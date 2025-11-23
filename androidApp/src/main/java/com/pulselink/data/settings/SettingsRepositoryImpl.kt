@@ -38,6 +38,8 @@ private val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
 private val DEVICE_ID = stringPreferencesKey("device_id")
 private val OWNER_NAME = stringPreferencesKey("owner_name")
 private val IS_BETA_TESTER = booleanPreferencesKey("is_beta_tester")
+private val WIDGET_LAST_CHECK_TIMESTAMP = androidx.datastore.preferences.core.longPreferencesKey("widget_last_check_timestamp")
+private val EMERGENCY_ACTIVE = booleanPreferencesKey("emergency_active")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -146,6 +148,26 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[BETA_AGREEMENT_ACCEPTED] = true
             prefs[BETA_AGREEMENT_VERSION] = version
         }
+    }
+
+    override suspend fun getLastWidgetCheckTimestamp(): Long {
+        return dataStore.data.map { it[WIDGET_LAST_CHECK_TIMESTAMP] ?: 0L }.first()
+    }
+
+    override suspend fun updateLastWidgetCheckTimestamp(timestamp: Long) {
+        dataStore.edit { prefs ->
+            prefs[WIDGET_LAST_CHECK_TIMESTAMP] = timestamp
+        }
+    }
+
+    override suspend fun setEmergencyActive(active: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[EMERGENCY_ACTIVE] = active
+        }
+    }
+
+    override suspend fun isEmergencyActive(): Boolean {
+        return dataStore.data.map { it[EMERGENCY_ACTIVE] ?: false }.first()
     }
 
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {

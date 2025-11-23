@@ -341,4 +341,17 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="home_add_login_cta">Add login</string>
     <string name="contact_reachability_sms">SMS backup available</string>
     <string name="contact_reachability_online_only">Internet only</string>
+    <!-- Widget Strings -->
+    <string name="widget_description">Quick access to emergency and check-in features</string>
+    <string name="widget_emergency_button">Emergency</string>
+    <string name="widget_cancel_emergency_button">Cancel Emergency</string>
+    <string name="widget_checkin_button">Check In</string>
+    <string name="widget_notification_label">Emergency Alerts</string>
+    <string name="widget_notification_multiple">%d alerts</string>
+    <string name="widget_friends_online_title">Friends Online</string>
+    <string name="widget_friends_online_empty">No friends online</string>
+    <string name="widget_emergency_instructions">Double-tap to Activate</string>
+    <string name="widget_emergency_active">EMERGENCY ACTIVE</string>
+    <string name="widget_cancel_instructions">Tap to Authenticate &amp; Cancel</string>
+    <string name="widget_instruction_short">Double-tap, then hold the shield for Emergency</string>
 </resources>

@@ -20,4 +20,8 @@ class MessageRepositoryImpl @Inject constructor(
     override suspend fun clear(contactId: Long) {
         dao.clear(contactId)
     }
+
+    override suspend fun getUnreadEmergencyMessageCount(contactIds: List<Long>, since: Long): Int {
+        return dao.getUnreadEmergencyCount(contactIds, since)
+    }
 }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient
+        android:startColor="#FF3B2F"
+        android:endColor="#B60F1F"
+        android:angle="90" />
+    <size android:width="180dp" android:height="180dp" />
+    <stroke android:width="2dp" android:color="@color/widget_gold_light" />
+</shape>

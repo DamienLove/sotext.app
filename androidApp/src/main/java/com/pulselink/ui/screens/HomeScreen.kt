@@ -968,28 +968,11 @@ private fun ContactRow(
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Text(
-                            text = contact.displayName,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    Text(
-                        text = contact.phoneNumber,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(top = 4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -997,61 +980,26 @@ private fun ContactRow(
                                 .clip(CircleShape)
                                 .background(presenceColor)
                         )
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = contact.displayName,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = when {
-                                    phone.isNotBlank() -> phone
-                                    contact.email?.isNotBlank() == true -> contact.email
-                                    else -> stringResource(id = R.string.contact_no_reachability)
-                                },
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(top = 6.dp)
-                    ) {
-                        Surface(
-                            color = if (hasSmsFallback) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.28f)
-                            else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f),
-                            shape = RoundedCornerShape(999.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (hasSmsFallback) Icons.Filled.Sms else Icons.Outlined.WifiTethering,
-                                    contentDescription = if (hasSmsFallback) stringResource(R.string.contact_reachability_sms) else stringResource(
-                                        R.string.contact_reachability_online_only
-                                    ),
-                                    tint = if (hasSmsFallback) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = if (hasSmsFallback) stringResource(R.string.contact_reachability_sms) else stringResource(
-                                        R.string.contact_reachability_online_only
-                                    ),
-                                    color = if (hasSmsFallback) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            }
-                        }
                         Text(
-                            text = statusLabel,
-                            color = statusColor,
-                            style = MaterialTheme.typography.bodySmall
+                            text = contact.displayName,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
+                    Text(
+                        text = when {
+                            phone.isNotBlank() -> phone
+                            contact.email?.isNotBlank() == true -> contact.email
+                            else -> stringResource(id = R.string.contact_no_reachability)
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = statusLabel,
+                        color = statusColor,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onCall) {

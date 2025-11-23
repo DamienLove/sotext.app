@@ -14,4 +14,8 @@ interface SettingsRepository {
     suspend fun setBetaTesterStatus(enabled: Boolean)
     suspend fun setAssistantShortcutsDismissed(dismissed: Boolean)
     suspend fun setBetaAgreementAcceptance(version: String)
+    suspend fun getLastWidgetCheckTimestamp(): Long
+    suspend fun updateLastWidgetCheckTimestamp(timestamp: Long)
+    suspend fun setEmergencyActive(active: Boolean)
+    suspend fun isEmergencyActive(): Boolean
 }

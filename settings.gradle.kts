@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "PulseLink"
 include(":androidApp")
+include(":wearApp")

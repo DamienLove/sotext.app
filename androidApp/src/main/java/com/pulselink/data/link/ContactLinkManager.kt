@@ -33,6 +33,7 @@ import com.pulselink.util.AudioOverrideManager
 import com.pulselink.util.resolveUri
 import com.pulselink.ui.EmergencyPopupActivity
 import com.pulselink.util.CallStateMonitor
+import com.pulselink.widget.WidgetStateManager
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
@@ -69,7 +70,8 @@ class ContactLinkManager @Inject constructor(
     private val callStateMonitor: CallStateMonitor,
     private val linkChannelService: LinkChannelService,
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val widgetStateManager: WidgetStateManager
 ) {
 
     private val notificationManager by lazy { NotificationManagerCompat.from(context) }
@@ -310,6 +312,10 @@ class ContactLinkManager @Inject constructor(
             remoteActionHandler.showEmergencyPopup(contact, message.tier)
 
         }
+        if (message.tier == EscalationTier.EMERGENCY) {
+            settingsRepository.setEmergencyActive(true)
+            widgetStateManager.requestWidgetUpdate()
+        }
         alertRepository.record(
             AlertEvent(
                 timestamp = System.currentTimeMillis(),
@@ -488,6 +494,10 @@ class ContactLinkManager @Inject constructor(
                     overrideSucceeded = overrideApplied
                 )
             )
+            if (contact.escalationTier == EscalationTier.EMERGENCY) {
+                settingsRepository.setEmergencyActive(true)
+                widgetStateManager.requestWidgetUpdate()
+            }
         }
     }
 

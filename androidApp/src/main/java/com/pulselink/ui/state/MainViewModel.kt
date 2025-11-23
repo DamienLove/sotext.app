@@ -34,6 +34,7 @@ import com.pulselink.service.AlertRouter
 import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.state.DndStatusMessage
 import com.pulselink.util.AudioOverrideManager
+import com.pulselink.widget.WidgetStateManager
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.FieldValue
@@ -63,7 +64,8 @@ class MainViewModel @Inject constructor(
     private val betaAgreementRepository: BetaAgreementRepository,
     private val naturalLanguageCommandProcessor: NaturalLanguageCommandProcessor,
     private val firebaseAuthManager: FirebaseAuthManager,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val widgetStateManager: WidgetStateManager
 ) : ViewModel() {
 
     private val dispatching = MutableStateFlow(false)
@@ -665,6 +667,8 @@ class MainViewModel @Inject constructor(
             val cancelled = linkManager.cancelActiveEmergency()
             if (cancelled) {
                 emergencyActive.value = false
+                settingsRepository.setEmergencyActive(false)
+                widgetStateManager.requestWidgetUpdate()
             }
             onComplete(cancelled)
         }
@@ -677,6 +681,8 @@ class MainViewModel @Inject constructor(
             val result = alertRouter.dispatchManual(tier, phrase)
             if (tier == EscalationTier.EMERGENCY && result != null) {
                 emergencyActive.value = true
+                settingsRepository.setEmergencyActive(true)
+                widgetStateManager.requestWidgetUpdate()
             }
             emitDndStatus(result)
             dispatching.value = false
