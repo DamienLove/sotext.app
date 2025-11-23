@@ -4,6 +4,6 @@
         android:startColor="#FF3B2F"
         android:endColor="#B60F1F"
         android:angle="90" />
-    <size android:width="180dp" android:height="180dp" />
+    <size android:width="150dp" android:height="150dp" />
     <stroke android:width="2dp" android:color="@color/widget_gold_light" />
 </shape>
