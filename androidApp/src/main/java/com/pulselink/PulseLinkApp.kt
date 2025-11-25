@@ -16,12 +16,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import com.pulselink.widget.WidgetUpdateWorker
-import java.util.concurrent.TimeUnit
-
 @HiltAndroidApp
 class PulseLinkApp : Application(), Configuration.Provider {
 
@@ -49,14 +43,5 @@ class PulseLinkApp : Application(), Configuration.Provider {
             MobileAds.initialize(this)
             appOpenAdController.updateAvailability(false)
         }
-
-        // Schedule widget updates
-        val widgetRequest = PeriodicWorkRequestBuilder<WidgetUpdateWorker>(15, TimeUnit.MINUTES)
-            .build()
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            "PulseLinkWidgetUpdate",
-            ExistingPeriodicWorkPolicy.KEEP,
-            widgetRequest
-        )
     }
 }

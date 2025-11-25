@@ -74,7 +74,9 @@ data class OnboardingPermissionState(
     val manualHelp: String? = null,
     val actionLabel: String? = null,
     val onAction: (() -> Unit)? = null,
-    val emphasis: String? = null
+    val emphasis: String? = null,
+    val skipLabel: String? = null,
+    val onSkip: (() -> Unit)? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -209,8 +211,8 @@ fun OnboardingScreen(
         colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16))
     )
     val manualHelp = when {
-        focusedPermission != null && !focusedPermission.granted && !focusedPermission.manualHelp.isNullOrBlank() -> focusedPermission.manualHelp
-        else -> permissions.firstOrNull { it.manualHelp != null && !it.granted }?.manualHelp
+        focusedPermission != null && !focusedPermission.granted && !focusedPermission.manualHelp.isNullOrBlank() && focusedPermission.onAction == null -> focusedPermission.manualHelp
+        else -> permissions.firstOrNull { it.manualHelp != null && !it.granted && it.onAction == null }?.manualHelp
     }
     val activeFocus = focusedPermission?.takeIf { !it.granted }
 
@@ -384,20 +386,29 @@ private fun PermissionCard(state: OnboardingPermissionState) {
                 )
             }
             if (!state.granted && state.actionLabel != null && state.onAction != null) {
+                if (!state.manualHelp.isNullOrBlank()) {
+                    Text(
+                        text = state.manualHelp,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFFCD34D)
+                    )
+                }
                 Divider(color = Color.White.copy(alpha = 0.08f))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = state.manualHelp ?: "Tap to grant",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFFFCD34D),
+                    Button(
+                        onClick = state.onAction,
                         modifier = Modifier.weight(1f)
-                    )
-                    TextButton(onClick = state.onAction) {
+                    ) {
                         Text(text = state.actionLabel)
+                    }
+                    OutlinedButton(
+                        onClick = state.onSkip ?: {},
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(text = state.skipLabel ?: "Not now")
                     }
                 }
             }

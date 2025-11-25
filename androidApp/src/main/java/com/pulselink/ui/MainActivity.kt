@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
@@ -43,6 +44,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.PackageManagerCompat
 import androidx.core.content.UnusedAppRestrictionsConstants
+import androidx.core.content.getSystemService
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -490,6 +492,15 @@ class MainActivity : AppCompatActivity() {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
                         val callLogGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
+                        val powerManager = context.getSystemService<PowerManager>()
+                        val batteryUnrestricted = powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+                        val requiredToast: () -> Unit = {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.permission_required_to_finish),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
 
                         val managePermissionCard = OnboardingPermissionState(
                             icon = Icons.Filled.Schedule,
@@ -501,10 +512,24 @@ class MainActivity : AppCompatActivity() {
                                 pendingUnusedRestrictionsCheck = true
                                 openUnusedAppRestrictionsSettings(context)
                             },
+                            skipLabel = stringResource(id = R.string.permission_skip),
+                            onSkip = requiredToast,
                             manualHelp = if (!unusedRestrictionsRequirementMet) {
                                 stringResource(R.string.permission_unused_apps_manual)
                             } else null,
                             emphasis = stringResource(R.string.permission_unused_apps_emphasis)
+                        )
+
+                        val batteryPermissionCard = OnboardingPermissionState(
+                            icon = Icons.Filled.PowerSettingsNew,
+                            title = stringResource(R.string.permission_battery_opt_title),
+                            description = stringResource(R.string.permission_battery_opt_description),
+                            granted = batteryUnrestricted,
+                            actionLabel = stringResource(R.string.permission_battery_opt_action),
+                            onAction = { openBatteryOptimizationSettings(context) },
+                            manualHelp = stringResource(R.string.permission_battery_opt_manual),
+                            skipLabel = stringResource(id = R.string.permission_skip),
+                            onSkip = requiredToast
                         )
 
                         val permissionCards = buildList {
@@ -523,7 +548,9 @@ class MainActivity : AppCompatActivity() {
                                 description = "Needed so critical alerts ring even when the phone is muted.",
                                 granted = hasDndAccess,
                                 actionLabel = if (hasDndAccess) "Manage" else "Allow",
-                                onAction = { openDndSettings(context) }
+                                onAction = { openDndSettings(context) },
+                                skipLabel = stringResource(id = R.string.permission_skip),
+                                onSkip = requiredToast
                             ).also { add(it) }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Person,
@@ -534,12 +561,7 @@ class MainActivity : AppCompatActivity() {
                                     "Open Settings -> Apps -> PulseLink -> Permissions and allow Call logs so linked contacts can ring through."
                                 } else null
                             ).also { add(it) }
-                            OnboardingPermissionState(
-                                icon = Icons.Filled.PowerSettingsNew,
-                                title = "Background activity",
-                                description = "Keep PulseLink active so alerts work whenever you need them.",
-                                granted = true
-                            ).also { add(it) }
+                            add(batteryPermissionCard)
                             OnboardingPermissionState(
                                 icon = Icons.Filled.LocationOn,
                                 title = "Location",
@@ -562,17 +584,24 @@ class MainActivity : AppCompatActivity() {
                             sanitizedOnboardingName.isNotBlank() &&
                             hasDndAccess &&
                             unusedRestrictionsRequirementMet &&
+                            batteryUnrestricted &&
                             !viewModel.needsBetaAgreement(state.settings)
 
                         OnboardingScreen(
                             permissions = permissionCards,
-                            focusedPermission = if (!unusedRestrictionsRequirementMet) managePermissionCard else null,
+                            focusedPermission = when {
+                                !batteryUnrestricted -> batteryPermissionCard
+                                !unusedRestrictionsRequirementMet -> managePermissionCard
+                                else -> null
+                            },
                             isReadyToFinish = canContinue,
                             onGrantPermissions = {
                                 if (missingPermissions.isEmpty()) {
                                     val currentName = onboardingName.trim()
                                     if (!hasDndAccess) {
                                         openDndSettings(context)
+                                    } else if (!batteryUnrestricted) {
+                                        openBatteryOptimizationSettings(context)
                                     } else if (!unusedRestrictionsRequirementMet) {
                                         pendingUnusedRestrictionsCheck = true
                                         openUnusedAppRestrictionsSettings(context)
@@ -1013,6 +1042,22 @@ private fun openUnusedAppRestrictionsSettings(context: android.content.Context) 
         openAppSettings(context)
     } catch (_: SecurityException) {
         openAppSettings(context)
+    }
+}
+
+private fun openBatteryOptimizationSettings(context: android.content.Context) {
+    val pkg = context.packageName
+    val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    runCatching { context.startActivity(intent) }.onFailure {
+        val req = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = Uri.parse("package:$pkg")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        runCatching { context.startActivity(req) }.onFailure {
+            openAppSettings(context)
+        }
     }
 }
 

@@ -122,27 +122,6 @@
             android:exported="false"
             tools:node="remove" />
 
-        <receiver
-            android:name=".widget.PulseLinkWidgetProvider"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_info" />
-        </receiver>
-
-        <receiver
-            android:name=".widget.PulseLinkWidgetActionReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.pulselink.widget.EMERGENCY_ACTION" />
-                <action android:name="com.pulselink.widget.CHECKIN_ACTION" />
-                <action android:name="com.pulselink.widget.NOTIFICATION_ACTION" />
-            </intent-filter>
-        </receiver>
-
         <service
             android:name=".wear.WearCommandListenerService"
             android:exported="true">
