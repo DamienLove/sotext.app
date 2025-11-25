@@ -33,5 +33,5 @@ androidApp/build/outputs/apk/pro/
 androidApp/build/outputs/bundle/proRelease/
 artifacts/releases/**/androidApp-pro-*.apk
 artifacts/releases/**/androidApp-pro-*.aab
-
+wearApp/build/
 /PulseLink-ui-mockup/wearos-pro-emergency.png

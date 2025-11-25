@@ -33,6 +33,7 @@ class FirebaseAuthManager @Inject constructor(
     }
 
     private fun updateAuthState(user: FirebaseUser?) {
+        Log.d(TAG, "Auth state updated user=${user?.uid ?: "null"} anon=${user?.isAnonymous}")
         _authState.value = user?.let { AuthState.Authenticated(it) } ?: AuthState.Unauthenticated
     }
 
@@ -51,8 +52,11 @@ class FirebaseAuthManager @Inject constructor(
 
     suspend fun signIn(email: String, password: String): Result<FirebaseUser> {
         return runCatching {
-            auth.signInWithEmailAndPassword(email, password).await().user
+            val user = auth.signInWithEmailAndPassword(email, password).await().user
                 ?: error("Authentication succeeded without user payload")
+            updateAuthState(user)
+            Log.i(TAG, "Email/password sign-in success uid=${user.uid}")
+            user
         }.onFailure { error ->
             Log.w(TAG, "Firebase email/password sign-in failed", error)
         }
@@ -60,8 +64,11 @@ class FirebaseAuthManager @Inject constructor(
 
     suspend fun register(email: String, password: String): Result<FirebaseUser> {
         return runCatching {
-            auth.createUserWithEmailAndPassword(email, password).await().user
+            val user = auth.createUserWithEmailAndPassword(email, password).await().user
                 ?: error("Account creation succeeded without user payload")
+            updateAuthState(user)
+            Log.i(TAG, "Account creation success uid=${user.uid}")
+            user
         }.onFailure { error ->
             Log.w(TAG, "Firebase account creation failed", error)
         }
@@ -115,6 +122,6 @@ class FirebaseAuthManager @Inject constructor(
     }
 
     companion object {
-        private const val TAG = "FirebaseAuthManager"
+        private const val TAG = "FirebaseAuthManager/Auth"
     }
 }

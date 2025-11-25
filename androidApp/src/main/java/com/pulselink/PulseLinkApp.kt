@@ -39,6 +39,8 @@ class PulseLinkApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
         FirebaseApp.initializeApp(this)
+        // Touch auth early so listeners register before any UI state checks
+        firebaseAuthManager.currentUser()
         CoroutineScope(Dispatchers.IO).launch {
             remoteConfigService.fetchAndActivate()
         }

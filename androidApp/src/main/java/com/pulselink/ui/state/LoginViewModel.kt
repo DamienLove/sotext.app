@@ -1,19 +1,26 @@
 package com.pulselink.ui.state
 
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.FirebaseNetworkException
+import com.google.firebase.installations.FirebaseInstallationsException
 import com.pulselink.R
 import com.pulselink.auth.AuthState
 import com.pulselink.auth.FirebaseAuthManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.IOException
+import java.util.concurrent.TimeoutException
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
@@ -67,10 +74,23 @@ class LoginViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessageRes = null, userMessageRes = null) }
             val sanitizedEmail = state.email.trim()
             val sanitizedPassword = state.password.trim()
-            val result = if (state.mode == LoginMode.SIGN_IN) {
-                authManager.signIn(sanitizedEmail, sanitizedPassword)
+            val result = withTimeoutOrNull(LOGIN_TIMEOUT_MS) {
+                if (state.mode == LoginMode.SIGN_IN) {
+                    authManager.signIn(sanitizedEmail, sanitizedPassword)
+                } else {
+                    authManager.register(sanitizedEmail, sanitizedPassword)
+                }
+            } ?: Result.failure(TimeoutException("Login timed out"))
+            if (result.isSuccess) {
+                val user = result.getOrNull()
+                if (user == null) {
+                    Log.w(TAG, "Auth ${state.mode} reported success but user payload is null")
+                } else {
+                    Log.d(TAG, "Auth ${state.mode} success uid=${user.uid}")
+                }
+                delay(AUTH_SYNC_DELAY_MS)
             } else {
-                authManager.register(sanitizedEmail, sanitizedPassword)
+                Log.w(TAG, "Auth ${state.mode} failed", result.exceptionOrNull())
             }
             _uiState.update {
                 val loginError = result.exceptionOrNull()?.toLoginError()
@@ -161,8 +181,17 @@ class LoginViewModel @Inject constructor(
     }
 
     private fun Throwable.toLoginError(): LoginError {
+        when (this) {
+            is TimeoutException -> return LoginError.NETWORK_BLOCKED
+            is IOException -> return LoginError.NETWORK
+            is FirebaseNetworkException -> return LoginError.NETWORK
+            is FirebaseInstallationsException -> return LoginError.NETWORK_BLOCKED
+        }
         val normalized = message.orEmpty()
         return when {
+            normalized.contains("installations", ignoreCase = true) -> LoginError.NETWORK_BLOCKED
+            normalized.contains("recaptcha", ignoreCase = true) -> LoginError.NETWORK_BLOCKED
+            normalized.contains("network", ignoreCase = true) -> LoginError.NETWORK
             normalized.contains("password", ignoreCase = true) -> LoginError.INVALID_CREDENTIALS
             normalized.contains("no user", ignoreCase = true) -> LoginError.INVALID_CREDENTIALS
             normalized.contains("already in use", ignoreCase = true) -> LoginError.EMAIL_IN_USE
@@ -172,6 +201,9 @@ class LoginViewModel @Inject constructor(
 
     companion object {
         private const val MIN_PASSWORD_LENGTH = 8
+        private const val LOGIN_TIMEOUT_MS = 15_000L
+        private const val AUTH_SYNC_DELAY_MS = 150L
+        private const val TAG = "LoginViewModel/Auth"
     }
 }
 
@@ -193,6 +225,8 @@ private enum class LoginError(@StringRes val messageRes: Int) {
     SHORT_PASSWORD(R.string.login_error_short_password),
     PASSWORD_MISMATCH(R.string.login_error_password_mismatch),
     INVALID_CREDENTIALS(R.string.login_error_invalid_credentials),
+    NETWORK(R.string.login_error_network),
+    NETWORK_BLOCKED(R.string.login_error_network_blocked),
     EMAIL_IN_USE(R.string.login_error_email_in_use),
     GENERIC(R.string.login_error_generic)
 }

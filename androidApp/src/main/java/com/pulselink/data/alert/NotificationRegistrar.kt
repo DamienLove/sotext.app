@@ -36,6 +36,29 @@ class NotificationRegistrar @Inject constructor(
         }
     }
 
+    fun ensureSilentAlertChannel(): String {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return LEGACY_ALERT_CHANNEL
+        }
+        ensureChannels()
+        val manager = context.getSystemService<NotificationManager>() ?: return LEGACY_ALERT_CHANNEL
+        val existing = manager.getNotificationChannel(CHANNEL_ALERT_CONFIRMATION)
+        if (existing != null) return CHANNEL_ALERT_CONFIRMATION
+        val channel = NotificationChannel(
+            CHANNEL_ALERT_CONFIRMATION,
+            context.getString(R.string.notification_channel_alert_confirmations),
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = context.getString(R.string.notification_channel_alert_confirmations_desc)
+            setGroup(GROUP_ALERTS)
+            setBypassDnd(false)
+            enableVibration(false)
+            setSound(null, null)
+        }
+        manager.createNotificationChannel(channel)
+        return CHANNEL_ALERT_CONFIRMATION
+    }
+
     fun ensureAlertChannel(
         category: SoundCategory,
         soundOption: SoundOption?,
@@ -134,6 +157,7 @@ class NotificationRegistrar @Inject constructor(
             private const val LEGACY_CHECK_IN_CHANNEL = "pulse_checkins_legacy"
             private const val LEGACY_CALL_CHANNEL = "pulse_call_legacy"
             const val CHANNEL_BACKGROUND = "pulse_background"
+            const val CHANNEL_ALERT_CONFIRMATION = "pulse_alert_confirmation"
             private const val GROUP_ALERTS = "pulse_group_alerts"
         }
 }

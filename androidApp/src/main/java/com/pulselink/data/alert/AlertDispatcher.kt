@@ -47,7 +47,8 @@ class AlertDispatcher @Inject constructor(
         tier: EscalationTier,
         contacts: List<Contact>,
         settings: PulseLinkSettings,
-        contactId: Long? = null
+        contactId: Long? = null,
+        shouldPlayLocalSound: Boolean = false
     ): AlertResult = withContext(Dispatchers.IO) {
         registrar.ensureChannels()
 
@@ -58,13 +59,17 @@ class AlertDispatcher @Inject constructor(
             EscalationTier.EMERGENCY -> settings.emergencyProfile to SoundCategory.SIREN
             EscalationTier.CHECK_IN -> settings.checkInProfile to SoundCategory.CHIME
         }
-        val soundOption = soundCatalog.resolve(profile.soundKey, soundCategory)
-        val channelId = registrar.ensureAlertChannel(soundCategory, soundOption, profile)
+        val soundOption = if (shouldPlayLocalSound) soundCatalog.resolve(profile.soundKey, soundCategory) else null
+        val channelId = if (shouldPlayLocalSound) {
+            registrar.ensureAlertChannel(soundCategory, soundOption, profile)
+        } else {
+            registrar.ensureSilentAlertChannel()
+        }
         val orderedContacts = contacts.sortedWith(
             compareBy<Contact> { it.contactOrder }.thenBy { it.displayName.lowercase(Locale.US) }
         )
 
-        val shouldOverrideAudio = profile.breakThroughDnd || tier == EscalationTier.EMERGENCY
+        val shouldOverrideAudio = shouldPlayLocalSound && (profile.breakThroughDnd || tier == EscalationTier.EMERGENCY)
         val notificationManager = context.getSystemService(NotificationManager::class.java)
         val preFilter = notificationManager?.currentInterruptionFilter
         val overrideResult = if (shouldOverrideAudio) {
@@ -106,14 +111,16 @@ class AlertDispatcher @Inject constructor(
             message = message,
             profile = profile,
             soundOption = soundOption,
-            primaryContact = orderedContacts.firstOrNull()
+            primaryContact = orderedContacts.firstOrNull(),
+            shouldPlaySound = shouldPlayLocalSound,
+            notifiedContacts = smsCount
         )
 
         if (shouldOverrideAudio && overrideResult.state != AudioOverrideManager.OverrideResult.State.FAILURE && overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED) {
             audioOverrideManager.scheduleRestore()
         }
 
-        val resolvedSoundKey = soundOption?.key ?: profile.soundKey
+        val resolvedSoundKey = if (shouldPlayLocalSound) soundOption?.key ?: profile.soundKey else null
         AlertResult(
             message = message,
             notifiedContacts = smsCount,
@@ -164,25 +171,44 @@ class AlertDispatcher @Inject constructor(
         message: String,
         profile: AlertProfile,
         soundOption: SoundOption?,
-        primaryContact: Contact?
+        primaryContact: Contact?,
+        shouldPlaySound: Boolean,
+        notifiedContacts: Int
     ) {
         val manager = NotificationManagerCompat.from(context)
+        val (title, text) = if (shouldPlaySound) {
+            val titleValue = if (tier == EscalationTier.EMERGENCY) {
+                context.getString(R.string.notification_title_alert)
+            } else {
+                context.getString(R.string.notification_title_check_in)
+            }
+            titleValue to message
+        } else {
+            val titleValue = if (tier == EscalationTier.EMERGENCY) {
+                context.getString(R.string.notification_title_alert_sent)
+            } else {
+                context.getString(R.string.notification_title_checkin_sent)
+            }
+            val countText = if (tier == EscalationTier.EMERGENCY) {
+                context.getString(R.string.notification_text_alert_sent, notifiedContacts)
+            } else {
+                context.getString(R.string.notification_text_checkin_sent, notifiedContacts)
+            }
+            titleValue to countText
+        }
         val builder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_logo)
-            .setContentTitle(
-                if (tier == EscalationTier.EMERGENCY) context.getString(R.string.notification_title_alert)
-                else context.getString(R.string.notification_title_check_in)
-            )
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
-            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(if (shouldPlaySound) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 
-        if (profile.vibrate) builder.setVibrate(longArrayOf(0, 250, 250, 250, 500, 250))
-        if (profile.breakThroughDnd) builder.setCategory(NotificationCompat.CATEGORY_ALARM)
+        if (shouldPlaySound && profile.vibrate) builder.setVibrate(longArrayOf(0, 250, 250, 250, 500, 250))
+        if (shouldPlaySound && profile.breakThroughDnd) builder.setCategory(NotificationCompat.CATEGORY_ALARM)
 
         val soundUri = soundOption?.resolveUri(context)
-        if (soundUri != null) {
+        if (shouldPlaySound && soundUri != null) {
             builder.setSound(soundUri)
         }
 
@@ -196,7 +222,7 @@ class AlertDispatcher @Inject constructor(
                 false
             )
         }
-        if (callIntent != null) {
+        if (shouldPlaySound && callIntent != null) {
             builder.addAction(
                 R.drawable.ic_logo,
                 context.getString(R.string.notification_action_call),
@@ -208,11 +234,15 @@ class AlertDispatcher @Inject constructor(
             val sysManager = context.getSystemService(NotificationManager::class.java)
             if (sysManager?.getNotificationChannel(channel) == null) {
                 Log.w(TAG, "Expected notification channel $channel missing; re-registering")
-                registrar.ensureAlertChannel(
-                    SoundCategory.SIREN.takeIf { tier == EscalationTier.EMERGENCY } ?: SoundCategory.CHIME,
-                    soundOption,
-                    profile
-                )
+                if (shouldPlaySound) {
+                    registrar.ensureAlertChannel(
+                        SoundCategory.SIREN.takeIf { tier == EscalationTier.EMERGENCY } ?: SoundCategory.CHIME,
+                        soundOption,
+                        profile
+                    )
+                } else {
+                    registrar.ensureSilentAlertChannel()
+                }
             }
         }
 

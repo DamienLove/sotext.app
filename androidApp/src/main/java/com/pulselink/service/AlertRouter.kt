@@ -92,7 +92,13 @@ class AlertRouter @Inject constructor(
             }
         } else emptyList()
 
-        val result: AlertResult = dispatcher.dispatch(trigger, tier, contacts, settings)
+        val result: AlertResult = dispatcher.dispatch(
+            phrase = trigger,
+            tier = tier,
+            contacts = contacts,
+            settings = settings,
+            shouldPlayLocalSound = false
+        )
 
         remoteJobs.forEach { deferred ->
             val remoteResult = runCatching { deferred.await() }
