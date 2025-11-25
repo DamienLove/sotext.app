@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +48,8 @@ fun SettingsScreen(
     hasDndAccess: Boolean,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
+    onRequestBatteryOpt: () -> Unit,
+    onRequestUnusedApps: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
     onEditEmergencyTone: () -> Unit,
@@ -110,7 +113,22 @@ fun SettingsScreen(
                 } else {
                     stringResource(R.string.dnd_override_action_allow)
                 },
-                onAction = onRequestDndAccess
+                onAction = onRequestDndAccess,
+                leadingIcon = Icons.Filled.NotificationsActive
+            )
+            SettingsActionRow(
+                title = stringResource(R.string.permission_battery_opt_title),
+                subtitle = stringResource(R.string.permission_battery_opt_description),
+                actionLabel = stringResource(R.string.permission_battery_opt_action),
+                onAction = onRequestBatteryOpt,
+                leadingIcon = Icons.Filled.PowerSettingsNew
+            )
+            SettingsActionRow(
+                title = stringResource(R.string.permission_unused_apps_title),
+                subtitle = stringResource(R.string.permission_unused_apps_description),
+                actionLabel = stringResource(R.string.permission_unused_apps_action),
+                onAction = onRequestUnusedApps,
+                leadingIcon = Icons.Filled.Schedule
             )
             SettingsToggleRow(
                 title = "Auto-allow remote sound change",
