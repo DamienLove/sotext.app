@@ -1,16 +1,12 @@
-Branch: beta-logins (tracking Beta merged through e8000beb)
+Branch: feature/permissions-prompts (tracking origin/feature/permissions-prompts; based on Beta @ 1411be3)
 Latest commits:
- - e8000beb (Beta) merge: relink fixes + presence fallback
- - f814c548 (beta-logins) fix: relink contacts via link docs and improve presence fallback
- - cd70ab59 feat: show link presence and bump version 15
-Build artifacts v15:
- - Free debug APK: androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk
- - Pro debug APK:  androidApp/build/outputs/apk/pro/debug/androidApp-pro-debug.apk
- - Free release AAB: androidApp/build/outputs/bundle/freeRelease/app-free-release.aab
- - Pro release AAB:  androidApp/build/outputs/bundle/proRelease/app-pro-release.aab
-Key changes:
- - Presence badges on home + contact detail with last-active text.
- - Links restored from Firestore link docs on login (keeps LINKED without re-approve) and updates phone from link doc.
- - Presence fallback uses STALE instead of UNKNOWN when missing lastSeen.
- - Edge-to-edge uses new enableEdgeToEdge + PiP on emergency leave.
- - VersionCode/Name bumped to 15.
+ - 1411be3 fix: silence local alerts and clarify login failures
+ - cd4bdca chore: bump version to 18 and refine rolex-style widget
+ - 66afee6 feat: refresh widget and add wear module
+Build/run status:
+ - Ran .\gradlew :androidApp:compileFreeDebugKotlin (passes; Room schema export warning only).
+ - No APK/AAB artifacts built in this workspace after reclone.
+Key changes in current branch:
+ - Outgoing alerts are silent on sender; adds silent confirmation channel + “sent” notifications.
+ - Alert router dispatches with local sound off; audio override/sound only on receivers.
+ - Login flow: 15s timeout, network-blocked guidance (installations/recaptcha), early auth init + logging.
