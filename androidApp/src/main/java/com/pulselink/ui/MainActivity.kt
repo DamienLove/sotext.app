@@ -1,6 +1,7 @@
 package com.pulselink.ui
 
 import android.Manifest
+import android.app.Activity
 import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
@@ -53,6 +54,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.pulselink.auth.AuthState
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.domain.model.Contact
@@ -367,6 +371,37 @@ class MainActivity : AppCompatActivity() {
                     composable("login") {
                         val loginViewModel: LoginViewModel = hiltViewModel()
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
+                        val activity = LocalContext.current as? MainActivity
+                        val googleClient = remember {
+                            GoogleSignIn.getClient(
+                                activity!!,
+                                GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                    .requestIdToken(getString(R.string.google_web_client_id))
+                                    .requestEmail()
+                                    .build()
+                            )
+                        }
+                        val googleLauncher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.StartActivityForResult()
+                        ) { result ->
+                            if (result.resultCode != RESULT_OK) {
+                                loginViewModel.reportExternalError()
+                                return@rememberLauncherForActivityResult
+                            }
+                            try {
+                                val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                                val account = task.getResult(ApiException::class.java)
+                                val idToken = account?.idToken
+                                if (idToken != null) {
+                                    loginViewModel.handleGoogleIdToken(idToken)
+                                } else {
+                                    loginViewModel.reportExternalError()
+                                }
+                            } catch (e: Exception) {
+                                loginViewModel.reportExternalError()
+                            }
+                        }
+
                         LoginScreen(
                             state = loginUiState,
                             onEmailChange = loginViewModel::updateEmail,
@@ -376,6 +411,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleMode = loginViewModel::toggleMode,
                             onForgotPassword = loginViewModel::sendPasswordReset,
                             onSmsOnlyClick = loginViewModel::signInSmsOnly,
+                            onGoogleClick = { googleLauncher.launch(googleClient.signInIntent) },
                             onMessageConsumed = loginViewModel::clearTransientMessages
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {

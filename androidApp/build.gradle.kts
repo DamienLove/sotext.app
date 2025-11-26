@@ -236,6 +236,10 @@ kapt {
 
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.04.01"))
+    implementation("com.google.firebase:firebase-auth:23.0.0")
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.04.01"))
 
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
@@ -285,7 +289,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
     implementation("com.google.firebase:firebase-functions-ktx")
     implementation("com.google.firebase:firebase-config-ktx")
     implementation("com.google.assistant.appactions:suggestions:1.0.0")

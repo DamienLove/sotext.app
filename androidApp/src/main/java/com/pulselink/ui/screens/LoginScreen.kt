@@ -57,6 +57,7 @@ fun LoginScreen(
     onToggleMode: () -> Unit,
     onForgotPassword: () -> Unit,
     onSmsOnlyClick: () -> Unit,
+    onGoogleClick: () -> Unit,
     onMessageConsumed: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -266,6 +267,31 @@ fun LoginScreen(
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(text = stringResource(R.string.login_sms_only_cta))
+            }
+
+            Button(
+                onClick = {
+                    focusManager.clearFocus()
+                    onGoogleClick()
+                },
+                enabled = !state.isSocialLoading && !state.isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                if (state.isSocialLoading) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text(text = stringResource(R.string.login_continue_with_google))
+                }
             }
         }
     }
