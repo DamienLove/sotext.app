@@ -365,4 +365,9 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="widget_emergency_active">EMERGENCY ACTIVE</string>
     <string name="widget_cancel_instructions">Tap to Authenticate &amp; Cancel</string>
     <string name="widget_instruction_short">Double-tap, then hold the shield for Emergency</string>
+    <string name="widget_open_settings">Open PulseLink</string>
+    <string name="widget_tap_to_arm">TAP TO ARM ✕</string>
+    <string name="widget_role_emergency">Emergency contact</string>
+    <string name="widget_role_checkin">Check-in contact</string>
+    <string name="widget_role_unknown">Contact</string>
 </resources>

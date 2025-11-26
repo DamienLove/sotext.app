@@ -35,6 +35,12 @@ class WidgetStateManager @Inject constructor(
             .take(3)
     }
 
+    suspend fun getEmergencyContactsForWidget(): List<com.pulselink.domain.model.Contact> {
+        return contactRepository.getEmergencyContacts()
+            .sortedBy { it.contactOrder }
+            .take(5)
+    }
+
     suspend fun markNotificationsSeen() {
         settingsRepository.updateLastWidgetCheckTimestamp(System.currentTimeMillis())
         requestWidgetUpdate()

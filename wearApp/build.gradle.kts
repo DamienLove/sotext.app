@@ -52,4 +52,9 @@ dependencies {
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.google.guava:guava:32.1.2-android")
+
+    // Wear OS watch face rendering
+    implementation("androidx.wear.watchface:watchface:1.2.0")
+    implementation("androidx.wear.watchface:watchface-complications-data:1.2.0")
+    implementation("androidx.wear.watchface:watchface-complications-rendering:1.2.0")
 }
