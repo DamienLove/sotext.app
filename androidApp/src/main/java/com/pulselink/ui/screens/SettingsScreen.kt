@@ -38,20 +38,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.PulseLinkSettings
+import com.pulselink.ui.ads.BannerAdSlot
+import com.pulselink.ui.state.ProfileUpdateUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     settings: PulseLinkSettings,
     hasDndAccess: Boolean,
+    showAds: Boolean,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
     onRequestBatteryOpt: () -> Unit,
     onRequestUnusedApps: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
+    onToggleAutoUpdateContactInfo: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
+    profileUpdateState: ProfileUpdateUiState,
+    onBroadcastProfileUpdate: () -> Unit,
     onEditEmergencyTone: () -> Unit,
     onEditCheckInTone: () -> Unit,
     onEditCallTone: () -> Unit,
@@ -81,6 +88,12 @@ fun SettingsScreen(
             )
         },
         contentWindowInsets = WindowInsets.safeDrawing
+        ,
+        bottomBar = {
+            if (BuildConfig.ADS_ENABLED && showAds && !settings.proUnlocked) {
+                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
+            }
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -136,6 +149,12 @@ fun SettingsScreen(
                 checked = settings.autoAllowRemoteSoundChange,
                 onCheckedChange = onToggleAutoAllowRemoteSoundChange
             )
+            SettingsToggleRow(
+                title = stringResource(id = R.string.settings_auto_update_contact_title),
+                subtitle = stringResource(id = R.string.settings_auto_update_contact_subtitle),
+                checked = settings.autoUpdateContactInfo,
+                onCheckedChange = onToggleAutoUpdateContactInfo
+            )
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_sync_contacts_title),
                 subtitle = stringResource(id = R.string.settings_sync_contacts_subtitle),
@@ -143,6 +162,31 @@ fun SettingsScreen(
                 onAction = onSyncNow,
                 leadingIcon = Icons.Filled.Sync
             )
+            SettingsActionRow(
+                title = stringResource(id = R.string.profile_update_button),
+                subtitle = stringResource(id = R.string.profile_update_subtitle),
+                actionLabel = if (profileUpdateState.inProgress) {
+                    stringResource(id = R.string.profile_update_sending)
+                } else {
+                    stringResource(id = R.string.profile_update_button)
+                },
+                onAction = onBroadcastProfileUpdate,
+                leadingIcon = Icons.Filled.Sync
+            )
+            profileUpdateState.resultCount?.let { count ->
+                Text(
+                    text = stringResource(id = R.string.profile_update_success, count),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            profileUpdateState.error?.let { error ->
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
             SettingsActionRow(
                 title = "Emergency alert tone",
                 actionLabel = "Edit",
@@ -176,6 +220,14 @@ fun SettingsScreen(
                 actionLabel = stringResource(id = R.string.settings_sign_out_action),
                 onAction = onSignOut,
                 leadingIcon = Icons.Filled.PowerSettingsNew
+            )
+            Text(
+                text = "Link ID: ${settings.deviceId}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
             )
         }
     }

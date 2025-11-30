@@ -132,6 +132,8 @@ fun HomeScreen(
     var newContactName by remember { mutableStateOf(TextFieldValue()) }
     var newContactPhone by remember { mutableStateOf(TextFieldValue()) }
     var newContactEmail by remember { mutableStateOf(TextFieldValue()) }
+    var newContactAltPhone by remember { mutableStateOf(TextFieldValue()) }
+    var newContactAltEmail by remember { mutableStateOf(TextFieldValue()) }
     var allowRemoteSound by remember { mutableStateOf(false) }
     var searchValue by remember { mutableStateOf(TextFieldValue()) }
 
@@ -151,6 +153,8 @@ fun HomeScreen(
             newContactName = TextFieldValue()
             newContactPhone = TextFieldValue()
             newContactEmail = TextFieldValue()
+            newContactAltPhone = TextFieldValue()
+            newContactAltEmail = TextFieldValue()
             allowRemoteSound = false
         }
     }
@@ -223,6 +227,10 @@ fun HomeScreen(
             onPhoneChange = { newContactPhone = it },
             email = newContactEmail,
             onEmailChange = { newContactEmail = it },
+            altPhone = newContactAltPhone,
+            onAltPhoneChange = { newContactAltPhone = it },
+            altEmail = newContactAltEmail,
+            onAltEmailChange = { newContactAltEmail = it },
             allowRemoteSound = allowRemoteSound,
             onAllowRemoteSoundChange = { allowRemoteSound = it },
             onImport = { contactPicker.launch(null) },
@@ -231,12 +239,16 @@ fun HomeScreen(
                 val name = newContactName.text.trim()
                 val phone = newContactPhone.text.trim()
                 val email = newContactEmail.text.trim()
+                val altPhone = newContactAltPhone.text.trim()
+                val altEmail = newContactAltEmail.text.trim()
                 if (name.isNotEmpty() && (phone.isNotEmpty() || email.isNotEmpty())) {
                     onAddContact(
                         Contact(
                             displayName = name,
                             phoneNumber = phone,
                             email = email.ifBlank { null },
+                            additionalPhones = listOf(altPhone).filter { it.isNotBlank() },
+                            additionalEmails = listOf(altEmail).filter { it.isNotBlank() },
                             allowRemoteSoundChange = allowRemoteSound
                         )
                     )
@@ -949,7 +961,7 @@ private fun ContactRow(
         RemotePresence.STALE -> MaterialTheme.colorScheme.outline
         RemotePresence.UNKNOWN -> MaterialTheme.colorScheme.outlineVariant
     }
-    val phone = contact.phoneNumber.orEmpty()
+    val phone = (listOf(contact.phoneNumber) + contact.additionalPhones).firstOrNull { it.isNotBlank() }.orEmpty()
     val hasSmsFallback = phone.isNotBlank()
     Card(
         modifier = Modifier
@@ -990,6 +1002,7 @@ private fun ContactRow(
                         text = when {
                             phone.isNotBlank() -> phone
                             contact.email?.isNotBlank() == true -> contact.email
+                            contact.additionalEmails.firstOrNull { it.isNotBlank() } != null -> contact.additionalEmails.first { it.isNotBlank() }
                             else -> stringResource(id = R.string.contact_no_reachability)
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1002,11 +1015,14 @@ private fun ContactRow(
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onCall) {
+                    val callEnabled = phone.isNotBlank()
+                    IconButton(onClick = onCall, enabled = callEnabled) {
                         Icon(
                             Icons.Filled.Call,
                             contentDescription = "Call contact",
-                            tint = MaterialTheme.colorScheme.secondary
+                            tint = if (callEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                alpha = 0.4f
+                            )
                         )
                     }
                     IconButton(onClick = onOpenMessages) {
@@ -1292,6 +1308,10 @@ private fun AddContactDialog(
     onPhoneChange: (TextFieldValue) -> Unit,
     email: TextFieldValue,
     onEmailChange: (TextFieldValue) -> Unit,
+    altPhone: TextFieldValue,
+    onAltPhoneChange: (TextFieldValue) -> Unit,
+    altEmail: TextFieldValue,
+    onAltEmailChange: (TextFieldValue) -> Unit,
     allowRemoteSound: Boolean,
     onAllowRemoteSoundChange: (Boolean) -> Unit,
     onImport: () -> Unit,
@@ -1312,13 +1332,25 @@ private fun AddContactDialog(
                 OutlinedTextField(
                     value = phone,
                     onValueChange = onPhoneChange,
-                    label = { Text("Phone") },
+                    label = { Text("Phone (preferred)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = altPhone,
+                    onValueChange = onAltPhoneChange,
+                    label = { Text("Additional phone (optional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = email,
                     onValueChange = onEmailChange,
                     label = { Text("Email (optional)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = altEmail,
+                    onValueChange = onAltEmailChange,
+                    label = { Text("Additional email (optional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(

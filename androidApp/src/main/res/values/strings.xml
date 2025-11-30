@@ -125,10 +125,17 @@
     <string name="settings_sync_contacts_title">Sync contacts to Firebase</string>
     <string name="settings_sync_contacts_subtitle">Push local contacts and pull cloud updates to keep links in step.</string>
     <string name="settings_sync_action">Sync now</string>
+    <string name="profile_update_button">Update profile to contacts</string>
+    <string name="profile_update_subtitle">Send your current phone number and email to linked contacts.</string>
+    <string name="profile_update_success">Profile updated for %1$d contacts.</string>
+    <string name="profile_update_failed">Could not update your contacts. Try again.</string>
+    <string name="profile_update_sending">Sending...</string>
     <string name="settings_help_action">Open safety help</string>
     <string name="settings_sign_out_title">Sign out</string>
     <string name="settings_sign_out_subtitle">Return to the login screen and keep using SMS-only if needed.</string>
     <string name="settings_sign_out_action">Sign out</string>
+    <string name="settings_auto_update_contact_title">Auto-update contact info</string>
+    <string name="settings_auto_update_contact_subtitle">Keep phone numbers and emails in sync for linked contacts.</string>
     <string name="settings_help_title">Safety help</string>
     <string name="settings_help_location_title">Location sharing</string>
     <string name="settings_help_location_body">Include your latest GPS fix when sending emergency or check-in alerts so your circle can find you quickly. PulseLink only attaches that location to your outgoing alerts.</string>

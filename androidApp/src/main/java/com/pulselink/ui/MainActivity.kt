@@ -237,18 +237,24 @@ class MainActivity : AppCompatActivity() {
                     pendingPermissionCheck = true
                 }
 
-                val callContactHandler: suspend (Contact) -> Unit = { contact ->
+                val callContactHandler: suspend (Contact) -> Unit = handler@ { contact ->
                     isPreparingCall = true
                     Toast.makeText(context, context.getString(R.string.call_preparing), Toast.LENGTH_SHORT).show()
+                    val targetPhone = contact.primaryPhone()
+                    if (targetPhone.isNullOrBlank()) {
+                        isPreparingCall = false
+                        Toast.makeText(context, context.getString(R.string.call_failed), Toast.LENGTH_SHORT).show()
+                        return@handler
+                    }
                     val result = try {
-                        viewModel.initiateCall(contact.id, contact.phoneNumber)
+                        viewModel.initiateCall(contact.id, targetPhone)
                     } finally {
                         isPreparingCall = false
                     }
                     when (result) {
                         CallInitiationResult.Ready -> {
                             Toast.makeText(context, context.getString(R.string.call_ready), Toast.LENGTH_SHORT).show()
-                            val placed = placeCall(activity, contact, callStateMonitor) { duration ->
+                            val placed = placeCall(activity, contact, targetPhone, callStateMonitor) { duration ->
                                 viewModel.notifyCallEnded(contact.id, duration)
                             }
                             if (!placed) {
@@ -257,7 +263,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         CallInitiationResult.Timeout -> {
                             Toast.makeText(context, context.getString(R.string.call_timeout), Toast.LENGTH_SHORT).show()
-                            val placed = placeCall(activity, contact, callStateMonitor) { duration ->
+                            val placed = placeCall(activity, contact, targetPhone, callStateMonitor) { duration ->
                                 viewModel.notifyCallEnded(contact.id, duration)
                             }
                             if (!placed) {
@@ -415,9 +421,7 @@ class MainActivity : AppCompatActivity() {
                             onMessageConsumed = loginViewModel::clearTransientMessages
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
-                            val currentUser = (authState as? AuthState.Authenticated)?.user
-                            val isFullyAuthenticated = currentUser?.isAnonymous == false
-                            if (isFullyAuthenticated) {
+                            if (authState is AuthState.Authenticated) {
                                 val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                                 navController.navigate(destination) {
                                     popUpTo(0) { inclusive = true }
@@ -668,6 +672,7 @@ class MainActivity : AppCompatActivity() {
                         AlertHistoryScreen(
                             alerts = state.recentEvents,
                             contacts = state.contacts,
+                            showAds = state.showAds,
                             onBack = { navController.popBackStack() },
                             onContactClick = { contactId -> navController.navigate("contact/$contactId") }
                         )
@@ -683,6 +688,7 @@ class MainActivity : AppCompatActivity() {
                             contact = contact,
                             messages = messages,
                             isProUser = state.isProUser,
+                            showAds = state.showAds,
                             onBack = { navController.popBackStack() },
                             onOpenSettings = { navController.navigate("contact/$contactId/settings") },
                             onCallContact = callContactHandler,
@@ -713,8 +719,21 @@ class MainActivity : AppCompatActivity() {
                         val contact = state.contacts.firstOrNull { it.id == contactId }
                         ContactDetailScreen(
                             contact = contact,
+                            showAds = state.showAds,
                             onBack = { navController.popBackStack() },
                             onCallContact = callContactHandler,
+                            onEditContact = { newName, newPhone, newEmail, additionalPhones, additionalEmails ->
+                                contact?.let {
+                                    val updated = it.copy(
+                                        displayName = newName,
+                                        phoneNumber = newPhone,
+                                        email = newEmail,
+                                        additionalPhones = additionalPhones,
+                                        additionalEmails = additionalEmails
+                                    )
+                                    viewModel.saveContact(updated)
+                                }
+                            },
                             onEditEmergencyAlert = { navController.navigate("alerts/contact/$contactId/emergency") },
                             onEditCheckInAlert = { navController.navigate("alerts/contact/$contactId/checkin") },
                             onToggleLocation = { enabled -> contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) } },
@@ -800,12 +819,16 @@ class MainActivity : AppCompatActivity() {
                         SettingsScreen(
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
+                            showAds = state.showAds,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
                             onRequestBatteryOpt = { openBatteryOptimizationSettings(context) },
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
+                            onToggleAutoUpdateContactInfo = viewModel::setAutoUpdateContactInfo,
                             onSyncNow = viewModel::syncContactsNow,
+                            profileUpdateState = state.profileUpdate,
+                            onBroadcastProfileUpdate = viewModel::broadcastProfileToContacts,
                             onEditEmergencyTone = { navController.navigate("alerts/default/emergency") },
                             onEditCheckInTone = { navController.navigate("alerts/default/checkin") },
                             onEditCallTone = { navController.navigate("alerts/default/call") },
@@ -919,9 +942,13 @@ private fun rememberCancelEmergencyLauncher(
 private const val CANCEL_EMERGENCY_AUTHENTICATORS =
     BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
+private fun Contact.primaryPhone(): String? =
+    (listOf(phoneNumber) + additionalPhones).firstOrNull { it.isNotBlank() }
+
 private fun placeCall(
     activity: MainActivity,
     contact: Contact,
+    phoneNumber: String,
     monitor: CallStateMonitor,
     onCallEnded: (Long) -> Unit
 ): Boolean {
@@ -953,7 +980,7 @@ private fun placeCall(
     } else {
         monitor.cancel()
     }
-    val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:${contact.phoneNumber}"))
+    val intent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$phoneNumber"))
     return try {
         activity.startActivity(intent)
         true

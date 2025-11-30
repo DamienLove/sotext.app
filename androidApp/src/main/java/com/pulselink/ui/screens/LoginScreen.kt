@@ -244,6 +244,34 @@ fun LoginScreen(
             ) {
                 Text(text = stringResource(R.string.login_forgot_password))
             }
+            Button(
+                onClick = {
+                    focusManager.clearFocus()
+                    onGoogleClick()
+                },
+                enabled = !state.isSocialLoading && !state.isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            ) {
+                if (state.isSocialLoading) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_google_logo),
+                        contentDescription = stringResource(R.string.login_continue_with_google),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
             Text(
                 text = stringResource(R.string.login_sms_only_helper),
                 style = MaterialTheme.typography.bodySmall,
@@ -267,31 +295,6 @@ fun LoginScreen(
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(text = stringResource(R.string.login_sms_only_cta))
-            }
-
-            Button(
-                onClick = {
-                    focusManager.clearFocus()
-                    onGoogleClick()
-                },
-                enabled = !state.isSocialLoading && !state.isLoading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface
-                )
-            ) {
-                if (state.isSocialLoading) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text(text = stringResource(R.string.login_continue_with_google))
-                }
             }
         }
     }

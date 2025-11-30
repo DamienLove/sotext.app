@@ -45,16 +45,20 @@
         <!-- Contact list -->
         <LinearLayout
             android:id="@+id/widget_contacts"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_width="368dp"
+            android:layout_height="664dp"
             android:layout_alignTop="@+id/widget_center_overlay"
-            android:layout_marginTop="-215dp"
+            android:layout_marginTop="-231dp"
             android:orientation="vertical">
 
             <include layout="@layout/widget_row_contact_1" />
+
             <include layout="@layout/widget_row_contact_2" />
+
             <include layout="@layout/widget_row_contact_3" />
+
             <include layout="@layout/widget_row_contact_4" />
+
             <include layout="@layout/widget_row_contact_5" />
         </LinearLayout>
 
@@ -100,7 +104,7 @@
             <TextView
                 android:id="@+id/widget_emergency_button"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:background="@android:color/transparent" />
 
             <TextView

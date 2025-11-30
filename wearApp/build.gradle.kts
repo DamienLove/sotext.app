@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     kotlin("android")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -57,4 +58,8 @@ dependencies {
     implementation("androidx.wear.watchface:watchface:1.2.0")
     implementation("androidx.wear.watchface:watchface-complications-data:1.2.0")
     implementation("androidx.wear.watchface:watchface-complications-rendering:1.2.0")
+    implementation("com.google.firebase:firebase-auth:24.0.1")
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 }

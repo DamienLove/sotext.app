@@ -92,6 +92,7 @@ class ContactLinkManager @Inject constructor(
 
     suspend fun sendLinkRequest(contactId: Long) {
         val contact = contactRepository.getContact(contactId) ?: return
+        val targetPhone = contact.primaryPhone() ?: return
         val deviceId = settingsRepository.ensureDeviceId()
         val code = contact.linkCode ?: UUID.randomUUID().toString()
         val updated = contact.copy(
@@ -103,11 +104,12 @@ class ContactLinkManager @Inject constructor(
         upsertLinkDoc(code)
         val senderName = settingsRepository.settings.first().ownerName.ifBlank { contact.displayName }
         val payload = SmsCodec.encodeLinkRequest(deviceId, code, senderName)
-        smsSender.sendSms(contact.phoneNumber, payload)
+        smsSender.sendSms(targetPhone, payload)
     }
 
     suspend fun approveLink(contactId: Long) {
         val contact = contactRepository.getContact(contactId) ?: return
+        val targetPhone = contact.primaryPhone() ?: return
         val deviceId = settingsRepository.ensureDeviceId()
         val code = contact.linkCode ?: UUID.randomUUID().toString()
         val updated = contact.copy(
@@ -122,9 +124,9 @@ class ContactLinkManager @Inject constructor(
         )
         contactRepository.upsert(updated)
         upsertLinkDoc(code)
-        maybeApplyRemoteUid(code, contact.phoneNumber)
+        maybeApplyRemoteUid(code, targetPhone)
         val payload = SmsCodec.encodeLinkAccept(deviceId, code)
-        smsSender.sendSms(contact.phoneNumber, payload)
+        smsSender.sendSms(targetPhone, payload)
     }
 
     suspend fun sendPing(contactId: Long): Boolean {
@@ -137,7 +139,7 @@ class ContactLinkManager @Inject constructor(
         )
         val deviceId = settingsRepository.ensureDeviceId()
         val payload = SmsCodec.encodePing(deviceId, contact.linkCode)
-        smsSender.sendSms(contact.phoneNumber, payload)
+        contact.primaryPhone()?.let { smsSender.sendSms(it, payload) }
         return ready
     }
 
@@ -146,6 +148,7 @@ class ContactLinkManager @Inject constructor(
         if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) {
             return CallPreparationResult.FAILED
         }
+        if (contact.primaryPhone().isNullOrBlank()) return CallPreparationResult.FAILED
         val ready = requestRemotePrepare(
             contact = contact,
             tier = EscalationTier.EMERGENCY,
@@ -159,7 +162,7 @@ class ContactLinkManager @Inject constructor(
         val code = contact.linkCode ?: return
         val deviceId = settingsRepository.ensureDeviceId()
         val payload = SmsCodec.encodeCallEnded(deviceId, code, callDuration)
-        smsSender.sendSms(contact.phoneNumber, payload, awaitResult = false)
+        contact.primaryPhone()?.let { smsSender.sendSms(it, payload, awaitResult = false) }
     }
 
     suspend fun sendSoundOverride(contactId: Long, tier: EscalationTier, soundKey: String?) {
@@ -168,7 +171,7 @@ class ContactLinkManager @Inject constructor(
         val code = contact.linkCode ?: return
         val deviceId = settingsRepository.ensureDeviceId()
         val payload = SmsCodec.encodeSoundOverride(deviceId, code, tier, soundKey)
-        smsSender.sendSms(contact.phoneNumber, payload, awaitResult = false)
+        contact.primaryPhone()?.let { smsSender.sendSms(it, payload, awaitResult = false) }
     }
 
     suspend fun handleInbound(message: PulseLinkMessage, fromPhone: String) {
@@ -348,7 +351,7 @@ class ContactLinkManager @Inject constructor(
         val response = SmsCodec.encodeAlertReady(deviceId, message.code, overrideApplied)
         // Fire-and-forget so we don't block the inbound SMS broadcast while waiting for
         // the modem to confirm send/delivery of the acknowledgement.
-        smsSender.sendSms(contact.phoneNumber, response, awaitResult = false)
+        contact.primaryPhone()?.let { smsSender.sendSms(it, response, awaitResult = false) }
         if (message.reason == PulseLinkMessage.AlertPrepareReason.CALL) {
             remoteActionHandler.notifyIncomingCall(contact, message.tier)
         }
@@ -404,7 +407,7 @@ class ContactLinkManager @Inject constructor(
                 ?: return
             markPresence(contact, payload.timestamp)
             deliverManualMessage(contact, payload.body, overrideApplied = true)
-            payload.linkCode?.let { maybeApplyRemoteUid(it, contact.phoneNumber) }
+            payload.linkCode?.let { maybeApplyRemoteUid(it, contact.primaryPhone().orEmpty()) }
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process realtime message ${payload.id}", error)
         }
@@ -513,7 +516,8 @@ class ContactLinkManager @Inject constructor(
         contacts.forEach { contact ->
             val code = contact.linkCode ?: return@forEach
             val payload = SmsCodec.encodeManualMessage(deviceId, code, body)
-            if (smsSender.sendSms(contact.phoneNumber, payload)) {
+            val targetPhone = contact.primaryPhone()
+            if (targetPhone != null && smsSender.sendSms(targetPhone, payload)) {
                 sentAny = true
                 messageRepository.record(
                     ContactMessage(
@@ -578,6 +582,8 @@ class ContactLinkManager @Inject constructor(
     private suspend fun handleConfigUpdate(message: PulseLinkMessage.ConfigUpdate) {
         val contact = contactRepository.getByLinkCode(message.code) ?: return
         val freshContact = markPresence(contact)
+        val settings = settingsRepository.settings.first()
+        if (!settings.autoUpdateContactInfo) return
         when (message.key) {
             CONFIG_REMOTE_SOUND -> {
                 val allow = message.value == "1"
@@ -586,6 +592,14 @@ class ContactLinkManager @Inject constructor(
             CONFIG_REMOTE_OVERRIDE -> {
                 val allow = message.value == "1"
                 contactRepository.upsert(freshContact.copy(allowRemoteOverride = allow))
+            }
+            CONFIG_PHONE_UPDATE -> {
+                if (message.value.isNotBlank()) {
+                    contactRepository.upsert(freshContact.copy(phoneNumber = message.value))
+                }
+            }
+            CONFIG_EMAIL_UPDATE -> {
+                contactRepository.upsert(freshContact.copy(email = message.value.ifBlank { null }))
             }
         }
     }
@@ -643,7 +657,7 @@ class ContactLinkManager @Inject constructor(
         if (contact.linkStatus == LinkStatus.LINKED && !contact.linkCode.isNullOrBlank()) {
             val deviceId = settingsRepository.ensureDeviceId()
             val payload = SmsCodec.encodeConfig(deviceId, contact.linkCode, CONFIG_REMOTE_SOUND, if (allow) "1" else "0")
-            smsSender.sendSms(contact.phoneNumber, payload)
+            contact.primaryPhone()?.let { smsSender.sendSms(it, payload) }
         }
     }
 
@@ -654,7 +668,37 @@ class ContactLinkManager @Inject constructor(
         if (contact.linkStatus == LinkStatus.LINKED && !contact.linkCode.isNullOrBlank()) {
             val deviceId = settingsRepository.ensureDeviceId()
             val payload = SmsCodec.encodeConfig(deviceId, contact.linkCode, CONFIG_REMOTE_OVERRIDE, if (allow) "1" else "0")
-            smsSender.sendSms(contact.phoneNumber, payload)
+            contact.primaryPhone()?.let { smsSender.sendSms(it, payload) }
+        }
+    }
+
+    suspend fun broadcastProfileUpdate(): Result<Int> = runCatching {
+        val phone = auth.currentUser?.phoneNumber
+        val email = auth.currentUser?.email
+        val deviceId = settingsRepository.ensureDeviceId()
+        val linkedContacts = contactRepository.getLinkedContacts()
+        var sent = 0
+        linkedContacts.forEach { contact ->
+            val code = contact.linkCode ?: return@forEach
+            phone?.let {
+                contact.primaryPhone()?.let { target ->
+                    smsSender.sendSms(target, SmsCodec.encodeConfig(deviceId, code, CONFIG_PHONE_UPDATE, it))
+                }
+            }
+            email?.let {
+                contact.primaryPhone()?.let { target ->
+                    smsSender.sendSms(target, SmsCodec.encodeConfig(deviceId, code, CONFIG_EMAIL_UPDATE, it))
+                }
+            }
+            sent++
+        }
+        sent
+    }
+
+    suspend fun hydrateContactFromEmail(contactId: Long) {
+        val contact = contactRepository.getContact(contactId) ?: return
+        if (!contact.email.isNullOrBlank() && contact.remoteDeviceId.isNullOrBlank()) {
+            maybeResolveRemoteIdentity(contact)
         }
     }
 
@@ -664,20 +708,35 @@ class ContactLinkManager @Inject constructor(
         return requestRemotePrepare(contact, tier)
     }
 
-        suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult {
-            Log.d(TAG, "sendManualMessage: START for contactId=$contactId")
-            val contact = contactRepository.getContact(contactId)
-                ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
-            val code = contact.linkCode
-            if (code.isNullOrBlank()) {
+    suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult {
+        Log.d(TAG, "sendManualMessage: START for contactId=$contactId")
+        var contact = contactRepository.getContact(contactId)
+            ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
+
+        if ((contact.remoteDeviceId.isNullOrBlank() || contact.linkStatus != LinkStatus.LINKED) &&
+            !contact.email.isNullOrBlank()
+        ) {
+            maybeResolveRemoteIdentity(contact)?.let { resolved ->
+                contact = resolved
+            }
+        }
+
+        val hasRealtimeChannel = contact.linkStatus == LinkStatus.LINKED && !contact.remoteDeviceId.isNullOrBlank()
+        val hasSmsMirror = (contact.primaryPhone()?.isNotBlank() == true) && !contact.linkCode.isNullOrBlank()
+
+        if (!hasRealtimeChannel && !hasSmsMirror) {
             Log.w(TAG, "sendManualMessage: FAILED. Reason: NOT_LINKED for contactId=$contactId")
             return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
         }
+
         return try {
-            Log.d(TAG, "sendManualMessage: Attempting realtime send for contactId=$contactId.")
-            val realtimeSent = linkChannelService.sendManualMessage(contact, message)
-            Log.d(TAG, "sendManualMessage: Realtime send result for contactId=$contactId: $realtimeSent")
-            val ready = if (contact.linkStatus == LinkStatus.LINKED) {
+            val realtimeSent = if (hasRealtimeChannel) {
+                Log.d(TAG, "sendManualMessage: Attempting realtime send for contactId=$contactId.")
+                linkChannelService.sendManualMessage(contact, message)
+            } else {
+                false
+            }
+            val ready = if (hasRealtimeChannel && contact.linkCode != null) {
                 requestRemotePrepare(
                     contact,
                     EscalationTier.CHECK_IN,
@@ -686,15 +745,16 @@ class ContactLinkManager @Inject constructor(
             } else {
                 false
             }
-            if (!realtimeSent) {
+            if (!realtimeSent && hasSmsMirror) {
                 Log.d(TAG, "sendManualMessage: Realtime send failed, falling back to SMS for contactId=$contactId.")
-            } else {
+            } else if (realtimeSent && hasSmsMirror) {
                 Log.d(TAG, "sendManualMessage: Realtime send succeeded; mirroring via SMS for contactId=$contactId.")
             }
+
             val deviceId = settingsRepository.ensureDeviceId()
-            val payload = SmsCodec.encodeManualMessage(deviceId, code, message)
-            val smsSent = if (contact.phoneNumber.isNotBlank()) {
-                smsSender.sendSms(contact.phoneNumber, payload)
+            val smsSent = if (hasSmsMirror) {
+                val payload = SmsCodec.encodeManualMessage(deviceId, contact.linkCode!!, message)
+                contact.primaryPhone()?.let { smsSender.sendSms(it, payload) } ?: false
             } else {
                 false
             }
@@ -712,15 +772,15 @@ class ContactLinkManager @Inject constructor(
                 )
             }
 
-            if (smsSent) {
-                ManualMessageResult.Success(overrideApplied = ready)
-            } else {
-                if (realtimeSent) {
-                    Log.w(TAG, "sendManualMessage: SMS mirror failed but realtime dispatch succeeded for contactId=$contactId")
+            when {
+                smsSent -> ManualMessageResult.Success(overrideApplied = ready)
+                realtimeSent -> {
+                    if (!smsSent && hasSmsMirror) {
+                        Log.w(TAG, "sendManualMessage: SMS mirror failed but realtime dispatch succeeded for contactId=$contactId")
+                    }
                     ManualMessageResult.Success(overrideApplied = ready)
-                } else {
-                    ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
                 }
+                else -> ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
             }
         } catch (error: Exception) {
             Log.e(TAG, "Unable to send manual message for contactId=$contactId", error)
@@ -740,7 +800,7 @@ class ContactLinkManager @Inject constructor(
         val deferred = CompletableDeferred<Boolean>()
         alertHandshake[code] = deferred
         val payload = SmsCodec.encodeAlertPrepare(deviceId, code, tier, reason)
-        smsSender.sendSms(contact.phoneNumber, payload)
+        contact.primaryPhone()?.let { smsSender.sendSms(it, payload) }
         val ready = withTimeoutOrNull(PREPARE_TIMEOUT_MS) { deferred.await() } ?: false
         alertHandshake.remove(code)
         if (!ready) {
@@ -806,7 +866,9 @@ class ContactLinkManager @Inject constructor(
         val normalizedIncoming = normalizePhone(phone)
         if (normalizedIncoming.isEmpty()) return null
         return contactRepository.observeContacts().first().firstOrNull { existing ->
-            normalizePhone(existing.phoneNumber) == normalizedIncoming
+            (listOf(existing.phoneNumber) + existing.additionalPhones)
+                .map { normalizePhone(it) }
+                .any { it == normalizedIncoming }
         }
     }
 
@@ -822,9 +884,10 @@ class ContactLinkManager @Inject constructor(
             tier,
             PulseLinkMessage.AlertPrepareReason.ALERT
         )
-        smsSender.sendSms(contact.phoneNumber, preparePayload, awaitResult = false)
+        val targetPhone = contact.primaryPhone() ?: return RemoteAlertResult(contact.id, contact.displayName, RemoteAlertStatus.NOT_LINKED, tier)
+        smsSender.sendSms(targetPhone, preparePayload, awaitResult = false)
         val alertPayload = SmsCodec.encodeRemoteAlert(deviceId, code, tier)
-        val alertSent = smsSender.sendSms(contact.phoneNumber, alertPayload, awaitResult = false)
+        val alertSent = smsSender.sendSms(targetPhone, alertPayload, awaitResult = false)
         return if (alertSent) {
             RemoteAlertResult(contact.id, contact.displayName, RemoteAlertStatus.SUCCESS, tier)
         } else {
@@ -909,16 +972,41 @@ class ContactLinkManager @Inject constructor(
         return updated
     }
 
+    private suspend fun maybeResolveRemoteIdentity(contact: Contact): Contact? {
+        val email = normalizeEmail(contact.primaryEmail()).takeIf { it.isNotBlank() } ?: return null
+        return runCatching {
+            val query = firestore.collection("users")
+                .whereEqualTo("emailLowercase", email)
+                .limit(1)
+                .get()
+                .await()
+            val doc = query.documents.firstOrNull() ?: return@runCatching null
+            val remoteUid = doc.id
+            val remoteDeviceId = doc.getString("deviceId") ?: return@runCatching null
+            val updated = contact.copy(
+                remoteUid = remoteUid,
+                remoteDeviceId = remoteDeviceId,
+                linkStatus = LinkStatus.LINKED,
+                pendingApproval = false
+            )
+            contactRepository.upsert(updated)
+            mirrorContactToCloud(updated)
+            updated
+        }.onFailure {
+            Log.w(TAG, "Unable to resolve remote identity for email=$email", it)
+        }.getOrNull()
+    }
+
     private suspend fun mirrorContactToCloud(contact: Contact) {
         val user = auth.currentUser ?: return
         if (user.isAnonymous) return
-        val docId = contact.phoneNumber.ifBlank {
-            contact.displayName.lowercase().replace("\\s+".toRegex(), "_")
-                .ifBlank { contact.displayName.hashCode().toString() }
-        }
+        val docId = contactDocId(contact)
         val payload = mapOf(
             "displayName" to contact.displayName,
             "phoneNumber" to contact.phoneNumber,
+            "email" to contact.email,
+            "additionalPhones" to contact.additionalPhones,
+            "additionalEmails" to contact.additionalEmails,
             "escalationTier" to contact.escalationTier.name,
             "includeLocation" to contact.includeLocation,
             "autoCall" to contact.autoCall,
@@ -950,6 +1038,8 @@ class ContactLinkManager @Inject constructor(
         private const val CHANNEL_ID = "pulselink_link_channel"
         const val CONFIG_REMOTE_SOUND = "ALLOW_SOUND"
         const val CONFIG_REMOTE_OVERRIDE = "ALLOW_OVERRIDE"
+        const val CONFIG_PHONE_UPDATE = "PHONE"
+        const val CONFIG_EMAIL_UPDATE = "EMAIL"
         private const val PREPARE_TIMEOUT_MS = 10_000L
         const val COLLECTION_LINKS = "links"
         private const val REMOTE_ALERT_DEDUP_WINDOW_MS = 15_000L
@@ -987,10 +1077,29 @@ private fun normalizePhone(input: String): String {
             if (ch.isDigit()) append(ch)
         }
     }
-    if (digits.length > 10 && digits.startsWith("1")) {
-        return digits.drop(1)
+    return if (input.startsWith("+")) "+$digits" else digits
+}
+
+private fun normalizeEmail(input: String?): String =
+    input?.trim()?.lowercase().orEmpty()
+
+private fun Contact.primaryPhone(): String? =
+    (listOf(phoneNumber) + additionalPhones).firstOrNull { it.isNotBlank() }
+
+private fun Contact.primaryEmail(): String? =
+    (listOfNotNull(email) + additionalEmails).firstOrNull { it.isNotBlank() }
+
+private fun contactDocId(contact: Contact): String {
+    val phoneRaw = contact.primaryPhone()?.trim().orEmpty()
+    val normalizedEmail = normalizeEmail(contact.email)
+    return when {
+        phoneRaw.isNotBlank() -> phoneRaw
+        normalizedEmail.isNotBlank() -> "email_$normalizedEmail"
+        !contact.remoteUid.isNullOrBlank() -> "uid_${contact.remoteUid}"
+        !contact.linkCode.isNullOrBlank() -> "link_${contact.linkCode}"
+        else -> contact.displayName.lowercase().replace("\\s+".toRegex(), "_")
+            .ifBlank { contact.displayName.hashCode().toString() }
     }
-    return digits
 }
 
 @Singleton

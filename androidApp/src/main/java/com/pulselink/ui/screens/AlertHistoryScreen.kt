@@ -48,10 +48,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.AlertEvent
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.EscalationTier
+import com.pulselink.ui.ads.BannerAdSlot
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -61,6 +63,7 @@ import java.time.ZoneId
 fun AlertHistoryScreen(
     alerts: List<AlertEvent>,
     contacts: List<Contact>,
+    showAds: Boolean,
     onBack: () -> Unit,
     onContactClick: (Long) -> Unit
 ) {
@@ -85,7 +88,12 @@ fun AlertHistoryScreen(
                 }
             )
         },
-        contentWindowInsets = WindowInsets.safeDrawing
+        contentWindowInsets = WindowInsets.safeDrawing,
+        bottomBar = {
+            if (BuildConfig.ADS_ENABLED && showAds) {
+                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
+            }
+        }
     ) { padding ->
         if (sortedEvents.isEmpty()) {
             AlertHistoryEmptyState(modifier = Modifier.padding(padding))
