@@ -235,21 +235,14 @@ private fun LinkStatusSection(
     onToggleRemoteSound: (Boolean) -> Unit,
     onPing: () -> Unit
 ) {
-    val canSendSmsLink = contact.phoneNumber.isNotBlank()
+    val canSendLink = contact.phoneNumber.isNotBlank() || contact.email?.isNotBlank() == true
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(text = "Link status", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
             when (contact.linkStatus) {
                 LinkStatus.NONE -> {
                     Text(text = "This contact is not linked yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (!canSendSmsLink) {
-                        Text(
-                            text = "Add a phone number to send SMS link requests, or message via email only.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    Button(onClick = onSendLink, enabled = canSendSmsLink, modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = onSendLink, enabled = canSendLink, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.Link, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Send link request")
@@ -257,7 +250,7 @@ private fun LinkStatusSection(
                 }
                 LinkStatus.OUTBOUND_PENDING -> {
                     Text(text = "Awaiting their approval.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = onSendLink, enabled = canSendSmsLink, modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = onSendLink, enabled = canSendLink, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Filled.Send, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Resend link request")

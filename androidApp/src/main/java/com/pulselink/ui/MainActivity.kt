@@ -110,6 +110,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.pulselink.BuildConfig
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -639,7 +640,9 @@ class MainActivity : AppCompatActivity() {
                             onAddContact = viewModel::saveContact,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
-                            onSendLink = viewModel::sendLinkRequest,
+                            onSendLink = { contactId ->
+                                state.contacts.firstOrNull { it.id == contactId }?.let { sendLinkOrInvite(it) }
+                            },
                             onApproveLink = viewModel::approveLink,
                             onCallContact = callContactHandler,
                             onReorderContacts = viewModel::reorderContacts,
@@ -739,7 +742,9 @@ class MainActivity : AppCompatActivity() {
                             onToggleAutoCall = { enabled -> contact?.let { viewModel.updateContact(it.copy(autoCall = enabled)) } },
                             onToggleRemoteOverride = { allow -> viewModel.setRemoteOverridePermission(contactId, allow) },
                             onToggleRemoteSound = { allow -> viewModel.setRemoteSoundPermission(contactId, allow) },
-                            onSendLink = { viewModel.sendLinkRequest(contactId) },
+                            onSendLink = {
+                                contact?.let { sendLinkOrInvite(it) }
+                            },
                             onApproveLink = { viewModel.approveLink(contactId) },
                             onPing = { viewModel.sendPing(contactId) },
                             onDelete = {
@@ -864,6 +869,34 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun sendLinkOrInvite(contact: Contact) {
+        if (contact.phoneNumber.isNotBlank()) {
+            viewModel.sendLinkRequest(contact.id)
+            Toast.makeText(this, getString(R.string.link_request_sent_sms), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val email = contact.email
+        if (!email.isNullOrBlank()) {
+            val sender = viewModel.uiState.value.settings.ownerName.ifBlank { getString(R.string.app_name) }
+            val playPackage = if (BuildConfig.ADS_ENABLED) "com.free.pulselink" else "com.pulselink.pro"
+            val playLink = "https://play.google.com/store/apps/details?id=$playPackage"
+            val subject = getString(R.string.link_invite_email_subject, sender)
+            val body = getString(R.string.link_invite_email_body, contact.displayName, sender, playLink)
+            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("mailto:$email")
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+                putExtra(Intent.EXTRA_TEXT, body)
+            }
+            try {
+                startActivity(Intent.createChooser(intent, getString(R.string.link_invite_email_chooser)))
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(this, getString(R.string.link_invite_no_email_app), Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+        Toast.makeText(this, getString(R.string.link_invite_missing_contact_info), Toast.LENGTH_SHORT).show()
     }
 
     override fun onResume() {
