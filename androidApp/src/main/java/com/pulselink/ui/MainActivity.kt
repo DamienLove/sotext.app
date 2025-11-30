@@ -722,14 +722,12 @@ class MainActivity : AppCompatActivity() {
                             showAds = state.showAds,
                             onBack = { navController.popBackStack() },
                             onCallContact = callContactHandler,
-                            onEditContact = { newName, newPhone, newEmail, additionalPhones, additionalEmails ->
+                            onEditContact = { newName, newPhone, newEmail ->
                                 contact?.let {
                                     val updated = it.copy(
                                         displayName = newName,
                                         phoneNumber = newPhone,
-                                        email = newEmail,
-                                        additionalPhones = additionalPhones,
-                                        additionalEmails = additionalEmails
+                                        email = newEmail
                                     )
                                     viewModel.saveContact(updated)
                                 }

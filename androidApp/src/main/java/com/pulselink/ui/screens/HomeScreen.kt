@@ -130,10 +130,8 @@ fun HomeScreen(
 
     var showAddDialog by remember { mutableStateOf(false) }
     var newContactName by remember { mutableStateOf(TextFieldValue()) }
-    var newContactPhone by remember { mutableStateOf(TextFieldValue()) }
-    var newContactEmail by remember { mutableStateOf(TextFieldValue()) }
-    var newContactAltPhone by remember { mutableStateOf(TextFieldValue()) }
-    var newContactAltEmail by remember { mutableStateOf(TextFieldValue()) }
+    // Single handle: phone or email
+    var newContactHandle by remember { mutableStateOf(TextFieldValue()) }
     var allowRemoteSound by remember { mutableStateOf(false) }
     var searchValue by remember { mutableStateOf(TextFieldValue()) }
 
@@ -142,7 +140,7 @@ fun HomeScreen(
             resolveContact(context, uri)?.let { (name, number) ->
                 newContactName = TextFieldValue(name)
                 if (number.isNotBlank()) {
-                    newContactPhone = TextFieldValue(number)
+                    newContactHandle = TextFieldValue(number)
                 }
             }
         }
@@ -151,10 +149,7 @@ fun HomeScreen(
     LaunchedEffect(showAddDialog) {
         if (showAddDialog) {
             newContactName = TextFieldValue()
-            newContactPhone = TextFieldValue()
-            newContactEmail = TextFieldValue()
-            newContactAltPhone = TextFieldValue()
-            newContactAltEmail = TextFieldValue()
+            newContactHandle = TextFieldValue()
             allowRemoteSound = false
         }
     }
@@ -223,32 +218,24 @@ fun HomeScreen(
         AddContactDialog(
             name = newContactName,
             onNameChange = { newContactName = it },
-            phone = newContactPhone,
-            onPhoneChange = { newContactPhone = it },
-            email = newContactEmail,
-            onEmailChange = { newContactEmail = it },
-            altPhone = newContactAltPhone,
-            onAltPhoneChange = { newContactAltPhone = it },
-            altEmail = newContactAltEmail,
-            onAltEmailChange = { newContactAltEmail = it },
+            handle = newContactHandle,
+            onHandleChange = { newContactHandle = it },
             allowRemoteSound = allowRemoteSound,
             onAllowRemoteSoundChange = { allowRemoteSound = it },
             onImport = { contactPicker.launch(null) },
             onDismiss = { showAddDialog = false },
             onSave = {
                 val name = newContactName.text.trim()
-                val phone = newContactPhone.text.trim()
-                val email = newContactEmail.text.trim()
-                val altPhone = newContactAltPhone.text.trim()
-                val altEmail = newContactAltEmail.text.trim()
-                if (name.isNotEmpty() && (phone.isNotEmpty() || email.isNotEmpty())) {
+                val handle = newContactHandle.text.trim()
+                if (name.isNotEmpty() && handle.isNotEmpty()) {
+                    val isEmail = handle.contains("@")
                     onAddContact(
                         Contact(
                             displayName = name,
-                            phoneNumber = phone,
-                            email = email.ifBlank { null },
-                            additionalPhones = listOf(altPhone).filter { it.isNotBlank() },
-                            additionalEmails = listOf(altEmail).filter { it.isNotBlank() },
+                            phoneNumber = if (isEmail) "" else handle,
+                            email = if (isEmail) handle else null,
+                            additionalPhones = emptyList(),
+                            additionalEmails = emptyList(),
                             allowRemoteSoundChange = allowRemoteSound
                         )
                     )
@@ -1304,14 +1291,8 @@ private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
 private fun AddContactDialog(
     name: TextFieldValue,
     onNameChange: (TextFieldValue) -> Unit,
-    phone: TextFieldValue,
-    onPhoneChange: (TextFieldValue) -> Unit,
-    email: TextFieldValue,
-    onEmailChange: (TextFieldValue) -> Unit,
-    altPhone: TextFieldValue,
-    onAltPhoneChange: (TextFieldValue) -> Unit,
-    altEmail: TextFieldValue,
-    onAltEmailChange: (TextFieldValue) -> Unit,
+    handle: TextFieldValue,
+    onHandleChange: (TextFieldValue) -> Unit,
     allowRemoteSound: Boolean,
     onAllowRemoteSoundChange: (Boolean) -> Unit,
     onImport: () -> Unit,
@@ -1330,27 +1311,9 @@ private fun AddContactDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
-                    value = phone,
-                    onValueChange = onPhoneChange,
-                    label = { Text("Phone (preferred)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = altPhone,
-                    onValueChange = onAltPhoneChange,
-                    label = { Text("Additional phone (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = onEmailChange,
-                    label = { Text("Email (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = altEmail,
-                    onValueChange = onAltEmailChange,
-                    label = { Text("Additional email (optional)") },
+                    value = handle,
+                    onValueChange = onHandleChange,
+                    label = { Text("Phone or email") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Row(

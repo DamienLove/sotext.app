@@ -71,7 +71,7 @@ fun ContactDetailScreen(
     showAds: Boolean,
     onBack: () -> Unit,
     onCallContact: suspend (Contact) -> Unit,
-    onEditContact: (String, String, String?, List<String>, List<String>) -> Unit,
+    onEditContact: (String, String, String?) -> Unit,
     onEditEmergencyAlert: () -> Unit,
     onEditCheckInAlert: () -> Unit,
     onToggleLocation: (Boolean) -> Unit,
@@ -369,13 +369,11 @@ private fun SettingsCard(
 private fun EditContactDialog(
     contact: Contact,
     onDismiss: () -> Unit,
-    onSave: (String, String, String?, List<String>, List<String>) -> Unit
+    onSave: (String, String, String?) -> Unit
 ) {
     var name by remember { mutableStateOf(contact.displayName) }
     var phone by remember { mutableStateOf(contact.phoneNumber) }
     var email by remember { mutableStateOf(contact.email.orEmpty()) }
-    var altPhone by remember { mutableStateOf(contact.additionalPhones.firstOrNull().orEmpty()) }
-    var altEmail by remember { mutableStateOf(contact.additionalEmails.firstOrNull().orEmpty()) }
     val canSave = name.isNotBlank() && (phone.isNotBlank() || email.isNotBlank())
 
     androidx.compose.material3.AlertDialog(
@@ -401,30 +399,12 @@ private fun EditContactDialog(
                     label = { Text("Email (optional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
-                    value = altPhone,
-                    onValueChange = { altPhone = it },
-                    label = { Text("Additional phone (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = altEmail,
-                    onValueChange = { altEmail = it },
-                    label = { Text("Additional email (optional)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onSave(
-                        name.trim(),
-                        phone.trim(),
-                        email.trim().ifBlank { null },
-                        listOf(altPhone.trim()).filter { it.isNotBlank() },
-                        listOf(altEmail.trim()).filter { it.isNotBlank() }
-                    )
+                    onSave(name.trim(), phone.trim(), email.trim().ifBlank { null })
                 },
                 enabled = canSave
             ) {
