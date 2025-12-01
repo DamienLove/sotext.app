@@ -2,6 +2,8 @@ import java.io.File
 import java.util.Locale
 import java.util.Properties
 import org.gradle.api.Project
+import org.gradle.api.tasks.Copy
+import com.google.gms.googleservices.GoogleServicesTask
 
 plugins {
     id("com.android.application")
@@ -125,8 +127,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 20
-        versionName = "20"
+        versionCode = 22
+        versionName = "22"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -228,6 +230,27 @@ android {
     buildTypes.forEach {
         it.manifestPlaceholders["googleServices"] = "true"
     }
+}
+
+// Automatically copy per-flavor google-services.json from secure folders if present.
+listOf(
+    "free" to rootProject.file("Free-Certs/google-services.json"),
+    "pro" to rootProject.file("PRO-CERTS/google-services.json")
+).forEach { (flavor, sourceFile) ->
+    tasks.register("sync${flavor.replaceFirstChar { it.titlecase(Locale.US) }}GoogleServices", Copy::class) {
+        onlyIf { sourceFile.exists() }
+        from(sourceFile)
+        into(file("src/$flavor"))
+        rename { "google-services.json" }
+    }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn("syncFreeGoogleServices", "syncProGoogleServices")
+}
+
+tasks.withType(GoogleServicesTask::class.java).configureEach {
+    dependsOn("syncFreeGoogleServices", "syncProGoogleServices")
 }
 
 kapt {

@@ -380,13 +380,13 @@ class MainActivity : AppCompatActivity() {
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
                         val activity = LocalContext.current as? MainActivity
                         val googleClient = remember {
-                            GoogleSignIn.getClient(
-                                activity!!,
-                                GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                                    .requestIdToken(getString(R.string.google_web_client_id))
-                                    .requestEmail()
-                                    .build()
-                            )
+                                GoogleSignIn.getClient(
+                                    activity!!,
+                                    GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                                        .requestIdToken(getString(R.string.default_web_client_id))
+                                        .requestEmail()
+                                        .build()
+                                )
                         }
                         val googleLauncher = rememberLauncherForActivityResult(
                             contract = ActivityResultContracts.StartActivityForResult()

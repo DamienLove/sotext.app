@@ -9,6 +9,7 @@ androidApp/.gradle/
 gradle-8.6/
 gradle-8.6-bin.zip
 pulselink-*.json
+**/google-services.json
 
 functions/node_modules/
 functions/lib/
