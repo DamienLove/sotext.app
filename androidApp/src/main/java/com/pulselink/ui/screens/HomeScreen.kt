@@ -300,14 +300,6 @@ private fun HeaderSection(
                     isProUser = state.isProUser
                 )
             }
-            if (!state.settings.assistantShortcutsDismissed) {
-                VoiceTipsCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    isProUser = state.isProUser,
-                    onUpgradeClick = onUpgradeClick,
-                    onDismiss = onDismissAssistantShortcuts
-                )
-            }
         }
     }
 }

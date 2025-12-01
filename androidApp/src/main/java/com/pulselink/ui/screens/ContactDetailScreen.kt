@@ -183,8 +183,8 @@ fun ContactDetailScreen(
         EditContactDialog(
             contact = contact,
             onDismiss = { showEditDialog = false },
-            onSave = { name, phone, email, additionalPhones, additionalEmails ->
-                onEditContact(name, phone, email, additionalPhones, additionalEmails)
+            onSave = { name, phone, email ->
+                onEditContact(name, phone, email)
                 showEditDialog = false
             }
         )
