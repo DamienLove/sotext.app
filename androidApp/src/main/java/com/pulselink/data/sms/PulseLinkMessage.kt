@@ -57,7 +57,9 @@ sealed class PulseLinkMessage {
     data class ManualMessage(
         override val senderId: String,
         override val code: String,
-        val body: String
+        val body: String,
+        val urgency: com.pulselink.domain.model.MessageUrgency = com.pulselink.domain.model.MessageUrgency.STANDARD,
+        val volumeHint: com.pulselink.domain.model.VolumeHint? = null
     ) : PulseLinkMessage()
 
     data class ConfigUpdate(

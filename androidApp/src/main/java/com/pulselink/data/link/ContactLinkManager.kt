@@ -392,7 +392,13 @@ class ContactLinkManager @Inject constructor(
         try {
             val persisted = resolveContactForManualMessage(message, fromPhone) ?: return
             markPresence(persisted)
-            deliverManualMessage(persisted, message.body, overrideApplied = true)
+            deliverManualMessage(
+                contact = persisted,
+                rawBody = message.body,
+                overrideApplied = true,
+                urgency = message.urgency,
+                volumeHint = message.volumeHint
+            )
             maybeApplyRemoteUid(message.code, fromPhone)
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process manual message from $fromPhone", error)
@@ -406,7 +412,13 @@ class ContactLinkManager @Inject constructor(
                 ?: payload.phoneNumber?.takeIf { it.isNotBlank() }?.let { contactRepository.getByPhone(it) }
                 ?: return
             markPresence(contact, payload.timestamp)
-            deliverManualMessage(contact, payload.body, overrideApplied = true)
+            deliverManualMessage(
+                contact = contact,
+                rawBody = payload.body,
+                overrideApplied = true,
+                urgency = payload.urgency,
+                volumeHint = payload.volumeHint
+            )
             payload.linkCode?.let { maybeApplyRemoteUid(it, contact.primaryPhone().orEmpty()) }
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process realtime message ${payload.id}", error)
@@ -465,7 +477,13 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
-    private suspend fun deliverManualMessage(contact: Contact, rawBody: String, overrideApplied: Boolean) {
+    private suspend fun deliverManualMessage(
+        contact: Contact,
+        rawBody: String,
+        overrideApplied: Boolean,
+        urgency: com.pulselink.domain.model.MessageUrgency,
+        volumeHint: com.pulselink.domain.model.VolumeHint?
+    ) {
         val body = rawBody.ifBlank { context.getString(R.string.ping_received_body) }
         val title = context.getString(R.string.manual_message_title, contact.displayName)
         if (isAutoAlertBody(rawBody)) {
@@ -481,12 +499,19 @@ class ContactLinkManager @Inject constructor(
             }
             return
         }
+        val tier = when (urgency) {
+            com.pulselink.domain.model.MessageUrgency.EMERGENCY,
+            com.pulselink.domain.model.MessageUrgency.URGENT -> EscalationTier.EMERGENCY
+            com.pulselink.domain.model.MessageUrgency.STANDARD -> EscalationTier.CHECK_IN
+        }
         remoteActionHandler.playAttentionTone(
             contact = contact,
-            tier = EscalationTier.CHECK_IN,
+            tier = tier,
             title = title,
             body = body,
-            notificationId = (contact.id.hashCode() and 0xFFFF) + 3000
+            notificationId = (contact.id.hashCode() and 0xFFFF) + 3000,
+            forceBypass = true,
+            volumeHint = volumeHint
         )
         withContext(Dispatchers.IO) {
             messageRepository.record(
@@ -515,7 +540,13 @@ class ContactLinkManager @Inject constructor(
         var sentAny = false
         contacts.forEach { contact ->
             val code = contact.linkCode ?: return@forEach
-            val payload = SmsCodec.encodeManualMessage(deviceId, code, body)
+            val payload = SmsCodec.encodeManualMessage(
+                deviceId,
+                code,
+                body,
+                com.pulselink.domain.model.MessageUrgency.STANDARD,
+                null
+            )
             val targetPhone = contact.primaryPhone()
             if (targetPhone != null && smsSender.sendSms(targetPhone, payload)) {
                 sentAny = true
@@ -708,7 +739,12 @@ class ContactLinkManager @Inject constructor(
         return requestRemotePrepare(contact, tier)
     }
 
-    suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult {
+    suspend fun sendManualMessage(
+        contactId: Long,
+        message: String,
+        urgency: com.pulselink.domain.model.MessageUrgency = com.pulselink.domain.model.MessageUrgency.STANDARD,
+        volumeHint: com.pulselink.domain.model.VolumeHint? = null
+    ): ManualMessageResult {
         Log.d(TAG, "sendManualMessage: START for contactId=$contactId")
         var contact = contactRepository.getContact(contactId)
             ?: return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.CONTACT_MISSING)
@@ -732,7 +768,7 @@ class ContactLinkManager @Inject constructor(
         return try {
             val realtimeSent = if (hasRealtimeChannel) {
                 Log.d(TAG, "sendManualMessage: Attempting realtime send for contactId=$contactId.")
-                linkChannelService.sendManualMessage(contact, message)
+                linkChannelService.sendManualMessage(contact, message, urgency, volumeHint)
             } else {
                 false
             }
@@ -753,7 +789,7 @@ class ContactLinkManager @Inject constructor(
 
             val deviceId = settingsRepository.ensureDeviceId()
             val smsSent = if (hasSmsMirror) {
-                val payload = SmsCodec.encodeManualMessage(deviceId, contact.linkCode!!, message)
+                val payload = SmsCodec.encodeManualMessage(deviceId, contact.linkCode!!, message, urgency, volumeHint)
                 contact.primaryPhone()?.let { smsSender.sendSms(it, payload) } ?: false
             } else {
                 false
@@ -1167,7 +1203,8 @@ class RemoteActionHandler @Inject constructor(
         body: String,
         notificationId: Int,
         forceBypass: Boolean = false,
-        overrideHoldMs: Long = MESSAGE_OVERRIDE_HOLD_MS
+        overrideHoldMs: Long = MESSAGE_OVERRIDE_HOLD_MS,
+        volumeHint: com.pulselink.domain.model.VolumeHint? = null
     ) {
         val settings = settingsRepository.settings.first()
         val (profile, category, soundKey) = when (tier) {
@@ -1195,7 +1232,7 @@ class RemoteActionHandler @Inject constructor(
         }
         val overrideResult = if (requestBypass) {
             withContext(Dispatchers.Main) {
-                audioOverrideManager.overrideForAlert(true)
+                audioOverrideManager.overrideForAlert(true, volumeHint)
             }
         } else {
             AudioOverrideManager.OverrideResult.skipped()

@@ -151,9 +151,7 @@
     <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → PulseLink → Notifications and re-enable bypass.</string>
     <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>
     <string name="assistant_trigger_check_in">Check-in sent via Google Assistant.</string>
-    <string name="assistant_shortcut_emergency_short">PulseLink emergency</string>
     <string name="assistant_shortcut_emergency_long">Send a PulseLink emergency alert</string>
-    <string name="assistant_shortcut_check_in_short">PulseLink check-in</string>
     <string name="assistant_shortcut_check_in_long">Send a PulseLink check-in</string>
     <string name="assistant_hint_title">Voice commands, no setup</string>
     <string name="assistant_hint_subtitle">Say "Hey Google" or "Hey Google, talk to Gemini" and ask PulseLink for help.</string>
@@ -171,6 +169,13 @@
     <string name="assistant_shortcut_help_gemini">In Gemini, open Profile -> Settings -> Google Assistant features in Gemini -> Shortcuts.</string>
     <string name="assistant_shortcut_help_generic">Follow your assistant\'s instructions on the next screen to enable the PulseLink shortcuts.</string>
     <string name="assistant_shortcut_missing">No Assistant or Gemini app found. Install the Google app or Gemini to enable hands-free shortcuts.</string>
+    <string name="assistant_commands_title">Voice commands</string>
+    <string name="assistant_commands_title_free">Voice commands (Pro)</string>
+    <string name="assistant_commands_body_pro">Use Google Assistant or Gemini to trigger PulseLink instantly.</string>
+    <string name="assistant_commands_body_free">Hands-free alerts, cancel, and urgent messages are a PulseLink Pro feature. Upgrade to unlock them.</string>
+    <string name="assistant_commands_examples">• "Send a PulseLink emergency"\n• "Cancel my PulseLink alert" (biometric required)\n• "Send an urgent check-in to Mom"\n• "Send a non-urgent PulseLink to Alex at half volume"\n• "Make an urgent PulseLink call to Sam"</string>
+    <string name="assistant_commands_manage">Manage assistant tips</string>
+    <string name="assistant_commands_learn">Learn how</string>
     <string name="blocked_contact_attempt_title">Blocked contact tried to reach you</string>
     <string name="blocked_contact_attempt_body">%1$s attempted to send a message but is blocked.</string>
     <string name="dnd_override_title">Do Not Disturb override</string>
@@ -278,7 +283,7 @@ Disclaimers
 Limitation of Liability
 8.1 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, CONSEQUENTIAL, SPECIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA, LOSS OF PROFITS, LOSS OF OPPORTUNITIES, OR LOSS RELATING TO PERSONAL SAFETY OR PROPERTY, ARISING OUT OF OR IN CONNECTION WITH THE APP OR THIS AGREEMENT, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
 
-8.2 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER’S TOTAL CUMULATIVE LIABILITY ARISING OUT OF OR RELATING TO THE APP OR THIS AGREEMENT SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS (US $100) (OR, IF REQUIRED BY LAW, THE MINIMUM GREATER AMOUNT MANDATED BY SUCH LAW).
+8.2 TO THE MAXIMUM EXTENT PERMITTED BY LAW, DEVELOPER’S TOTAL CUMULATIVE LIABILITY ARISING OUT of OR RELATING TO THE APP OR THIS AGREEMENT SHALL NOT EXCEED ONE HUNDRED U.S. DOLLARS (US $100) (OR, IF REQUIRED BY LAW, THE MINIMUM GREATER AMOUNT MANDATED BY SUCH LAW).
 
 8.3 THE ABOVE LIMITATIONS SHALL APPLY REGARDLESS OF THE THEORY OF LIABILITY (CONTRACT, TORT, NEGLIGENCE, STRICT LIABILITY, OR OTHERWISE) AND EVEN IF ANY REMEDY FAILS OF ITS ESSENTIAL PURPOSE.
 
@@ -382,4 +387,17 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="widget_role_emergency">Emergency contact</string>
     <string name="widget_role_checkin">Check-in contact</string>
     <string name="widget_role_unknown">Contact</string>
+
+    <!-- Assistant Strings -->
+    <string name="assistant_shortcut_emergency_short">PulseLink emergency</string>
+    <string name="assistant_shortcut_cancel_short">Cancel alert</string>
+    <string name="assistant_shortcut_check_in_short">PulseLink check-in</string>
+    <string name="assistant_shortcut_urgent_message_short">Send urgent message</string>
+    <string name="assistant_shortcut_non_urgent_message_short">Send non-urgent message</string>
+    <string name="assistant_contact_not_found">Couldn\'t find %1$s in your PulseLink contacts.</string>
+    <string name="assistant_message_sent">Message sent to %1$s.</string>
+    <string name="assistant_message_failed">Failed to send message to %1$s.</string>
+    <string name="assistant_urgent_message_sent">Urgent alert sent to %1$s.</string>
+    <string name="assistant_urgent_message_failed">Failed to send urgent alert to %1$s.</string>
+    <string name="assistant_non_urgent_sent">Non-urgent message sent to %1$s at %2$s volume.</string>
 </resources>

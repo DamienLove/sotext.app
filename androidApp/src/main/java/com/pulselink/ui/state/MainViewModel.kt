@@ -393,8 +393,13 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch { linkManager.updateRemoteOverridePermission(contactId, allow) }
     }
 
-    suspend fun sendManualMessage(contactId: Long, message: String): ManualMessageResult =
-        linkManager.sendManualMessage(contactId, message)
+    suspend fun sendManualMessage(
+        contactId: Long,
+        message: String,
+        urgency: com.pulselink.domain.model.MessageUrgency = com.pulselink.domain.model.MessageUrgency.STANDARD,
+        volumeHint: com.pulselink.domain.model.VolumeHint? = null
+    ): ManualMessageResult =
+        linkManager.sendManualMessage(contactId, message, urgency, volumeHint)
 
     fun messagesForContact(contactId: Long): Flow<List<ContactMessage>> =
         messageRepository.observeForContact(contactId)

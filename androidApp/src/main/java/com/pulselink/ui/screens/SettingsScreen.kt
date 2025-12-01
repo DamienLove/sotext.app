@@ -21,6 +21,8 @@ import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -202,6 +204,10 @@ fun SettingsScreen(
                 actionLabel = "Edit",
                 onAction = onEditCallTone
             )
+            AssistantCommandsCard(
+                proEnabled = !BuildConfig.ADS_ENABLED || settings.proUnlocked,
+                onOpenHelp = onOpenHelp
+            )
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_report_bug),
                 actionLabel = "Report",
@@ -321,6 +327,49 @@ private fun SettingsActionRow(
             }
             TextButton(onClick = onAction) {
                 Text(text = actionLabel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AssistantCommandsCard(
+    proEnabled: Boolean,
+    onOpenHelp: () -> Unit
+) {
+    val title = if (proEnabled) {
+        stringResource(R.string.assistant_commands_title)
+    } else {
+        stringResource(R.string.assistant_commands_title_free)
+    }
+    val body = if (proEnabled) {
+        stringResource(R.string.assistant_commands_body_pro)
+    } else {
+        stringResource(R.string.assistant_commands_body_free)
+    }
+    val bullets = stringResource(R.string.assistant_commands_examples)
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(bullets, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = onOpenHelp) {
+                Text(
+                    text = if (proEnabled) {
+                        stringResource(R.string.assistant_commands_manage)
+                    } else {
+                        stringResource(R.string.assistant_commands_learn)
+                    }
+                )
             }
         }
     }

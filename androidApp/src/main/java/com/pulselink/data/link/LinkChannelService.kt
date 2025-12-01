@@ -50,7 +50,12 @@ class LinkChannelService @Inject constructor(
         }
     }
 
-    suspend fun sendManualMessage(contact: Contact, body: String): Boolean {
+    suspend fun sendManualMessage(
+        contact: Contact,
+        body: String,
+        urgency: com.pulselink.domain.model.MessageUrgency,
+        volumeHint: com.pulselink.domain.model.VolumeHint?
+    ): Boolean {
         start()
         authManager.ensureSignedIn()
         val remoteDeviceId = contact.remoteDeviceId ?: return false
@@ -62,7 +67,9 @@ class LinkChannelService @Inject constructor(
             FIELD_RECEIVER_ID to remoteDeviceId,
             FIELD_BODY to body,
             FIELD_TIMESTAMP to System.currentTimeMillis(),
-            FIELD_TYPE to TYPE_MANUAL
+            FIELD_TYPE to TYPE_MANUAL,
+            FIELD_URGENCY to urgency.name,
+            FIELD_VOLUME to (volumeHint?.name ?: "")
         )
         contact.linkCode?.let { payload[FIELD_LINK_CODE] = it }
         payload[FIELD_PHONE] = contact.phoneNumber.orEmpty()
@@ -119,7 +126,13 @@ class LinkChannelService @Inject constructor(
                             body = doc.getString(FIELD_BODY).orEmpty(),
                             timestamp = doc.getLong(FIELD_TIMESTAMP) ?: System.currentTimeMillis(),
                             linkCode = doc.getString(FIELD_LINK_CODE),
-                            phoneNumber = doc.getString(FIELD_PHONE)?.takeIf { it.isNotBlank() }
+                            phoneNumber = doc.getString(FIELD_PHONE)?.takeIf { it.isNotBlank() },
+                            urgency = doc.getString(FIELD_URGENCY)
+                                ?.let { runCatching { com.pulselink.domain.model.MessageUrgency.valueOf(it) }.getOrNull() }
+                                ?: com.pulselink.domain.model.MessageUrgency.STANDARD,
+                            volumeHint = doc.getString(FIELD_VOLUME)
+                                ?.takeIf { it.isNotBlank() }
+                                ?.let { runCatching { com.pulselink.domain.model.VolumeHint.valueOf(it) }.getOrNull() }
                         )
                         scope.launch {
                             _inboundMessages.emit(payload)
@@ -146,6 +159,8 @@ class LinkChannelService @Inject constructor(
         private const val FIELD_TYPE = "type"
         private const val FIELD_LINK_CODE = "linkCode"
         private const val FIELD_PHONE = "phoneNumber"
+        private const val FIELD_URGENCY = "urgency"
+        private const val FIELD_VOLUME = "volumeHint"
         private const val TYPE_MANUAL = "manual"
     }
 }
@@ -157,5 +172,7 @@ data class LinkChannelPayload(
     val body: String,
     val timestamp: Long,
     val linkCode: String?,
-    val phoneNumber: String?
+    val phoneNumber: String?,
+    val urgency: com.pulselink.domain.model.MessageUrgency,
+    val volumeHint: com.pulselink.domain.model.VolumeHint?
 )
