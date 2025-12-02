@@ -7,6 +7,7 @@ workflows:
         XCODE_WORKSPACE: "PulseLinkiOS.xcworkspace"
         XCODE_SCHEME: "PulseLinkiOS"
         SIM_DEVICE: "iPhone 15"
+        DERIVED_DATA: "$CM_BUILD_DIR/derivedData"
       node: v20.12.2
       java: "17"
       cocoapods: default
@@ -47,11 +48,12 @@ workflows:
             -sdk iphonesimulator \
             -configuration Debug \
             -destination "platform=iOS Simulator,name=$SIM_DEVICE" \
+            -derivedDataPath "$DERIVED_DATA" \
             CODE_SIGNING_ALLOWED=NO \
             build
       - name: Package simulator app
         script: |
-          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "PulseLinkIOS.app" -path "*Build/Products/Debug-iphonesimulator/*" -print -quit)
+          APP_PATH=$(find "$DERIVED_DATA" -name "PulseLinkiOS.app" -path "*Build/Products/Debug-iphonesimulator/*" -print -quit)
           if [ -z "$APP_PATH" ]; then
             echo "Simulator app not found" && exit 1
           fi
