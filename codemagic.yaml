@@ -31,7 +31,11 @@ workflows:
           ./gradlew :shared:podspec
       - name: Build dummy framework for Cocoapods
         script: |
-          ./gradlew :shared:generateDummyFramework
+          # Build the actual Shared.framework for simulator (so Xcode doesn't need to invoke Gradle)
+          ./gradlew :shared:syncFramework \
+            -Pkotlin.native.cocoapods.platform=iphonesimulator \
+            -Pkotlin.native.cocoapods.archs=arm64 \
+            -Pkotlin.native.cocoapods.configuration=Debug
       - name: Generate Xcode project via XcodeGen
         script: |
           brew install xcodegen

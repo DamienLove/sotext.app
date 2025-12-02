@@ -885,7 +885,9 @@ class MainActivity : AppCompatActivity() {
             val subject = getString(R.string.link_invite_email_subject, sender)
             val body = getString(R.string.link_invite_email_body, contact.displayName, sender, playLink)
             val intent = Intent(Intent.ACTION_SENDTO).apply {
-                data = Uri.parse("mailto:$email")
+                // Use generic mailto: to keep extras respected by most clients
+                data = Uri.parse("mailto:")
+                putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
                 putExtra(Intent.EXTRA_SUBJECT, subject)
                 putExtra(Intent.EXTRA_TEXT, body)
             }
