@@ -4,3 +4,15 @@ use_frameworks!
 target 'PulseLinkiOS' do
   pod 'Shared', :path => '../shared'
 end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |t|
+    if t.name == 'Shared'
+      t.build_phases.each do |phase|
+        if phase.respond_to?(:display_name) && phase.display_name.include?('Build Shared')
+          t.build_phases.delete(phase)
+        end
+      end
+    end
+  end
+end

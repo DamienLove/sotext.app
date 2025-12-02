@@ -7,6 +7,7 @@ CI setup:
  - Latest fixes: chmod gradlew; allow project repos; add Kotlin native repo; Cocoapods podspec name/version; generateDummyFramework before pod install; workspace path now PulseLinkiOS.xcworkspace (cd iosApp); scheme is PulseLinkiOS.
   - Simulator packaging uses derivedData at $CM_BUILD_DIR/derivedData; looks for PulseLinkiOS.app there.
   - Shared client now tolerates non-2xx and mock baseUrl; default iOS status shows error instead of crash.
+  - Podfile removes [CP-User] Build Shared phase; Codemagic prebuilds :shared:syncFramework (iosSimulatorArm64, Debug) so Xcode build phase is unnecessary.
 
 Ad configuration (free flavor):
  - AdMob app id: ca-app-pub-5327057757821609~9533221188

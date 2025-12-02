@@ -32,6 +32,12 @@ workflows:
       - name: Build dummy framework for Cocoapods
         script: |
           ./gradlew :shared:generateDummyFramework
+      - name: Prebuild KMP framework for simulator (skip Xcode build phase)
+        script: |
+          ./gradlew :shared:syncFramework \
+            -Pkotlin.native.cocoapods.target=iosSimulatorArm64 \
+            -Pkotlin.cocoapods.configuration=Debug \
+            -Pkotlin.cocoapods.buildType=DEBUG
       - name: Generate Xcode project via XcodeGen
         script: |
           brew install xcodegen
