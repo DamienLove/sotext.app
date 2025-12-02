@@ -20,6 +20,9 @@ workflows:
         - ~/Library/Caches/CocoaPods
         - iosApp/Pods
     scripts:
+      - name: Ensure gradlew is executable
+        script: |
+          chmod +x ./gradlew
       - name: Generate KMP podspec
         script: |
           ./gradlew :shared:podspec
