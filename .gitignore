@@ -13,6 +13,12 @@ pulselink-*.json
 
 functions/node_modules/
 functions/lib/
+PulseLink/
+PulseLink/node_modules/
+PulseLink/.expo/
+PulseLink/.expo-shared/
+PulseLink/dist/
+PulseLink/.cache/
 
 # Sensitive signing material (must never be deleted manually)
 *.pem

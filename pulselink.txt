@@ -1,15 +1,24 @@
-Branch: feature/permissions-prompts (tracking origin/feature/permissions-prompts; based on Beta @ 1411be3)
-Latest commits:
- - 1411be3 fix: silence local alerts and clarify login failures
- - cd4bdca chore: bump version to 18 and refine rolex-style widget
- - 66afee6 feat: refresh widget and add wear module
-Build/run status:
- - Ran .\gradlew assembleFreeDebug assembleProDebug (passes; Room schema export warning only).
- - Latest compile check after permission/widget updates: .\gradlew :androidApp:compileFreeDebugKotlin (passes; same Room warning).
- - APKs exist under androidApp/build/outputs/apk/*/debug from the assemble run.
-Key changes in current branch:
- - Outgoing alerts are silent on sender; adds silent confirmation channel + "sent" notifications.
- - Alert router dispatches with local sound off; audio override/sound only on receivers.
- - Login flow: 15s timeout, network-blocked guidance (installations/recaptcha), early auth init + logging.
- - Onboarding permission cards now include Allow/Not now actions for DND, battery optimization, and unused-apps; battery/DND/unused required to finish.
- - Widget feature removed from manifest and scheduling to match mock; no widget updates are scheduled.
+Branch: feature/app-actions-assistant (based on Beta)
+Recent builds (this session):
+ - .\gradlew assembleFreeDebug assembleProDebug  ✅
+ - .\gradlew bundleProRelease  ✅ (keystore already configured in env)
+
+Ad configuration (free flavor):
+ - AdMob app id: ca-app-pub-5327057757821609~9533221188
+ - Banner unit: ca-app-pub-5327057757821609/3955684775
+ - Interstitial unit: ca-app-pub-5327057757821609/3170992810
+ - Rewarded interstitial unit: ca-app-pub-5327057757821609/8428571815
+ - Native advanced unit: ca-app-pub-5327057757821609/2153424615
+ - App open unit: ca-app-pub-5327057757821609/4210125201
+ - Ads disabled for pro flavor (MobileAdsInitProvider removed; build config ADS_ENABLED=false).
+
+Ad units quick list (free):
+ - native-advanced = ca-app-pub-5327057757821609/2153424615
+ - rewards-interstitual = ca-app-pub-5327057757821609/8428571815
+ - banner = ca-app-pub-5327057757821609/3955684775
+ - app-open = ca-app-pub-5327057757821609/4210125201
+
+Current ad behavior in app:
+ - Banners shown only on Home, Settings, Contact Detail, Contact Conversation, and Alert History screens; not globally pinned.
+ - App-open ad loads when ads are allowed; shown after onboarding completes and whenever the app resumes (no emergency-aware gating yet).
+ - No interstitial/rewarded interstitial display logic is implemented; only the IDs are configured.

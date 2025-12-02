@@ -52,6 +52,7 @@ class AssistantShortcutActivity : FragmentActivity() {
                 "/assistant/message" -> handleCreateMessageIntent(data).also { return }
                 "/assistant/urgent" -> handleUrgentMessageIntent(data).also { return }
                 "/assistant/nonurgent" -> handleNonUrgentMessageIntent(data).also { return }
+                "/assistant/call" -> handleEmergencyCallIntent(data).also { return }
             }
         }
 
@@ -182,9 +183,9 @@ class AssistantShortcutActivity : FragmentActivity() {
         }
     }
 
-    private suspend fun findContact(contactName: String) = 
+    private suspend fun findContact(contactName: String) =
         contactRepository.observeContacts().first()
-            .firstOrNull { it.displayName.equals(contactName, ignoreCase = true) }
+            .firstOrNull { it.displayName.equals(contactName, ignoreCase = true) || it.displayName.contains(contactName, ignoreCase = true) }
 
 
     private suspend fun handleVoiceCommand(query: String) {
@@ -205,6 +206,45 @@ class AssistantShortcutActivity : FragmentActivity() {
             lower.contains("low") || lower.contains("quiet") || lower.contains("half") -> VolumeHint.LOW
             lower.contains("high") || lower.contains("loud") || lower.contains("max") || lower.contains("full") -> VolumeHint.HIGH
             else -> VolumeHint.MEDIUM
+        }
+    }
+
+    private fun handleEmergencyCallIntent(data: Uri) {
+        val contactName = data.getQueryParameter("contact")
+        if (contactName.isNullOrBlank()) {
+            toast("Contact name is missing for emergency call.")
+            finish()
+            return
+        }
+        lifecycleScope.launch {
+            val targetContact = findContact(contactName)
+            if (targetContact == null) {
+                toast(getString(R.string.assistant_contact_not_found, contactName))
+                finish()
+                return@launch
+            }
+            val phone = (listOf(targetContact.phoneNumber) + targetContact.additionalPhones)
+                .firstOrNull { it.isNotBlank() }
+            if (phone.isNullOrBlank()) {
+                toast(getString(R.string.assistant_contact_not_found, contactName))
+                finish()
+                return@launch
+            }
+            val callIntent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$phone"))
+            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
+            val launched = runCatching {
+                startActivity(callIntent)
+                true
+            }.getOrElse {
+                runCatching {
+                    startActivity(dialIntent)
+                    true
+                }.getOrElse { false }
+            }
+            if (!launched) {
+                toast(getString(R.string.assistant_message_failed, contactName))
+            }
+            finish()
         }
     }
 
