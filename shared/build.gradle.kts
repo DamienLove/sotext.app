@@ -15,6 +15,7 @@ kotlin {
     }
 
     cocoapods {
+        name = "Shared"
         summary = "Shared core for PulseLink (alerts & relay)"
         homepage = "https://github.com/DamienLove/pulselink"
         ios.deploymentTarget = "16.0"
