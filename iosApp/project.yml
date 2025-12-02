@@ -22,14 +22,3 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.pulselink.ios
       INFOPLIST_FILE: PulseLinkiOS/Info.plist
-    dependencies:
-      - target: Pods_PulseLinkiOS
-schemes:
-  PulseLinkIOSScheme:
-    build:
-      targets:
-        PulseLinkIOS: all
-    run:
-      config: Debug
-    archive:
-      config: Release
