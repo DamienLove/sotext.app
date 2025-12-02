@@ -53,9 +53,10 @@ workflows:
     artifacts:
       - PulseLinkIOS-sim-debug.zip
     publishing:
-      email:
-        recipients:
-          - "${CM_EMAIL?}"
-        notify:
-          success: true
-          failure: true
+      # Email notifications optional; add a valid address list here or set CM_EMAIL and uncomment.
+      # email:
+      #   recipients:
+      #     - "$CM_EMAIL"
+      #   notify:
+      #     success: true
+      #     failure: true
