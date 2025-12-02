@@ -62,3 +62,64 @@ export const alertRelay = functions.https.onCall(async (data: RelayRequest, cont
     estimatedFanOut: cleanRecipients.length,
   };
 });
+
+// Lightweight HTTP wrapper so clients without the Firebase Functions SDK
+// (e.g., KMP/Swift via Ktor) can hit the same functionality.
+export const alertRelayHttp = functions.https.onRequest(async (req, res) => {
+  if (req.method !== "POST") {
+    res.status(405).send({ error: "method_not_allowed" });
+    return;
+  }
+
+  let authUid: string | null = null;
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  const bearer = Array.isArray(authHeader) ? authHeader[0] : authHeader;
+  if (bearer && bearer.startsWith("Bearer ")) {
+    const token = bearer.substring(7);
+    try {
+      const decoded = await admin.auth().verifyIdToken(token);
+      authUid = decoded.uid;
+    } catch (_err) {
+      // Ignore invalid tokens; treat as anonymous
+      authUid = null;
+    }
+  }
+
+  const data = req.body as RelayRequest | undefined;
+  if (!data || typeof data.message !== "string" || !Array.isArray(data.recipients)) {
+    res.status(400).send({ error: "invalid-argument", message: "Invalid payload" });
+    return;
+  }
+
+  const cleanRecipients = data.recipients
+    .filter((r) => !!(r.phoneNumber || r.pushToken || r.email))
+    .map((r) => ({
+      phoneNumber: r.phoneNumber,
+      pushToken: r.pushToken,
+      email: r.email,
+    }));
+
+  if (cleanRecipients.length === 0) {
+    res.status(400).send({ error: "invalid-argument", message: "No recipients provided" });
+    return;
+  }
+
+  const relayDoc = {
+    message: data.message,
+    severity: data.severity ?? "non_urgent",
+    recipients: cleanRecipients,
+    senderId: data.senderId ?? authUid,
+    location: data.location ?? null,
+    metadata: data.metadata ?? {},
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    status: "queued",
+    platform: "kmp",
+  };
+
+  const docRef = await db.collection("relayAlerts").add(relayDoc);
+  res.status(200).send({
+    status: "queued",
+    relayId: docRef.id,
+    estimatedFanOut: cleanRecipients.length,
+  });
+});

@@ -16,4 +16,4 @@ setGlobalOptions({ maxInstances: 10 });
 
 export { naturalLanguageQuery } from './naturalLanguageInterface';
 export { menuSuggestion } from './genkit-sample';
-export { alertRelay } from './alertRelay';
+export { alertRelay, alertRelayHttp } from './alertRelay';

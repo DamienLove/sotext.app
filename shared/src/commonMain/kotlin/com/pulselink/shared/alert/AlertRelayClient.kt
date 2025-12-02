@@ -29,7 +29,7 @@ class AlertRelayClient private constructor(
             return AlertResponse(status = "mocked", relayId = "local", estimatedFanOut = request.recipients.size)
         }
 
-        val endpoint = baseUrl.trimEnd('/') + "/alertRelay"
+        val endpoint = baseUrl.trimEnd('/') + "/alertRelayHttp"
         val response: HttpResponse = httpClient.post(endpoint) {
             contentType(ContentType.Application.Json)
             setBody(request)
