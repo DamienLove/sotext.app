@@ -18,6 +18,7 @@ kotlin {
         summary = "Shared core for PulseLink (alerts & relay)"
         homepage = "https://github.com/DamienLove/pulselink"
         ios.deploymentTarget = "16.0"
+        version = "0.1.0"
         framework {
             baseName = "Shared"
         }
