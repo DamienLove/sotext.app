@@ -29,7 +29,7 @@ final class AlertRelayViewModel: ObservableObject {
             )
 
             let response = try await client.sendAlert(request: request)
-            statusText = "Sent (\(response.status)) id=\(response.relayId ?? "n/a")"
+            statusText = "Status: \(response.status) id=\(response.relayId ?? "n/a")"
         } catch {
             statusText = "Failed: \(error.localizedDescription)"
         }

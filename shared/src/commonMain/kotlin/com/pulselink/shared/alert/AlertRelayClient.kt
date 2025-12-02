@@ -5,6 +5,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 
@@ -13,11 +15,26 @@ class AlertRelayClient(
     private val baseUrl: String
 ) {
     suspend fun sendAlert(request: AlertRequest): AlertResponse {
+        // Allow a mock base for UI testing (no network)
+        if (baseUrl.equals("mock", ignoreCase = true)) {
+            return AlertResponse(status = "mocked", relayId = "local", estimatedFanOut = request.recipients.size)
+        }
+
         val endpoint = baseUrl.trimEnd('/') + "/alertRelay"
-        return httpClient.post(endpoint) {
+        val response: HttpResponse = httpClient.post(endpoint) {
             contentType(ContentType.Application.Json)
             setBody(request)
-        }.body()
+        }
+
+        return if (response.status.isSuccess()) {
+            response.body()
+        } else {
+            AlertResponse(
+                status = "error:${response.status.value}",
+                relayId = null,
+                estimatedFanOut = null
+            )
+        }
     }
 }
 
