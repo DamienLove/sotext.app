@@ -42,3 +42,12 @@ artifacts/releases/**/androidApp-pro-*.apk
 artifacts/releases/**/androidApp-pro-*.aab
 wearApp/build/
 /PulseLink-ui-mockup/wearos-pro-emergency.png
+
+# iOS (KMP SwiftUI shell)
+iosApp/Pods/
+iosApp/Podfile.lock
+iosApp/*.xcworkspace
+iosApp/*.xcuserstate
+iosApp/build/
+shared/build/
+shared/.gradle/

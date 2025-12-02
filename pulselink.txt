@@ -1,7 +1,6 @@
-Branch: feature/app-actions-assistant (based on Beta)
-Recent builds (this session):
- - .\gradlew assembleFreeDebug assembleProDebug  ✅
- - .\gradlew bundleProRelease  ✅ (keystore already configured in env)
+Branch: feature/kmp-ios-backend-relay (based on Beta)
+Recent builds (this branch):
+ - .\gradlew assembleFreeDebug ✅ (KMP shared module + Android build still green)
 
 Ad configuration (free flavor):
  - AdMob app id: ca-app-pub-5327057757821609~9533221188

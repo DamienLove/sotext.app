@@ -160,6 +160,7 @@ android {
             )
             buildConfigField("boolean", "ADS_ENABLED", "true")
             buildConfigField("boolean", "PRO_FEATURES", "false")
+            buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
             buildConfigField("String", "AD_APP_ID", "\"ca-app-pub-5327057757821609~9533221188\"")
             buildConfigField("String", "AD_UNIT_BANNER", "\"ca-app-pub-5327057757821609/3955684775\"")
             buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"ca-app-pub-5327057757821609/3170992810\"")
@@ -184,6 +185,7 @@ android {
             )
             buildConfigField("boolean", "ADS_ENABLED", "false")
             buildConfigField("boolean", "PRO_FEATURES", "true")
+            buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
             buildConfigField("String", "AD_APP_ID", "\"\"")
             buildConfigField("String", "AD_UNIT_BANNER", "\"\"")
             buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"\"")
@@ -257,10 +259,11 @@ kapt {
     correctErrorTypes = true
 }
 
-dependencies {
-    implementation(platform("androidx.compose:compose-bom:2024.04.01"))
-    implementation("com.google.firebase:firebase-auth:23.0.0")
-    implementation("androidx.credentials:credentials:1.5.0")
+    dependencies {
+        implementation(project(":shared"))
+        implementation(platform("androidx.compose:compose-bom:2024.04.01"))
+        implementation("com.google.firebase:firebase-auth:23.0.0")
+        implementation("androidx.credentials:credentials:1.5.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.04.01"))
