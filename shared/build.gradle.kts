@@ -2,6 +2,7 @@ plugins {
     kotlin("multiplatform")
     id("com.android.library")
     id("org.jetbrains.kotlin.plugin.serialization")
+    kotlin("native.cocoapods")
 }
 
 kotlin {
@@ -10,6 +11,15 @@ kotlin {
             kotlinOptions {
                 jvmTarget = "17"
             }
+        }
+    }
+
+    cocoapods {
+        summary = "Shared core for PulseLink (alerts & relay)"
+        homepage = "https://github.com/DamienLove/pulselink"
+        ios.deploymentTarget = "16.0"
+        framework {
+            baseName = "Shared"
         }
     }
 
