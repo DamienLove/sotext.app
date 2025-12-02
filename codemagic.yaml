@@ -1,0 +1,61 @@
+workflows:
+  ios-simulator-kmp:
+    name: iOS Simulator (KMP Shared)
+    instance_type: mac_mini_m1
+    environment:
+      vars:
+        XCODE_WORKSPACE: "iosApp/PulseLinkiOS.xcworkspace"
+        XCODE_SCHEME: "PulseLinkIOS"
+        SIM_DEVICE: "iPhone 15"
+      node: v20.12.2
+      java: "17"
+      cocoapods: default
+      xcode: "16.1"
+      groups:
+        - pulselink-apple-signing   # optional; required only for device builds
+    cache:
+      cache_paths:
+        - ~/.gradle/caches
+        - ~/.gradle/wrapper
+        - ~/Library/Caches/CocoaPods
+        - iosApp/Pods
+    scripts:
+      - name: Generate KMP podspec
+        script: |
+          ./gradlew :shared:podspec
+      - name: Generate Xcode project via XcodeGen
+        script: |
+          brew install xcodegen
+          cd iosApp
+          xcodegen generate --spec project.yml
+      - name: Install CocoaPods
+        script: |
+          cd iosApp
+          pod install
+      - name: Build iOS simulator app
+        script: |
+          cd iosApp
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme PulseLinkIOS \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,name=$SIM_DEVICE" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      - name: Package simulator app
+        script: |
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "PulseLinkIOS.app" -path "*Build/Products/Debug-iphonesimulator/*" -print -quit)
+          if [ -z "$APP_PATH" ]; then
+            echo "Simulator app not found" && exit 1
+          fi
+          zip -r PulseLinkIOS-sim-debug.zip "$APP_PATH"
+    artifacts:
+      - PulseLinkIOS-sim-debug.zip
+    publishing:
+      email:
+        recipients:
+          - "${CM_EMAIL?}"
+        notify:
+          success: true
+          failure: true

@@ -1,6 +1,9 @@
 Branch: feature/kmp-ios-backend-relay (based on Beta)
 Recent builds (this branch):
  - .\gradlew assembleFreeDebug ✅ (KMP shared module + Android build still green)
+CI setup:
+ - Added codemagic.yaml (workflow: ios-simulator-kmp). Steps: KMP podspec, XcodeGen, pod install, xcodebuild for simulator, zip artifact.
+ - XcodeGen spec at iosApp/project.yml; Info.plist scaffolded under iosApp/PulseLinkiOS.
 
 Ad configuration (free flavor):
  - AdMob app id: ca-app-pub-5327057757821609~9533221188
