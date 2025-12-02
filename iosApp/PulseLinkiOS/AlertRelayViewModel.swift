@@ -5,23 +5,23 @@ import Shared
 final class AlertRelayViewModel: ObservableObject {
     @Published var statusText: String = "Idle"
 
-    private let client: SharedAlertRelayClient
+    private let client: AlertRelayClient
 
-    init(baseUrl: String = SharedAlertRelay.Companion().DEFAULT_BASE_URL) {
-        client = SharedAlertRelayFactory.shared.build(baseUrl: baseUrl)
+    init(baseUrl: String = AlertRelay.shared.DEFAULT_BASE_URL) {
+        client = AlertRelayFactory.shared.build(baseUrl: baseUrl)
     }
 
     func sendTestAlert() async {
         statusText = "Sending…"
         do {
-            let recipient = SharedAlertRecipient(
+            let recipient = AlertRecipient(
                 phoneNumber: nil,
                 pushToken: nil,
                 email: nil
             )
-            let request = SharedAlertRequest(
+            let request = AlertRequest(
                 message: "Test alert from iOS shell",
-                severity: SharedAlertSeverity.emergency,
+                severity: AlertSeverity.emergency,
                 recipients: [recipient],
                 senderId: nil,
                 location: nil,
