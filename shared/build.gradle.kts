@@ -5,6 +5,12 @@ plugins {
     kotlin("native.cocoapods")
 }
 
+repositories {
+    google()
+    mavenCentral()
+    maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/gradle-plugin")
+}
+
 kotlin {
     androidTarget {
         compilations.all {
