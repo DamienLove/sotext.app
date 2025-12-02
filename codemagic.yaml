@@ -26,6 +26,9 @@ workflows:
       - name: Generate KMP podspec
         script: |
           ./gradlew :shared:podspec
+      - name: Build dummy framework for Cocoapods
+        script: |
+          ./gradlew :shared:generateDummyFramework
       - name: Generate Xcode project via XcodeGen
         script: |
           brew install xcodegen
