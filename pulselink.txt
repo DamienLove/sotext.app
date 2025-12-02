@@ -4,6 +4,7 @@ Recent builds (this branch):
 CI setup:
  - Added codemagic.yaml (workflow: ios-simulator-kmp). Steps: KMP podspec, XcodeGen, pod install, xcodebuild for simulator, zip artifact.
  - XcodeGen spec at iosApp/project.yml; Info.plist scaffolded under iosApp/PulseLinkiOS.
+ - Latest fixes: chmod gradlew; allow project repos; add Kotlin native repo; Cocoapods podspec name/version; generateDummyFramework before pod install; workspace path now PulseLinkiOS.xcworkspace (cd iosApp); scheme is PulseLinkiOS.
 
 Ad configuration (free flavor):
  - AdMob app id: ca-app-pub-5327057757821609~9533221188
