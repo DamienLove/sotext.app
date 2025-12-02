@@ -1,5 +1,6 @@
 Branch: feature/kmp-ios-backend-relay (based on Beta)
 Recent builds (this branch):
+ - 2025-12-02: .\gradlew bundleFreeRelease bundleProRelease (versionCode 26 / versionName 26) using updated google-services.json from Free-Certs and PRO-CERTS; AlertRelayClient Ktor isSuccess import fixed.
  - .\gradlew assembleFreeDebug ✅ (KMP shared module + Android build still green)
 CI setup:
  - Added codemagic.yaml (workflow: ios-simulator-kmp). Steps: KMP podspec, XcodeGen, pod install, xcodebuild for simulator, zip artifact.
