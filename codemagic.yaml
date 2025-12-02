@@ -4,7 +4,7 @@ workflows:
     instance_type: mac_mini_m1
     environment:
       vars:
-        XCODE_WORKSPACE: "iosApp/PulseLinkiOS.xcworkspace"
+        XCODE_WORKSPACE: "PulseLinkiOS.xcworkspace"
         XCODE_SCHEME: "PulseLinkiOS"
         SIM_DEVICE: "iPhone 15"
       node: v20.12.2
