@@ -1,6 +1,5 @@
 package com.pulselink.shared.alert
 
-import com.pulselink.shared.network.createPlatformHttpClient
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.post
@@ -10,11 +9,20 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import com.pulselink.shared.network.createPlatformHttpClient
 
-class AlertRelayClient(
-    private val httpClient: HttpClient = createPlatformHttpClient(),
+class AlertRelayClient private constructor(
+    private val httpClient: HttpClient,
     private val baseUrl: String
 ) {
+    companion object {
+        fun create(baseUrl: String = AlertRelay.DEFAULT_BASE_URL): AlertRelayClient =
+            AlertRelayClient(
+                httpClient = createPlatformHttpClient(),
+                baseUrl = baseUrl
+            )
+    }
+
     suspend fun sendAlert(request: AlertRequest): AlertResponse {
         // Allow a mock base for UI testing (no network)
         if (baseUrl.equals("mock", ignoreCase = true)) {
@@ -43,5 +51,5 @@ object AlertRelay {
     const val DEFAULT_BASE_URL = "https://us-central1-pulselink-prod.cloudfunctions.net"
 
     fun create(baseUrl: String = DEFAULT_BASE_URL): AlertRelayClient =
-        AlertRelayClient(baseUrl = baseUrl)
+        AlertRelayClient.create(baseUrl)
 }
