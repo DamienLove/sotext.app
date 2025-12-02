@@ -24,6 +24,8 @@ workflows:
       - name: Ensure gradlew is executable
         script: |
           chmod +x ./gradlew
+          ln -sf ../gradlew iosApp/gradlew
+          chmod +x iosApp/gradlew
       - name: Generate KMP podspec
         script: |
           ./gradlew :shared:podspec
