@@ -187,7 +187,7 @@ private struct HomeTab: View {
             }
             Label("Emergency drill queued for 3 contacts", systemImage: "bolt.fill")
                 .foregroundStyle(RelayColors.accent)
-            Label("Check-in acknowledged • Morgan", systemImage: "checkmark.circle.fill")
+            Label("Check-in acknowledged · Morgan", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.secondary)
             Label("Widget updated with latest status", systemImage: "rectangle.dashed.badge.record")
                 .foregroundStyle(.secondary)
