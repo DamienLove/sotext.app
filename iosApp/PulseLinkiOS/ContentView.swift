@@ -315,7 +315,7 @@ private struct SettingsTab: View {
                 TextField("Relay base URL", text: Binding(
                     get: { baseUrlDraft.isEmpty ? viewModel.baseUrl : baseUrlDraft },
                     set: { baseUrlDraft = $0 }
-                ), prompt: Text("https://…"))
+                ), prompt: Text("https://example.com"))
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
                 Button("Apply URL") {
