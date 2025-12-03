@@ -1,7 +1,15 @@
-Branch: feature/app-actions-assistant (based on Beta)
-Recent builds (this session):
- - .\gradlew assembleFreeDebug assembleProDebug  ✅
- - .\gradlew bundleProRelease  ✅ (keystore already configured in env)
+Branch: feature/kmp-ios-backend-relay (based on Beta)
+Recent builds (this branch):
+ - 2025-12-02: .\gradlew bundleFreeRelease bundleProRelease (versionCode 26 / versionName 26) using updated google-services.json from Free-Certs and PRO-CERTS; AlertRelayClient Ktor isSuccess import fixed.
+ - .\gradlew assembleFreeDebug ✅ (KMP shared module + Android build still green)
+CI setup:
+ - Added codemagic.yaml (workflow: ios-simulator-kmp). Steps: KMP podspec, XcodeGen, pod install, xcodebuild for simulator, zip artifact.
+ - XcodeGen spec at iosApp/project.yml; Info.plist scaffolded under iosApp/PulseLinkiOS.
+ - Latest fixes: chmod gradlew; allow project repos; add Kotlin native repo; Cocoapods podspec name/version; syncFramework (iphonesimulator/arm64 Debug) before pod install; workspace path now PulseLinkiOS.xcworkspace (cd iosApp); scheme is PulseLinkiOS.
+  - Simulator packaging uses derivedData at $CM_BUILD_DIR/derivedData; looks for PulseLinkiOS.app there.
+  - Shared client now tolerates non-2xx and mock baseUrl; default iOS status shows error instead of crash.
+  - Podfile removes [CP-User] Build Shared phase; CI prebuilds via :shared:syncFramework (iphonesimulator/arm64 Debug) before pod install so Xcode doesn’t call Gradle.
+  - Codemagic steps (current): chmod + symlink gradlew; :shared:podspec; :shared:generateDummyFramework; XcodeGen; pod install (with build phase removed); xcodebuild Debug iphonesim (derivedData=$CM_BUILD_DIR/derivedData); zip PulseLinkiOS.app.
 
 Ad configuration (free flavor):
  - AdMob app id: ca-app-pub-5327057757821609~9533221188

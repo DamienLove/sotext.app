@@ -1,0 +1,637 @@
+﻿{
+    "repo":  "DamienLove/pulselink",
+    "fetchedAt":  "2025-12-02T15:16:02",
+    "total_open_issues":  29,
+    "groups":  {
+                   "enhancement":  [
+                                       {
+                                           "number":  69,
+                                           "title":  "app links or deep app links need to be establshed",
+                                           "url":  "https://github.com/DamienLove/pulselink/issues/69",
+                                           "createdAt":  "2025-12-01T01:42:33Z",
+                                           "updatedAt":  "2025-12-01T01:50:50Z",
+                                           "labels":  [
+                                                          "bug",
+                                                          "documentation",
+                                                          "enhancement",
+                                                          "TODO"
+                                                      ],
+                                           "assignees":  "DamienLove",
+                                           "author":  "DamienLove"
+                                       },
+                                       {
+                                           "number":  68,
+                                           "title":  "watch app just fails to build",
+                                           "url":  "https://github.com/DamienLove/pulselink/issues/68",
+                                           "createdAt":  "2025-12-01T01:40:54Z",
+                                           "updatedAt":  "2025-12-01T01:48:49Z",
+                                           "labels":  [
+                                                          "bug",
+                                                          "documentation",
+                                                          "enhancement",
+                                                          "TODO"
+                                                      ],
+                                           "assignees":  "DamienLove",
+                                           "author":  "DamienLove"
+                                       },
+                                       {
+                                           "number":  67,
+                                           "title":  "firebase should be the backend for pulselink apps to be communicating back and forth",
+                                           "url":  "https://github.com/DamienLove/pulselink/issues/67",
+                                           "createdAt":  "2025-12-01T01:40:17Z",
+                                           "updatedAt":  "2025-12-01T01:47:39Z",
+                                           "labels":  [
+                                                          "bug",
+                                                          "documentation",
+                                                          "enhancement",
+                                                          "TODO"
+                                                      ],
+                                           "assignees":  "DamienLove",
+                                           "author":  "DamienLove"
+                                       },
+                                       {
+                                           "number":  66,
+                                           "title":  "email link sends user to blank email composer",
+                                           "url":  "https://github.com/DamienLove/pulselink/issues/66",
+                                           "createdAt":  "2025-12-01T01:39:11Z",
+                                           "updatedAt":  "2025-12-01T01:47:02Z",
+                                           "labels":  [
+                                                          "bug",
+                                                          "documentation",
+                                                          "enhancement",
+                                                          "TODO"
+                                                      ],
+                                           "assignees":  "DamienLove",
+                                           "author":  "DamienLove"
+                                       },
+                                       {
+                                           "number":  65,
+                                           "title":  "playstore needs updated screenshots and details",
+                                           "url":  "https://github.com/DamienLove/pulselink/issues/65",
+                                           "createdAt":  "2025-12-01T01:37:50Z",
+                                           "updatedAt":  "2025-12-01T01:46:15Z",
+                                           "labels":  [
+                                                          "bug",
+                                                          "documentation",
+                                                          "enhancement",
+                                                          "TODO"
+                                                      ],
+                                           "assignees":  "DamienLove",
+                                           "author":  "DamienLove"
+                                       },
+                                       {
+                                           "number":  59,
+                                           "title":  "need maps in location",
+                                           "url":  "https://github.com/DamienLove/pulselink/issues/59",
+                                           "createdAt":  "2025-11-23T07:32:12Z",
+                                           "updatedAt":  "2025-11-23T16:05:35Z",
+                                           "labels":  "enhancement",
+                                           "assignees":  "DamienLove",
+                                           "author":  "DamienLove"
+                                       },
+                                       {
+                                           "number":  47,
+                                           "title":  "Audio",
+                                           "url":  "https://github.com/DamienLove/pulselink/issues/47",
+                                           "createdAt":  "2025-11-18T16:41:40Z",
+                                           "updatedAt":  "2025-11-18T16:44:19Z",
+                                           "labels":  [
+                                                          "enhancement",
+                                                          "TODO"
+                                                      ],
+                                           "assignees":  "DamienLove",
+                                           "author":  "DamienLove"
+                                       },
+                                       {
+                                           "number":  42,
+                                           "title":  "Watch widget",
+                                           "url":  "https://github.com/DamienLove/pulselink/issues/42",
+                                           "createdAt":  "2025-11-18T00:43:11Z",
+                                           "updatedAt":  "2025-11-18T00:51:19Z",
+                                           "labels":  [
+                                                          "enhancement",
+                                                          "TODO"
+                                                      ],
+                                           "assignees":  "DamienLove",
+                                           "author":  "DamienLove"
+                                       }
+                                   ],
+                   "TODO":  [
+                                {
+                                    "number":  72,
+                                    "title":  "[Owner] Finalize ad copy - select 4 headline sets from recommendations",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/72",
+                                    "createdAt":  "2025-12-01T01:44:51Z",
+                                    "updatedAt":  "2025-12-01T01:48:41Z",
+                                    "labels":  [
+                                                   "documentation",
+                                                   "TODO"
+                                               ],
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  71,
+                                    "title":  "Optimize Play Store listing with screenshots and compelling description",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/71",
+                                    "createdAt":  "2025-12-01T01:44:32Z",
+                                    "updatedAt":  "2025-12-01T01:48:20Z",
+                                    "labels":  [
+                                                   "documentation",
+                                                   "TODO"
+                                               ],
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  70,
+                                    "title":  "Update GitHub README with donation information and iOS roadmap",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/70",
+                                    "createdAt":  "2025-12-01T01:44:06Z",
+                                    "updatedAt":  "2025-12-01T01:47:55Z",
+                                    "labels":  [
+                                                   "documentation",
+                                                   "TODO"
+                                               ],
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  69,
+                                    "title":  "app links or deep app links need to be establshed",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/69",
+                                    "createdAt":  "2025-12-01T01:42:33Z",
+                                    "updatedAt":  "2025-12-01T01:50:50Z",
+                                    "labels":  [
+                                                   "bug",
+                                                   "documentation",
+                                                   "enhancement",
+                                                   "TODO"
+                                               ],
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  68,
+                                    "title":  "watch app just fails to build",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/68",
+                                    "createdAt":  "2025-12-01T01:40:54Z",
+                                    "updatedAt":  "2025-12-01T01:48:49Z",
+                                    "labels":  [
+                                                   "bug",
+                                                   "documentation",
+                                                   "enhancement",
+                                                   "TODO"
+                                               ],
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  67,
+                                    "title":  "firebase should be the backend for pulselink apps to be communicating back and forth",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/67",
+                                    "createdAt":  "2025-12-01T01:40:17Z",
+                                    "updatedAt":  "2025-12-01T01:47:39Z",
+                                    "labels":  [
+                                                   "bug",
+                                                   "documentation",
+                                                   "enhancement",
+                                                   "TODO"
+                                               ],
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  66,
+                                    "title":  "email link sends user to blank email composer",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/66",
+                                    "createdAt":  "2025-12-01T01:39:11Z",
+                                    "updatedAt":  "2025-12-01T01:47:02Z",
+                                    "labels":  [
+                                                   "bug",
+                                                   "documentation",
+                                                   "enhancement",
+                                                   "TODO"
+                                               ],
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  65,
+                                    "title":  "playstore needs updated screenshots and details",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/65",
+                                    "createdAt":  "2025-12-01T01:37:50Z",
+                                    "updatedAt":  "2025-12-01T01:46:15Z",
+                                    "labels":  [
+                                                   "bug",
+                                                   "documentation",
+                                                   "enhancement",
+                                                   "TODO"
+                                               ],
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  60,
+                                    "title":  "iOS port",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/60",
+                                    "createdAt":  "2025-11-23T16:08:14Z",
+                                    "updatedAt":  "2025-11-23T16:12:04Z",
+                                    "labels":  "TODO",
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  47,
+                                    "title":  "Audio",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/47",
+                                    "createdAt":  "2025-11-18T16:41:40Z",
+                                    "updatedAt":  "2025-11-18T16:44:19Z",
+                                    "labels":  [
+                                                   "enhancement",
+                                                   "TODO"
+                                               ],
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  42,
+                                    "title":  "Watch widget",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/42",
+                                    "createdAt":  "2025-11-18T00:43:11Z",
+                                    "updatedAt":  "2025-11-18T00:51:19Z",
+                                    "labels":  [
+                                                   "enhancement",
+                                                   "TODO"
+                                               ],
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                },
+                                {
+                                    "number":  11,
+                                    "title":  "Activate 365 business",
+                                    "url":  "https://github.com/DamienLove/pulselink/issues/11",
+                                    "createdAt":  "2025-11-06T20:57:19Z",
+                                    "updatedAt":  "2025-11-18T18:07:38Z",
+                                    "labels":  "TODO",
+                                    "assignees":  "DamienLove",
+                                    "author":  "DamienLove"
+                                }
+                            ],
+                   "documentation":  [
+                                         {
+                                             "number":  72,
+                                             "title":  "[Owner] Finalize ad copy - select 4 headline sets from recommendations",
+                                             "url":  "https://github.com/DamienLove/pulselink/issues/72",
+                                             "createdAt":  "2025-12-01T01:44:51Z",
+                                             "updatedAt":  "2025-12-01T01:48:41Z",
+                                             "labels":  [
+                                                            "documentation",
+                                                            "TODO"
+                                                        ],
+                                             "assignees":  "DamienLove",
+                                             "author":  "DamienLove"
+                                         },
+                                         {
+                                             "number":  71,
+                                             "title":  "Optimize Play Store listing with screenshots and compelling description",
+                                             "url":  "https://github.com/DamienLove/pulselink/issues/71",
+                                             "createdAt":  "2025-12-01T01:44:32Z",
+                                             "updatedAt":  "2025-12-01T01:48:20Z",
+                                             "labels":  [
+                                                            "documentation",
+                                                            "TODO"
+                                                        ],
+                                             "assignees":  "DamienLove",
+                                             "author":  "DamienLove"
+                                         },
+                                         {
+                                             "number":  70,
+                                             "title":  "Update GitHub README with donation information and iOS roadmap",
+                                             "url":  "https://github.com/DamienLove/pulselink/issues/70",
+                                             "createdAt":  "2025-12-01T01:44:06Z",
+                                             "updatedAt":  "2025-12-01T01:47:55Z",
+                                             "labels":  [
+                                                            "documentation",
+                                                            "TODO"
+                                                        ],
+                                             "assignees":  "DamienLove",
+                                             "author":  "DamienLove"
+                                         },
+                                         {
+                                             "number":  69,
+                                             "title":  "app links or deep app links need to be establshed",
+                                             "url":  "https://github.com/DamienLove/pulselink/issues/69",
+                                             "createdAt":  "2025-12-01T01:42:33Z",
+                                             "updatedAt":  "2025-12-01T01:50:50Z",
+                                             "labels":  [
+                                                            "bug",
+                                                            "documentation",
+                                                            "enhancement",
+                                                            "TODO"
+                                                        ],
+                                             "assignees":  "DamienLove",
+                                             "author":  "DamienLove"
+                                         },
+                                         {
+                                             "number":  68,
+                                             "title":  "watch app just fails to build",
+                                             "url":  "https://github.com/DamienLove/pulselink/issues/68",
+                                             "createdAt":  "2025-12-01T01:40:54Z",
+                                             "updatedAt":  "2025-12-01T01:48:49Z",
+                                             "labels":  [
+                                                            "bug",
+                                                            "documentation",
+                                                            "enhancement",
+                                                            "TODO"
+                                                        ],
+                                             "assignees":  "DamienLove",
+                                             "author":  "DamienLove"
+                                         },
+                                         {
+                                             "number":  67,
+                                             "title":  "firebase should be the backend for pulselink apps to be communicating back and forth",
+                                             "url":  "https://github.com/DamienLove/pulselink/issues/67",
+                                             "createdAt":  "2025-12-01T01:40:17Z",
+                                             "updatedAt":  "2025-12-01T01:47:39Z",
+                                             "labels":  [
+                                                            "bug",
+                                                            "documentation",
+                                                            "enhancement",
+                                                            "TODO"
+                                                        ],
+                                             "assignees":  "DamienLove",
+                                             "author":  "DamienLove"
+                                         },
+                                         {
+                                             "number":  66,
+                                             "title":  "email link sends user to blank email composer",
+                                             "url":  "https://github.com/DamienLove/pulselink/issues/66",
+                                             "createdAt":  "2025-12-01T01:39:11Z",
+                                             "updatedAt":  "2025-12-01T01:47:02Z",
+                                             "labels":  [
+                                                            "bug",
+                                                            "documentation",
+                                                            "enhancement",
+                                                            "TODO"
+                                                        ],
+                                             "assignees":  "DamienLove",
+                                             "author":  "DamienLove"
+                                         },
+                                         {
+                                             "number":  65,
+                                             "title":  "playstore needs updated screenshots and details",
+                                             "url":  "https://github.com/DamienLove/pulselink/issues/65",
+                                             "createdAt":  "2025-12-01T01:37:50Z",
+                                             "updatedAt":  "2025-12-01T01:46:15Z",
+                                             "labels":  [
+                                                            "bug",
+                                                            "documentation",
+                                                            "enhancement",
+                                                            "TODO"
+                                                        ],
+                                             "assignees":  "DamienLove",
+                                             "author":  "DamienLove"
+                                         },
+                                         {
+                                             "number":  46,
+                                             "title":  "update wiki",
+                                             "url":  "https://github.com/DamienLove/pulselink/issues/46",
+                                             "createdAt":  "2025-11-18T01:44:49Z",
+                                             "updatedAt":  "2025-11-23T07:34:45Z",
+                                             "labels":  "documentation",
+                                             "assignees":  "DamienLove",
+                                             "author":  "DamienLove"
+                                         }
+                                     ],
+                   "bug":  [
+                               {
+                                   "number":  78,
+                                   "title":  "The add a login feature when using sms bypass doesnt work12/1/2025 21:19:08",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/78",
+                                   "createdAt":  "2025-12-02T04:21:42Z",
+                                   "updatedAt":  "2025-12-02T04:25:42Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  77,
+                                   "title":  "The version flavor and details of the users device should auto compile onto bugs written in the app11/30/2025 21:21:50",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/77",
+                                   "createdAt":  "2025-12-01T04:22:34Z",
+                                   "updatedAt":  "2025-12-01T04:26:24Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  76,
+                                   "title":  "There\u0027s no widget on pro11/30/2025 21:20:31",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/76",
+                                   "createdAt":  "2025-12-01T04:22:34Z",
+                                   "updatedAt":  "2025-12-01T04:26:25Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  75,
+                                   "title":  "Still no place for users to add/edit thier own info that is linked to thier trusted contacts 11/30/2025 21:19:33",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/75",
+                                   "createdAt":  "2025-12-01T04:22:32Z",
+                                   "updatedAt":  "2025-12-01T04:26:23Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  74,
+                                   "title":  "Sms login isn\u0027t working11/30/2025 21:18:24",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/74",
+                                   "createdAt":  "2025-12-01T04:19:34Z",
+                                   "updatedAt":  "2025-12-01T04:23:26Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  73,
+                                   "title":  "Google auth login isn\u0027t working on pro release11/30/2025 21:16:58",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/73",
+                                   "createdAt":  "2025-12-01T04:19:33Z",
+                                   "updatedAt":  "2025-12-01T04:23:27Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  69,
+                                   "title":  "app links or deep app links need to be establshed",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/69",
+                                   "createdAt":  "2025-12-01T01:42:33Z",
+                                   "updatedAt":  "2025-12-01T01:50:50Z",
+                                   "labels":  [
+                                                  "bug",
+                                                  "documentation",
+                                                  "enhancement",
+                                                  "TODO"
+                                              ],
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  68,
+                                   "title":  "watch app just fails to build",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/68",
+                                   "createdAt":  "2025-12-01T01:40:54Z",
+                                   "updatedAt":  "2025-12-01T01:48:49Z",
+                                   "labels":  [
+                                                  "bug",
+                                                  "documentation",
+                                                  "enhancement",
+                                                  "TODO"
+                                              ],
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  67,
+                                   "title":  "firebase should be the backend for pulselink apps to be communicating back and forth",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/67",
+                                   "createdAt":  "2025-12-01T01:40:17Z",
+                                   "updatedAt":  "2025-12-01T01:47:39Z",
+                                   "labels":  [
+                                                  "bug",
+                                                  "documentation",
+                                                  "enhancement",
+                                                  "TODO"
+                                              ],
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  66,
+                                   "title":  "email link sends user to blank email composer",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/66",
+                                   "createdAt":  "2025-12-01T01:39:11Z",
+                                   "updatedAt":  "2025-12-01T01:47:02Z",
+                                   "labels":  [
+                                                  "bug",
+                                                  "documentation",
+                                                  "enhancement",
+                                                  "TODO"
+                                              ],
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  65,
+                                   "title":  "playstore needs updated screenshots and details",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/65",
+                                   "createdAt":  "2025-12-01T01:37:50Z",
+                                   "updatedAt":  "2025-12-01T01:46:15Z",
+                                   "labels":  [
+                                                  "bug",
+                                                  "documentation",
+                                                  "enhancement",
+                                                  "TODO"
+                                              ],
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  64,
+                                   "title":  "Users are to be able to update thier own number and email to all thier trusted contacts 11/25/2025 20:35:03",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/64",
+                                   "createdAt":  "2025-11-26T03:36:15Z",
+                                   "updatedAt":  "2025-11-26T03:45:54Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  63,
+                                   "title":  "Users cant edit thier contacts names, numbers, or emails11/25/2025 20:33:35",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/63",
+                                   "createdAt":  "2025-11-26T03:36:14Z",
+                                   "updatedAt":  "2025-11-26T03:42:53Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  58,
+                                   "title":  "Need more on the android home widget, at least the logo",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/58",
+                                   "createdAt":  "2025-11-23T07:29:29Z",
+                                   "updatedAt":  "2025-11-23T07:35:06Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  55,
+                                   "title":  "Tablet view is strange",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/55",
+                                   "createdAt":  "2025-11-22T04:32:15Z",
+                                   "updatedAt":  "2025-11-22T04:36:01Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  54,
+                                   "title":  "Users without a number can\u0027t actually add another user",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/54",
+                                   "createdAt":  "2025-11-22T04:30:48Z",
+                                   "updatedAt":  "2025-11-22T04:33:22Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               },
+                               {
+                                   "number":  44,
+                                   "title":  "the number that appears over the icon doesn\u0027t seem to be linked to anything",
+                                   "url":  "https://github.com/DamienLove/pulselink/issues/44",
+                                   "createdAt":  "2025-11-18T00:47:23Z",
+                                   "updatedAt":  "2025-11-18T00:52:52Z",
+                                   "labels":  "bug",
+                                   "assignees":  "DamienLove",
+                                   "author":  "DamienLove"
+                               }
+                           ],
+                   "REQUEST":  [
+                                   {
+                                       "number":  81,
+                                       "title":  "Have a group area testers can message each other since testing requires min of 2 users12/1/2025 21:23:33",
+                                       "url":  "https://github.com/DamienLove/pulselink/issues/81",
+                                       "createdAt":  "2025-12-02T04:24:44Z",
+                                       "updatedAt":  "2025-12-02T04:28:32Z",
+                                       "labels":  "REQUEST",
+                                       "assignees":  "DamienLove",
+                                       "author":  "DamienLove"
+                                   },
+                                   {
+                                       "number":  80,
+                                       "title":  "Maybe have link id be users google if they use that for login....12/1/2025 21:21:10",
+                                       "url":  "https://github.com/DamienLove/pulselink/issues/80",
+                                       "createdAt":  "2025-12-02T04:21:44Z",
+                                       "updatedAt":  "2025-12-02T04:25:43Z",
+                                       "labels":  "REQUEST",
+                                       "assignees":  "DamienLove",
+                                       "author":  "DamienLove"
+                                   },
+                                   {
+                                       "number":  79,
+                                       "title":  "Move the submit bug to more obvious location12/1/2025 21:20:13",
+                                       "url":  "https://github.com/DamienLove/pulselink/issues/79",
+                                       "createdAt":  "2025-12-02T04:21:43Z",
+                                       "updatedAt":  "2025-12-02T04:25:39Z",
+                                       "labels":  "REQUEST",
+                                       "assignees":  "DamienLove",
+                                       "author":  "DamienLove"
+                                   }
+                               ]
+               }
+}
