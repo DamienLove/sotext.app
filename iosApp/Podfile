@@ -3,6 +3,9 @@ use_frameworks!
 
 target 'PulseLinkiOS' do
   pod 'Shared', :path => '../shared'
+  pod 'Firebase/CoreOnly'
+  pod 'Firebase/Auth'
+  pod 'Firebase/Firestore'
 end
 
 # Remove KMP-generated build phase; we prebuild in CI via generateDummyFramework.

@@ -45,6 +45,11 @@ workflows:
         script: |
           cd iosApp
           pod install
+      - name: Verify Firebase config exists
+        script: |
+          if [ ! -f "iosApp/PulseLinkiOS/GoogleService-Info.plist" ]; then
+            echo "GoogleService-Info.plist missing. Add it to iosApp/PulseLinkiOS in repo or provide via secure files." && exit 1
+          fi
       - name: Build iOS simulator app
         script: |
           cd iosApp

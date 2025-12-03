@@ -2,128 +2,176 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var viewModel: AlertRelayViewModel
+    @State private var showCancelSheet = false
+    @State private var pinInput = ""
+    @State private var selectedContact: ContactCard?
 
-    private let sampleContacts: [ContactChip] = [
-        ContactChip(name: "Alex Rivera", role: "Emergency", status: .online),
-        ContactChip(name: "Morgan Lee", role: "Check-in", status: .away),
-        ContactChip(name: "Jamie Patel", role: "Backup", status: .offline)
-    ]
+    var body: some View {
+        TabView {
+            HomeTab(viewModel: viewModel,
+                    showCancelSheet: $showCancelSheet,
+                    pinInput: $pinInput)
+                .tabItem {
+                    Label("Home", systemImage: "shield.lefthalf.filled")
+                }
 
-    private let sampleActivity: [ActivityRow] = [
-        ActivityRow(icon: "bolt.fill", title: "Emergency drill sent", detail: "Queued for 3 recipients"),
-        ActivityRow(icon: "checkmark.shield.fill", title: "Check-in acknowledged", detail: "2m ago • Morgan"),
-        ActivityRow(icon: "bubble.left.and.exclamationmark.fill", title: "Alert log synced", detail: "Today • Cloud")
-    ]
+            ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
+                .tabItem {
+                    Label("Contacts", systemImage: "person.2.fill")
+                }
+
+            SettingsTab(viewModel: viewModel)
+                .tabItem {
+                    Label("Settings", systemImage: "gear")
+                }
+        }
+        .sheet(isPresented: $showCancelSheet) {
+            CancelEmergencySheet(pinInput: $pinInput) { pin in
+                if viewModel.cancelEmergency(withPin: pin) {
+                    pinInput = ""
+                    showCancelSheet = false
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Home
+
+private struct HomeTab: View {
+    @ObservedObject var viewModel: AlertRelayViewModel
+    @Binding var showCancelSheet: Bool
+    @Binding var pinInput: String
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    heroCard
-                    actionsCard
-                    contactsCard
+                    emergencyCard
+                    relayCard
+                    overrideCard
                     activityCard
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 20)
+                .padding(16)
             }
-            .background(LinearGradient(colors: [.black, RelayColors.deep],
-                                       startPoint: .topLeading, endPoint: .bottomTrailing)
-                .ignoresSafeArea())
+            .background(
+                LinearGradient(colors: [.black, RelayColors.deep],
+                               startPoint: .topLeading,
+                               endPoint: .bottomTrailing)
+                    .ignoresSafeArea()
+            )
             .navigationTitle("PulseLink")
-        }
-    }
-
-    // MARK: - Sections
-
-    private var heroCard: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(LinearGradient(colors: [RelayColors.primary, RelayColors.accent],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 12) {
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
                     Image(systemName: "antenna.radiowaves.left.and.right")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .padding(10)
-                        .background(.white.opacity(0.15))
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("PulseLink Relay")
-                            .font(.title2.bold())
-                            .foregroundStyle(.white)
-                        Text("Send practice alerts and monitor relay health.")
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .lineLimit(2)
-                    }
+                        .foregroundStyle(RelayColors.primary)
                 }
-
-                statusPill(text: viewModel.statusText)
             }
-            .padding(20)
         }
-        .frame(maxWidth: .infinity)
     }
 
-    private var actionsCard: some View {
+    private var emergencyCard: some View {
         Card {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Actions")
+                    Text("Emergency")
                         .font(.headline)
-                    Text("Trigger a test alert to verify end-to-end delivery.")
+                    Text("Send a trusted emergency and override DND / ringer.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Image(systemName: "paperplane.fill")
-                    .foregroundStyle(RelayColors.primary)
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
             }
+
+            VStack(spacing: 14) {
+                switch viewModel.emergencyState {
+                case .idle:
+                    Button {
+                        viewModel.startEmergencyCountdown()
+                    } label: {
+                        Label("Send Emergency", systemImage: "bolt.fill")
+                            .font(.title3.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+
+                case .arming(let seconds):
+                    Button {
+                        showCancelSheet = true
+                    } label: {
+                        Label("Arming… \(seconds)s", systemImage: "timer")
+                            .font(.title3.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+
+                case .active:
+                    Button {
+                        showCancelSheet = true
+                    } label: {
+                        Label("Cancel Emergency", systemImage: "hand.raised.fill")
+                            .font(.title3.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                }
+
+                if viewModel.emergencyState == .active {
+                    Text("Emergency is live. Contacts will be alerted even if DND is on; ringer set to max.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var relayCard: some View {
+        Card {
+            HStack {
+                Text("Relay")
+                    .font(.headline)
+                Spacer()
+                Image(systemName: "waveform.path.ecg.rectangle")
+                    .foregroundStyle(RelayColors.accent)
+            }
+            Text(viewModel.statusText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
             Button {
                 Task { await viewModel.sendTestAlert() }
             } label: {
-                Label("Send Test Alert", systemImage: "bolt.horizontal.fill")
-                    .font(.headline)
+                Label("Send Test Alert", systemImage: "paperplane.fill")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .tint(RelayColors.primary)
-
-            Divider()
-            Label(viewModel.statusText, systemImage: "waveform.path.ecg")
-                .foregroundStyle(.secondary)
         }
     }
 
-    private var contactsCard: some View {
+    private var overrideCard: some View {
         Card {
             HStack {
-                Text("Trusted contacts")
+                Text("Alert delivery")
                     .font(.headline)
                 Spacer()
-                Text("\(sampleContacts.count) linked")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Image(systemName: "bell.and.waves.left.and.right.fill")
+                    .foregroundStyle(RelayColors.primary)
             }
-            VStack(spacing: 12) {
-                ForEach(sampleContacts) { contact in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(contact.name)
-                                .font(.body.weight(.semibold))
-                            Text(contact.role)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        statusDot(for: contact.status)
-                    }
-                    .padding(.vertical, 6)
-                }
-            }
+            Toggle("Override Do Not Disturb for trusted alerts", isOn: $viewModel.overrideDND)
+            Toggle("Max volume on urgent messages", isOn: $viewModel.maxVolumeOnUrgent)
+                .tint(.red)
+            Text("iOS limits full control of DND/volume; PulseLink will request critical alerts permission and play loud tones for urgent messages.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -133,57 +181,162 @@ struct ContentView: View {
                 Text("Recent activity")
                     .font(.headline)
                 Spacer()
-                Image(systemName: "arrow.clockwise")
+                Text(Date.now, style: .time)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            VStack(spacing: 12) {
-                ForEach(sampleActivity) { item in
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: item.icon)
-                            .foregroundStyle(RelayColors.accent)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.title)
-                                .font(.body.weight(.semibold))
-                            Text(item.detail)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Helpers
-
-    private func statusPill(text: String) -> some View {
-        Text(text)
-            .font(.callout.weight(.semibold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(.white.opacity(0.15))
-            .clipShape(Capsule())
-    }
-
-    private func statusDot(for status: Presence) -> some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(status.color)
-                .frame(width: 10, height: 10)
-            Text(status.label)
-                .font(.caption)
+            Label("Emergency drill queued for 3 contacts", systemImage: "bolt.fill")
+                .foregroundStyle(RelayColors.accent)
+            Label("Check-in acknowledged • Morgan", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.secondary)
+            Label("Widget updated with latest status", systemImage: "rectangle.dashed.badge.record")
                 .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(Capsule())
     }
 }
 
-// MARK: - UI primitives
+// MARK: - Contacts
+
+private struct ContactsTab: View {
+    @ObservedObject var viewModel: AlertRelayViewModel
+    @Binding var selectedContact: ContactCard?
+    @State private var draftMessage = ""
+    @State private var urgent = true
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Trusted contacts") {
+                    ForEach(viewModel.contacts) { contact in
+                        NavigationLink(value: contact) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(contact.name).font(.headline)
+                                    Text(contact.role).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                PresenceDot(presence: contact.presence)
+                                if contact.unread > 0 {
+                                    Badge("\(contact.unread)")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationDestination(for: ContactCard.self) { contact in
+                ConversationView(
+                    contact: contact,
+                    messages: viewModel.messages(for: contact),
+                    onSend: { text, urgent in
+                        viewModel.sendMessage(to: contact, text: text, urgent: urgent)
+                    }
+                )
+            }
+            .navigationTitle("Contacts")
+        }
+    }
+}
+
+private struct ConversationView: View {
+    let contact: ContactCard
+    let messages: [ConversationMessage]
+    let onSend: (String, Bool) -> Void
+
+    @State private var draft = ""
+    @State private var urgent = true
+
+    var body: some View {
+        VStack {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 12) {
+                        ForEach(messages) { msg in
+                            HStack {
+                                if msg.isIncoming { Spacer() }
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(msg.text)
+                                        .padding(12)
+                                        .background(msg.isUrgent ? Color.red.opacity(0.15) : Color(.secondarySystemBackground))
+                                        .foregroundStyle(msg.isUrgent ? .red : .primary)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    Text(msg.timestamp, style: .time)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                if !msg.isIncoming { Spacer() }
+                            }
+                            .id(msg.id)
+                        }
+                    }
+                    .padding()
+                }
+                .onAppear {
+                    if let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
+                }
+            }
+
+            VStack(spacing: 8) {
+                Toggle("Mark urgent (override DND, boost volume)", isOn: $urgent)
+                    .font(.caption)
+                    .padding(.horizontal)
+                HStack {
+                    TextField("Message", text: $draft)
+                        .textFieldStyle(.roundedBorder)
+                    Button {
+                        guard !draft.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                        onSend(draft, urgent)
+                        draft = ""
+                    } label: {
+                        Image(systemName: "paperplane.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(RelayColors.primary)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+            }
+            .background(.thinMaterial)
+        }
+        .navigationTitle(contact.name)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Settings
+
+private struct SettingsTab: View {
+    @ObservedObject var viewModel: AlertRelayViewModel
+    @State private var baseUrlDraft: String = ""
+
+    var body: some View {
+        Form {
+            Section("Relay") {
+                TextField("Relay base URL", text: Binding(
+                    get: { baseUrlDraft.isEmpty ? viewModel.baseUrl : baseUrlDraft },
+                    set: { baseUrlDraft = $0 }
+                ), prompt: Text("https://…"))
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                Button("Apply URL") {
+                    viewModel.baseUrl = baseUrlDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
+            Section("Alerts") {
+                Toggle("Override Do Not Disturb", isOn: $viewModel.overrideDND)
+                Toggle("Max volume on urgent", isOn: $viewModel.maxVolumeOnUrgent)
+            }
+            Section("About") {
+                Label("Matches Android experience: emergency, trusted contacts, urgent chat", systemImage: "arrow.left.arrow.right")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("Settings")
+    }
+}
+
+// MARK: - Components
 
 private struct Card<Content: View>: View {
     @ViewBuilder var content: Content
@@ -198,42 +351,84 @@ private struct Card<Content: View>: View {
     }
 }
 
-private struct ContactChip: Identifiable {
-    let id = UUID()
-    let name: String
-    let role: String
-    let status: Presence
-}
-
-private struct ActivityRow: Identifiable {
-    let id = UUID()
-    let icon: String
-    let title: String
-    let detail: String
-}
-
-private enum Presence {
-    case online, away, offline
-
-    var color: Color {
-        switch self {
-        case .online: return Color.green
-        case .away: return Color.yellow
-        case .offline: return Color.red
+private struct PresenceDot: View {
+    let presence: Presence
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 10, height: 10)
+            Text(presence.label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(Capsule())
     }
 
-    var label: String {
-        switch self {
-        case .online: return "Online"
-        case .away: return "Idle"
-        case .offline: return "Offline"
+    private var color: Color {
+        switch presence {
+        case .online: return .green
+        case .recent: return .yellow
+        case .offline: return .red
         }
     }
 }
 
-private enum RelayColors {
-    // Inspired by the Android gold palette
+private struct Badge: View {
+    let text: String
+    var body: some View {
+        Text(text)
+            .font(.caption.bold())
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(RelayColors.accent)
+            .clipShape(Capsule())
+    }
+}
+
+private struct CancelEmergencySheet: View {
+    @Binding var pinInput: String
+    var onSubmit: (String) -> Void
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                Text("Cancel Emergency")
+                    .font(.title2.bold())
+                Text("Enter your PIN to cancel the active alert.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                SecureField("PIN", text: $pinInput)
+                    .keyboardType(.numberPad)
+                    .textContentType(.oneTimeCode)
+                    .multilineTextAlignment(.center)
+                    .padding()
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                Button {
+                    onSubmit(pinInput)
+                } label: {
+                    Label("Confirm cancel", systemImage: "hand.raised.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+            }
+            .padding()
+            .presentationDetents([.fraction(0.4)])
+        }
+    }
+}
+
+// MARK: - Theme
+
+enum RelayColors {
     static let primary = Color(red: 0.96, green: 0.80, blue: 0.43)   // gold light
     static let accent  = Color(red: 0.75, green: 0.53, blue: 0.12)   // gold deep
     static let deep    = Color(red: 0.07, green: 0.09, blue: 0.14)   // near-black
