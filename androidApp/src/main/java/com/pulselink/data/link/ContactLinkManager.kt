@@ -92,7 +92,6 @@ class ContactLinkManager @Inject constructor(
 
     suspend fun sendLinkRequest(contactId: Long) {
         val contact = contactRepository.getContact(contactId) ?: return
-        val targetPhone = contact.primaryPhone() ?: return
         val deviceId = settingsRepository.ensureDeviceId()
         val code = contact.linkCode ?: UUID.randomUUID().toString()
         val updated = contact.copy(
@@ -103,13 +102,54 @@ class ContactLinkManager @Inject constructor(
         contactRepository.upsert(updated)
         upsertLinkDoc(code)
         val senderName = settingsRepository.settings.first().ownerName.ifBlank { contact.displayName }
-        val payload = SmsCodec.encodeLinkRequest(deviceId, code, senderName)
-        smsSender.sendSms(targetPhone, payload)
+
+        val targetPhone = contact.primaryPhone()
+        if (!targetPhone.isNullOrBlank()) {
+            val payload = SmsCodec.encodeLinkRequest(deviceId, code, senderName)
+            smsSender.sendSms(targetPhone, payload)
+            return
+        }
+
+        val targetEmail = normalizeEmail(contact.primaryEmail())
+        if (targetEmail.isNotBlank()) {
+            sendEmailLinkRequest(code, targetEmail, senderName, updated)
+            return
+        }
+
+        Log.w(TAG, "sendLinkRequest: no phone/email available for contactId=$contactId")
+    }
+
+    private suspend fun sendEmailLinkRequest(
+        code: String,
+        targetEmail: String,
+        senderName: String,
+        contact: Contact
+    ) {
+        val sender = auth.currentUser ?: run {
+            Log.w(TAG, "sendEmailLinkRequest: no authenticated user")
+            return
+        }
+        val payload = hashMapOf(
+            "code" to code,
+            "senderUid" to sender.uid,
+            "senderDeviceId" to settingsRepository.ensureDeviceId(),
+            "senderName" to senderName,
+            "senderEmail" to normalizeEmail(sender.email),
+            "targetEmailLowercase" to targetEmail,
+            "contactName" to contact.displayName,
+            "createdAt" to FieldValue.serverTimestamp()
+        )
+        runCatching {
+            firestore.collection(COLLECTION_EMAIL_INVITES)
+                .add(payload)
+                .await()
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to enqueue email-based link invite for $targetEmail", error)
+        }
     }
 
     suspend fun approveLink(contactId: Long) {
         val contact = contactRepository.getContact(contactId) ?: return
-        val targetPhone = contact.primaryPhone() ?: return
         val deviceId = settingsRepository.ensureDeviceId()
         val code = contact.linkCode ?: UUID.randomUUID().toString()
         val updated = contact.copy(
@@ -124,9 +164,18 @@ class ContactLinkManager @Inject constructor(
         )
         contactRepository.upsert(updated)
         upsertLinkDoc(code)
-        maybeApplyRemoteUid(code, targetPhone)
-        val payload = SmsCodec.encodeLinkAccept(deviceId, code)
-        smsSender.sendSms(targetPhone, payload)
+        val targetPhone = contact.primaryPhone()
+        if (!targetPhone.isNullOrBlank()) {
+            maybeApplyRemoteUid(code, targetPhone)
+            val payload = SmsCodec.encodeLinkAccept(deviceId, code)
+            smsSender.sendSms(targetPhone, payload)
+            return
+        }
+        val targetEmail = normalizeEmail(contact.primaryEmail())
+        if (targetEmail.isNotBlank()) {
+            Log.i(TAG, "approveLink: recorded cloud approval for code=$code (email-only contact)")
+            return
+        }
     }
 
     suspend fun sendPing(contactId: Long): Boolean {
@@ -932,6 +981,7 @@ class ContactLinkManager @Inject constructor(
     }
 
     suspend fun syncLinksOnLogin() {
+        fetchEmailInvitesForCurrentUser()
         val uid = auth.currentUser?.uid ?: return
         val phone = auth.currentUser?.phoneNumber
         val linkCollection = firestore.collection(COLLECTION_LINKS)
@@ -994,6 +1044,52 @@ class ContactLinkManager @Inject constructor(
 
     private fun presenceFromNullable(lastSeenMillis: Long?): RemotePresence {
         return lastSeenMillis?.let { presenceFrom(it) } ?: RemotePresence.STALE
+    }
+
+    private suspend fun fetchEmailInvitesForCurrentUser() {
+        val email = normalizeEmail(auth.currentUser?.email)
+        if (email.isBlank()) return
+        val snapshot = runCatching {
+            firestore.collection(COLLECTION_EMAIL_INVITES)
+                .whereEqualTo("targetEmailLowercase", email)
+                .get()
+                .await()
+        }.getOrElse { error ->
+            Log.w(TAG, "Unable to fetch email-based link invites", error)
+            return
+        }
+        if (snapshot.isEmpty) return
+
+        val existing = contactRepository.observeContacts().first()
+        var nextOrder = (existing.maxOfOrNull { it.contactOrder } ?: -1) + 1
+
+        snapshot.documents.forEach { doc ->
+            val code = doc.getString("code").orEmpty().ifBlank { UUID.randomUUID().toString() }
+            val senderName = doc.getString("senderName").orEmpty()
+            val senderEmail = normalizeEmail(doc.getString("senderEmail"))
+            val senderDeviceId = doc.getString("senderDeviceId")
+            val senderUid = doc.getString("senderUid")
+            val base = contactRepository.getByLinkCode(code)
+                ?: contactRepository.getByEmail(senderEmail)
+                ?: Contact(
+                    displayName = senderName.ifBlank { senderEmail.ifBlank { context.getString(R.string.app_name) } },
+                    email = senderEmail.takeIf { it.isNotBlank() },
+                    contactOrder = nextOrder++
+                )
+            val updated = base.copy(
+                linkStatus = LinkStatus.INBOUND_REQUEST,
+                linkCode = code,
+                pendingApproval = true,
+                remoteDeviceId = senderDeviceId ?: base.remoteDeviceId,
+                remoteUid = senderUid ?: base.remoteUid,
+                remotePresence = base.remotePresence.takeIf { it != RemotePresence.UNKNOWN }
+                    ?: RemotePresence.RECENT
+            )
+            contactRepository.upsert(updated)
+            upsertLinkDoc(code)
+            runCatching { firestore.collection(COLLECTION_EMAIL_INVITES).document(doc.id).delete().await() }
+                .onFailure { error -> Log.w(TAG, "Unable to clear processed email invite ${doc.id}", error) }
+        }
     }
 
     private suspend fun markPresence(contact: Contact, observedAt: Long = System.currentTimeMillis()): Contact {
@@ -1078,6 +1174,7 @@ class ContactLinkManager @Inject constructor(
         const val CONFIG_EMAIL_UPDATE = "EMAIL"
         private const val PREPARE_TIMEOUT_MS = 10_000L
         const val COLLECTION_LINKS = "links"
+        const val COLLECTION_EMAIL_INVITES = "linkEmailInvites"
         private const val REMOTE_ALERT_DEDUP_WINDOW_MS = 15_000L
         private const val REMOTE_ALERT_DEDUP_MAX = 50
     }

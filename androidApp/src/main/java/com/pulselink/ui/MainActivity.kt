@@ -877,25 +877,9 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.link_request_sent_sms), Toast.LENGTH_SHORT).show()
             return
         }
-        val email = contact.email
-        if (!email.isNullOrBlank()) {
-            val sender = viewModel.uiState.value.settings.ownerName.ifBlank { getString(R.string.app_name) }
-            val playPackage = if (BuildConfig.ADS_ENABLED) "com.free.pulselink" else "com.pulselink.pro"
-            val playLink = "https://play.google.com/store/apps/details?id=$playPackage"
-            val subject = getString(R.string.link_invite_email_subject, sender)
-            val body = getString(R.string.link_invite_email_body, contact.displayName, sender, playLink)
-            val intent = Intent(Intent.ACTION_SENDTO).apply {
-                // Use generic mailto: to keep extras respected by most clients
-                data = Uri.parse("mailto:")
-                putExtra(Intent.EXTRA_EMAIL, arrayOf(email))
-                putExtra(Intent.EXTRA_SUBJECT, subject)
-                putExtra(Intent.EXTRA_TEXT, body)
-            }
-            try {
-                startActivity(Intent.createChooser(intent, getString(R.string.link_invite_email_chooser)))
-            } catch (_: ActivityNotFoundException) {
-                Toast.makeText(this, getString(R.string.link_invite_no_email_app), Toast.LENGTH_SHORT).show()
-            }
+        if (!contact.email.isNullOrBlank()) {
+            viewModel.sendLinkRequest(contact.id)
+            Toast.makeText(this, getString(R.string.link_request_sent_cloud), Toast.LENGTH_SHORT).show()
             return
         }
         Toast.makeText(this, getString(R.string.link_invite_missing_contact_info), Toast.LENGTH_SHORT).show()

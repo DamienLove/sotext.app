@@ -201,6 +201,7 @@
     <string name="cancel_emergency_card_cta">Authenticate to cancel</string>
     <string name="cancel_emergency_card_secondary">Biometric confirmation required</string>
     <string name="link_request_sent_sms">Link request sent via SMS</string>
+    <string name="link_request_sent_cloud">Link request sent via cloud</string>
     <string name="link_invite_email_subject">%1$s wants to connect on PulseLink</string>
     <string name="link_invite_email_body">Hi %1$s,\n\n%2$s invited you to connect on PulseLink. Download the app to accept their request:\n%3$s\n\nAfter installing, open PulseLink and approve the link.</string>
     <string name="link_invite_email_chooser">Send invite with</string>
