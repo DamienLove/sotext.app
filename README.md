@@ -17,6 +17,12 @@ PulseLink is a personal safety app that listens for discreet trigger phrases and
 - Alpha APK:
   - Download: [PulseLink Alpha](androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk)
 
+## Product Lineup
+
+- **Beacon (Free)** – ad-supported default SMS app with core safety and alerts.
+- **PulseLink Pro (one-time)** – Beacon plus the full safety stack with ads removed.
+- **Beacon Premium (subscription)** – everything in Pro plus caller ID, remote SMS access, AI \"Lab\" features, trusted/private contacts, and customizable UI.
+
 ## iOS Roadmap
 
 PulseLink for iOS is in active planning. See the detailed milestones, dependencies, and how to contribute:

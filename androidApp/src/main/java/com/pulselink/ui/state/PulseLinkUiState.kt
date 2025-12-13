@@ -17,6 +17,7 @@ data class PulseLinkUiState(
     val callSoundOptions: List<SoundOption> = emptyList(),
     val showAds: Boolean = false,
     val isProUser: Boolean = true,
+    val isPremiumUser: Boolean = false,
     val adsAvailable: Boolean = false,
     val onboardingComplete: Boolean = false,
     val dndStatus: DndStatusMessage? = null,

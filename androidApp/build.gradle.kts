@@ -104,6 +104,7 @@ fun com.android.build.api.dsl.SigningConfig.applySpec(
 val releaseSigningSpec = project.buildSigningSpec(flavor = null)
 val freeSigningSpec = project.buildSigningSpec("free")
 val proSigningSpec = project.buildSigningSpec("pro")
+val premiumSigningSpec = project.buildSigningSpec("premium")
 
 android {
     namespace = "com.pulselink"
@@ -120,6 +121,9 @@ android {
         }
         if (proSigningSpec.isConfigured) {
             create("proRelease") { applySpec(proSigningSpec, "proRelease", logger) }
+        }
+        if (premiumSigningSpec.isConfigured) {
+            create("premiumRelease") { applySpec(premiumSigningSpec, "premiumRelease", logger) }
         }
     }
 
@@ -151,6 +155,7 @@ android {
         val releaseConfig = signingConfigs.getByName("release")
         val freeReleaseConfig = signingConfigs.findByName("freeRelease")
         val proReleaseConfig = signingConfigs.findByName("proRelease")
+        val premiumReleaseConfig = signingConfigs.findByName("premiumRelease")
 
         create("free") {
             dimension = "tier"
@@ -160,6 +165,8 @@ android {
             )
             buildConfigField("boolean", "ADS_ENABLED", "true")
             buildConfigField("boolean", "PRO_FEATURES", "false")
+            buildConfigField("boolean", "PREMIUM_FEATURES", "false")
+            buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "false")
             buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
             buildConfigField("String", "AD_APP_ID", "\"ca-app-pub-5327057757821609~9533221188\"")
             buildConfigField("String", "AD_UNIT_BANNER", "\"ca-app-pub-5327057757821609/3955684775\"")
@@ -167,7 +174,9 @@ android {
             buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"ca-app-pub-5327057757821609/8428571815\"")
             buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"ca-app-pub-5327057757821609/2153424615\"")
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"ca-app-pub-5327057757821609/4210125201\"")
-            resValue("string", "app_name", "PulseLink")
+            buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"\"")
+            buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"\"")
+            resValue("string", "app_name", "PulseLink Beacon")
             val targetSigning = when {
                 freeSigningSpec.isConfigured -> freeReleaseConfig
                 releaseSigningSpec.isConfigured -> releaseConfig
@@ -185,6 +194,8 @@ android {
             )
             buildConfigField("boolean", "ADS_ENABLED", "false")
             buildConfigField("boolean", "PRO_FEATURES", "true")
+            buildConfigField("boolean", "PREMIUM_FEATURES", "false")
+            buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "false")
             buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
             buildConfigField("String", "AD_APP_ID", "\"\"")
             buildConfigField("String", "AD_UNIT_BANNER", "\"\"")
@@ -192,8 +203,40 @@ android {
             buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"\"")
             buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"\"")
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
-            resValue("string", "app_name", "PulseLink Pro")
+            buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"\"")
+            buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"\"")
+            resValue("string", "app_name", "PulseLink Pro (Beacon)")
             val targetSigning = when {
+                proSigningSpec.isConfigured -> proReleaseConfig
+                releaseSigningSpec.isConfigured -> releaseConfig
+                else -> null
+            }
+            if (targetSigning != null) {
+                signingConfig = targetSigning
+            }
+        }
+        create("premium") {
+            dimension = "tier"
+            applicationIdSuffix = ".premium"
+            manifestPlaceholders += mapOf(
+                "admobAppId" to ""
+            )
+            buildConfigField("boolean", "ADS_ENABLED", "false")
+            buildConfigField("boolean", "PRO_FEATURES", "true")
+            buildConfigField("boolean", "PREMIUM_FEATURES", "true")
+            buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "true")
+            buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
+            buildConfigField("String", "AD_APP_ID", "\"\"")
+            buildConfigField("String", "AD_UNIT_BANNER", "\"\"")
+            buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"\"")
+            buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"\"")
+            buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"\"")
+            buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
+            buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"pulselink_premium_monthly\"")
+            buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"pulselink_premium_yearly\"")
+            resValue("string", "app_name", "PulseLink Beacon Premium")
+            val targetSigning = when {
+                premiumSigningSpec.isConfigured -> premiumReleaseConfig
                 proSigningSpec.isConfigured -> proReleaseConfig
                 releaseSigningSpec.isConfigured -> releaseConfig
                 else -> null
@@ -237,7 +280,8 @@ android {
 // Automatically copy per-flavor google-services.json from secure folders if present.
 listOf(
     "free" to rootProject.file("Free-Certs/google-services.json"),
-    "pro" to rootProject.file("PRO-CERTS/google-services.json")
+    "pro" to rootProject.file("PRO-CERTS/google-services.json"),
+    "premium" to rootProject.file("PRO-CERTS/google-services-premium.json")
 ).forEach { (flavor, sourceFile) ->
     tasks.register("sync${flavor.replaceFirstChar { it.titlecase(Locale.US) }}GoogleServices", Copy::class) {
         onlyIf { sourceFile.exists() }
@@ -248,11 +292,11 @@ listOf(
 }
 
 tasks.matching { it.name == "preBuild" }.configureEach {
-    dependsOn("syncFreeGoogleServices", "syncProGoogleServices")
+    dependsOn("syncFreeGoogleServices", "syncProGoogleServices", "syncPremiumGoogleServices")
 }
 
 tasks.withType(GoogleServicesTask::class.java).configureEach {
-    dependsOn("syncFreeGoogleServices", "syncProGoogleServices")
+    dependsOn("syncFreeGoogleServices", "syncProGoogleServices", "syncPremiumGoogleServices")
 }
 
 kapt {
@@ -313,6 +357,7 @@ kapt {
     implementation("com.google.android.gms:play-services-ads:22.6.0")
     implementation("com.google.android.gms:play-services-auth:21.1.0")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
+    implementation("com.android.billingclient:billing-ktx:7.1.1")
     implementation("com.google.firebase:firebase-crashlytics-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx:23.0.0")

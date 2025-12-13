@@ -16,11 +16,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,8 +54,14 @@ fun SettingsScreen(
     settings: PulseLinkSettings,
     hasDndAccess: Boolean,
     showAds: Boolean,
+    isDefaultSmsApp: Boolean,
+    defaultSmsSupported: Boolean,
+    subscriptionAvailable: Boolean,
+    isPremiumActive: Boolean,
+    subscriptionMessage: String?,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
+    onRequestDefaultSms: () -> Unit,
     onRequestBatteryOpt: () -> Unit,
     onRequestUnusedApps: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
@@ -68,7 +76,8 @@ fun SettingsScreen(
     onBetaTesters: () -> Unit,
     onOpenHelp: () -> Unit,
     onSignOut: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onPurchasePremium: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -111,6 +120,40 @@ fun SettingsScreen(
                 checked = settings.includeLocation,
                 onCheckedChange = onToggleIncludeLocation
             )
+            val defaultSmsSubtitle = if (isDefaultSmsApp) {
+                "PulseLink is set as the default SMS app."
+            } else if (defaultSmsSupported) {
+                "Required for Beacon/Pro messaging and Play compliance."
+            } else {
+                "Default SMS role unavailable on this device."
+            }
+            SettingsActionRow(
+                title = "Default SMS app",
+                subtitle = defaultSmsSubtitle,
+                actionLabel = if (isDefaultSmsApp) "Change" else "Make default",
+                onAction = onRequestDefaultSms,
+                leadingIcon = Icons.Filled.Message
+            )
+            if (BuildConfig.SUBSCRIPTION_ENABLED && subscriptionAvailable) {
+                val premiumSubtitle = when {
+                    isPremiumActive -> "Beacon Premium is active on this device."
+                    else -> "Unlock caller ID, remote SMS, AI lab features, and more."
+                }
+                SettingsActionRow(
+                    title = "Beacon Premium",
+                    subtitle = premiumSubtitle,
+                    actionLabel = if (isPremiumActive) "Manage" else "Subscribe",
+                    onAction = onPurchasePremium,
+                    leadingIcon = Icons.Filled.Star
+                )
+                subscriptionMessage?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             val dndSubtitle = if (hasDndAccess) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                     stringResource(R.string.dnd_override_android15_note)

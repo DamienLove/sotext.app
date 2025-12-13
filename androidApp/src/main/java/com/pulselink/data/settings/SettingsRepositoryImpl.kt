@@ -34,6 +34,7 @@ private val BETA_AGREEMENT_ACCEPTED = booleanPreferencesKey("beta_agreement_acce
 private val BETA_AGREEMENT_VERSION = stringPreferencesKey("beta_agreement_version")
 private val AUTO_CALL = booleanPreferencesKey("auto_call")
 private val PRO_UNLOCKED = booleanPreferencesKey("pro_unlocked")
+private val PREMIUM_UNLOCKED = booleanPreferencesKey("premium_unlocked")
 private val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
 private val DEVICE_ID = stringPreferencesKey("device_id")
 private val OWNER_NAME = stringPreferencesKey("owner_name")
@@ -70,6 +71,7 @@ class SettingsRepositoryImpl @Inject constructor(
             betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
+            premiumUnlocked = prefs[PREMIUM_UNLOCKED] ?: PulseLinkSettings().premiumUnlocked,
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
             deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
             ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName,
@@ -94,6 +96,7 @@ class SettingsRepositoryImpl @Inject constructor(
             updated.betaAgreementVersion?.let { prefs[BETA_AGREEMENT_VERSION] = it } ?: prefs.remove(BETA_AGREEMENT_VERSION)
             prefs[AUTO_CALL] = updated.autoCallAfterAlert
             prefs[PRO_UNLOCKED] = updated.proUnlocked
+            prefs[PREMIUM_UNLOCKED] = updated.premiumUnlocked
             prefs[ONBOARDING_COMPLETE] = updated.onboardingComplete
             prefs[DEVICE_ID] = updated.deviceId
             prefs[OWNER_NAME] = updated.ownerName
@@ -105,6 +108,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setProUnlocked(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[PRO_UNLOCKED] = enabled
+        }
+    }
+
+    override suspend fun setPremiumUnlocked(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[PREMIUM_UNLOCKED] = enabled
         }
     }
 
@@ -219,10 +228,12 @@ class SettingsRepositoryImpl @Inject constructor(
             betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
+            premiumUnlocked = prefs[PREMIUM_UNLOCKED] ?: PulseLinkSettings().premiumUnlocked,
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
             deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
             ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName,
-            isBetaTester = prefs[IS_BETA_TESTER] ?: PulseLinkSettings().isBetaTester
+            isBetaTester = prefs[IS_BETA_TESTER] ?: PulseLinkSettings().isBetaTester,
+            autoUpdateContactInfo = prefs[AUTO_UPDATE_CONTACT_INFO] ?: PulseLinkSettings().autoUpdateContactInfo
         )
     }
 }

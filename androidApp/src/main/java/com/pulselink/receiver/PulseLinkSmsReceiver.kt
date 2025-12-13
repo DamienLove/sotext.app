@@ -23,7 +23,11 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
     @Inject lateinit var contactLinkManager: ContactLinkManager
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
+        val action = intent.action
+        if (action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION &&
+            action != Telephony.Sms.Intents.SMS_DELIVER_ACTION) {
+            return
+        }
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
         val mergedBody = messages.joinToString(separator = "") { it.messageBody }
         val body = mergedBody.trim()

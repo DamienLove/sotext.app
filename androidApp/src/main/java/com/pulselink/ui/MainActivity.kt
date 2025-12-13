@@ -111,6 +111,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.pulselink.BuildConfig
+import com.pulselink.billing.SubscriptionManager
+import com.pulselink.util.DefaultSmsHelper
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -118,6 +120,8 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var callStateMonitor: CallStateMonitor
+    @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
+    @Inject lateinit var subscriptionManager: SubscriptionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -142,6 +146,33 @@ class MainActivity : AppCompatActivity() {
                 var isPreparingCall by remember { mutableStateOf(false) }
                 val activity = this@MainActivity
                 var isCancelingEmergency by remember { mutableStateOf(false) }
+                val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
+                var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
+                val defaultSmsLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.StartActivityForResult()
+                ) {
+                    isDefaultSms = defaultSmsHelper.isDefaultSms()
+                }
+                val defaultSmsSupported = remember {
+                    defaultSmsHelper.buildRoleRequestIntent() != null || defaultSmsHelper.isDefaultSms()
+                }
+                val requestDefaultSms = remember(defaultSmsLauncher) {
+                    {
+                        val intent = defaultSmsHelper.buildRoleRequestIntent()
+                        if (intent != null) {
+                            defaultSmsLauncher.launch(intent)
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Default SMS role not available on this device.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+                LaunchedEffect(Unit) {
+                    isDefaultSms = defaultSmsHelper.isDefaultSms()
+                }
                 val cancelEmergencyLauncher = rememberCancelEmergencyLauncher(
                     activity = activity,
                     onAuthenticated = {
@@ -823,8 +854,14 @@ class MainActivity : AppCompatActivity() {
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
                             showAds = state.showAds,
+                            isDefaultSmsApp = isDefaultSms,
+                            defaultSmsSupported = defaultSmsSupported,
+                            subscriptionAvailable = subscriptionUiState.available,
+                            isPremiumActive = subscriptionUiState.isPremiumActive || state.settings.premiumUnlocked,
+                            subscriptionMessage = subscriptionUiState.statusMessage,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
+                            onRequestDefaultSms = requestDefaultSms,
                             onRequestBatteryOpt = { openBatteryOptimizationSettings(context) },
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
@@ -841,7 +878,8 @@ class MainActivity : AppCompatActivity() {
                             onSignOut = {
                                 viewModel.signOut()
                             },
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            onPurchasePremium = { subscriptionManager.launchSubscribe(activity) }
                         )
                     }
                     composable("settings_help") {

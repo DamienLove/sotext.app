@@ -13,7 +13,7 @@ pulselink-*.json
 
 functions/node_modules/
 functions/lib/
-PulseLink/
+/PulseLink/
 PulseLink/node_modules/
 PulseLink/.expo/
 PulseLink/.expo-shared/

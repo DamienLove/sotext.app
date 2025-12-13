@@ -101,8 +101,8 @@ class MainViewModel @Inject constructor(
             ) { settings, contacts, events, isDispatching, message ->
                 val normalizedSettings = ensureSoundDefaults(settings)
                 val adsAvailable = BuildConfig.ADS_ENABLED
-                val showAds = adsAvailable && !normalizedSettings.proUnlocked
-                val isProUser = normalizedSettings.proUnlocked || !adsAvailable
+                val showAds = adsAvailable && !normalizedSettings.proUnlocked && !normalizedSettings.premiumUnlocked
+                val isProUser = normalizedSettings.proUnlocked || normalizedSettings.premiumUnlocked || !adsAvailable
 
                 PulseLinkUiState(
                     settings = normalizedSettings,
@@ -115,6 +115,7 @@ class MainViewModel @Inject constructor(
                     callSoundOptions = callSounds,
                     showAds = showAds,
                     isProUser = isProUser,
+                    isPremiumUser = normalizedSettings.premiumUnlocked,
                     adsAvailable = adsAvailable,
                     onboardingComplete = normalizedSettings.onboardingComplete,
                     autoUpdateContactInfo = normalizedSettings.autoUpdateContactInfo
@@ -906,7 +907,14 @@ class MainViewModel @Inject constructor(
             .appendQueryParameter("reporter", bugReportData.userEmail)
             .appendQueryParameter("version_name", versionName)
             .appendQueryParameter("version_code", versionCode.toString())
-            .appendQueryParameter("build_flavor", if (BuildConfig.ADS_ENABLED) "free" else "pro")
+            .appendQueryParameter(
+                "build_flavor",
+                when {
+                    BuildConfig.PREMIUM_FEATURES -> "premium"
+                    BuildConfig.ADS_ENABLED -> "free"
+                    else -> "pro"
+                }
+            )
             .appendQueryParameter("device", "$manufacturer $model")
             .appendQueryParameter("os_version", "Android $osVersion (API $apiLevel)")
             .appendQueryParameter("summary_suffix", subjectSuffix)

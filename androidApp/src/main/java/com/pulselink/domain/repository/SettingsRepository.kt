@@ -7,6 +7,7 @@ interface SettingsRepository {
     val settings: Flow<PulseLinkSettings>
     suspend fun update(transform: (PulseLinkSettings) -> PulseLinkSettings)
     suspend fun setProUnlocked(enabled: Boolean)
+    suspend fun setPremiumUnlocked(enabled: Boolean)
     suspend fun setOnboardingComplete()
     suspend fun ensureDeviceId(): String
     suspend fun setOwnerName(name: String)

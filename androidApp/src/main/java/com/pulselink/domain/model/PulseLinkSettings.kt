@@ -28,6 +28,7 @@ data class PulseLinkSettings(
     val betaAgreementVersion: String? = null,
     val autoCallAfterAlert: Boolean = false,
     val proUnlocked: Boolean = false,
+    val premiumUnlocked: Boolean = false,
     val onboardingComplete: Boolean = false,
     val deviceId: String = "",
     val isBetaTester: Boolean = false,
