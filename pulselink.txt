@@ -1,32 +1,35 @@
-Branch: feature/kmp-ios-backend-relay (based on Beta)
-Recent builds (this branch):
- - 2025-12-02: .\gradlew bundleFreeRelease bundleProRelease (versionCode 26 / versionName 26) using updated google-services.json from Free-Certs and PRO-CERTS; AlertRelayClient Ktor isSuccess import fixed.
- - .\gradlew assembleFreeDebug ✅ (KMP shared module + Android build still green)
-CI setup:
- - Added codemagic.yaml (workflow: ios-simulator-kmp). Steps: KMP podspec, XcodeGen, pod install, xcodebuild for simulator, zip artifact.
- - XcodeGen spec at iosApp/project.yml; Info.plist scaffolded under iosApp/PulseLinkiOS.
- - Latest fixes: chmod gradlew; allow project repos; add Kotlin native repo; Cocoapods podspec name/version; syncFramework (iphonesimulator/arm64 Debug) before pod install; workspace path now PulseLinkiOS.xcworkspace (cd iosApp); scheme is PulseLinkiOS.
-  - Simulator packaging uses derivedData at $CM_BUILD_DIR/derivedData; looks for PulseLinkiOS.app there.
-  - Shared client now tolerates non-2xx and mock baseUrl; default iOS status shows error instead of crash.
-  - Podfile removes [CP-User] Build Shared phase; CI prebuilds via :shared:syncFramework (iphonesimulator/arm64 Debug) before pod install so Xcode doesn’t call Gradle.
-  - Codemagic steps (current): chmod + symlink gradlew; :shared:podspec; :shared:generateDummyFramework; XcodeGen; pod install (with build phase removed); xcodebuild Debug iphonesim (derivedData=$CM_BUILD_DIR/derivedData); zip PulseLinkiOS.app.
+Branch: change-directions-pl-suite (based on Beta)
 
-Ad configuration (free flavor):
- - AdMob app id: ca-app-pub-5327057757821609~9533221188
- - Banner unit: ca-app-pub-5327057757821609/3955684775
- - Interstitial unit: ca-app-pub-5327057757821609/3170992810
- - Rewarded interstitial unit: ca-app-pub-5327057757821609/8428571815
- - Native advanced unit: ca-app-pub-5327057757821609/2153424615
- - App open unit: ca-app-pub-5327057757821609/4210125201
- - Ads disabled for pro flavor (MobileAdsInitProvider removed; build config ADS_ENABLED=false).
+Recent builds / notable runs
+- 2025-12-02: .\gradlew bundleFreeRelease bundleProRelease (versionCode 26 / versionName 26) using updated google-services.json from Free-Certs and PRO-CERTS; AlertRelayClient Ktor isSuccess import fixed.
+- 2025-12-13: flavors expanded to free / pro / premium; billing-ktx added; default-SMS scaffolding (SMS/MMS/WAP receivers, respond-via-message service, SENDTO intent filter, default-SMS prompt in Settings); premium google-services sync task stubbed (PRO-CERTS/google-services-premium.json).
 
-Ad units quick list (free):
- - native-advanced = ca-app-pub-5327057757821609/2153424615
- - rewards-interstitual = ca-app-pub-5327057757821609/8428571815
- - banner = ca-app-pub-5327057757821609/3955684775
- - app-open = ca-app-pub-5327057757821609/4210125201
+CI setup
+- codemagic.yaml workflow ios-simulator-kmp: KMP podspec, XcodeGen, pod install, xcodebuild for simulator, zip artifact.
+- iosApp/project.yml via XcodeGen; Info.plist scaffolded under iosApp/PulseLinkiOS.
+- Fixes: chmod gradlew; allow project repos; add Kotlin native repo; Cocoapods podspec name/version; :shared:syncFramework (iphonesimulator/arm64 Debug) before pod install; workspace PulseLinkiOS.xcworkspace (cd iosApp); scheme PulseLinkI0S. DerivedData=$CM_BUILD_DIR/derivedData.
+- Podfile removes [CP-User] Build Shared phase; CI prebuilds via :shared:syncFramework.
 
-Current ad behavior in app:
- - Banners shown only on Home, Settings, Contact Detail, Contact Conversation, and Alert History screens; not globally pinned.
- - App-open ad loads when ads are allowed; shown after onboarding completes and whenever the app resumes (no emergency-aware gating yet).
- - No interstitial/rewarded interstitial display logic is implemented; only the IDs are configured.
+Ad configuration (free flavor)
+- AdMob app id: ca-app-pub-5327057757821609~9533221188
+- Banner: ca-app-pub-5327057757821609/3955684775
+- Interstitial: ca-app-pub-5327057757821609/3170992810
+- Rewarded interstitial: ca-app-pub-5327057757821609/8428571815
+- Native advanced: ca-app-pub-5327057757821609/2153424615
+- App open: ca-app-pub-5327057757821609/4210125201
+- Ads disabled for pro and premium flavors (MobileAdsInitProvider removed; ADS_ENABLED=false); premium also SUBSCRIPTION_ENABLED=true.
+
+Ad behavior (current)
+- Banners shown on Home, Settings, Contact Detail, Contact Conversation, Alert History.
+- App-open ad loads when ads allowed; shown after onboarding and on resume.
+- No interstitial/rewarded display logic yet—IDs only.
+
+Product tiers (2025-12-13)
+- Beacon (free): default SMS, ads on (ADS_ENABLED=true).
+- PulseLink Pro (one-time): ads off, PRO_FEATURES=true, SMS-capable, renamed “PulseLink Pro (Beacon)”.
+- Beacon Premium (subscription): ads off, PRO_FEATURES + PREMIUM_FEATURES + SUBSCRIPTION_ENABLED true; billing IDs placeholders pulselink_premium_monthly / pulselink_premium_yearly; needs Play products + server validation + google-services-premium.json.
+
+Outstanding for Issue #93
+- Port Beacon inbox/chat UI and SMS/MMS provider/storage into androidApp pro/premium.
+- Wire Billing to server validation; add real Play product IDs and premium google-services json.
+- Default-SMS compliance: MMS send/receive, respond-via-message UX, device tests; polish Settings prompt.
