@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -84,7 +86,9 @@ fun SettingsScreen(
     onPurchasePremium: () -> Unit,
     onOpenSmsInbox: () -> Unit,
     onTimeFormatChange: (TimeFormat) -> Unit,
-    onOpenVisualSettings: () -> Unit
+    onOpenVisualSettings: () -> Unit,
+    onToggleRemoteWebAccess: (Boolean) -> Unit,
+    onSetPrivatePin: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -173,6 +177,20 @@ fun SettingsScreen(
                     actionLabel = "Open",
                     onAction = onOpenVisualSettings,
                     leadingIcon = Icons.Filled.Palette
+                )
+                SettingsActionRow(
+                    title = "Web access to messages",
+                    subtitle = if (settings.remoteWebAccessEnabled) "Enabled (Premium) — manage in web portal" else "Premium-only: securely access SMS from the web",
+                    actionLabel = if (settings.remoteWebAccessEnabled) "Disable" else "Enable",
+                    onAction = { onToggleRemoteWebAccess(!settings.remoteWebAccessEnabled) },
+                    leadingIcon = Icons.Filled.Language
+                )
+                SettingsActionRow(
+                    title = "Private chats PIN",
+                    subtitle = if (settings.privatePinHash != null) "PIN set — tap to change/clear" else "Protect private contacts and chats",
+                    actionLabel = "Set",
+                    onAction = onSetPrivatePin,
+                    leadingIcon = Icons.Filled.Security
                 )
             }
             if (BuildConfig.SUBSCRIPTION_ENABLED && subscriptionAvailable) {

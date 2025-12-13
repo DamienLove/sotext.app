@@ -25,4 +25,7 @@ interface SettingsRepository {
     suspend fun getLastKnownEmail(): String?
     suspend fun setAutoUpdateContactInfo(enabled: Boolean)
     suspend fun setTimeFormat(format: com.pulselink.domain.model.TimeFormat)
+    suspend fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences)
+    suspend fun setRemoteWebAccessEnabled(enabled: Boolean)
+    suspend fun setPrivatePinHash(hash: String?)
 }

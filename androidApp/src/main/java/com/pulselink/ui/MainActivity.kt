@@ -79,6 +79,7 @@ import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
+import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.state.LoginViewModel
 import com.pulselink.ui.state.MainViewModel
@@ -888,7 +889,9 @@ class MainActivity : AppCompatActivity() {
                         onPurchasePremium = { subscriptionManager.launchSubscribe(activity) },
                         onOpenSmsInbox = { navController.navigate("sms/inbox") },
                         onTimeFormatChange = { viewModel.setTimeFormat(it) },
-                        onOpenVisualSettings = { navController.navigate("visual_settings") }
+                        onOpenVisualSettings = { navController.navigate("visual_settings") },
+                        onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
+                        onSetPrivatePin = { navController.navigate("private_pin") }
                     )
                 }
                     composable("sms/inbox") {
@@ -920,7 +923,8 @@ class MainActivity : AppCompatActivity() {
                             address = Uri.decode(address),
                             messages = messages,
                             onBack = { navController.popBackStack() },
-                            dateFormatter = { ts -> formatTimestamp(context, ts, settings.timeFormat) }
+                            dateFormatter = { ts -> formatTimestamp(context, ts, settings.timeFormat) },
+                            themePreferences = settings.themePreferences
                         )
                     }
                     composable("settings_help") {
@@ -929,7 +933,21 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("visual_settings") {
+                        val currentTheme = state.settings.themePreferences
                         VisualSettingsScreen(
+                            theme = currentTheme,
+                            onSelectTheme = { newTheme -> viewModel.setThemePreferences(newTheme) },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("private_pin") {
+                        PrivatePinScreen(
+                            hasPin = state.settings.privatePinHash != null,
+                            onSavePin = { newPin ->
+                                val hashed = newPin?.let { com.pulselink.util.hashPin(it) }
+                                viewModel.setPrivatePinHash(hashed)
+                                navController.popBackStack()
+                            },
                             onBack = { navController.popBackStack() }
                         )
                     }

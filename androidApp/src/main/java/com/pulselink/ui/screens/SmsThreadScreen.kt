@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.data.sms.SmsMessageItem
+import com.pulselink.domain.model.ThemePreferences
+import com.pulselink.util.parseColorOr
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +35,8 @@ fun SmsThreadScreen(
     messages: List<SmsMessageItem>,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    dateFormatter: (Long) -> String
+    dateFormatter: (Long) -> String,
+    themePreferences: ThemePreferences
 ) {
     Scaffold(
         topBar = {
@@ -55,19 +58,19 @@ fun SmsThreadScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(messages) { msg ->
-                MessageBubble(msg, dateFormatter)
+                MessageBubble(msg, dateFormatter, themePreferences)
             }
         }
     }
 }
 
 @Composable
-private fun MessageBubble(message: SmsMessageItem, dateFormatter: (Long) -> String) {
+private fun MessageBubble(message: SmsMessageItem, dateFormatter: (Long) -> String, theme: ThemePreferences) {
     val alignment = if (message.outgoing) Alignment.End else Alignment.Start
     val bubbleColor = if (message.outgoing) {
-        MaterialTheme.colorScheme.primaryContainer
+        parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)
     } else {
-        MaterialTheme.colorScheme.surfaceVariant
+        parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming)
     }
     Column(
         modifier = Modifier.fillMaxWidth(),

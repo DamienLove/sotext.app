@@ -34,7 +34,10 @@ data class PulseLinkSettings(
     val isBetaTester: Boolean = false,
     val ownerName: String = "",
     val autoUpdateContactInfo: Boolean = true,
-    val timeFormat: TimeFormat = TimeFormat.AUTO
+    val timeFormat: TimeFormat = TimeFormat.AUTO,
+    val themePreferences: ThemePreferences = ThemePreferences(),
+    val remoteWebAccessEnabled: Boolean = false,
+    val privatePinHash: String? = null
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }
@@ -44,3 +47,13 @@ data class PulseLinkSettings(
 enum class TimeFormat {
     AUTO, TWELVE_HOUR, TWENTY_FOUR_HOUR
 }
+
+@kotlinx.serialization.Serializable
+data class ThemePreferences(
+    val primaryColor: String = "#6750A4",
+    val secondaryColor: String = "#625B71",
+    val bubbleOutgoing: String = "#D0BCFF",
+    val bubbleIncoming: String = "#E8DEF8",
+    val backgroundColor: String = "#FFFFFF",
+    val iconSizeFactor: Float = 1.0f
+)

@@ -28,7 +28,8 @@ data class Contact(
     val pendingApproval: Boolean = false,
     val remoteUid: String? = null,
     val remoteLastSeen: Long? = null,
-    val remotePresence: RemotePresence = RemotePresence.UNKNOWN
+    val remotePresence: RemotePresence = RemotePresence.UNKNOWN,
+    val isPrivate: Boolean = false
 )
 
 @Serializable

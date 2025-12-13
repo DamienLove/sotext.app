@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import android.provider.ContactsContract
-import android.content.ContentUris
+import android.net.Uri
 
 @Singleton
 class SmsRepository @Inject constructor(

@@ -45,6 +45,9 @@ private val LAST_KNOWN_PHONE = stringPreferencesKey("last_known_phone")
 private val LAST_KNOWN_EMAIL = stringPreferencesKey("last_known_email")
 private val AUTO_UPDATE_CONTACT_INFO = booleanPreferencesKey("auto_update_contact_info")
 private val TIME_FORMAT = stringPreferencesKey("time_format")
+private val THEME_PREFERENCES = stringPreferencesKey("theme_preferences")
+private val REMOTE_WEB_ACCESS = booleanPreferencesKey("remote_web_access")
+private val PRIVATE_PIN_HASH = stringPreferencesKey("private_pin_hash")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -76,8 +79,15 @@ class SettingsRepositoryImpl @Inject constructor(
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
             deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
             ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName,
-            isBetaTester = prefs[IS_BETA_TESTER] ?: PulseLinkSettings().isBetaTester
-            , autoUpdateContactInfo = prefs[AUTO_UPDATE_CONTACT_INFO] ?: PulseLinkSettings().autoUpdateContactInfo
+            isBetaTester = prefs[IS_BETA_TESTER] ?: PulseLinkSettings().isBetaTester,
+            autoUpdateContactInfo = prefs[AUTO_UPDATE_CONTACT_INFO] ?: PulseLinkSettings().autoUpdateContactInfo,
+            timeFormat = prefs[TIME_FORMAT]?.let { runCatching { com.pulselink.domain.model.TimeFormat.valueOf(it) }.getOrNull() }
+                ?: PulseLinkSettings().timeFormat,
+            themePreferences = prefs[THEME_PREFERENCES]?.let {
+                runCatching { json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it) }.getOrNull()
+            } ?: PulseLinkSettings().themePreferences,
+            remoteWebAccessEnabled = prefs[REMOTE_WEB_ACCESS] ?: PulseLinkSettings().remoteWebAccessEnabled,
+            privatePinHash = prefs[PRIVATE_PIN_HASH]
         )
     }
 
@@ -103,6 +113,10 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[OWNER_NAME] = updated.ownerName
             prefs[IS_BETA_TESTER] = updated.isBetaTester
             prefs[AUTO_UPDATE_CONTACT_INFO] = updated.autoUpdateContactInfo
+            prefs[TIME_FORMAT] = updated.timeFormat.name
+            prefs[THEME_PREFERENCES] = json.encodeToString(com.pulselink.domain.model.ThemePreferences.serializer(), updated.themePreferences)
+            prefs[REMOTE_WEB_ACCESS] = updated.remoteWebAccessEnabled
+            updated.privatePinHash?.let { prefs[PRIVATE_PIN_HASH] = it } ?: prefs.remove(PRIVATE_PIN_HASH)
         }
     }
 
@@ -214,6 +228,24 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setTimeFormat(format: com.pulselink.domain.model.TimeFormat) {
         dataStore.edit { prefs ->
             prefs[TIME_FORMAT] = format.name
+        }
+    }
+
+    override suspend fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences) {
+        dataStore.edit { prefs ->
+            prefs[THEME_PREFERENCES] = json.encodeToString(com.pulselink.domain.model.ThemePreferences.serializer(), theme)
+        }
+    }
+
+    override suspend fun setRemoteWebAccessEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[REMOTE_WEB_ACCESS] = enabled
+        }
+    }
+
+    override suspend fun setPrivatePinHash(hash: String?) {
+        dataStore.edit { prefs ->
+            hash?.let { prefs[PRIVATE_PIN_HASH] = it } ?: prefs.remove(PRIVATE_PIN_HASH)
         }
     }
 

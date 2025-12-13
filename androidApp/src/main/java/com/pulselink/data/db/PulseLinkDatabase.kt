@@ -119,7 +119,7 @@ interface BlockedContactDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -162,6 +162,12 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE contacts ADD COLUMN additionalPhones TEXT")
                 database.execSQL("ALTER TABLE contacts ADD COLUMN additionalEmails TEXT")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE contacts ADD COLUMN isPrivate INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

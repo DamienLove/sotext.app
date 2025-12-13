@@ -981,6 +981,24 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences) {
+        viewModelScope.launch {
+            settingsRepository.setThemePreferences(theme)
+        }
+    }
+
+    fun setRemoteWebAccess(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRemoteWebAccessEnabled(enabled)
+        }
+    }
+
+    fun setPrivatePinHash(hash: String?) {
+        viewModelScope.launch {
+            settingsRepository.setPrivatePinHash(hash)
+        }
+    }
+
     private fun emitDndStatus(result: AlertResult?) {
         val overrideResult = result?.overrideResult ?: run {
             dndStatus.value = null
