@@ -975,6 +975,12 @@ class MainViewModel @Inject constructor(
         dndStatus.value = null
     }
 
+    fun setTimeFormat(format: com.pulselink.domain.model.TimeFormat) {
+        viewModelScope.launch {
+            settingsRepository.setTimeFormat(format)
+        }
+    }
+
     private fun emitDndStatus(result: AlertResult?) {
         val overrideResult = result?.overrideResult ?: run {
             dndStatus.value = null

@@ -78,6 +78,7 @@ import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
+import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.state.LoginViewModel
 import com.pulselink.ui.state.MainViewModel
@@ -116,6 +117,7 @@ import android.webkit.WebViewClient
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.pulselink.BuildConfig
 import com.pulselink.billing.SubscriptionManager
+import com.pulselink.util.formatTimestamp
 import com.pulselink.util.DefaultSmsHelper
 
 @AndroidEntryPoint
@@ -876,17 +878,19 @@ class MainActivity : AppCompatActivity() {
                             onEditEmergencyTone = { navController.navigate("alerts/default/emergency") },
                             onEditCheckInTone = { navController.navigate("alerts/default/checkin") },
                             onEditCallTone = { navController.navigate("alerts/default/call") },
-                            onReportBug = { navController.navigate("bug_report") },
-                            onBetaTesters = { navController.navigate("beta_testers") },
-                            onOpenHelp = { navController.navigate("settings_help") },
-                            onSignOut = {
-                                viewModel.signOut()
-                            },
-                            onBack = { navController.popBackStack() },
-                            onPurchasePremium = { subscriptionManager.launchSubscribe(activity) },
-                            onOpenSmsInbox = { navController.navigate("sms/inbox") }
-                        )
-                    }
+                        onReportBug = { navController.navigate("bug_report") },
+                        onBetaTesters = { navController.navigate("beta_testers") },
+                        onOpenHelp = { navController.navigate("settings_help") },
+                        onSignOut = {
+                            viewModel.signOut()
+                        },
+                        onBack = { navController.popBackStack() },
+                        onPurchasePremium = { subscriptionManager.launchSubscribe(activity) },
+                        onOpenSmsInbox = { navController.navigate("sms/inbox") },
+                        onTimeFormatChange = { viewModel.setTimeFormat(it) },
+                        onOpenVisualSettings = { navController.navigate("visual_settings") }
+                    )
+                }
                     composable("sms/inbox") {
                         val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
                         val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
@@ -896,7 +900,8 @@ class MainActivity : AppCompatActivity() {
                             onOpenThread = { thread ->
                                 navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
                             },
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            dateFormatter = { ts -> formatTimestamp(context, ts, settings.timeFormat) }
                         )
                     }
                     composable(
@@ -914,11 +919,17 @@ class MainActivity : AppCompatActivity() {
                         SmsThreadScreen(
                             address = Uri.decode(address),
                             messages = messages,
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            dateFormatter = { ts -> formatTimestamp(context, ts, settings.timeFormat) }
                         )
                     }
                     composable("settings_help") {
                         SettingsHelpScreen(
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("visual_settings") {
+                        VisualSettingsScreen(
                             onBack = { navController.popBackStack() }
                         )
                     }

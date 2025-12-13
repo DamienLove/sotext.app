@@ -33,9 +33,14 @@ data class PulseLinkSettings(
     val deviceId: String = "",
     val isBetaTester: Boolean = false,
     val ownerName: String = "",
-    val autoUpdateContactInfo: Boolean = true
+    val autoUpdateContactInfo: Boolean = true,
+    val timeFormat: TimeFormat = TimeFormat.AUTO
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }
         .filter { it.isNotBlank() }
+}
+
+enum class TimeFormat {
+    AUTO, TWELVE_HOUR, TWENTY_FOUR_HOUR
 }

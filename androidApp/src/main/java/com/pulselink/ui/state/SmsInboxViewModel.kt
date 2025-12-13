@@ -9,6 +9,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 @HiltViewModel
@@ -23,6 +25,12 @@ class SmsInboxViewModel @Inject constructor(
             _threads.value = smsRepository.listThreads()
         }
     }
+
+    init {
+        smsRepository.changes()
+            .onEach { refresh() }
+            .launchIn(viewModelScope)
+    }
 }
 
 @HiltViewModel
@@ -36,5 +44,10 @@ class SmsThreadViewModel @Inject constructor(
         viewModelScope.launch {
             _messages.value = smsRepository.messagesForThread(threadId)
         }
+        smsRepository.changes()
+            .onEach {
+                _messages.value = smsRepository.messagesForThread(threadId)
+            }
+            .launchIn(viewModelScope)
     }
 }

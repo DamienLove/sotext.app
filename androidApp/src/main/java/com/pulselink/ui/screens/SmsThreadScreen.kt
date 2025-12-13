@@ -32,7 +32,8 @@ fun SmsThreadScreen(
     address: String,
     messages: List<SmsMessageItem>,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dateFormatter: (Long) -> String
 ) {
     Scaffold(
         topBar = {
@@ -54,14 +55,14 @@ fun SmsThreadScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(messages) { msg ->
-                MessageBubble(msg)
+                MessageBubble(msg, dateFormatter)
             }
         }
     }
 }
 
 @Composable
-private fun MessageBubble(message: SmsMessageItem) {
+private fun MessageBubble(message: SmsMessageItem, dateFormatter: (Long) -> String) {
     val alignment = if (message.outgoing) Alignment.End else Alignment.Start
     val bubbleColor = if (message.outgoing) {
         MaterialTheme.colorScheme.primaryContainer
@@ -83,7 +84,7 @@ private fun MessageBubble(message: SmsMessageItem) {
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = message.timestamp.toString(),
+                    text = dateFormatter(message.timestamp),
                     style = MaterialTheme.typography.labelSmall
                 )
             }

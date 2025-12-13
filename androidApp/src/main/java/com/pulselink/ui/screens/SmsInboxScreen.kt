@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.data.sms.SmsThreadItem
+import java.text.DateFormat
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +35,8 @@ fun SmsInboxScreen(
     threads: List<SmsThreadItem>,
     onOpenThread: (SmsThreadItem) -> Unit,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    dateFormatter: (Long) -> String
 ) {
     Scaffold(
         topBar = {
@@ -63,14 +66,14 @@ fun SmsInboxScreen(
                 }
             }
             items(threads) { thread ->
-                ThreadRow(thread = thread, onClick = { onOpenThread(thread) })
+                ThreadRow(thread = thread, onClick = { onOpenThread(thread) }, dateFormatter = dateFormatter)
             }
         }
     }
 }
 
 @Composable
-private fun ThreadRow(thread: SmsThreadItem, onClick: () -> Unit) {
+private fun ThreadRow(thread: SmsThreadItem, onClick: () -> Unit, dateFormatter: (Long) -> String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -89,7 +92,7 @@ private fun ThreadRow(thread: SmsThreadItem, onClick: () -> Unit) {
             maxLines = 2
         )
         Text(
-            text = "∙ ${thread.timestamp}",
+            text = dateFormatter(thread.timestamp),
             style = MaterialTheme.typography.labelSmall
         )
     }

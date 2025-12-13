@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Sms
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.PulseLinkSettings
+import com.pulselink.domain.model.TimeFormat
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.state.ProfileUpdateUiState
 
@@ -79,7 +82,9 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
     onBack: () -> Unit,
     onPurchasePremium: () -> Unit,
-    onOpenSmsInbox: () -> Unit
+    onOpenSmsInbox: () -> Unit,
+    onTimeFormatChange: (TimeFormat) -> Unit,
+    onOpenVisualSettings: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -143,6 +148,31 @@ fun SettingsScreen(
                     actionLabel = "Open",
                     onAction = onOpenSmsInbox,
                     leadingIcon = Icons.Filled.Sms
+                )
+                SettingsActionRow(
+                    title = "Time format",
+                    subtitle = when (settings.timeFormat) {
+                        TimeFormat.AUTO -> "Follow device"
+                        TimeFormat.TWELVE_HOUR -> "12-hour"
+                        TimeFormat.TWENTY_FOUR_HOUR -> "24-hour"
+                    },
+                    actionLabel = "Change",
+                    onAction = {
+                        val next = when (settings.timeFormat) {
+                            TimeFormat.AUTO -> TimeFormat.TWELVE_HOUR
+                            TimeFormat.TWELVE_HOUR -> TimeFormat.TWENTY_FOUR_HOUR
+                            TimeFormat.TWENTY_FOUR_HOUR -> TimeFormat.AUTO
+                        }
+                        onTimeFormatChange(next)
+                    },
+                    leadingIcon = Icons.Filled.AccessTime
+                )
+                SettingsActionRow(
+                    title = "Visual customization",
+                    subtitle = "Colors, layout, icons, and chat appearance.",
+                    actionLabel = "Open",
+                    onAction = onOpenVisualSettings,
+                    leadingIcon = Icons.Filled.Palette
                 )
             }
             if (BuildConfig.SUBSCRIPTION_ENABLED && subscriptionAvailable) {
