@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -77,7 +78,8 @@ fun SettingsScreen(
     onOpenHelp: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit,
-    onPurchasePremium: () -> Unit
+    onPurchasePremium: () -> Unit,
+    onOpenSmsInbox: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -134,6 +136,15 @@ fun SettingsScreen(
                 onAction = onRequestDefaultSms,
                 leadingIcon = Icons.Filled.Message
             )
+            if (BuildConfig.PRO_FEATURES) {
+                SettingsActionRow(
+                    title = "SMS inbox",
+                    subtitle = "View conversations stored on this device.",
+                    actionLabel = "Open",
+                    onAction = onOpenSmsInbox,
+                    leadingIcon = Icons.Filled.Sms
+                )
+            }
             if (BuildConfig.SUBSCRIPTION_ENABLED && subscriptionAvailable) {
                 val premiumSubtitle = when {
                     isPremiumActive -> "Beacon Premium is active on this device."

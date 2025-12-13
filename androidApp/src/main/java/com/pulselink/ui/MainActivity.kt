@@ -76,10 +76,14 @@ import com.pulselink.ui.screens.OnboardingIntroScreen
 import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.SplashScreen
+import com.pulselink.ui.screens.SmsInboxScreen
+import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.state.LoginViewModel
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.MainViewModel.CallInitiationResult
+import com.pulselink.ui.state.SmsInboxViewModel
+import com.pulselink.ui.state.SmsThreadViewModel
 import com.pulselink.ui.theme.PulseLinkTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -879,7 +883,38 @@ class MainActivity : AppCompatActivity() {
                                 viewModel.signOut()
                             },
                             onBack = { navController.popBackStack() },
-                            onPurchasePremium = { subscriptionManager.launchSubscribe(activity) }
+                            onPurchasePremium = { subscriptionManager.launchSubscribe(activity) },
+                            onOpenSmsInbox = { navController.navigate("sms/inbox") }
+                        )
+                    }
+                    composable("sms/inbox") {
+                        val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
+                        val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
+                        LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
+                        SmsInboxScreen(
+                            threads = threads,
+                            onOpenThread = { thread ->
+                                navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(
+                        route = "sms/thread/{threadId}/{address}",
+                        arguments = listOf(
+                            navArgument("threadId") { type = NavType.LongType },
+                            navArgument("address") { type = NavType.StringType }
+                        )
+                    ) { entry ->
+                        val threadId = entry.arguments?.getLong("threadId") ?: return@composable
+                        val address = entry.arguments?.getString("address") ?: ""
+                        val threadViewModel: SmsThreadViewModel = hiltViewModel()
+                        val messages by threadViewModel.messages.collectAsStateWithLifecycle()
+                        LaunchedEffect(threadId) { threadViewModel.load(threadId) }
+                        SmsThreadScreen(
+                            address = Uri.decode(address),
+                            messages = messages,
+                            onBack = { navController.popBackStack() }
                         )
                     }
                     composable("settings_help") {

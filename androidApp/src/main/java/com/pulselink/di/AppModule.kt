@@ -27,6 +27,7 @@ import com.pulselink.data.db.PulseLinkDatabase
 import com.pulselink.data.settings.SettingsRepositoryImpl
 import com.pulselink.data.settings.provideSettingsDataStore
 import com.pulselink.data.sms.SmsStore
+import com.pulselink.data.sms.SmsRepository
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.BetaAgreementRepository
 import com.pulselink.domain.repository.BlockedContactRepository
@@ -130,6 +131,10 @@ object DatabaseModule {
             SmsManager.getDefault()
         }
     }
+
+    @Provides
+    @Singleton
+    fun provideSmsRepository(@ApplicationContext context: Context): SmsRepository = SmsRepository(context)
 
     @Provides
     @Singleton
