@@ -1,8 +1,9 @@
-Branch: change-directions-pl-suite (based on Beta)
+Branch: Suite-Beta (based on Beta)
 
-Recent builds / notable runs
-- 2025-12-02: .\gradlew bundleFreeRelease bundleProRelease (versionCode 26 / versionName 26) using updated google-services.json from Free-Certs and PRO-CERTS; AlertRelayClient Ktor isSuccess import fixed.
-- 2025-12-13: flavors expanded to free / pro / premium; billing-ktx added; default-SMS scaffolding (SMS/MMS/WAP receivers, respond-via-message service, SENDTO intent filter, default-SMS prompt in Settings); premium google-services sync task stubbed (PRO-CERTS/google-services-premium.json).
+Recent work
+- 2025-12-13: Added premium flavor; billing-ktx; default-SMS scaffolding (SMS/MMS/WAP receivers, respond-via-message service, SENDTO intent filter, default-SMS prompt); premium google-services sync task placeholder.
+- 2025-12-13: Persist SMS to Telephony provider when app is default SMS (incoming/outgoing).
+- 2025-12-13: SMS inbox + thread UI (reads Telephony provider), live updates via content observers, contact lookup, time-format toggle, visual customization entry, theme presets, caller ID screening stub, private chats PIN, web access toggle.
 
 CI setup
 - codemagic.yaml workflow ios-simulator-kmp: KMP podspec, XcodeGen, pod install, xcodebuild for simulator, zip artifact.
@@ -10,26 +11,31 @@ CI setup
 - Fixes: chmod gradlew; allow project repos; add Kotlin native repo; Cocoapods podspec name/version; :shared:syncFramework (iphonesimulator/arm64 Debug) before pod install; workspace PulseLinkiOS.xcworkspace (cd iosApp); scheme PulseLinkI0S. DerivedData=$CM_BUILD_DIR/derivedData.
 - Podfile removes [CP-User] Build Shared phase; CI prebuilds via :shared:syncFramework.
 
-Ad configuration (free flavor)
-- AdMob app id: ca-app-pub-5327057757821609~9533221188
+Ads (free flavor)
+- App id: ca-app-pub-5327057757821609~9533221188
 - Banner: ca-app-pub-5327057757821609/3955684775
 - Interstitial: ca-app-pub-5327057757821609/3170992810
 - Rewarded interstitial: ca-app-pub-5327057757821609/8428571815
-- Native advanced: ca-app-pub-5327057757821609/2153424615
+- Native: ca-app-pub-5327057757821609/2153424615
 - App open: ca-app-pub-5327057757821609/4210125201
-- Ads disabled for pro and premium flavors (MobileAdsInitProvider removed; ADS_ENABLED=false); premium also SUBSCRIPTION_ENABLED=true.
+- Ads off for pro/premium; premium has SUBSCRIPTION_ENABLED.
 
-Ad behavior (current)
-- Banners shown on Home, Settings, Contact Detail, Contact Conversation, Alert History.
-- App-open ad loads when ads allowed; shown after onboarding and on resume.
-- No interstitial/rewarded display logic yet—IDs only.
+Product tiers (as of 2025-12-13)
+- Beacon (free): default SMS, ads on.
+- PulseLink Pro (one-time): ads off, PRO_FEATURES=true, SMS-capable.
+- Beacon Premium (subscription): ads off, PRO_FEATURES+PREMIUM_FEATURES+SUBSCRIPTION_ENABLED=true; billing IDs placeholders pulselink_premium_monthly / pulselink_premium_yearly; needs Play products + google-services-premium.json and server validation.
 
-Product tiers (2025-12-13)
-- Beacon (free): default SMS, ads on (ADS_ENABLED=true).
-- PulseLink Pro (one-time): ads off, PRO_FEATURES=true, SMS-capable, renamed “PulseLink Pro (Beacon)”.
-- Beacon Premium (subscription): ads off, PRO_FEATURES + PREMIUM_FEATURES + SUBSCRIPTION_ENABLED true; billing IDs placeholders pulselink_premium_monthly / pulselink_premium_yearly; needs Play products + server validation + google-services-premium.json.
+Current SMS features
+- Default-SMS permissions/intents, SMS/MMS/WAP receivers, respond-via-message service.
+- Telephony provider writes for inbound/outbound SMS.
+- Inbox/thread UI with live refresh + contact resolution; time-format preference.
 
-Outstanding for Issue #93
-- Port Beacon inbox/chat UI and SMS/MMS provider/storage into androidApp pro/premium.
-- Wire Billing to server validation; add real Play product IDs and premium google-services json.
-- Default-SMS compliance: MMS send/receive, respond-via-message UX, device tests; polish Settings prompt.
+Outstanding (carry-over for next session)
+- SMS: Add MMS send/receive UI + compliance tests; enhance inbox with unread badges, delete/archive, and better date formatting; consider content observer cleanup.
+- Beacon visual customization: build full editor (color wheel, per-surface colors, gradients, icon sizing, layout presets, sample chat preview applied globally).
+- Caller ID: implement spam/lookup + in-call overlay; respect permissions.
+- Private contacts/chats: enforce PIN when opening private threads, store messages securely/encrypted, filter UI lists, add “make private” toggles.
+- Trusted contacts/emergency controls: ensure emergency actions (ringer/volume/siren override) are exposed in SMS app for trusted contacts.
+- Premium web access: design secure relay (likely Firebase Functions + Firestore) for remote message access, add device opt-in, auth, and audit logging.
+- Billing: replace placeholder product IDs, add server-side validation, handle subscription states, and add premium google-services file.
+- Tests: device tests for default SMS role, call screening, and PIN flows.
