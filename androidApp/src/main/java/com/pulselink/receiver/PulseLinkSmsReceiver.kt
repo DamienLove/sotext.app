@@ -14,6 +14,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.data.sms.SmsCodec
+import com.pulselink.data.sms.SmsStore
 import com.pulselink.service.AlertRouter
 
 @AndroidEntryPoint
@@ -21,6 +22,7 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
 
     @Inject lateinit var alertRouter: AlertRouter
     @Inject lateinit var contactLinkManager: ContactLinkManager
+    @Inject lateinit var smsStore: SmsStore
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
@@ -43,6 +45,7 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                     } else {
                         alertRouter.onInboundMessage(body)
                     }
+                    smsStore.insertIncoming(origin, body, System.currentTimeMillis())
                 }
                 if (completed == null) {
                     Log.w(TAG, "SMS processing timed out for sender: $origin")

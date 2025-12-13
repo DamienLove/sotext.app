@@ -26,6 +26,7 @@ import com.pulselink.data.db.MessageRepositoryImpl
 import com.pulselink.data.db.PulseLinkDatabase
 import com.pulselink.data.settings.SettingsRepositoryImpl
 import com.pulselink.data.settings.provideSettingsDataStore
+import com.pulselink.data.sms.SmsStore
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.BetaAgreementRepository
 import com.pulselink.domain.repository.BlockedContactRepository
@@ -115,6 +116,10 @@ object DatabaseModule {
     @Singleton
     fun provideSoundCatalog(@ApplicationContext context: Context): SoundCatalog =
         SoundCatalog(context)
+
+    @Provides
+    @Singleton
+    fun provideSmsStore(@ApplicationContext context: Context): SmsStore = SmsStore(context)
 
     @Provides
     @Singleton

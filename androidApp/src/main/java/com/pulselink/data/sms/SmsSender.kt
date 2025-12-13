@@ -21,7 +21,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Singleton
 class SmsSender @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val smsManager: SmsManager
+    private val smsManager: SmsManager,
+    private val smsStore: SmsStore
 ) {
 
     private val pendingRequests = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
@@ -95,6 +96,9 @@ class SmsSender @Inject constructor(
 
         val result = withTimeoutOrNull(timeoutMillis) { deferred?.await() } ?: false
         pendingRequests.remove(requestId)
+        if (result) {
+            smsStore.insertOutgoing(phoneNumber, message)
+        }
         return result
     }
 
