@@ -1,6 +1,7 @@
 Branch: Suite-Beta (based on Beta)
 
 Recent work
+- 2025-12-14: Caller ID screening now queries Numlookup API (per-call lookup, silences only on obvious spam/invalid); Numlookup key pulled from local.properties `numlookupApiKey` or env `NUMLOOKUP_API_KEY` (not checked in).
 - 2025-12-13: Added premium flavor; billing-ktx; default-SMS scaffolding (SMS/MMS/WAP receivers, respond-via-message service, SENDTO intent filter, default-SMS prompt); premium google-services sync task placeholder.
 - 2025-12-13: Persist SMS to Telephony provider when app is default SMS (incoming/outgoing).
 - 2025-12-13: SMS inbox + thread UI (reads Telephony provider), live updates via content observers, contact lookup, time-format toggle, visual customization entry, theme presets, caller ID screening stub, private chats PIN, web access toggle.

@@ -43,6 +43,12 @@ val keystoreProperties = Properties().apply {
 
 val defaultKeystoreFile = rootProject.file("upload-keystore.jks")
 
+// Optional Numlookup API key (keep out of VCS).
+val numlookupApiKey = optionalProperty("numlookupApiKey")
+    ?: System.getenv("NUMLOOKUP_API_KEY")
+    ?: ""
+val escapedNumlookupApiKey = numlookupApiKey.replace("\"", "\\\"")
+
 fun Project.signingEnvKey(base: String, flavor: String?): String {
     val suffix = flavor?.uppercase(Locale.US)?.let { "_${it}" }.orEmpty()
     val root = when (base) {
@@ -135,6 +141,9 @@ android {
         versionName = "28"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "NUMLOOKUP_API_BASE", "\"https://api.numlookupapi.com/v1\"")
+        buildConfigField("String", "NUMLOOKUP_API_KEY", "\"$escapedNumlookupApiKey\"")
     }
 
     buildTypes {
@@ -366,6 +375,8 @@ kapt {
     implementation("com.google.assistant.appactions:suggestions:1.0.0")
     implementation("com.google.android.play:integrity:1.5.0")
     implementation("androidx.biometric:biometric:1.1.0")
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-compiler:2.51.1")

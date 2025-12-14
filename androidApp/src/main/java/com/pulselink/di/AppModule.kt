@@ -37,12 +37,16 @@ import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.shared.alert.AlertRelay
 import com.pulselink.shared.alert.AlertRelayClient
 import com.pulselink.util.AudioOverrideManager
+import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.time.Duration
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -176,4 +180,24 @@ object DatabaseModule {
     @Singleton
     fun provideAlertRelayClient(): AlertRelayClient =
         AlertRelay.create(BuildConfig.ALERT_RELAY_BASE_URL)
+
+    @Provides
+    @Singleton
+    fun provideJson(): Json = Json {
+        ignoreUnknownKeys = true
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient =
+        OkHttpClient.Builder()
+            .connectTimeout(Duration.ofSeconds(3))
+            .readTimeout(Duration.ofSeconds(3))
+            .callTimeout(Duration.ofSeconds(5))
+            .build()
+
+    @Provides
+    @Singleton
+    @Named("NumlookupApiKey")
+    fun provideNumlookupApiKey(): String = BuildConfig.NUMLOOKUP_API_KEY
 }

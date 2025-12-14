@@ -2,10 +2,14 @@ package com.pulselink.callid
 
 import android.telecom.Call
 import android.telecom.CallScreeningService
-import android.telecom.TelecomManager
 import android.util.Log
-import com.pulselink.data.sms.SmsRepository
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 /**
@@ -15,16 +19,40 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class CallerIdScreeningService : CallScreeningService() {
 
-    @Inject lateinit var smsRepository: SmsRepository
+    @Inject lateinit var numLookupApiClient: NumLookupApiClient
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onScreenCall(callDetails: Call.Details) {
         val number = callDetails.handle?.schemeSpecificPart.orEmpty()
-        Log.i(TAG, "Incoming call from $number; letting through.")
-        respondToCall(callDetails, CallResponse.Builder()
+        if (number.isBlank()) {
+            respondToCall(callDetails, allowResponse())
+            return
+        }
+
+        serviceScope.launch {
+            val lookup = withTimeoutOrNull(3500) {
+                numLookupApiClient.lookup(number)
+            }
+            val shouldSilence = lookup?.isLikelySpam == true
+            Log.i(TAG, "Incoming call from $number; lookup=${lookup?.summary ?: "none"} silence=$shouldSilence")
+            respondToCall(callDetails, CallResponse.Builder()
+                .setSilenceCall(shouldSilence)
+                .setDisallowCall(false)
+                .build())
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
+    }
+
+    private fun allowResponse(): CallResponse =
+        CallResponse.Builder()
             .setSilenceCall(false)
             .setDisallowCall(false)
-            .build())
-    }
+            .build()
 
     companion object {
         private const val TAG = "CallerIdScreeningSvc"

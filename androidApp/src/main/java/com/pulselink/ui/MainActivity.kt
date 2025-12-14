@@ -904,7 +904,7 @@ class MainActivity : AppCompatActivity() {
                                 navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
                             },
                             onBack = { navController.popBackStack() },
-                            dateFormatter = { ts -> formatTimestamp(context, ts, settings.timeFormat) }
+                            dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) }
                         )
                     }
                     composable(
@@ -923,8 +923,8 @@ class MainActivity : AppCompatActivity() {
                             address = Uri.decode(address),
                             messages = messages,
                             onBack = { navController.popBackStack() },
-                            dateFormatter = { ts -> formatTimestamp(context, ts, settings.timeFormat) },
-                            themePreferences = settings.themePreferences
+                            dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                            themePreferences = state.settings.themePreferences
                         )
                     }
                     composable("settings_help") {
