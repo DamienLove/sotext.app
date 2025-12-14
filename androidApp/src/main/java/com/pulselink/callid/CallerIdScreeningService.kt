@@ -19,7 +19,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class CallerIdScreeningService : CallScreeningService() {
 
-    @Inject lateinit var numLookupApiClient: NumLookupApiClient
+    @Inject lateinit var callerIdLookupClient: CallerIdLookupClient
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -32,14 +32,16 @@ class CallerIdScreeningService : CallScreeningService() {
 
         serviceScope.launch {
             val lookup = withTimeoutOrNull(3500) {
-                numLookupApiClient.lookup(number)
+                callerIdLookupClient.lookup(number)
             }
             val shouldSilence = lookup?.isLikelySpam == true
             Log.i(TAG, "Incoming call from $number; lookup=${lookup?.summary ?: "none"} silence=$shouldSilence")
-            respondToCall(callDetails, CallResponse.Builder()
-                .setSilenceCall(shouldSilence)
+            val builder = CallResponse.Builder()
                 .setDisallowCall(false)
-                .build())
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                builder.setSilenceCall(shouldSilence)
+            }
+            respondToCall(callDetails, builder.build())
         }
     }
 
@@ -50,7 +52,6 @@ class CallerIdScreeningService : CallScreeningService() {
 
     private fun allowResponse(): CallResponse =
         CallResponse.Builder()
-            .setSilenceCall(false)
             .setDisallowCall(false)
             .build()
 

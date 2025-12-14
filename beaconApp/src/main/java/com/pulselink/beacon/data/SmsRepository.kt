@@ -1,26 +1,17 @@
-package com.pulselink.data.sms
+package com.pulselink.beacon.data
 
 import android.content.Context
-import android.provider.Telephony
-import com.pulselink.data.db.ArchivedThreadDao
-import com.pulselink.domain.model.ArchivedThread
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 import android.database.ContentObserver
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.ContactsContract
+import android.provider.Telephony
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import android.provider.ContactsContract
-import android.net.Uri
 
-@Singleton
-class SmsRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val archivedThreadDao: ArchivedThreadDao
-) {
+class SmsRepository(private val context: Context) {
 
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
@@ -45,14 +36,12 @@ class SmsRepository @Inject constructor(
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
 
-    fun listThreads(limit: Int = 50, includeArchived: Boolean = false, onlyArchived: Boolean = false): List<SmsThreadItem> {
-        val archivedIds = runCatching { archivedThreadDao.getAllIds() }.getOrDefault(emptyList())
+    fun listThreads(limit: Int = 50): List<SmsThreadItem> {
         val projection = arrayOf(
             Telephony.Threads._ID,
             Telephony.Threads.SNIPPET,
             Telephony.Threads.DATE,
             Telephony.Threads.RECIPIENT_IDS,
-            Telephony.Threads.MESSAGE_COUNT,
             Telephony.Threads.READ
         )
         val cursor = context.contentResolver.query(
@@ -61,15 +50,13 @@ class SmsRepository @Inject constructor(
             null,
             null,
             "${Telephony.Threads.DATE} DESC"
-        )
+        ) ?: return emptyList()
 
-        cursor ?: return emptyList()
         cursor.use { c ->
             val idIdx = c.getColumnIndexOrThrow(Telephony.Threads._ID)
             val snippetIdx = c.getColumnIndexOrThrow(Telephony.Threads.SNIPPET)
             val dateIdx = c.getColumnIndexOrThrow(Telephony.Threads.DATE)
             val readIdx = c.getColumnIndexOrThrow(Telephony.Threads.READ)
-            val addressIdx = c.getColumnIndexOrThrow(Telephony.Threads.RECIPIENT_IDS)
             val items = mutableListOf<SmsThreadItem>()
             var count = 0
             while (c.moveToNext() && count < limit) {
@@ -77,29 +64,37 @@ class SmsRepository @Inject constructor(
                 val snippet = c.getString(snippetIdx) ?: ""
                 val ts = c.getLong(dateIdx)
                 val unread = c.getInt(readIdx) == 0
-                val address = resolveAddress(c.getString(addressIdx))
-                val isArchived = archivedIds.contains(threadId)
-                if (onlyArchived && !isArchived) {
-                    // skip
-                } else if (!includeArchived && isArchived) {
-                    // skip
-                } else {
-                    items += SmsThreadItem(
-                        threadId = threadId,
-                        address = address,
-                        snippet = snippet,
-                        timestamp = ts,
-                        unread = unread
-                    )
-                }
+                val address = resolveThreadAddress(threadId)
+                items += SmsThreadItem(
+                    threadId = threadId,
+                    address = address,
+                    snippet = snippet,
+                    timestamp = ts,
+                    unread = unread
+                )
                 count++
             }
             return items
         }
     }
 
-    fun listArchivedThreads(limit: Int = 50): List<SmsThreadItem> =
-        listThreads(limit = limit, includeArchived = true, onlyArchived = true)
+    private fun resolveThreadAddress(threadId: Long): String {
+        val cursor = context.contentResolver.query(
+            Telephony.Sms.CONTENT_URI,
+            arrayOf(Telephony.Sms.ADDRESS),
+            "${Telephony.Sms.THREAD_ID}=?",
+            arrayOf(threadId.toString()),
+            "${Telephony.Sms.DATE} DESC"
+        ) ?: return ""
+
+        cursor.use { c ->
+            if (c.moveToFirst()) {
+                val addr = c.getString(c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS))
+                return resolveAddress(addr)
+            }
+        }
+        return ""
+    }
 
     fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> {
         val projection = arrayOf(
@@ -116,8 +111,8 @@ class SmsRepository @Inject constructor(
             "${Telephony.Sms.THREAD_ID}=?",
             arrayOf(threadId.toString()),
             "${Telephony.Sms.DATE} DESC"
-        )
-        cursor ?: return emptyList()
+        ) ?: return emptyList()
+
         cursor.use { c ->
             val idIdx = c.getColumnIndexOrThrow(Telephony.Sms._ID)
             val threadIdx = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
@@ -148,6 +143,43 @@ class SmsRepository @Inject constructor(
         }
     }
 
+    fun sendSms(address: String, body: String): Boolean {
+        return runCatching {
+            val smsManager = android.telephony.SmsManager.getDefault()
+            smsManager.sendTextMessage(address, null, body, null, null)
+            true
+        }.getOrDefault(false)
+    }
+
+    fun markThreadRead(threadId: Long) {
+        val values = android.content.ContentValues().apply {
+            put(Telephony.Sms.READ, 1)
+            put(Telephony.Sms.SEEN, 1)
+        }
+        context.contentResolver.update(
+            Telephony.Sms.CONTENT_URI,
+            values,
+            "${Telephony.Sms.THREAD_ID}=?",
+            arrayOf(threadId.toString())
+        )
+        context.contentResolver.update(
+            Telephony.Threads.CONTENT_URI,
+            values,
+            "${Telephony.Threads._ID}=?",
+            arrayOf(threadId.toString())
+        )
+        observerFlow.tryEmit(Unit)
+    }
+
+    fun deleteThread(threadId: Long) {
+        context.contentResolver.delete(
+            Telephony.Sms.CONTENT_URI,
+            "${Telephony.Sms.THREAD_ID}=?",
+            arrayOf(threadId.toString())
+        )
+        observerFlow.tryEmit(Unit)
+    }
+
     private fun resolveAddress(raw: String?): String {
         val number = raw?.trim().orEmpty()
         if (number.isBlank()) return ""
@@ -165,61 +197,9 @@ class SmsRepository @Inject constructor(
                 val numIdx = c.getColumnIndexOrThrow(ContactsContract.PhoneLookup.NUMBER)
                 val name = c.getString(nameIdx) ?: ""
                 val formatted = c.getString(numIdx) ?: number
-                return if (name.isNotBlank()) "$name · $formatted" else formatted
+                return if (name.isNotBlank()) "$name \u2022 $formatted" else formatted
             }
         }
         return number
-    }
-
-    fun markThreadRead(threadId: Long): Boolean {
-        val values = android.content.ContentValues().apply {
-            put(Telephony.Sms.READ, 1)
-            put(Telephony.Sms.SEEN, 1)
-        }
-        return runCatching {
-            context.contentResolver.update(
-                Telephony.Sms.CONTENT_URI,
-                values,
-                "${Telephony.Sms.THREAD_ID}=?",
-                arrayOf(threadId.toString())
-            )
-            context.contentResolver.update(
-                Telephony.Threads.CONTENT_URI,
-                values,
-                "${Telephony.Threads._ID}=?",
-                arrayOf(threadId.toString())
-            )
-            observerFlow.tryEmit(Unit)
-            true
-        }.getOrDefault(false)
-    }
-
-    fun archiveThread(threadId: Long): Boolean {
-        return runCatching {
-            archivedThreadDao.insert(ArchivedThread(threadId = threadId, archivedAt = System.currentTimeMillis()))
-            observerFlow.tryEmit(Unit)
-            true
-        }.getOrDefault(false)
-    }
-
-    fun unarchiveThread(threadId: Long): Boolean {
-        return runCatching {
-            archivedThreadDao.deleteByThreadId(threadId)
-            observerFlow.tryEmit(Unit)
-            true
-        }.getOrDefault(false)
-    }
-
-    fun deleteThread(threadId: Long): Boolean {
-        return runCatching {
-            context.contentResolver.delete(
-                Telephony.Sms.CONTENT_URI,
-                "${Telephony.Sms.THREAD_ID}=?",
-                arrayOf(threadId.toString())
-            )
-            archivedThreadDao.deleteByThreadId(threadId)
-            observerFlow.tryEmit(Unit)
-            true
-        }.getOrDefault(false)
     }
 }

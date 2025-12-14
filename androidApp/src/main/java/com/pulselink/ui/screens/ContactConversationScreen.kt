@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -98,6 +99,7 @@ fun ContactConversationScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .background(gradient)
     ) {
@@ -179,7 +181,8 @@ private fun ConversationBody(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 24.dp),
+            .padding(horizontal = 20.dp)
+            .padding(top = 24.dp, bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Row(

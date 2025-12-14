@@ -19,10 +19,35 @@ class SmsInboxViewModel @Inject constructor(
 ) : ViewModel() {
     private val _threads = MutableStateFlow<List<SmsThreadItem>>(emptyList())
     val threads: StateFlow<List<SmsThreadItem>> = _threads
+    private val _archived = MutableStateFlow<List<SmsThreadItem>>(emptyList())
+    val archived: StateFlow<List<SmsThreadItem>> = _archived
 
     fun refresh() {
         viewModelScope.launch {
             _threads.value = smsRepository.listThreads()
+            _archived.value = smsRepository.listArchivedThreads()
+        }
+    }
+
+    fun archive(threadId: Long) {
+        viewModelScope.launch {
+            smsRepository.markThreadRead(threadId)
+            smsRepository.archiveThread(threadId)
+            refresh()
+        }
+    }
+
+    fun unarchive(threadId: Long) {
+        viewModelScope.launch {
+            smsRepository.unarchiveThread(threadId)
+            refresh()
+        }
+    }
+
+    fun delete(threadId: Long) {
+        viewModelScope.launch {
+            smsRepository.deleteThread(threadId)
+            refresh()
         }
     }
 

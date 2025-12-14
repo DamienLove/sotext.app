@@ -131,21 +131,21 @@ fun SettingsScreen(
                 checked = settings.includeLocation,
                 onCheckedChange = onToggleIncludeLocation
             )
-            val defaultSmsSubtitle = if (isDefaultSmsApp) {
-                "PulseLink is set as the default SMS app."
-            } else if (defaultSmsSupported) {
-                "Required for Beacon/Pro messaging and Play compliance."
-            } else {
-                "Default SMS role unavailable on this device."
-            }
-            SettingsActionRow(
-                title = "Default SMS app",
-                subtitle = defaultSmsSubtitle,
-                actionLabel = if (isDefaultSmsApp) "Change" else "Make default",
-                onAction = onRequestDefaultSms,
-                leadingIcon = Icons.Filled.Message
-            )
             if (BuildConfig.PRO_FEATURES) {
+                val defaultSmsSubtitle = if (isDefaultSmsApp) {
+                    "PulseLink is set as the default SMS app."
+                } else if (defaultSmsSupported) {
+                    "Required for Beacon/Pro messaging and Play compliance."
+                } else {
+                    "Default SMS role unavailable on this device."
+                }
+                SettingsActionRow(
+                    title = "Default SMS app",
+                    subtitle = defaultSmsSubtitle,
+                    actionLabel = if (isDefaultSmsApp) "Change" else "Make default",
+                    onAction = onRequestDefaultSms,
+                    leadingIcon = Icons.Filled.Message
+                )
                 SettingsActionRow(
                     title = "SMS inbox",
                     subtitle = "View conversations stored on this device.",

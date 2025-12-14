@@ -49,6 +49,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 
 @AndroidEntryPoint
+@android.annotation.SuppressLint("MissingPermission")
 class EmergencyPopupActivity : AppCompatActivity() {
 
     @Inject

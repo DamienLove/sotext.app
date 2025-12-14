@@ -49,6 +49,12 @@ val numlookupApiKey = optionalProperty("numlookupApiKey")
     ?: ""
 val escapedNumlookupApiKey = numlookupApiKey.replace("\"", "\\\"")
 
+// Optional IPQualityScore API key (caller ID fallback; keep out of VCS).
+val ipqsApiKey = optionalProperty("ipqsApiKey")
+    ?: System.getenv("IPQS_API_KEY")
+    ?: ""
+val escapedIpqsApiKey = ipqsApiKey.replace("\"", "\\\"")
+
 fun Project.signingEnvKey(base: String, flavor: String?): String {
     val suffix = flavor?.uppercase(Locale.US)?.let { "_${it}" }.orEmpty()
     val root = when (base) {
@@ -144,6 +150,8 @@ android {
 
         buildConfigField("String", "NUMLOOKUP_API_BASE", "\"https://api.numlookupapi.com/v1\"")
         buildConfigField("String", "NUMLOOKUP_API_KEY", "\"$escapedNumlookupApiKey\"")
+        buildConfigField("String", "IPQS_API_BASE", "\"https://www.ipqualityscore.com/api/json/phone\"")
+        buildConfigField("String", "IPQS_API_KEY", "\"$escapedIpqsApiKey\"")
     }
 
     buildTypes {

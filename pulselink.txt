@@ -1,6 +1,8 @@
 Branch: Suite-Beta (based on Beta)
 
 Recent work
+- 2025-12-14: Added Beacon standalone module (appId com.pulselink.beacon) with Firebase wired; telephony feature declared as optional, SMS/WAP permissions, default-SMS intents, Compose shell, branded icon. google-services.json placed under beaconApp/.
+- 2025-12-14: Beacon free now has functional inbox/thread UI (Compose + NavHost) backed by Telephony provider; default-SMS receivers for SMS/MMS/respond-via-message; request-default prompt; app-open + banner + inline native ads wired to provided unit IDs; SmsRepository updated for thread address resolution; gma ad-services config added.
 - 2025-12-14: Caller ID screening now queries Numlookup API (per-call lookup, silences only on obvious spam/invalid); Numlookup key pulled from local.properties `numlookupApiKey` or env `NUMLOOKUP_API_KEY` (not checked in).
 - 2025-12-13: Added premium flavor; billing-ktx; default-SMS scaffolding (SMS/MMS/WAP receivers, respond-via-message service, SENDTO intent filter, default-SMS prompt); premium google-services sync task placeholder.
 - 2025-12-13: Persist SMS to Telephony provider when app is default SMS (incoming/outgoing).
@@ -32,6 +34,7 @@ Current SMS features
 - Inbox/thread UI with live refresh + contact resolution; time-format preference.
 
 Outstanding (carry-over for next session)
+- Beacon free: add runtime permission flows (READ/RECEIVE/WRITE/SEND_SMS + POST_NOTIFICATIONS), default-SMS role result handling, MMS download/display, contact avatars, search, and interstitial ad trigger points; run lint/unit tests once receivers/UI finalized.
 - SMS: Add MMS send/receive UI + compliance tests; enhance inbox with unread badges, delete/archive, and better date formatting; consider content observer cleanup.
 - Beacon visual customization: build full editor (color wheel, per-surface colors, gradients, icon sizing, layout presets, sample chat preview applied globally).
 - Caller ID: implement spam/lookup + in-call overlay; respect permissions.

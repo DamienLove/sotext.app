@@ -18,6 +18,7 @@ import com.pulselink.data.beta.BetaAgreementRepositoryImpl
 import com.pulselink.data.db.AlertEventDao
 import com.pulselink.data.db.AlertRepositoryImpl
 import com.pulselink.data.db.BlockedContactDao
+import com.pulselink.data.db.ArchivedThreadDao
 import com.pulselink.data.db.BlockedContactRepositoryImpl
 import com.pulselink.data.db.ContactDao
 import com.pulselink.data.db.ContactRepositoryImpl
@@ -91,7 +92,8 @@ object DatabaseModule {
                 PulseLinkDatabase.MIGRATION_5_6,
                 PulseLinkDatabase.MIGRATION_6_7,
                 PulseLinkDatabase.MIGRATION_7_8,
-                PulseLinkDatabase.MIGRATION_8_9
+                PulseLinkDatabase.MIGRATION_8_9,
+                PulseLinkDatabase.MIGRATION_9_10
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -107,6 +109,9 @@ object DatabaseModule {
 
     @Provides
     fun provideBlockedContactDao(database: PulseLinkDatabase): BlockedContactDao = database.blockedContactDao()
+
+    @Provides
+    fun provideArchivedThreadDao(database: PulseLinkDatabase): ArchivedThreadDao = database.archivedThreadDao()
 
     @Provides
     @Singleton
@@ -139,7 +144,10 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideSmsRepository(@ApplicationContext context: Context): SmsRepository = SmsRepository(context)
+    fun provideSmsRepository(
+        @ApplicationContext context: Context,
+        archivedThreadDao: ArchivedThreadDao
+    ): SmsRepository = SmsRepository(context, archivedThreadDao)
 
     @Provides
     @Singleton
@@ -200,4 +208,9 @@ object DatabaseModule {
     @Singleton
     @Named("NumlookupApiKey")
     fun provideNumlookupApiKey(): String = BuildConfig.NUMLOOKUP_API_KEY
+
+    @Provides
+    @Singleton
+    @Named("IpqsApiKey")
+    fun provideIpqsApiKey(): String = BuildConfig.IPQS_API_KEY
 }

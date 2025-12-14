@@ -897,12 +897,17 @@ class MainActivity : AppCompatActivity() {
                     composable("sms/inbox") {
                         val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
                         val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
+                        val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
                         LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
                         SmsInboxScreen(
                             threads = threads,
+                            archivedThreads = archivedThreads,
                             onOpenThread = { thread ->
                                 navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
                             },
+                            onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
+                            onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
+                            onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
                             onBack = { navController.popBackStack() },
                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) }
                         )

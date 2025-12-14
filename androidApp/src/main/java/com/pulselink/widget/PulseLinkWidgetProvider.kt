@@ -1,5 +1,6 @@
 package com.pulselink.widget
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -43,6 +44,7 @@ class PulseLinkWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    @SuppressLint("RemoteViewLayout")
     private fun updateWidgetsSync(
         context: Context,
         appWidgetManager: AppWidgetManager,
