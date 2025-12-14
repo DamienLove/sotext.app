@@ -38,7 +38,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshThreads() {
-        threads = repo.listThreads()
+        threads = runCatching { repo.listThreads() }.getOrElse { emptyList() }
     }
 
     fun openThread(threadId: Long, address: String) {
@@ -48,14 +48,14 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun refreshThread(threadId: Long, refreshRead: Boolean) {
-        messages = repo.messagesForThread(threadId)
-        if (refreshRead) repo.markThreadRead(threadId)
+        messages = runCatching { repo.messagesForThread(threadId) }.getOrElse { emptyList() }
+        if (refreshRead) runCatching { repo.markThreadRead(threadId) }
     }
 
     fun sendMessage(body: String): Boolean {
         val addr = currentAddress.ifBlank { messages.lastOrNull()?.address.orEmpty() }
         if (addr.isBlank()) return false
-        val ok = repo.sendSms(addr, body)
+        val ok = runCatching { repo.sendSms(addr, body) }.getOrDefault(false)
         if (ok) currentThreadId?.let { refreshThread(it, refreshRead = true) }
         return ok
     }

@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
 import android.provider.Telephony
+import com.pulselink.beacon.data.MmsPart
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -96,6 +97,99 @@ class SmsRepository(private val context: Context) {
         return ""
     }
 
+    private fun readMmsMessages(threadId: Long, limit: Int): List<SmsMessageItem> {
+        val projection = arrayOf(
+            Telephony.Mms._ID,
+            Telephony.Mms.THREAD_ID,
+            Telephony.Mms.DATE,
+            Telephony.Mms.MESSAGE_BOX
+        )
+        val cursor = context.contentResolver.query(
+            Telephony.Mms.CONTENT_URI,
+            projection,
+            "${Telephony.Mms.THREAD_ID}=?",
+            arrayOf(threadId.toString()),
+            "${Telephony.Mms.DATE} DESC"
+        ) ?: return emptyList()
+
+        cursor.use { c ->
+            val idIdx = c.getColumnIndexOrThrow(Telephony.Mms._ID)
+            val dateIdx = c.getColumnIndexOrThrow(Telephony.Mms.DATE)
+            val boxIdx = c.getColumnIndexOrThrow(Telephony.Mms.MESSAGE_BOX)
+            val items = mutableListOf<SmsMessageItem>()
+            var count = 0
+            while (c.moveToNext() && count < limit) {
+                val mmsId = c.getLong(idIdx)
+                val address = resolveMmsAddress(mmsId)
+                val parts = readMmsParts(mmsId)
+                val textPart = parts.firstOrNull { it.text != null }?.text ?: "[MMS]"
+                val ts = c.getLong(dateIdx) * 1000 // Mms dates are in seconds
+                val msgBox = c.getInt(boxIdx)
+                val outgoing = msgBox == Telephony.Mms.MESSAGE_BOX_SENT || msgBox == Telephony.Mms.MESSAGE_BOX_OUTBOX
+                items += SmsMessageItem(
+                    id = -mmsId, // avoid collision with SMS ids
+                    threadId = threadId,
+                    address = address,
+                    body = textPart,
+                    timestamp = ts,
+                    outgoing = outgoing,
+                    isMms = true,
+                    mediaParts = parts
+                )
+                count++
+            }
+            return items
+        }
+    }
+
+    private fun resolveMmsAddress(mmsId: Long): String {
+        val uri = Uri.parse("content://mms/$mmsId/addr")
+        val cursor = context.contentResolver.query(
+            uri,
+            arrayOf("address", "type"),
+            "type=137", // FROM
+            null,
+            null
+        ) ?: return ""
+        cursor.use { c ->
+            if (c.moveToFirst()) {
+                val addr = c.getString(c.getColumnIndexOrThrow("address"))
+                return resolveAddress(addr)
+            }
+        }
+        return ""
+    }
+
+    private fun readMmsParts(mmsId: Long): List<MmsPart> {
+        val uri = Uri.parse("content://mms/$mmsId/part")
+        val cursor = context.contentResolver.query(
+            uri,
+            arrayOf("_id", "ct", "text"),
+            null,
+            null,
+            null
+        ) ?: return emptyList()
+
+        val parts = mutableListOf<MmsPart>()
+        cursor.use { c ->
+            val idIdx = c.getColumnIndexOrThrow("_id")
+            val ctIdx = c.getColumnIndexOrThrow("ct")
+            val textIdx = c.getColumnIndexOrThrow("text")
+            while (c.moveToNext()) {
+                val partId = c.getString(idIdx)
+                val contentType = c.getString(ctIdx) ?: ""
+                val text = c.getString(textIdx)
+                val dataUri = Uri.parse("content://mms/part/$partId")
+                parts += MmsPart(
+                    contentType = contentType,
+                    text = text,
+                    dataUri = if (text == null) dataUri else null
+                )
+            }
+        }
+        return parts
+    }
+
     fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> {
         val projection = arrayOf(
             Telephony.Sms._ID,
@@ -105,15 +199,15 @@ class SmsRepository(private val context: Context) {
             Telephony.Sms.DATE,
             Telephony.Sms.TYPE
         )
-        val cursor = context.contentResolver.query(
+        val smsCursor = context.contentResolver.query(
             Telephony.Sms.CONTENT_URI,
             projection,
             "${Telephony.Sms.THREAD_ID}=?",
             arrayOf(threadId.toString()),
             "${Telephony.Sms.DATE} DESC"
-        ) ?: return emptyList()
+        )
 
-        cursor.use { c ->
+        val smsItems = smsCursor?.use { c ->
             val idIdx = c.getColumnIndexOrThrow(Telephony.Sms._ID)
             val threadIdx = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
             val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
@@ -135,12 +229,17 @@ class SmsRepository(private val context: Context) {
                     address = addr,
                     body = body,
                     timestamp = ts,
-                    outgoing = outgoing
+                    outgoing = outgoing,
+                    isMms = false
                 )
                 count++
             }
-            return items.sortedBy { it.timestamp }
-        }
+            items
+        } ?: emptyList()
+
+        val mmsItems = readMmsMessages(threadId, limit)
+
+        return (smsItems + mmsItems).sortedBy { it.timestamp }.takeLast(limit)
     }
 
     fun sendSms(address: String, body: String): Boolean {

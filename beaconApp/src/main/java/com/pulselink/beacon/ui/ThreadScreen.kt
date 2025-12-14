@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.ui.ads.NativeAdCard
 
@@ -151,6 +152,19 @@ private fun MessageBubble(message: SmsMessageItem) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Black
                 )
+                if (message.isMms && message.mediaParts.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    message.mediaParts.filter { it.dataUri != null && it.contentType.startsWith("image") }
+                        .forEach { part ->
+                            AsyncImage(
+                                model = part.dataUri,
+                                contentDescription = "MMS image",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                            )
+                        }
+                }
                 Text(
                     text = DateUtils.getRelativeTimeSpanString(
                         message.timestamp,
