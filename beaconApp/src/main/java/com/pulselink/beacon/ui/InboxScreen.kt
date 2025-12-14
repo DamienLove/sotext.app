@@ -54,6 +54,8 @@ import kotlinx.coroutines.launch
 fun InboxScreen(
     threads: List<SmsThreadItem>,
     isDefaultSms: Boolean,
+    missingPermissions: List<String>,
+    onRequestPermissions: () -> Unit,
     onRequestDefault: () -> Unit,
     onOpenThread: (Long, String) -> Unit,
     onDeleteThread: (Long) -> Unit,
@@ -80,6 +82,33 @@ fun InboxScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            if (missingPermissions.isNotEmpty()) {
+                Surface(
+                    tonalElevation = 2.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = null)
+                        Column(Modifier.weight(1f)) {
+                            Text("Permissions needed", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Grant SMS + notifications so Beacon can read and show messages.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        OutlinedButton(onClick = onRequestPermissions) {
+                            Text("Grant")
+                        }
+                    }
+                }
+            }
+
             if (!isDefaultSms) {
                 Surface(
                     tonalElevation = 2.dp,
