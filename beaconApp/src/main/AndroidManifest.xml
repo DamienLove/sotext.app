@@ -88,14 +88,6 @@
             </intent-filter>
         </receiver>
 
-        <service
-            android:name=".service.BeaconMmsService"
-            android:exported="true"
-            android:permission="android.permission.BIND_TELEPHONY_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.carrier.CarrierMessagingService" />
-            </intent-filter>
-        </service>
     </application>
 
 </manifest>

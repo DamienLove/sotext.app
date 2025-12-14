@@ -2,6 +2,8 @@ package com.pulselink.data.sms
 
 import android.content.Context
 import android.provider.Telephony
+import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
 import com.pulselink.data.db.ArchivedThreadDao
 import com.pulselink.domain.model.ArchivedThread
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -22,30 +24,36 @@ class SmsRepository @Inject constructor(
     private val archivedThreadDao: ArchivedThreadDao
 ) {
 
+    private val hasPerms = hasSmsPermissions(context)
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     init {
-        val handler = Handler(Looper.getMainLooper())
-        val observer = object : ContentObserver(handler) {
-            override fun onChange(selfChange: Boolean) {
-                observerFlow.tryEmit(Unit)
+        if (hasPerms) {
+            val handler = Handler(Looper.getMainLooper())
+            val observer = object : ContentObserver(handler) {
+                override fun onChange(selfChange: Boolean) {
+                    observerFlow.tryEmit(Unit)
+                }
+            }
+            runCatching {
+                context.contentResolver.registerContentObserver(
+                    Telephony.Sms.CONTENT_URI,
+                    true,
+                    observer
+                )
+                context.contentResolver.registerContentObserver(
+                    Telephony.Threads.CONTENT_URI,
+                    true,
+                    observer
+                )
             }
         }
-        context.contentResolver.registerContentObserver(
-            Telephony.Sms.CONTENT_URI,
-            true,
-            observer
-        )
-        context.contentResolver.registerContentObserver(
-            Telephony.Threads.CONTENT_URI,
-            true,
-            observer
-        )
     }
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
 
     fun listThreads(limit: Int = 50, includeArchived: Boolean = false, onlyArchived: Boolean = false): List<SmsThreadItem> {
+        if (!hasPerms) return emptyList()
         val archivedIds = runCatching { archivedThreadDao.getAllIds() }.getOrDefault(emptyList())
         val projection = arrayOf(
             Telephony.Threads._ID,
@@ -102,6 +110,7 @@ class SmsRepository @Inject constructor(
         listThreads(limit = limit, includeArchived = true, onlyArchived = true)
 
     fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> {
+        if (!hasPerms) return emptyList()
         val projection = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.THREAD_ID,
@@ -149,6 +158,7 @@ class SmsRepository @Inject constructor(
     }
 
     private fun resolveAddress(raw: String?): String {
+        if (!hasPerms) return raw.orEmpty()
         val number = raw?.trim().orEmpty()
         if (number.isBlank()) return ""
         val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
@@ -172,6 +182,7 @@ class SmsRepository @Inject constructor(
     }
 
     fun markThreadRead(threadId: Long): Boolean {
+        if (!hasPerms) return false
         val values = android.content.ContentValues().apply {
             put(Telephony.Sms.READ, 1)
             put(Telephony.Sms.SEEN, 1)
@@ -211,6 +222,7 @@ class SmsRepository @Inject constructor(
     }
 
     fun deleteThread(threadId: Long): Boolean {
+        if (!hasPerms) return false
         return runCatching {
             context.contentResolver.delete(
                 Telephony.Sms.CONTENT_URI,
@@ -221,5 +233,20 @@ class SmsRepository @Inject constructor(
             observerFlow.tryEmit(Unit)
             true
         }.getOrDefault(false)
+    }
+
+    companion object {
+        private fun hasSmsPermissions(context: Context): Boolean {
+            val perms = listOf(
+                android.Manifest.permission.READ_SMS,
+                android.Manifest.permission.RECEIVE_SMS,
+                android.Manifest.permission.SEND_SMS,
+                android.Manifest.permission.RECEIVE_MMS,
+                android.Manifest.permission.RECEIVE_WAP_PUSH
+            )
+            return perms.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
+        }
     }
 }

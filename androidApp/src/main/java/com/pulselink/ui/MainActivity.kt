@@ -148,6 +148,7 @@ class MainActivity : AppCompatActivity() {
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val authState by viewModel.authState.collectAsStateWithLifecycle()
                 val navController = rememberNavController()
+                var missingSmsPerms by remember { mutableStateOf(requiredSmsPermissions(context)) }
                 val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
                 val ownerName = state.settings.ownerName
                 var isPreparingCall by remember { mutableStateOf(false) }
@@ -159,6 +160,11 @@ class MainActivity : AppCompatActivity() {
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
                     isDefaultSms = defaultSmsHelper.isDefaultSms()
+                }
+                val smsPermLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestMultiplePermissions()
+                ) {
+                    missingSmsPerms = requiredSmsPermissions(context)
                 }
                 val defaultSmsSupported = remember {
                     defaultSmsHelper.buildRoleRequestIntent() != null || defaultSmsHelper.isDefaultSms()
@@ -177,8 +183,19 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
+                val openInboxShortcut = remember { intent?.getBooleanExtra("open_sms_inbox", false) == true }
                 LaunchedEffect(Unit) {
                     isDefaultSms = defaultSmsHelper.isDefaultSms()
+                    missingSmsPerms = requiredSmsPermissions(context)
+                    if (openInboxShortcut) {
+                        if (missingSmsPerms.isNotEmpty()) {
+                            smsPermLauncher.launch(missingSmsPerms.toTypedArray())
+                        }
+                        navController.navigate("sms/inbox") {
+                            popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    }
                 }
                 val cancelEmergencyLauncher = rememberCancelEmergencyLauncher(
                     activity = activity,
@@ -1013,6 +1030,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+
+private fun requiredSmsPermissions(context: android.content.Context): List<String> =
+    buildList {
+        add(Manifest.permission.SEND_SMS)
+        add(Manifest.permission.RECEIVE_SMS)
+        add(Manifest.permission.READ_SMS)
+        add(Manifest.permission.RECEIVE_MMS)
+        add(Manifest.permission.RECEIVE_WAP_PUSH)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }.filter {
+        ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+    }
 
 @Composable
 private fun rememberCancelEmergencyLauncher(

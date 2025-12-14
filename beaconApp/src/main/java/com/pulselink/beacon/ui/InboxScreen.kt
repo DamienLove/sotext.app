@@ -21,9 +21,6 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sms
-import androidx.compose.material3.DismissDirection
-import androidx.compose.material3.DismissState
-import androidx.compose.material3.DismissValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,7 +32,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDismissState
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -157,41 +156,40 @@ fun InboxScreen(
                         )
                     }
                 }
-                return
-            }
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                itemsIndexed(threads, key = { _, item -> item.threadId }) { index, item ->
-                    if (index == 3) {
-                        NativeAdCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                        )
-                    }
-                    val dismissState = rememberDismissState(
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(threads, key = { _, item -> item.threadId }) { index, item ->
+                        if (index == 3) {
+                            NativeAdCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            )
+                        }
+                        val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = { value ->
-                            if (value == DismissValue.DismissedToStart) {
+                            if (value == SwipeToDismissBoxValue.EndToStart) {
                                 onDeleteThread(item.threadId)
                                 scope.launch {
                                     host.showSnackbar("Thread deleted")
                                 }
                             }
-                            false
-                        }
-                    )
-                    SwipeableThreadRow(
-                        thread = item,
-                        state = dismissState,
-                        onClick = { onOpenThread(item.threadId, item.address) }
-                    )
+                                false
+                            }
+                        )
+                        SwipeableThreadRow(
+                            thread = item,
+                            state = dismissState,
+                            onClick = { onOpenThread(item.threadId, item.address) }
+                        )
+                    }
+                    item { Spacer(modifier = Modifier.height(60.dp)) }
                 }
-                item { Spacer(modifier = Modifier.height(60.dp)) }
             }
         }
     }
@@ -201,16 +199,13 @@ fun InboxScreen(
 @Composable
 private fun SwipeableThreadRow(
     thread: SmsThreadItem,
-    state: DismissState,
+    state: SwipeToDismissBoxState,
     onClick: () -> Unit
 ) {
     androidx.compose.material3.SwipeToDismiss(
         state = state,
         background = {
-            val color = when (state.dismissDirection) {
-                DismissDirection.EndToStart -> Color(0xFFE53935)
-                else -> Color.Transparent
-            }
+            val color = if (state.targetValue == SwipeToDismissBoxValue.EndToStart) Color(0xFFE53935) else Color.Transparent
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -218,12 +213,12 @@ private fun SwipeableThreadRow(
                     .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                if (state.dismissDirection == DismissDirection.EndToStart) {
+                if (state.targetValue == SwipeToDismissBoxValue.EndToStart) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
                 }
             }
         },
-        directions = setOf(DismissDirection.EndToStart),
+        directions = setOf(SwipeToDismissBoxValue.EndToStart),
         dismissContent = {
             ThreadRow(thread = thread, onClick = onClick)
         }

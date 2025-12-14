@@ -222,7 +222,7 @@ android {
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
             buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"\"")
             buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"\"")
-            resValue("string", "app_name", "PulseLink Pro (Beacon)")
+            resValue("string", "app_name", "PulseLink Pro")
             val targetSigning = when {
                 proSigningSpec.isConfigured -> proReleaseConfig
                 releaseSigningSpec.isConfigured -> releaseConfig
@@ -251,7 +251,7 @@ android {
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
             buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"pulselink_premium_monthly\"")
             buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"pulselink_premium_yearly\"")
-            resValue("string", "app_name", "PulseLink Beacon Premium")
+            resValue("string", "app_name", "PulseLink Premium")
             val targetSigning = when {
                 premiumSigningSpec.isConfigured -> premiumReleaseConfig
                 proSigningSpec.isConfigured -> proReleaseConfig

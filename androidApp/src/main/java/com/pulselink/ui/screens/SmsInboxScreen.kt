@@ -21,15 +21,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -48,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.pulselink.R
 import com.pulselink.data.sms.SmsThreadItem
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,19 +60,15 @@ fun SmsInboxScreen(
     modifier: Modifier = Modifier,
     dateFormatter: (Long) -> String
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     val source = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
     val filtered = source.filter { thread ->
-        val target = "${thread.address} ${thread.snippet}".lowercase()
-        val matchesQuery = query.isBlank() || target.contains(query.lowercase())
-        val matchesFilter = when (filter) {
+        when (filter) {
             InboxFilter.ALL -> true
             InboxFilter.READ -> !thread.unread
             InboxFilter.UNREAD -> thread.unread
             InboxFilter.ARCHIVED -> true
         }
-        matchesQuery && matchesFilter
     }
 
     Scaffold(
@@ -87,14 +80,7 @@ fun SmsInboxScreen(
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                actions = {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                }
+                actions = {}
             )
         }
     ) { padding ->
@@ -102,18 +88,10 @@ fun SmsInboxScreen(
             modifier = modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                placeholder = { Text("Search messages or numbers") }
-            )
-
-            FilterRow(
+            TabsRow(
                 filter = filter,
                 unreadCount = threads.count { it.unread },
                 onFilterChange = { filter = it }
@@ -127,7 +105,7 @@ fun SmsInboxScreen(
                 if (filtered.isEmpty()) {
                     item {
                         Text(
-                            text = if (source.isEmpty()) "No SMS threads found." else "No matches for \"$query\".",
+                            text = "No messages here yet.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -304,37 +282,51 @@ private fun splitDisplay(address: String): Pair<String, String?> {
 }
 
 @Composable
-private fun FilterRow(
+private fun TabsRow(
     filter: InboxFilter,
     unreadCount: Int,
     onFilterChange: (InboxFilter) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        FilterChip(
-            selected = filter == InboxFilter.ALL,
-            onClick = { onFilterChange(InboxFilter.ALL) },
-            label = { Text("All") }
+        TabText(label = "All Messages", selected = filter == InboxFilter.ALL) {
+            onFilterChange(InboxFilter.ALL)
+        }
+        TabText(label = "Read", selected = filter == InboxFilter.READ) {
+            onFilterChange(InboxFilter.READ)
+        }
+        TabText(label = "Unread${if (unreadCount > 0) " ($unreadCount)" else ""}", selected = filter == InboxFilter.UNREAD) {
+            onFilterChange(InboxFilter.UNREAD)
+        }
+        TabText(label = "Archived", selected = filter == InboxFilter.ARCHIVED) {
+            onFilterChange(InboxFilter.ARCHIVED)
+        }
+    }
+}
+
+@Composable
+private fun TabText(label: String, selected: Boolean, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
         )
-        FilterChip(
-            selected = filter == InboxFilter.READ,
-            onClick = { onFilterChange(InboxFilter.READ) },
-            label = { Text("Read") }
-        )
-        FilterChip(
-            selected = filter == InboxFilter.UNREAD,
-            onClick = { onFilterChange(InboxFilter.UNREAD) },
-            label = { Text("Unread${if (unreadCount > 0) " ($unreadCount)" else ""}") },
-            colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-            )
-        )
-        FilterChip(
-            selected = filter == InboxFilter.ARCHIVED,
-            onClick = { onFilterChange(InboxFilter.ARCHIVED) },
-            label = { Text("Archived") }
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .height(2.dp)
+                .fillMaxWidth(0.8f)
+                .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
         )
     }
 }

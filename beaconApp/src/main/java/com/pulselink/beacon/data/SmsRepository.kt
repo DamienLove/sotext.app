@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
 import android.provider.Telephony
+import androidx.core.content.ContextCompat
 import com.pulselink.beacon.data.MmsPart
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -14,30 +15,36 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 class SmsRepository(private val context: Context) {
 
+    private val hasPerms = hasSmsPermissions(context)
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     init {
-        val handler = Handler(Looper.getMainLooper())
-        val observer = object : ContentObserver(handler) {
-            override fun onChange(selfChange: Boolean) {
-                observerFlow.tryEmit(Unit)
+        if (hasPerms) {
+            val handler = Handler(Looper.getMainLooper())
+            val observer = object : ContentObserver(handler) {
+                override fun onChange(selfChange: Boolean) {
+                    observerFlow.tryEmit(Unit)
+                }
+            }
+            runCatching {
+                context.contentResolver.registerContentObserver(
+                    Telephony.Sms.CONTENT_URI,
+                    true,
+                    observer
+                )
+                context.contentResolver.registerContentObserver(
+                    Telephony.Threads.CONTENT_URI,
+                    true,
+                    observer
+                )
             }
         }
-        context.contentResolver.registerContentObserver(
-            Telephony.Sms.CONTENT_URI,
-            true,
-            observer
-        )
-        context.contentResolver.registerContentObserver(
-            Telephony.Threads.CONTENT_URI,
-            true,
-            observer
-        )
     }
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
 
     fun listThreads(limit: Int = 50): List<SmsThreadItem> {
+        if (!hasPerms) return emptyList()
         val projection = arrayOf(
             Telephony.Threads._ID,
             Telephony.Threads.SNIPPET,
@@ -98,6 +105,7 @@ class SmsRepository(private val context: Context) {
     }
 
     private fun readMmsMessages(threadId: Long, limit: Int): List<SmsMessageItem> {
+        if (!hasPerms) return emptyList()
         val projection = arrayOf(
             Telephony.Mms._ID,
             Telephony.Mms.THREAD_ID,
@@ -143,6 +151,7 @@ class SmsRepository(private val context: Context) {
     }
 
     private fun resolveMmsAddress(mmsId: Long): String {
+        if (!hasPerms) return ""
         val uri = Uri.parse("content://mms/$mmsId/addr")
         val cursor = context.contentResolver.query(
             uri,
@@ -161,6 +170,7 @@ class SmsRepository(private val context: Context) {
     }
 
     private fun readMmsParts(mmsId: Long): List<MmsPart> {
+        if (!hasPerms) return emptyList()
         val uri = Uri.parse("content://mms/$mmsId/part")
         val cursor = context.contentResolver.query(
             uri,
@@ -199,6 +209,7 @@ class SmsRepository(private val context: Context) {
             Telephony.Sms.DATE,
             Telephony.Sms.TYPE
         )
+        if (!hasPerms) return emptyList()
         val smsCursor = context.contentResolver.query(
             Telephony.Sms.CONTENT_URI,
             projection,
@@ -243,6 +254,7 @@ class SmsRepository(private val context: Context) {
     }
 
     fun sendSms(address: String, body: String): Boolean {
+        if (!hasPerms) return false
         return runCatching {
             val smsManager = android.telephony.SmsManager.getDefault()
             smsManager.sendTextMessage(address, null, body, null, null)
@@ -251,6 +263,7 @@ class SmsRepository(private val context: Context) {
     }
 
     fun markThreadRead(threadId: Long) {
+        if (!hasPerms) return
         val values = android.content.ContentValues().apply {
             put(Telephony.Sms.READ, 1)
             put(Telephony.Sms.SEEN, 1)
@@ -271,6 +284,7 @@ class SmsRepository(private val context: Context) {
     }
 
     fun deleteThread(threadId: Long) {
+        if (!hasPerms) return
         context.contentResolver.delete(
             Telephony.Sms.CONTENT_URI,
             "${Telephony.Sms.THREAD_ID}=?",
@@ -280,6 +294,7 @@ class SmsRepository(private val context: Context) {
     }
 
     private fun resolveAddress(raw: String?): String {
+        if (!hasPerms) return raw.orEmpty()
         val number = raw?.trim().orEmpty()
         if (number.isBlank()) return ""
         val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
@@ -301,4 +316,20 @@ class SmsRepository(private val context: Context) {
         }
         return number
     }
+
+    companion object {
+        private fun hasSmsPermissions(context: Context): Boolean {
+            val perms = listOf(
+                android.Manifest.permission.READ_SMS,
+                android.Manifest.permission.RECEIVE_SMS,
+                android.Manifest.permission.SEND_SMS,
+                android.Manifest.permission.RECEIVE_MMS,
+                android.Manifest.permission.RECEIVE_WAP_PUSH
+            )
+            return perms.all {
+                ContextCompat.checkSelfPermission(context, it) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            }
+        }
+    }
 }
+

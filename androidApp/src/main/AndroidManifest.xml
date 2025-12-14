@@ -57,6 +57,19 @@
                 <data android:scheme="mmsto" />
             </intent-filter>
         </activity>
+        <!-- Secondary launcher for direct inbox access (pro/premium only via bool) -->
+        <activity
+            android:name=".ui.InboxLauncherActivity"
+            android:exported="true"
+            android:enabled="@bool/show_beacon_launcher"
+            android:label="Beacon Inbox"
+            android:icon="@drawable/ic_beacon_inbox"
+            android:roundIcon="@drawable/ic_beacon_inbox">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"

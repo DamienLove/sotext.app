@@ -1,8 +1,8 @@
 package com.pulselink.beacon
 
 import android.app.Application
-import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.android.gms.ads.MobileAds
+import androidx.lifecycle.ProcessLifecycleOwner
 
 class BeaconApp : Application() {
     private lateinit var appOpenManager: AppOpenAdManager
