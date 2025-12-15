@@ -57,9 +57,9 @@
                 <data android:scheme="mmsto" />
             </intent-filter>
         </activity>
-        <!-- Secondary launcher for direct inbox access (pro/premium only via bool) -->
+        <!-- Launcher shortcut that jumps directly to SMS inbox; enabled at runtime when PulseLink is default SMS -->
         <activity
-            android:name=".ui.BeaconInboxActivity"
+            android:name=".ui.InboxLauncherActivity"
             android:exported="true"
             android:enabled="@bool/show_beacon_launcher"
             android:label="Beacon Inbox"
@@ -72,6 +72,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Beacon inbox activity (opened from launcher shortcut or in-app) -->
+        <activity
+            android:name=".ui.BeaconInboxActivity"
+            android:exported="true"
+            android:taskAffinity="com.pulselink.beacon.inbox"
+            android:launchMode="singleTask" />
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"

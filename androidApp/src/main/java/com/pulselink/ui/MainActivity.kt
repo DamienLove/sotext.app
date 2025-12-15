@@ -59,7 +59,7 @@ import androidx.navigation.navArgument
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.pulselink.ui.BeaconInboxActivity
+import com.pulselink.ui.InboxLauncherActivity
 import com.pulselink.auth.AuthState
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.domain.model.Contact
@@ -134,7 +134,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
     private val inboxShortcutFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private fun updateBeaconLauncher(enable: Boolean) {
-        val component = ComponentName(this, BeaconInboxActivity::class.java)
+        val component = ComponentName(this, InboxLauncherActivity::class.java)
         val newState = if (enable) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         packageManager.setComponentEnabledSetting(

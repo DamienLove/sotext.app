@@ -31,7 +31,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.pulselink.billing.SubscriptionManager
-import android.content.ComponentName
+import com.pulselink.ui.InboxLauncherActivity
 import com.pulselink.ui.screens.BeaconSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.SmsInboxScreen
@@ -261,7 +261,7 @@ class BeaconInboxActivity : ComponentActivity() {
         }
 
     private fun updateBeaconLauncher(enable: Boolean) {
-        val component = ComponentName(this, BeaconInboxActivity::class.java)
+        val component = android.content.ComponentName(this, InboxLauncherActivity::class.java)
         val newState = if (enable) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         packageManager.setComponentEnabledSetting(
