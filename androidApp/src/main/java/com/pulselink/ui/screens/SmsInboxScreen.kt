@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -58,7 +59,9 @@ fun SmsInboxScreen(
     onUnarchiveThread: (SmsThreadItem) -> Unit = {},
     onDeleteThread: (SmsThreadItem) -> Unit = {},
     modifier: Modifier = Modifier,
-    dateFormatter: (Long) -> String
+    dateFormatter: (Long) -> String,
+    isBeaconMode: Boolean = false,
+    onOpenSettings: () -> Unit = {}
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     val source = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
@@ -74,13 +77,21 @@ fun SmsInboxScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Messages") },
+                title = { Text(if (isBeaconMode) "Beacon Inbox" else "Messages") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    if (!isBeaconMode) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
                 },
-                actions = {}
+                actions = {
+                    if (isBeaconMode) {
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                        }
+                    }
+                }
             )
         }
     ) { padding ->

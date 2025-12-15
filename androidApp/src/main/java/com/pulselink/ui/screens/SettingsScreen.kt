@@ -84,7 +84,6 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
     onBack: () -> Unit,
     onPurchasePremium: () -> Unit,
-    onOpenSmsInbox: () -> Unit,
     onTimeFormatChange: (TimeFormat) -> Unit,
     onOpenVisualSettings: () -> Unit,
     onToggleRemoteWebAccess: (Boolean) -> Unit,
@@ -145,13 +144,6 @@ fun SettingsScreen(
                     actionLabel = if (isDefaultSmsApp) "Change" else "Make default",
                     onAction = onRequestDefaultSms,
                     leadingIcon = Icons.Filled.Message
-                )
-                SettingsActionRow(
-                    title = "SMS inbox",
-                    subtitle = "View conversations stored on this device.",
-                    actionLabel = "Open",
-                    onAction = onOpenSmsInbox,
-                    leadingIcon = Icons.Filled.Sms
                 )
                 SettingsActionRow(
                     title = "Time format",
