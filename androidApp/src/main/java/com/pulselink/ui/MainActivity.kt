@@ -49,6 +49,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -167,27 +168,35 @@ class MainActivity : AppCompatActivity() {
                 val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
                 var pendingInboxNav by remember { mutableStateOf(false) }
+                val smsPermLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestMultiplePermissions()
+                ) {
+                    missingSmsPerms = requiredSmsPermissions(context)
+                    if (pendingInboxNav && missingSmsPerms.isEmpty()) {
+                        pendingInboxNav = false
+                        navController.navigate("sms/inbox") {
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                            launchSingleTop = true
+                            restoreState = false
+                        }
+                    } else if (pendingInboxNav) {
+                        pendingInboxNav = false
+                    }
+                }
                 val defaultSmsLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
                     isDefaultSms = defaultSmsHelper.isDefaultSms()
-                    val nowMissing = requiredSmsPermissions(context)
-                    missingSmsPerms = nowMissing
-                    if (pendingInboxNav && isDefaultSms && nowMissing.isEmpty()) {
+                    missingSmsPerms = requiredSmsPermissions(context)
+                    if (pendingInboxNav && missingSmsPerms.isNotEmpty()) {
+                        smsPermLauncher.launch(missingSmsPerms.toTypedArray())
+                    } else if (pendingInboxNav && isDefaultSms) {
                         pendingInboxNav = false
-                        inboxShortcutFlow.tryEmit(Unit)
-                    } else if (pendingInboxNav && !isDefaultSms) {
-                        pendingInboxNav = false
-                    }
-                }
-                val smsPermLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.RequestMultiplePermissions()
-                ) {
-                    val nowMissing = requiredSmsPermissions(context)
-                    missingSmsPerms = nowMissing
-                    if (pendingInboxNav && nowMissing.isEmpty()) {
-                        pendingInboxNav = false
-                        inboxShortcutFlow.tryEmit(Unit)
+                        navController.navigate("sms/inbox") {
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                            launchSingleTop = true
+                            restoreState = false
+                        }
                     } else if (pendingInboxNav) {
                         pendingInboxNav = false
                     }
@@ -217,23 +226,24 @@ class MainActivity : AppCompatActivity() {
                 }
                 LaunchedEffect(navController) {
                     inboxShortcutFlow.collectLatest {
-                        // Re-evaluate state on each request so we don't navigate without role/permissions
+                        // Re-evaluate state on each request, but always drive navigation to the inbox
                         isDefaultSms = defaultSmsHelper.isDefaultSms()
                         val missingNow = requiredSmsPermissions(context)
                         missingSmsPerms = missingNow
-                        pendingInboxNav = true
                         if (!isDefaultSms && defaultSmsSupported) {
+                            pendingInboxNav = true
                             requestDefaultSms()
                             return@collectLatest
                         }
                         if (missingNow.isNotEmpty()) {
+                            pendingInboxNav = true
                             smsPermLauncher.launch(missingNow.toTypedArray())
                             return@collectLatest
                         }
-                        pendingInboxNav = false
                         navController.navigate("sms/inbox") {
-                            popUpTo(navController.graph.startDestinationId) { inclusive = false }
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
                             launchSingleTop = true
+                            restoreState = false
                         }
                     }
                 }
@@ -454,12 +464,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                val startDestination = remember(initialInboxShortcut, authState, state.onboardingComplete) {
-                    if (initialInboxShortcut && authState is AuthState.Authenticated && state.onboardingComplete) {
-                        "sms/inbox"
-                    } else {
-                        "splash"
-                    }
+                val startDestination = remember(initialInboxShortcut) {
+                    if (initialInboxShortcut) "sms/inbox" else "splash"
                 }
 
                 NavHost(navController = navController, startDestination = startDestination) {

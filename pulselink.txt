@@ -51,3 +51,6 @@ Current SMS features
 - Beacon/PulseLink inbox crash hardening: SMS repositories now re-check permissions per call, wrap Telephony/Contacts queries in runCatching, and lazily register observers only after permissions are granted (prevents READ_SMS SecurityException). Applied to both androidApp and beaconApp.
 - Inbox launcher reliability: MainActivity startDestination switches to sms/inbox when launched from beacon shortcut, and shortcut flow now waits for default-SMS role + runtime SMS/MMS/WAP permissions before navigating; re-emits after the user grants to avoid dead-ends.
 - Rebuilt debug APKs (free, pro, premium, beacon) and copied to `apks-disposable/` for pickup (timestamps 2025-12-14 ~16:01).
+
+2025-12-15
+- No code changes; refreshed pulselink.txt per request. Latest APKs remain in `apks-disposable/`.
