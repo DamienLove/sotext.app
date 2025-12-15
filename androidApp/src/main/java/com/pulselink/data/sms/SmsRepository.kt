@@ -12,6 +12,7 @@ import javax.inject.Singleton
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
+import kotlin.jvm.Volatile
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -24,36 +25,18 @@ class SmsRepository @Inject constructor(
     private val archivedThreadDao: ArchivedThreadDao
 ) {
 
-    private val hasPerms = hasSmsPermissions(context)
+    @Volatile private var observersRegistered = false
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     init {
-        if (hasPerms) {
-            val handler = Handler(Looper.getMainLooper())
-            val observer = object : ContentObserver(handler) {
-                override fun onChange(selfChange: Boolean) {
-                    observerFlow.tryEmit(Unit)
-                }
-            }
-            runCatching {
-                context.contentResolver.registerContentObserver(
-                    Telephony.Sms.CONTENT_URI,
-                    true,
-                    observer
-                )
-                context.contentResolver.registerContentObserver(
-                    Telephony.Threads.CONTENT_URI,
-                    true,
-                    observer
-                )
-            }
-        }
+        ensureObserversRegistered()
     }
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
 
     fun listThreads(limit: Int = 50, includeArchived: Boolean = false, onlyArchived: Boolean = false): List<SmsThreadItem> {
-        if (!hasPerms) return emptyList()
+        if (!hasPerms()) return emptyList()
+        ensureObserversRegistered()
         val archivedIds = runCatching { archivedThreadDao.getAllIds() }.getOrDefault(emptyList())
         val projection = arrayOf(
             Telephony.Threads._ID,
@@ -63,13 +46,15 @@ class SmsRepository @Inject constructor(
             Telephony.Threads.MESSAGE_COUNT,
             Telephony.Threads.READ
         )
-        val cursor = context.contentResolver.query(
-            Telephony.Threads.CONTENT_URI,
-            projection,
-            null,
-            null,
-            "${Telephony.Threads.DATE} DESC"
-        )
+        val cursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Threads.CONTENT_URI,
+                projection,
+                null,
+                null,
+                "${Telephony.Threads.DATE} DESC"
+            )
+        }.getOrNull()
 
         cursor ?: return emptyList()
         cursor.use { c ->
@@ -110,7 +95,8 @@ class SmsRepository @Inject constructor(
         listThreads(limit = limit, includeArchived = true, onlyArchived = true)
 
     fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> {
-        if (!hasPerms) return emptyList()
+        if (!hasPerms()) return emptyList()
+        ensureObserversRegistered()
         val projection = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.THREAD_ID,
@@ -119,13 +105,15 @@ class SmsRepository @Inject constructor(
             Telephony.Sms.DATE,
             Telephony.Sms.TYPE
         )
-        val cursor = context.contentResolver.query(
-            Telephony.Sms.CONTENT_URI,
-            projection,
-            "${Telephony.Sms.THREAD_ID}=?",
-            arrayOf(threadId.toString()),
-            "${Telephony.Sms.DATE} DESC"
-        )
+        val cursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                projection,
+                "${Telephony.Sms.THREAD_ID}=?",
+                arrayOf(threadId.toString()),
+                "${Telephony.Sms.DATE} DESC"
+            )
+        }.getOrNull()
         cursor ?: return emptyList()
         cursor.use { c ->
             val idIdx = c.getColumnIndexOrThrow(Telephony.Sms._ID)
@@ -158,18 +146,20 @@ class SmsRepository @Inject constructor(
     }
 
     private fun resolveAddress(raw: String?): String {
-        if (!hasPerms) return raw.orEmpty()
+        if (!hasPerms()) return raw.orEmpty()
         val number = raw?.trim().orEmpty()
         if (number.isBlank()) return ""
         val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
         val lookupUri = Uri.withAppendedPath(uri, Uri.encode(number))
-        context.contentResolver.query(
-            lookupUri,
-            arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME, ContactsContract.PhoneLookup.NUMBER),
-            null,
-            null,
-            null
-        )?.use { c ->
+        runCatching {
+            context.contentResolver.query(
+                lookupUri,
+                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME, ContactsContract.PhoneLookup.NUMBER),
+                null,
+                null,
+                null
+            )
+        }.getOrNull()?.use { c ->
             if (c.moveToFirst()) {
                 val nameIdx = c.getColumnIndexOrThrow(ContactsContract.PhoneLookup.DISPLAY_NAME)
                 val numIdx = c.getColumnIndexOrThrow(ContactsContract.PhoneLookup.NUMBER)
@@ -182,7 +172,7 @@ class SmsRepository @Inject constructor(
     }
 
     fun markThreadRead(threadId: Long): Boolean {
-        if (!hasPerms) return false
+        if (!hasPerms()) return false
         val values = android.content.ContentValues().apply {
             put(Telephony.Sms.READ, 1)
             put(Telephony.Sms.SEEN, 1)
@@ -222,7 +212,7 @@ class SmsRepository @Inject constructor(
     }
 
     fun deleteThread(threadId: Long): Boolean {
-        if (!hasPerms) return false
+        if (!hasPerms()) return false
         return runCatching {
             context.contentResolver.delete(
                 Telephony.Sms.CONTENT_URI,
@@ -248,5 +238,31 @@ class SmsRepository @Inject constructor(
                 ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
             }
         }
+    }
+
+    private fun hasPerms(): Boolean = hasSmsPermissions(context)
+
+    private fun ensureObserversRegistered() {
+        if (observersRegistered || !hasPerms()) return
+        val handler = Handler(Looper.getMainLooper())
+        val observer = object : ContentObserver(handler) {
+            override fun onChange(selfChange: Boolean) {
+                observerFlow.tryEmit(Unit)
+            }
+        }
+        val registered = runCatching {
+            context.contentResolver.registerContentObserver(
+                Telephony.Sms.CONTENT_URI,
+                true,
+                observer
+            )
+            context.contentResolver.registerContentObserver(
+                Telephony.Threads.CONTENT_URI,
+                true,
+                observer
+            )
+            true
+        }.getOrDefault(false)
+        observersRegistered = registered
     }
 }

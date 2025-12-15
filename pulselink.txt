@@ -36,13 +36,18 @@ Current SMS features
 - Inbox/thread UI with live refresh + contact resolution; time-format preference.
 
  Outstanding (carry-over for next session)
- - Beacon free: handle default-SMS role result callback UX, improve permission rationale, add contact avatars/search, interstitial trigger points, and run lint/unit tests once finalized. Consider launcher/icon entry to inbox from PulseLink home per request.
+- Beacon free: handle default-SMS role result callback UX, improve permission rationale, add contact avatars/search, interstitial trigger points, and run lint/unit tests once finalized. Consider launcher/icon entry to inbox from PulseLink home per request.
  - Beacon MMS: current CarrierMessagingService is a stub (immediate OK); implement real carrier-grade MMS download/send pipeline and verify with device/carrier.
 - SMS: Add MMS send/receive UI + compliance tests; enhance inbox with unread badges, delete/archive, and better date formatting; consider content observer cleanup.
 - Beacon visual customization: build full editor (color wheel, per-surface colors, gradients, icon sizing, layout presets, sample chat preview applied globally).
 - Caller ID: implement spam/lookup + in-call overlay; respect permissions.
-- Private contacts/chats: enforce PIN when opening private threads, store messages securely/encrypted, filter UI lists, add “make private” toggles.
+- Private contacts/chats: enforce PIN when opening private threads, store messages securely/encrypted, filter UI lists, add "make private" toggles.
 - Trusted contacts/emergency controls: ensure emergency actions (ringer/volume/siren override) are exposed in SMS app for trusted contacts.
 - Premium web access: design secure relay (likely Firebase Functions + Firestore) for remote message access, add device opt-in, auth, and audit logging.
 - Billing: replace placeholder product IDs, add server-side validation, handle subscription states, and add premium google-services file.
 - Tests: device tests for default SMS role, call screening, and PIN flows.
+
+2025-12-14
+- Beacon/PulseLink inbox crash hardening: SMS repositories now re-check permissions per call, wrap Telephony/Contacts queries in runCatching, and lazily register observers only after permissions are granted (prevents READ_SMS SecurityException). Applied to both androidApp and beaconApp.
+- Inbox launcher reliability: MainActivity startDestination switches to sms/inbox when launched from beacon shortcut, and shortcut flow now waits for default-SMS role + runtime SMS/MMS/WAP permissions before navigating; re-emits after the user grants to avoid dead-ends.
+- Rebuilt debug APKs (free, pro, premium, beacon) and copied to `apks-disposable/` for pickup (timestamps 2025-12-14 ~16:01).
