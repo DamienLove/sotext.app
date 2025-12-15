@@ -213,6 +213,9 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
         </receiver>
+        <receiver
+            android:name=".widget.PulseLinkWidgetActionReceiver"
+            android:exported="false" />
 
     </application>
 </manifest>

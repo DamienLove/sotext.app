@@ -5,6 +5,7 @@ import android.app.Activity
 import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -58,6 +59,7 @@ import androidx.navigation.navArgument
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.pulselink.ui.BeaconInboxActivity
 import com.pulselink.auth.AuthState
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.domain.model.Contact
@@ -118,7 +120,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.pulselink.BuildConfig
-import com.pulselink.billing.SubscriptionManager
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.DefaultSmsHelper
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -131,8 +132,17 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var callStateMonitor: CallStateMonitor
     @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
-    @Inject lateinit var subscriptionManager: SubscriptionManager
     private val inboxShortcutFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private fun updateBeaconLauncher(enable: Boolean) {
+        val component = ComponentName(this, BeaconInboxActivity::class.java)
+        val newState = if (enable) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        packageManager.setComponentEnabledSetting(
+            component,
+            newState,
+            PackageManager.DONT_KILL_APP
+        )
+    }
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -165,7 +175,6 @@ class MainActivity : AppCompatActivity() {
                 var isPreparingCall by remember { mutableStateOf(false) }
                 val activity = this@MainActivity
                 var isCancelingEmergency by remember { mutableStateOf(false) }
-                val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
                 var pendingInboxNav by remember { mutableStateOf(false) }
                 val smsPermLauncher = rememberLauncherForActivityResult(
@@ -223,6 +232,10 @@ class MainActivity : AppCompatActivity() {
                     isDefaultSms = defaultSmsHelper.isDefaultSms()
                     missingSmsPerms = requiredSmsPermissions(context)
                     if (initialInboxShortcut) inboxShortcutFlow.tryEmit(Unit)
+                }
+                LaunchedEffect(isDefaultSms, state.settings.beaconLauncherEnabled) {
+                    val shouldEnable = isDefaultSms && state.settings.beaconLauncherEnabled
+                    updateBeaconLauncher(shouldEnable)
                 }
                 LaunchedEffect(navController) {
                     inboxShortcutFlow.collectLatest {
@@ -326,16 +339,10 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 var pendingPermissionCheck by remember { mutableStateOf(false) }
-                var pendingUnusedRestrictionsCheck by remember { mutableStateOf(true) }
-                var unusedAppRestrictionsStatus by rememberSaveable {
-                    mutableStateOf<Int?>(null)
-                }
-                val unusedRestrictionsRequirementMet = when (val status = unusedAppRestrictionsStatus) {
-                    UnusedAppRestrictionsConstants.FEATURE_NOT_AVAILABLE,
-                    UnusedAppRestrictionsConstants.DISABLED -> true
-                    UnusedAppRestrictionsConstants.ERROR -> true
-                    else -> false
-                }
+                var pendingUnusedRestrictionsCheck by remember { mutableStateOf(false) }
+                var unusedAppRestrictionsStatus by rememberSaveable { mutableStateOf<Int?>(null) }
+                // Unused-app restriction is now optional; treat as satisfied during onboarding.
+                val unusedRestrictionsRequirementMet = true
 
                 val permissionLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -610,16 +617,15 @@ class MainActivity : AppCompatActivity() {
 
                         val hasDndAccess = notificationManager?.isNotificationPolicyAccessGranted == true
 
-                        LaunchedEffect(state.onboardingComplete, missingPermissions, onboardingName, hasDndAccess, unusedRestrictionsRequirementMet) {
-                            val sanitized = onboardingName.trim()
-                            if (
-                                !state.onboardingComplete &&
-                                missingPermissions.isEmpty() &&
-                                sanitized.isNotBlank() &&
-                                hasDndAccess &&
-                                unusedRestrictionsRequirementMet &&
-                                !viewModel.needsBetaAgreement(state.settings)
-                            ) {
+                LaunchedEffect(state.onboardingComplete, missingPermissions, onboardingName, hasDndAccess) {
+                    val sanitized = onboardingName.trim()
+                    if (
+                        !state.onboardingComplete &&
+                        missingPermissions.isEmpty() &&
+                        sanitized.isNotBlank() &&
+                        hasDndAccess &&
+                        !viewModel.needsBetaAgreement(state.settings)
+                    ) {
                                 if (ownerName != sanitized) {
                                     viewModel.setOwnerName(sanitized)
                                 }
@@ -640,22 +646,6 @@ class MainActivity : AppCompatActivity() {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
                         val callLogGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
-
-                        val managePermissionCard = OnboardingPermissionState(
-                            icon = Icons.Filled.Schedule,
-                            title = stringResource(R.string.permission_unused_apps_title),
-                            description = stringResource(R.string.permission_unused_apps_description),
-                            granted = unusedRestrictionsRequirementMet,
-                            actionLabel = stringResource(R.string.permission_unused_apps_action),
-                            onAction = {
-                                pendingUnusedRestrictionsCheck = true
-                                openUnusedAppRestrictionsSettings(context)
-                            },
-                            manualHelp = if (!unusedRestrictionsRequirementMet) {
-                                stringResource(R.string.permission_unused_apps_manual)
-                            } else null,
-                            emphasis = stringResource(R.string.permission_unused_apps_emphasis)
-                        )
 
                         val permissionCards = buildList {
                             OnboardingPermissionState(
@@ -696,21 +686,17 @@ class MainActivity : AppCompatActivity() {
                                 description = "Link trusted partners so they receive your alerts.",
                                 granted = contactsGranted
                             ).also { add(it) }
-                            if (unusedRestrictionsRequirementMet) {
-                                add(managePermissionCard)
-                            }
                         }
 
                         val sanitizedOnboardingName = onboardingName.trim()
                         val canContinue = missingPermissions.isEmpty() &&
                             sanitizedOnboardingName.isNotBlank() &&
                             hasDndAccess &&
-                            unusedRestrictionsRequirementMet &&
                             !viewModel.needsBetaAgreement(state.settings)
 
                         OnboardingScreen(
                             permissions = permissionCards,
-                            focusedPermission = if (!unusedRestrictionsRequirementMet) managePermissionCard else null,
+                            focusedPermission = null,
                             isReadyToFinish = canContinue,
                             onGrantPermissions = {
                                 if (missingPermissions.isEmpty()) {
@@ -932,14 +918,8 @@ class MainActivity : AppCompatActivity() {
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
                             showAds = state.showAds,
-                            isDefaultSmsApp = isDefaultSms,
-                            defaultSmsSupported = defaultSmsSupported,
-                            subscriptionAvailable = subscriptionUiState.available,
-                            isPremiumActive = subscriptionUiState.isPremiumActive || state.settings.premiumUnlocked,
-                            subscriptionMessage = subscriptionUiState.statusMessage,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
-                            onRequestDefaultSms = requestDefaultSms,
                             onRequestBatteryOpt = { openBatteryOptimizationSettings(context) },
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
@@ -950,20 +930,15 @@ class MainActivity : AppCompatActivity() {
                             onEditEmergencyTone = { navController.navigate("alerts/default/emergency") },
                             onEditCheckInTone = { navController.navigate("alerts/default/checkin") },
                             onEditCallTone = { navController.navigate("alerts/default/call") },
-                        onReportBug = { navController.navigate("bug_report") },
-                        onBetaTesters = { navController.navigate("beta_testers") },
-                        onOpenHelp = { navController.navigate("settings_help") },
-                        onSignOut = {
-                            viewModel.signOut()
-                        },
-                        onBack = { navController.popBackStack() },
-                        onPurchasePremium = { subscriptionManager.launchSubscribe(activity) },
-                        onTimeFormatChange = { viewModel.setTimeFormat(it) },
-                        onOpenVisualSettings = { navController.navigate("visual_settings") },
-                        onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
-                        onSetPrivatePin = { navController.navigate("private_pin") }
-                    )
-                }
+                            onReportBug = { navController.navigate("bug_report") },
+                            onBetaTesters = { navController.navigate("beta_testers") },
+                            onOpenHelp = { navController.navigate("settings_help") },
+                            onSignOut = {
+                                viewModel.signOut()
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
                     composable("sms/inbox") {
                         val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
                         val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()

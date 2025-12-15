@@ -3,6 +3,7 @@ package com.pulselink.callid
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.util.Log
+import com.pulselink.BuildConfig
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +20,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class CallerIdScreeningService : CallScreeningService() {
 
-    @Inject lateinit var callerIdLookupClient: CallerIdLookupClient
+    @Inject lateinit var callerIdService: CallerIdService
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -29,10 +30,14 @@ class CallerIdScreeningService : CallScreeningService() {
             respondToCall(callDetails, allowResponse())
             return
         }
+        if (!BuildConfig.PREMIUM_FEATURES) {
+            respondToCall(callDetails, allowResponse())
+            return
+        }
 
         serviceScope.launch {
-            val lookup = withTimeoutOrNull(3500) {
-                callerIdLookupClient.lookup(number)
+            val lookup = withTimeoutOrNull(OVERALL_TIMEOUT_MS) {
+                callerIdService.lookup(number)
             }
             val shouldSilence = lookup?.isLikelySpam == true
             Log.i(TAG, "Incoming call from $number; lookup=${lookup?.summary ?: "none"} silence=$shouldSilence")
@@ -57,5 +62,6 @@ class CallerIdScreeningService : CallScreeningService() {
 
     companion object {
         private const val TAG = "CallerIdScreeningSvc"
+        private const val OVERALL_TIMEOUT_MS = 10_000L
     }
 }

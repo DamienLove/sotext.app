@@ -32,7 +32,8 @@ class PulseLinkWidgetProvider : AppWidgetProvider() {
         EntryPointAccessors.fromApplication(context, WidgetProviderEntryPoint::class.java)
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        updateWidgetsSync(context, appWidgetManager, appWidgetIds)
+        runCatching { updateWidgetsSync(context, appWidgetManager, appWidgetIds) }
+            .onFailure { provideFallback(context, appWidgetManager, appWidgetIds) }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -40,7 +41,8 @@ class PulseLinkWidgetProvider : AppWidgetProvider() {
         if (intent.action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, PulseLinkWidgetProvider::class.java))
-            updateWidgetsSync(context, mgr, ids)
+            runCatching { updateWidgetsSync(context, mgr, ids) }
+                .onFailure { provideFallback(context, mgr, ids) }
         }
     }
 
@@ -50,11 +52,14 @@ class PulseLinkWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        val widgetStateManager = entryPoint(context).widgetStateManager()
+        val widgetStateManager = runCatching { entryPoint(context).widgetStateManager() }.getOrNull()
+        if (widgetStateManager == null) {
+            provideFallback(context, appWidgetManager, appWidgetIds)
+            return
+        }
 
         val isEmergencyActive = runBlocking {
-            val active = runCatching { widgetStateManager.getEmergencyState() }.getOrDefault(false)
-            active
+            runCatching { widgetStateManager.getEmergencyState() }.getOrDefault(false)
         }
         val timeText = java.text.SimpleDateFormat("h:mm a").format(java.util.Date())
 
@@ -99,10 +104,14 @@ class PulseLinkWidgetProvider : AppWidgetProvider() {
             views.setFloat(R.id.widget_hand_minute, "setPivotX", 1.5f)
             views.setFloat(R.id.widget_hand_minute, "setPivotY", 90f)
 
-            bindContacts(views, contacts, context)
-
-            appWidgetManager.updateAppWidget(id, views)
+            runCatching { bindContacts(views, contacts, context) }
+            runCatching { appWidgetManager.updateAppWidget(id, views) }
         }
+    }
+
+    private fun provideFallback(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        val fallback = RemoteViews(context.packageName, R.layout.widget_pulselink)
+        appWidgetIds.forEach { id -> runCatching { appWidgetManager.updateAppWidget(id, fallback) } }
     }
 
     private fun bindContacts(views: RemoteViews, contacts: List<Contact>, context: Context) {

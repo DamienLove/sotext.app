@@ -28,4 +28,6 @@ interface SettingsRepository {
     suspend fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences)
     suspend fun setRemoteWebAccessEnabled(enabled: Boolean)
     suspend fun setPrivatePinHash(hash: String?)
+    suspend fun setPrivateThreads(threadIds: List<Long>)
+    suspend fun setBeaconLauncherEnabled(enabled: Boolean)
 }

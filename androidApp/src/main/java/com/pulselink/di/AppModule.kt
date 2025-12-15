@@ -211,6 +211,11 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    @Named("IpqsApiKey")
-    fun provideIpqsApiKey(): String = BuildConfig.IPQS_API_KEY
+    @Named("NumverifyApiKey")
+    fun provideNumverifyApiKey(): String = BuildConfig.NUMVERIFY_API_KEY
+
+    @Provides
+    @Singleton
+    @Named("IpQualityScoreApiKey")
+    fun provideIpQualityScoreApiKey(): String = BuildConfig.IPQUALITYSCORE_API_KEY
 }

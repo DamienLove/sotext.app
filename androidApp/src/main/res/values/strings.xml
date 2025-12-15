@@ -147,6 +147,16 @@
     <string name="settings_help_tone_body">Customize the siren that plays for emergencies, the chime for check-ins, and the ringtone override for incoming escalation calls to make sure every signal stands out.</string>
     <string name="settings_help_support_title">Support &amp; feedback</string>
     <string name="settings_help_support_body">Use Report a bug to send logs and context to the PulseLink team, or open the Beta testers panel to manage preview builds and feature flags.</string>
+    <string name="settings_help_battery_title">Battery optimizations</string>
+    <string name="settings_help_battery_body">Disable battery optimizations for PulseLink so alerts, SMS sync, and trusted contact checks run on time. On most devices this is under Battery &gt; Unrestricted or Don’t optimize.</string>
+    <string name="settings_help_unused_title">Unused app pause</string>
+    <string name="settings_help_unused_body">Turn off Android’s “Remove permissions and free up space” / “Pause app if unused” so PulseLink keeps permissions and background sync even if you don’t open the app often.</string>
+    <string name="settings_help_default_sms_title">Default SMS role</string>
+    <string name="settings_help_default_sms_body">Setting PulseLink as the default SMS app is required for Beacon messaging, MMS handling, and Play compliance. You can switch back anytime from Android’s default apps settings.</string>
+    <string name="settings_help_web_title">Web access to messages</string>
+    <string name="settings_help_web_body">When enabled (Premium), your device syncs SMS securely to the web portal. Use only on devices you trust; you can disable anytime to stop syncing immediately.</string>
+    <string name="settings_help_pin_title">Private chats PIN</string>
+    <string name="settings_help_pin_body">Set a PIN to lock private contacts and their threads. You’ll need the PIN to open or change them, keeping sensitive messages hidden if someone else opens the app.</string>
     <string name="settings_faq_section_title">Frequently Asked Questions</string>
     <string name="faq_question_1">How do I link a contact and start sending alerts?</string>
     <string name="faq_answer_1">Open the contact, tap Link, and share the invite via SMS or email. Once they accept, you can send emergency or check-in alerts directly to them.</string>

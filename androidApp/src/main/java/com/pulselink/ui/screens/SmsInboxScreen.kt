@@ -2,6 +2,7 @@ package com.pulselink.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,7 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.data.sms.SmsThreadItem
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun SmsInboxScreen(
     threads: List<SmsThreadItem>,
@@ -61,10 +63,18 @@ fun SmsInboxScreen(
     modifier: Modifier = Modifier,
     dateFormatter: (Long) -> String,
     isBeaconMode: Boolean = false,
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
+    onOpenPrivate: () -> Unit = {},
+    privateThreadIds: Set<Long> = emptySet(),
+    showPrivateOnly: Boolean = false,
+    onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> }
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
-    val source = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
+    val base = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
+    val source = base.filter { thread ->
+        val isPrivate = privateThreadIds.contains(thread.threadId)
+        if (showPrivateOnly) isPrivate else !isPrivate
+    }
     val filtered = source.filter { thread ->
         when (filter) {
             InboxFilter.ALL -> true
@@ -87,6 +97,9 @@ fun SmsInboxScreen(
                 },
                 actions = {
                     if (isBeaconMode) {
+                        IconButton(onClick = onOpenPrivate) {
+                            Icon(Icons.Filled.Lock, contentDescription = "Private inbox")
+                        }
                         IconButton(onClick = onOpenSettings) {
                             Icon(Icons.Filled.Settings, contentDescription = "Settings")
                         }
@@ -130,7 +143,9 @@ fun SmsInboxScreen(
                         onUnarchive = { onUnarchiveThread(thread) },
                         onDelete = { onDeleteThread(thread) },
                         dateFormatter = dateFormatter,
-                        isArchiveFilter = filter == InboxFilter.ARCHIVED
+                        isArchiveFilter = filter == InboxFilter.ARCHIVED,
+                        isPrivate = privateThreadIds.contains(thread.threadId),
+                        onTogglePrivate = { makePrivate -> onTogglePrivate(thread, makePrivate) }
                     )
                 }
             }
@@ -138,8 +153,8 @@ fun SmsInboxScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun ThreadRow(
     thread: SmsThreadItem,
     onClick: () -> Unit,
@@ -147,7 +162,9 @@ private fun ThreadRow(
     onUnarchive: () -> Unit,
     onDelete: () -> Unit,
     dateFormatter: (Long) -> String,
-    isArchiveFilter: Boolean
+    isArchiveFilter: Boolean,
+    isPrivate: Boolean,
+    onTogglePrivate: (Boolean) -> Unit
 ) {
     val (displayName, number) = splitDisplay(thread.address)
     val dismissState = rememberSwipeToDismissBoxState(
@@ -192,7 +209,10 @@ private fun ThreadRow(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onClick),
+                    .combinedClickable(
+                        onClick = onClick,
+                        onLongClick = { onTogglePrivate(!isPrivate) }
+                    ),
                 tonalElevation = 1.dp,
                 shape = RoundedCornerShape(14.dp)
             ) {
@@ -243,6 +263,10 @@ private fun ThreadRow(
                             Spacer(modifier = Modifier.height(4.dp))
                             UnreadPill()
                         }
+                        if (isPrivate) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            PrivatePill()
+                        }
                     }
                 }
             }
@@ -279,6 +303,21 @@ private fun UnreadPill() {
             text = "Unread",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun PrivatePill() {
+    Surface(
+        color = Color(0xFF2C2C2E).copy(alpha = 0.12f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = "Private",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
         )
     }

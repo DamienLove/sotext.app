@@ -82,6 +82,26 @@ fun SettingsHelpScreen(onBack: () -> Unit) {
                 body = stringResource(id = R.string.settings_help_tone_body)
             )
             HelpSection(
+                title = stringResource(id = R.string.settings_help_battery_title),
+                body = stringResource(id = R.string.settings_help_battery_body)
+            )
+            HelpSection(
+                title = stringResource(id = R.string.settings_help_unused_title),
+                body = stringResource(id = R.string.settings_help_unused_body)
+            )
+            HelpSection(
+                title = stringResource(id = R.string.settings_help_default_sms_title),
+                body = stringResource(id = R.string.settings_help_default_sms_body)
+            )
+            HelpSection(
+                title = stringResource(id = R.string.settings_help_web_title),
+                body = stringResource(id = R.string.settings_help_web_body)
+            )
+            HelpSection(
+                title = stringResource(id = R.string.settings_help_pin_title),
+                body = stringResource(id = R.string.settings_help_pin_body)
+            )
+            HelpSection(
                 title = stringResource(id = R.string.settings_help_support_title),
                 body = stringResource(id = R.string.settings_help_support_body)
             )

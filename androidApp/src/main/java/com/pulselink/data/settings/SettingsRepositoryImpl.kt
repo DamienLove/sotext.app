@@ -14,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -48,6 +49,8 @@ private val TIME_FORMAT = stringPreferencesKey("time_format")
 private val THEME_PREFERENCES = stringPreferencesKey("theme_preferences")
 private val REMOTE_WEB_ACCESS = booleanPreferencesKey("remote_web_access")
 private val PRIVATE_PIN_HASH = stringPreferencesKey("private_pin_hash")
+private val PRIVATE_THREADS = stringPreferencesKey("private_threads")
+private val BEACON_LAUNCHER_ENABLED = booleanPreferencesKey("beacon_launcher_enabled")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -87,7 +90,11 @@ class SettingsRepositoryImpl @Inject constructor(
                 runCatching { json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it) }.getOrNull()
             } ?: PulseLinkSettings().themePreferences,
             remoteWebAccessEnabled = prefs[REMOTE_WEB_ACCESS] ?: PulseLinkSettings().remoteWebAccessEnabled,
-            privatePinHash = prefs[PRIVATE_PIN_HASH]
+            privatePinHash = prefs[PRIVATE_PIN_HASH],
+            privateThreadIds = prefs[PRIVATE_THREADS]?.let {
+                runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().privateThreadIds,
+            beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled
         )
     }
 
@@ -117,6 +124,8 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[THEME_PREFERENCES] = json.encodeToString(com.pulselink.domain.model.ThemePreferences.serializer(), updated.themePreferences)
             prefs[REMOTE_WEB_ACCESS] = updated.remoteWebAccessEnabled
             updated.privatePinHash?.let { prefs[PRIVATE_PIN_HASH] = it } ?: prefs.remove(PRIVATE_PIN_HASH)
+            prefs[PRIVATE_THREADS] = json.encodeToString(updated.privateThreadIds)
+            prefs[BEACON_LAUNCHER_ENABLED] = updated.beaconLauncherEnabled
         }
     }
 
@@ -249,6 +258,18 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setPrivateThreads(threadIds: List<Long>) {
+        dataStore.edit { prefs ->
+            prefs[PRIVATE_THREADS] = json.encodeToString(threadIds.distinct())
+        }
+    }
+
+    override suspend fun setBeaconLauncherEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[BEACON_LAUNCHER_ENABLED] = enabled
+        }
+    }
+
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
@@ -274,7 +295,16 @@ class SettingsRepositoryImpl @Inject constructor(
             isBetaTester = prefs[IS_BETA_TESTER] ?: PulseLinkSettings().isBetaTester,
             autoUpdateContactInfo = prefs[AUTO_UPDATE_CONTACT_INFO] ?: PulseLinkSettings().autoUpdateContactInfo,
             timeFormat = prefs[TIME_FORMAT]?.let { runCatching { com.pulselink.domain.model.TimeFormat.valueOf(it) }.getOrNull() }
-                ?: PulseLinkSettings().timeFormat
+                ?: PulseLinkSettings().timeFormat,
+            themePreferences = prefs[THEME_PREFERENCES]?.let {
+                runCatching { json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it) }.getOrNull()
+            } ?: PulseLinkSettings().themePreferences,
+            remoteWebAccessEnabled = prefs[REMOTE_WEB_ACCESS] ?: PulseLinkSettings().remoteWebAccessEnabled,
+            privatePinHash = prefs[PRIVATE_PIN_HASH],
+            privateThreadIds = prefs[PRIVATE_THREADS]?.let {
+                runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().privateThreadIds,
+            beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled
         )
     }
 }
