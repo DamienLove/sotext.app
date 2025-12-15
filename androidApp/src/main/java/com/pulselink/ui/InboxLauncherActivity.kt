@@ -11,11 +11,14 @@ import android.os.Bundle
 class InboxLauncherActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val intent = Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+        // Always launch a fresh task straight into the inbox to avoid landing on Home/Trusted Contacts.
+        val inboxIntent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TASK or
+                Intent.FLAG_ACTIVITY_TASK_ON_HOME
             putExtra("open_sms_inbox", true)
         }
-        startActivity(intent)
+        startActivity(inboxIntent)
         finish()
     }
 }
