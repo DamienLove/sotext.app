@@ -134,6 +134,7 @@ class MainActivity : AppCompatActivity() {
     private val inboxShortcutFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
+        setIntent(intent)
         if (intent?.getBooleanExtra("open_sms_inbox", false) == true) {
             inboxShortcutFlow.tryEmit(Unit)
         }
@@ -194,6 +195,7 @@ class MainActivity : AppCompatActivity() {
                 val defaultSmsSupported = remember {
                     defaultSmsHelper.buildRoleRequestIntent() != null || defaultSmsHelper.isDefaultSms()
                 }
+                val initialInboxShortcut = intent?.getBooleanExtra("open_sms_inbox", false) == true
                 val requestDefaultSms = remember(defaultSmsLauncher) {
                     {
                         val intent = defaultSmsHelper.buildRoleRequestIntent()
@@ -208,11 +210,10 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
-                val openInboxShortcut = remember { intent?.getBooleanExtra("open_sms_inbox", false) == true }
                 LaunchedEffect(Unit) {
                     isDefaultSms = defaultSmsHelper.isDefaultSms()
                     missingSmsPerms = requiredSmsPermissions(context)
-                    if (openInboxShortcut) inboxShortcutFlow.tryEmit(Unit)
+                    if (initialInboxShortcut) inboxShortcutFlow.tryEmit(Unit)
                 }
                 LaunchedEffect(navController) {
                     inboxShortcutFlow.collectLatest {
@@ -453,8 +454,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                val startDestination = remember(openInboxShortcut, authState, state.onboardingComplete) {
-                    if (openInboxShortcut && authState is AuthState.Authenticated && state.onboardingComplete) {
+                val startDestination = remember(initialInboxShortcut, authState, state.onboardingComplete) {
+                    if (initialInboxShortcut && authState is AuthState.Authenticated && state.onboardingComplete) {
                         "sms/inbox"
                     } else {
                         "splash"
