@@ -958,7 +958,6 @@ class MainActivity : AppCompatActivity() {
                         },
                         onBack = { navController.popBackStack() },
                         onPurchasePremium = { subscriptionManager.launchSubscribe(activity) },
-                        onOpenSmsInbox = { navController.navigate("sms/inbox") },
                         onTimeFormatChange = { viewModel.setTimeFormat(it) },
                         onOpenVisualSettings = { navController.navigate("visual_settings") },
                         onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
