@@ -66,20 +66,20 @@ fun SettingsHelpScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             HelpSection(
-                title = stringResource(id = R.string.settings_help_location_title),
-                body = stringResource(id = R.string.settings_help_location_body)
+                title = "How do I add contacts to PulseLink?",
+                body = "Adding contacts is simple. Select the 'add trusted contact' button and you will then be able to add a contact by name and phone/email or select the \"Import from contacts\" button below it. There is an option to allow remote alert changes just above the 'Save' button in the bottom right of the screen."
             )
             HelpSection(
-                title = stringResource(id = R.string.settings_help_dnd_title),
-                body = stringResource(id = R.string.settings_help_dnd_body)
+                title = "What happens when I press the 'I am safe' button?",
+                body = "When you press the main 'I am safe' button, all your chosen contacts instantly receive a customized alert with your message. They can send you messages, or call for help. The alert goes through PulseLink's secure cloud first, and if contacts are offline or SMS-only."
             )
             HelpSection(
-                title = stringResource(id = R.string.settings_help_remote_title),
-                body = stringResource(id = R.string.settings_help_remote_body)
+                title = "Can I customize how I receive notifications?",
+                body = "Yes. PulseLink uses smart notifications that can reach you via text, call, or app notification—whichever works best. In Settings > Notifications, you can choose different alert tones and vibration patterns for incoming alerts. You can also enable Do Not Disturb exceptions so critical alerts always get through when you need them most."
             )
             HelpSection(
-                title = stringResource(id = R.string.settings_help_tone_title),
-                body = stringResource(id = R.string.settings_help_tone_body)
+                title = "Does PulseLink drain my battery?",
+                body = "PulseLink is optimized for minimal battery drain. It only activates location sharing when an alert is sent or when you press the 'I am safe' button. For best results, allow Battery Optimization mode in Settings. This balances background responsiveness with power efficiency, so you get alerts."
             )
             HelpSection(
                 title = stringResource(id = R.string.settings_help_battery_title),
