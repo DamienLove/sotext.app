@@ -58,3 +58,23 @@ If you also use the GitHub Wiki feature, mirror or link the same content there f
 ## Status
 
 Fresh build created on November 16, 2025. Messaging pathways remain fully enabled.
+
+## Google Assistant Integration
+
+PulseLink supports Google Assistant App Actions, allowing users to trigger emergency features using voice commands.
+
+### Supported Voice Commands
+
+- "Hey Google, emergency alert with PulseLink" - Triggers an immediate emergency alert
+- "Hey Google, check in with PulseLink" - Performs a routine safety check-in
+- "Hey Google, send message with PulseLink" - Sends a message to emergency contacts
+
+### Technical Implementation
+
+- **App Links**: Configured via `assetlinks.json` for domain verification
+- **Shortcuts XML**: Defines Built-in Intents (BIIs) for Assistant integration
+- **Deep Links**: Supports both `pulselink://` and `https://pulselink.app/` schemes
+- **Security**: Validates all deep link URLs against verified domains
+
+For more details, see the [App Actions documentation](https://developer.android.com/guide/app-actions).
+

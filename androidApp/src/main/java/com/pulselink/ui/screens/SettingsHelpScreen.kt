@@ -109,6 +109,12 @@ fun SettingsHelpScreen(onBack: () -> Unit) {
                 body = stringResource(id = R.string.settings_help_support_body)
             )
 
+                        // Google Assistant App Actions section
+            HelpSection(
+                title = "Using Google Assistant",
+                body = "You can trigger PulseLink emergency features using voice commands with Google Assistant. Try saying 'Hey Google, emergency alert with PulseLink' or 'Hey Google, check in with PulseLink'."
+            )
+
             // Visual separator before FAQ section
             Spacer(Modifier.height(24.dp))
             

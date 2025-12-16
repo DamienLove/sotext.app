@@ -424,4 +424,13 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="assistant_urgent_message_sent">Urgent alert sent to %1$s.</string>
     <string name="assistant_urgent_message_failed">Failed to send urgent alert to %1$s.</string>
     <string name="assistant_non_urgent_sent">Non-urgent message sent to %1$s at %2$s volume.</string>
+
+    <!-- Google Assistant App Actions -->
+    <string name="app_action_emergency_label">Emergency Alert</string>
+    <string name="app_action_checkin_label">Check In</string>
+    <string name="app_action_emergency_description">Send emergency alert to contacts</string>
+    <string name="app_action_checkin_description">Perform routine safety check-in</string>
+    <string name="app_action_send_message_label">Send Message</string>
+    <string name="app_action_send_message_description">Send a message to your emergency contacts</string>
+
 </resources>
