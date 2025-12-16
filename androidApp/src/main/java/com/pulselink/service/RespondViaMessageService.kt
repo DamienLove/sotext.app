@@ -18,6 +18,7 @@ import com.pulselink.data.sms.SmsSender
  * default SMS handler. Keeps the surface minimal but compliant.
  */
 @AndroidEntryPoint
+@android.annotation.SuppressLint("MissingPermission")
 class RespondViaMessageService : Service() {
 
     @Inject lateinit var smsSender: SmsSender

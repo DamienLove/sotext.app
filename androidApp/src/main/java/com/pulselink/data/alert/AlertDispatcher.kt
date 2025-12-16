@@ -138,12 +138,20 @@ class AlertDispatcher @Inject constructor(
         return "Last known location @ $timestamp: $geoUri"
     }
 
-    @RequiresPermission(Manifest.permission.SEND_SMS)
+    @android.annotation.SuppressLint("MissingPermission")
     private suspend fun sendSms(
         tier: EscalationTier,
         message: String,
         contacts: List<Contact>
     ): Int {
+        val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.SEND_SMS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!hasPermission) {
+            Log.w(TAG, "SEND_SMS permission not granted; skipping alert SMS dispatch.")
+            return 0
+        }
         val delay = if (tier == EscalationTier.EMERGENCY) SEQUENTIAL_CONTACT_DELAY_MS else 0L
         return smsSender.sendAlert(message, contacts, delay)
     }

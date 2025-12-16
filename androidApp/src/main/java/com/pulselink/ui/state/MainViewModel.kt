@@ -999,6 +999,22 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setThreadPrivacy(threadId: Long, makePrivate: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { current ->
+                val currentSet = current.privateThreadIds.toMutableSet()
+                if (makePrivate) currentSet.add(threadId) else currentSet.remove(threadId)
+                current.copy(privateThreadIds = currentSet.toList())
+            }
+        }
+    }
+
+    fun setBeaconLauncherEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setBeaconLauncherEnabled(enabled)
+        }
+    }
+
     private fun emitDndStatus(result: AlertResult?) {
         val overrideResult = result?.overrideResult ?: run {
             dndStatus.value = null

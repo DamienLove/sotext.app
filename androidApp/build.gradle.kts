@@ -43,6 +43,25 @@ val keystoreProperties = Properties().apply {
 
 val defaultKeystoreFile = rootProject.file("upload-keystore.jks")
 
+// Optional Numlookup API key (keep out of VCS).
+val numlookupApiKey = optionalProperty("numlookupApiKey")
+    ?: System.getenv("NUMLOOKUP_API_KEY")
+    ?: ""
+val escapedNumlookupApiKey = numlookupApiKey.replace("\"", "\\\"")
+
+// Optional Numverify API key (caller ID fallback; keep out of VCS).
+val numverifyApiKey = optionalProperty("numverifyApiKey")
+    ?: System.getenv("NUMVERIFY_API_KEY")
+    ?: ""
+val escapedNumverifyApiKey = numverifyApiKey.replace("\"", "\\\"")
+
+// Optional IPQualityScore API key (caller ID fallback; keep out of VCS).
+val ipqualityscoreApiKey = optionalProperty("ipqualityscoreApiKey")
+    ?: System.getenv("IPQUALITYSCORE_API_KEY")
+    ?: System.getenv("IPQS_API_KEY")
+    ?: ""
+val escapedIpqualityscoreApiKey = ipqualityscoreApiKey.replace("\"", "\\\"")
+
 fun Project.signingEnvKey(base: String, flavor: String?): String {
     val suffix = flavor?.uppercase(Locale.US)?.let { "_${it}" }.orEmpty()
     val root = when (base) {
@@ -131,10 +150,17 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 28
-        versionName = "28"
+        versionCode = 38
+        versionName = "38"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "NUMLOOKUP_API_BASE", "\"https://api.numlookupapi.com/v1\"")
+        buildConfigField("String", "NUMLOOKUP_API_KEY", "\"$escapedNumlookupApiKey\"")
+        buildConfigField("String", "IPQS_API_BASE", "\"https://www.ipqualityscore.com/api/json/phone\"")
+        buildConfigField("String", "IPQS_API_KEY", "\"$escapedIpqualityscoreApiKey\"")
+        buildConfigField("String", "NUMVERIFY_API_KEY", "\"$escapedNumverifyApiKey\"")
+        buildConfigField("String", "IPQUALITYSCORE_API_KEY", "\"$escapedIpqualityscoreApiKey\"")
     }
 
     buildTypes {
@@ -205,7 +231,7 @@ android {
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
             buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"\"")
             buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"\"")
-            resValue("string", "app_name", "PulseLink Pro (Beacon)")
+            resValue("string", "app_name", "PulseLink Pro")
             val targetSigning = when {
                 proSigningSpec.isConfigured -> proReleaseConfig
                 releaseSigningSpec.isConfigured -> releaseConfig
@@ -234,7 +260,7 @@ android {
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
             buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"pulselink_premium_monthly\"")
             buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"pulselink_premium_yearly\"")
-            resValue("string", "app_name", "PulseLink Beacon Premium")
+            resValue("string", "app_name", "PulseLink Premium")
             val targetSigning = when {
                 premiumSigningSpec.isConfigured -> premiumReleaseConfig
                 proSigningSpec.isConfigured -> proReleaseConfig
@@ -367,6 +393,8 @@ kapt {
     implementation("com.google.android.play:integrity:1.5.0")
     implementation("androidx.biometric:biometric:1.1.0")
 
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-compiler:2.51.1")
     kapt("androidx.hilt:hilt-compiler:1.1.0")
@@ -375,6 +403,7 @@ kapt {
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test:core:1.5.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.test.espresso:espresso-intents:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.51.1")
     kaptAndroidTest("com.google.dagger:hilt-compiler:2.51.1")

@@ -1,0 +1,383 @@
+{
+  "project_info": {
+    "project_number": "156950194350",
+    "project_id": "pulselink-24899",
+    "storage_bucket": "pulselink-24899.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:131cad4bd8eae76564653f",
+        "android_client_info": {
+          "package_name": "com.free.pulselink"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-bmscnhh7qaap2ars76b7kttkclnt6nhu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.free.pulselink",
+            "certificate_hash": "67855222da43059e161d6fe91c05e97bd36602df"
+          }
+        },
+        {
+          "client_id": "156950194350-u6lano9eotko62l37777gqe23pbmthpm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.free.pulselink",
+            "certificate_hash": "384865746bf3202647817a766303c3336d9a45d3"
+          }
+        },
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
+            }
+          ]
+        }
+      },
+      "admob_app_id": "ca-app-pub-5327057757821609~9533221188"
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:74ee92d7f70fbcd564653f",
+        "android_client_info": {
+          "package_name": "com.free.pulselink.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-qjrvvhqt62tmacnt2tj57fo1c6vdpeok.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.free.pulselink.debug",
+            "certificate_hash": "d0beb205d18f46cb17354bc41b4673a59cbaa9c8"
+          }
+        },
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:0524264102c12fee64653f",
+        "android_client_info": {
+          "package_name": "com.pulselink.beacon.free"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:7f2ac1ad51df66df64653f",
+        "android_client_info": {
+          "package_name": "com.pulselink.beacon.pro"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:2b68efcf10563ce564653f",
+        "android_client_info": {
+          "package_name": "com.pulselink.premium"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:9f8cff6aafd866d864653f",
+        "android_client_info": {
+          "package_name": "com.pulselink.premium.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:a28f71c08edfa01164653f",
+        "android_client_info": {
+          "package_name": "com.pulselink.pro"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-oruji88m2otjsubclgq9o4c8og51od78.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pulselink.pro",
+            "certificate_hash": "39a62a39ead3d8699259d52935bc0358be57e5c2"
+          }
+        },
+        {
+          "client_id": "156950194350-qhenfrhpir109h22gglbb1o56bmbsh77.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pulselink.pro",
+            "certificate_hash": "108320797e54f3448f14ac6cd07a9f2ec6345824"
+          }
+        },
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:aa290ad37a8e593164653f",
+        "android_client_info": {
+          "package_name": "com.pulselink.pro.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-hoem080m9lr7g7tamtetjp5d2q0tc2hf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pulselink.pro.debug",
+            "certificate_hash": "d0beb205d18f46cb17354bc41b4673a59cbaa9c8"
+          }
+        },
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:279197fc58c0b82c64653f",
+        "android_client_info": {
+          "package_name": "com.pulselink.wear.debug"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "156950194350-liaiiin83lgc6hq3ujkp6cjgh6f0e9v6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.pulselink.ios"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -57,6 +57,7 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
+@android.annotation.SuppressLint("MissingPermission")
 @Singleton
 class ContactLinkManager @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -90,6 +91,7 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
     suspend fun sendLinkRequest(contactId: Long) {
         val contact = contactRepository.getContact(contactId) ?: return
         val deviceId = settingsRepository.ensureDeviceId()
@@ -106,7 +108,11 @@ class ContactLinkManager @Inject constructor(
         val targetPhone = contact.primaryPhone()
         if (!targetPhone.isNullOrBlank()) {
             val payload = SmsCodec.encodeLinkRequest(deviceId, code, senderName)
-            smsSender.sendSms(targetPhone, payload)
+            if (hasSmsPermission()) {
+                smsSender.sendSms(targetPhone, payload)
+            } else {
+                Log.w(TAG, "SEND_SMS not granted; cannot send link request to $targetPhone")
+            }
             return
         }
 
@@ -148,6 +154,7 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
+    @android.annotation.SuppressLint("MissingPermission")
     suspend fun approveLink(contactId: Long) {
         val contact = contactRepository.getContact(contactId) ?: return
         val deviceId = settingsRepository.ensureDeviceId()
@@ -168,7 +175,11 @@ class ContactLinkManager @Inject constructor(
         if (!targetPhone.isNullOrBlank()) {
             maybeApplyRemoteUid(code, targetPhone)
             val payload = SmsCodec.encodeLinkAccept(deviceId, code)
-            smsSender.sendSms(targetPhone, payload)
+            if (hasSmsPermission()) {
+                smsSender.sendSms(targetPhone, payload)
+            } else {
+                Log.w(TAG, "SEND_SMS not granted; cannot send link accept to $targetPhone")
+            }
             return
         }
         val targetEmail = normalizeEmail(contact.primaryEmail())
@@ -177,6 +188,12 @@ class ContactLinkManager @Inject constructor(
             return
         }
     }
+
+    private fun hasSmsPermission(): Boolean =
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.SEND_SMS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
     suspend fun sendPing(contactId: Long): Boolean {
         val contact = contactRepository.getContact(contactId) ?: return false

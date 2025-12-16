@@ -2,10 +2,15 @@ package com.pulselink.callid
 
 import android.telecom.Call
 import android.telecom.CallScreeningService
-import android.telecom.TelecomManager
 import android.util.Log
-import com.pulselink.data.sms.SmsRepository
+import com.pulselink.BuildConfig
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 /**
@@ -15,18 +20,48 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class CallerIdScreeningService : CallScreeningService() {
 
-    @Inject lateinit var smsRepository: SmsRepository
+    @Inject lateinit var callerIdService: CallerIdService
+
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onScreenCall(callDetails: Call.Details) {
         val number = callDetails.handle?.schemeSpecificPart.orEmpty()
-        Log.i(TAG, "Incoming call from $number; letting through.")
-        respondToCall(callDetails, CallResponse.Builder()
-            .setSilenceCall(false)
-            .setDisallowCall(false)
-            .build())
+        if (number.isBlank()) {
+            respondToCall(callDetails, allowResponse())
+            return
+        }
+        if (!BuildConfig.PREMIUM_FEATURES) {
+            respondToCall(callDetails, allowResponse())
+            return
+        }
+
+        serviceScope.launch {
+            val lookup = withTimeoutOrNull(OVERALL_TIMEOUT_MS) {
+                callerIdService.lookup(number)
+            }
+            val shouldSilence = lookup?.isLikelySpam == true
+            Log.i(TAG, "Incoming call from $number; lookup=${lookup?.summary ?: "none"} silence=$shouldSilence")
+            val builder = CallResponse.Builder()
+                .setDisallowCall(false)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                builder.setSilenceCall(shouldSilence)
+            }
+            respondToCall(callDetails, builder.build())
+        }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
+    }
+
+    private fun allowResponse(): CallResponse =
+        CallResponse.Builder()
+            .setDisallowCall(false)
+            .build()
 
     companion object {
         private const val TAG = "CallerIdScreeningSvc"
+        private const val OVERALL_TIMEOUT_MS = 10_000L
     }
 }

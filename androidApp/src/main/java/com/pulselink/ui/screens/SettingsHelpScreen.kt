@@ -2,6 +2,7 @@ package com.pulselink.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,8 +11,16 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,7 +30,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -68,29 +82,32 @@ fun SettingsHelpScreen(onBack: () -> Unit) {
                 body = "PulseLink is optimized for minimal battery drain. It only activates location sharing when an alert is sent or when you press the 'I am safe' button. For best results, allow Battery Optimization mode in Settings. This balances background responsiveness with power efficiency, so you get alerts."
             )
             HelpSection(
-                title = "What's the difference between an alert and a check-in?",
-                body = "An alert is sent when you press the 'Emergency Alert' button—it immediately notifies all your contacts with your location and marks the situation as active. A check-in is a wellness message that confirms you're safe without urgency. Check-ins are perfect for letting people know you made it home or arrived safely."
+                title = stringResource(id = R.string.settings_help_battery_title),
+                body = stringResource(id = R.string.settings_help_battery_body)
             )
             HelpSection(
-                title = "How do I remove a contact or stop sharing with them?",
-                body = "To remove someone from your PulseLink circle, select the contact you want to remove from the list at the bottom of the home screen, find their name, and then select the settings icon. Scroll down to the bottom of that screen and at the bottom is the 'Delete Contact' button."
+                title = stringResource(id = R.string.settings_help_unused_title),
+                body = stringResource(id = R.string.settings_help_unused_body)
             )
             HelpSection(
-                title = "What's SMS-only mode and when would I use it?",
-                body = "SMS-only mode lets you send and receive alerts via text message without an internet connection. It's perfect for contacts who don't have PulseLink installed yet or prefer text-based communication. Authenticated mode (with a PulseLink account) provides encrypted communication, real-time location sharing, and all premium features. You can use both simultaneously."
+                title = stringResource(id = R.string.settings_help_default_sms_title),
+                body = stringResource(id = R.string.settings_help_default_sms_body)
             )
             HelpSection(
-                title = "How is my location data kept private?",
-                body = "Your location is encrypted in transit and at rest on our secure servers. Only the contacts you explicitly choose can see your location. PulseLink never sells your data to third parties or tracks you without permission. You control exactly who sees what—disable location sharing anytime in Settings > Privacy. Your safety and privacy come first."
+                title = stringResource(id = R.string.settings_help_web_title),
+                body = stringResource(id = R.string.settings_help_web_body)
             )
             HelpSection(
-                title = "Why aren't my contacts receiving my alerts?",
-                body = "First, check that push notifications are enabled in your phone's Settings. Make sure PulseLink has permission to access your location and send notifications. Verify your internet connection is stable—alerts go through the secure cloud first. If a contact is SMS-only, ensure they have your number saved correctly. Restart the app if alerts suddenly stopped working."
+                title = stringResource(id = R.string.settings_help_pin_title),
+                body = stringResource(id = R.string.settings_help_pin_body)
             )
             HelpSection(
-                title = "What features are in PulseLink Pro?",
-                body = "PulseLink Pro includes advanced customization features like custom alert profiles, priority cloud processing, integration with emergency services, detailed location history, and priority support. You also get early access to beta features as they're developed. Pro users help shape PulseLink's future while getting the most powerful safety tools available."
+                title = stringResource(id = R.string.settings_help_support_title),
+                body = stringResource(id = R.string.settings_help_support_body)
             )
+            Spacer(Modifier.height(8.dp))
+            FaqList()
+        }
     }
 }
 
@@ -120,6 +137,84 @@ private fun HelpSection(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun FaqList() {
+    Text(
+        text = stringResource(id = R.string.settings_faq_section_title),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.padding(top = 4.dp)
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val items = listOf(
+            R.string.faq_question_1 to R.string.faq_answer_1,
+            R.string.faq_question_2 to R.string.faq_answer_2,
+            R.string.faq_question_3 to R.string.faq_answer_3,
+            R.string.faq_question_4 to R.string.faq_answer_4,
+            R.string.faq_question_5 to R.string.faq_answer_5,
+            R.string.faq_question_6 to R.string.faq_answer_6
+        )
+        items.forEach { (qRes, aRes) ->
+            FaqItem(
+                question = stringResource(id = qRes),
+                answer = stringResource(id = aRes)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FaqItem(question: String, answer: String) {
+    var expanded by remember { mutableStateOf(false) }
+    val rotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "faqRotation")
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded },
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 1.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = question,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Icon(
+                    imageVector = Icons.Filled.ExpandMore,
+                    contentDescription = null,
+                    modifier = Modifier.rotate(rotation),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Text(
+                    text = answer,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

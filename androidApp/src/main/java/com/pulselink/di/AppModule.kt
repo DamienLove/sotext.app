@@ -18,6 +18,7 @@ import com.pulselink.data.beta.BetaAgreementRepositoryImpl
 import com.pulselink.data.db.AlertEventDao
 import com.pulselink.data.db.AlertRepositoryImpl
 import com.pulselink.data.db.BlockedContactDao
+import com.pulselink.data.db.ArchivedThreadDao
 import com.pulselink.data.db.BlockedContactRepositoryImpl
 import com.pulselink.data.db.ContactDao
 import com.pulselink.data.db.ContactRepositoryImpl
@@ -37,12 +38,16 @@ import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.shared.alert.AlertRelay
 import com.pulselink.shared.alert.AlertRelayClient
 import com.pulselink.util.AudioOverrideManager
+import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.time.Duration
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
@@ -87,7 +92,8 @@ object DatabaseModule {
                 PulseLinkDatabase.MIGRATION_5_6,
                 PulseLinkDatabase.MIGRATION_6_7,
                 PulseLinkDatabase.MIGRATION_7_8,
-                PulseLinkDatabase.MIGRATION_8_9
+                PulseLinkDatabase.MIGRATION_8_9,
+                PulseLinkDatabase.MIGRATION_9_10
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -103,6 +109,9 @@ object DatabaseModule {
 
     @Provides
     fun provideBlockedContactDao(database: PulseLinkDatabase): BlockedContactDao = database.blockedContactDao()
+
+    @Provides
+    fun provideArchivedThreadDao(database: PulseLinkDatabase): ArchivedThreadDao = database.archivedThreadDao()
 
     @Provides
     @Singleton
@@ -135,7 +144,10 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideSmsRepository(@ApplicationContext context: Context): SmsRepository = SmsRepository(context)
+    fun provideSmsRepository(
+        @ApplicationContext context: Context,
+        archivedThreadDao: ArchivedThreadDao
+    ): SmsRepository = SmsRepository(context, archivedThreadDao)
 
     @Provides
     @Singleton
@@ -176,4 +188,34 @@ object DatabaseModule {
     @Singleton
     fun provideAlertRelayClient(): AlertRelayClient =
         AlertRelay.create(BuildConfig.ALERT_RELAY_BASE_URL)
+
+    @Provides
+    @Singleton
+    fun provideJson(): Json = Json {
+        ignoreUnknownKeys = true
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient =
+        OkHttpClient.Builder()
+            .connectTimeout(Duration.ofSeconds(3))
+            .readTimeout(Duration.ofSeconds(3))
+            .callTimeout(Duration.ofSeconds(5))
+            .build()
+
+    @Provides
+    @Singleton
+    @Named("NumlookupApiKey")
+    fun provideNumlookupApiKey(): String = BuildConfig.NUMLOOKUP_API_KEY
+
+    @Provides
+    @Singleton
+    @Named("NumverifyApiKey")
+    fun provideNumverifyApiKey(): String = BuildConfig.NUMVERIFY_API_KEY
+
+    @Provides
+    @Singleton
+    @Named("IpQualityScoreApiKey")
+    fun provideIpQualityScoreApiKey(): String = BuildConfig.IPQUALITYSCORE_API_KEY
 }

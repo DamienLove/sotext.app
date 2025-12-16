@@ -16,18 +16,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Help
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Sms
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,14 +53,8 @@ fun SettingsScreen(
     settings: PulseLinkSettings,
     hasDndAccess: Boolean,
     showAds: Boolean,
-    isDefaultSmsApp: Boolean,
-    defaultSmsSupported: Boolean,
-    subscriptionAvailable: Boolean,
-    isPremiumActive: Boolean,
-    subscriptionMessage: String?,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
-    onRequestDefaultSms: () -> Unit,
     onRequestBatteryOpt: () -> Unit,
     onRequestUnusedApps: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
@@ -82,13 +69,7 @@ fun SettingsScreen(
     onBetaTesters: () -> Unit,
     onOpenHelp: () -> Unit,
     onSignOut: () -> Unit,
-    onBack: () -> Unit,
-    onPurchasePremium: () -> Unit,
-    onOpenSmsInbox: () -> Unit,
-    onTimeFormatChange: (TimeFormat) -> Unit,
-    onOpenVisualSettings: () -> Unit,
-    onToggleRemoteWebAccess: (Boolean) -> Unit,
-    onSetPrivatePin: () -> Unit
+    onBack: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -127,92 +108,10 @@ fun SettingsScreen(
         ) {
             SettingsToggleRow(
                 title = "Share location in alerts",
-                subtitle = "Include GPS when alerting your circle.",
+                subtitle = null,
                 checked = settings.includeLocation,
                 onCheckedChange = onToggleIncludeLocation
             )
-            val defaultSmsSubtitle = if (isDefaultSmsApp) {
-                "PulseLink is set as the default SMS app."
-            } else if (defaultSmsSupported) {
-                "Required for Beacon/Pro messaging and Play compliance."
-            } else {
-                "Default SMS role unavailable on this device."
-            }
-            SettingsActionRow(
-                title = "Default SMS app",
-                subtitle = defaultSmsSubtitle,
-                actionLabel = if (isDefaultSmsApp) "Change" else "Make default",
-                onAction = onRequestDefaultSms,
-                leadingIcon = Icons.Filled.Message
-            )
-            if (BuildConfig.PRO_FEATURES) {
-                SettingsActionRow(
-                    title = "SMS inbox",
-                    subtitle = "View conversations stored on this device.",
-                    actionLabel = "Open",
-                    onAction = onOpenSmsInbox,
-                    leadingIcon = Icons.Filled.Sms
-                )
-                SettingsActionRow(
-                    title = "Time format",
-                    subtitle = when (settings.timeFormat) {
-                        TimeFormat.AUTO -> "Follow device"
-                        TimeFormat.TWELVE_HOUR -> "12-hour"
-                        TimeFormat.TWENTY_FOUR_HOUR -> "24-hour"
-                    },
-                    actionLabel = "Change",
-                    onAction = {
-                        val next = when (settings.timeFormat) {
-                            TimeFormat.AUTO -> TimeFormat.TWELVE_HOUR
-                            TimeFormat.TWELVE_HOUR -> TimeFormat.TWENTY_FOUR_HOUR
-                            TimeFormat.TWENTY_FOUR_HOUR -> TimeFormat.AUTO
-                        }
-                        onTimeFormatChange(next)
-                    },
-                    leadingIcon = Icons.Filled.AccessTime
-                )
-                SettingsActionRow(
-                    title = "Visual customization",
-                    subtitle = "Colors, layout, icons, and chat appearance.",
-                    actionLabel = "Open",
-                    onAction = onOpenVisualSettings,
-                    leadingIcon = Icons.Filled.Palette
-                )
-                SettingsActionRow(
-                    title = "Web access to messages",
-                    subtitle = if (settings.remoteWebAccessEnabled) "Enabled (Premium) — manage in web portal" else "Premium-only: securely access SMS from the web",
-                    actionLabel = if (settings.remoteWebAccessEnabled) "Disable" else "Enable",
-                    onAction = { onToggleRemoteWebAccess(!settings.remoteWebAccessEnabled) },
-                    leadingIcon = Icons.Filled.Language
-                )
-                SettingsActionRow(
-                    title = "Private chats PIN",
-                    subtitle = if (settings.privatePinHash != null) "PIN set — tap to change/clear" else "Protect private contacts and chats",
-                    actionLabel = "Set",
-                    onAction = onSetPrivatePin,
-                    leadingIcon = Icons.Filled.Security
-                )
-            }
-            if (BuildConfig.SUBSCRIPTION_ENABLED && subscriptionAvailable) {
-                val premiumSubtitle = when {
-                    isPremiumActive -> "Beacon Premium is active on this device."
-                    else -> "Unlock caller ID, remote SMS, AI lab features, and more."
-                }
-                SettingsActionRow(
-                    title = "Beacon Premium",
-                    subtitle = premiumSubtitle,
-                    actionLabel = if (isPremiumActive) "Manage" else "Subscribe",
-                    onAction = onPurchasePremium,
-                    leadingIcon = Icons.Filled.Star
-                )
-                subscriptionMessage?.let { message ->
-                    Text(
-                        text = message,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
             val dndSubtitle = if (hasDndAccess) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                     stringResource(R.string.dnd_override_android15_note)
@@ -224,7 +123,7 @@ fun SettingsScreen(
             }
             SettingsActionRow(
                 title = stringResource(R.string.dnd_override_title),
-                subtitle = dndSubtitle,
+                subtitle = null,
                 actionLabel = if (hasDndAccess) {
                     stringResource(R.string.dnd_override_action_manage)
                 } else {
@@ -235,40 +134,40 @@ fun SettingsScreen(
             )
             SettingsActionRow(
                 title = stringResource(R.string.permission_battery_opt_title),
-                subtitle = stringResource(R.string.permission_battery_opt_description),
+                subtitle = null,
                 actionLabel = stringResource(R.string.permission_battery_opt_action),
                 onAction = onRequestBatteryOpt,
                 leadingIcon = Icons.Filled.PowerSettingsNew
             )
             SettingsActionRow(
                 title = stringResource(R.string.permission_unused_apps_title),
-                subtitle = stringResource(R.string.permission_unused_apps_description),
+                subtitle = null,
                 actionLabel = stringResource(R.string.permission_unused_apps_action),
                 onAction = onRequestUnusedApps,
                 leadingIcon = Icons.Filled.Schedule
             )
             SettingsToggleRow(
                 title = "Auto-allow remote sound change",
-                subtitle = "Automatically approve tone overrides from new links.",
+                subtitle = null,
                 checked = settings.autoAllowRemoteSoundChange,
                 onCheckedChange = onToggleAutoAllowRemoteSoundChange
             )
             SettingsToggleRow(
                 title = stringResource(id = R.string.settings_auto_update_contact_title),
-                subtitle = stringResource(id = R.string.settings_auto_update_contact_subtitle),
+                subtitle = null,
                 checked = settings.autoUpdateContactInfo,
                 onCheckedChange = onToggleAutoUpdateContactInfo
             )
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_sync_contacts_title),
-                subtitle = stringResource(id = R.string.settings_sync_contacts_subtitle),
+                subtitle = null,
                 actionLabel = stringResource(id = R.string.settings_sync_action),
                 onAction = onSyncNow,
                 leadingIcon = Icons.Filled.Sync
             )
             SettingsActionRow(
                 title = stringResource(id = R.string.profile_update_button),
-                subtitle = stringResource(id = R.string.profile_update_subtitle),
+                subtitle = null,
                 actionLabel = if (profileUpdateState.inProgress) {
                     stringResource(id = R.string.profile_update_sending)
                 } else {
@@ -344,7 +243,7 @@ fun SettingsScreen(
 @Composable
 private fun SettingsToggleRow(
     title: String,
-    subtitle: String,
+    subtitle: String?,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -371,11 +270,13 @@ private fun SettingsToggleRow(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                subtitle?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             Switch(checked = checked, onCheckedChange = onCheckedChange)
         }

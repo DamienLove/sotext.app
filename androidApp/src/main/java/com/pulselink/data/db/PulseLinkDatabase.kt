@@ -11,6 +11,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.pulselink.domain.model.AlertEvent
 import com.pulselink.domain.model.BlockedContact
+import com.pulselink.domain.model.ArchivedThread
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import kotlinx.coroutines.flow.Flow
@@ -117,9 +118,21 @@ interface BlockedContactDao {
     fun observeAll(): Flow<List<BlockedContact>>
 }
 
+@Dao
+interface ArchivedThreadDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insert(entry: ArchivedThread)
+
+    @Query("DELETE FROM archived_threads WHERE threadId = :threadId")
+    fun deleteByThreadId(threadId: Long)
+
+    @Query("SELECT threadId FROM archived_threads")
+    fun getAllIds(): List<Long>
+}
+
 @Database(
-    entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class],
-    version = 9,
+    entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class],
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -128,6 +141,7 @@ abstract class PulseLinkDatabase : RoomDatabase() {
     abstract fun alertEventDao(): AlertEventDao
     abstract fun contactMessageDao(): ContactMessageDao
     abstract fun blockedContactDao(): BlockedContactDao
+    abstract fun archivedThreadDao(): ArchivedThreadDao
 
     companion object {
         val MIGRATION_3_4 = object : Migration(3, 4) {
@@ -168,6 +182,19 @@ abstract class PulseLinkDatabase : RoomDatabase() {
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE contacts ADD COLUMN isPrivate INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS archived_threads (
+                        threadId INTEGER PRIMARY KEY,
+                        archivedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
             }
         }
     }

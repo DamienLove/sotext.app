@@ -1,0 +1,273 @@
+package com.pulselink.ui
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.pulselink.billing.SubscriptionManager
+import com.pulselink.ui.InboxLauncherActivity
+import com.pulselink.ui.screens.BeaconSettingsScreen
+import com.pulselink.ui.screens.PrivatePinScreen
+import com.pulselink.ui.screens.SmsInboxScreen
+import com.pulselink.ui.screens.SmsThreadScreen
+import com.pulselink.ui.screens.VisualSettingsScreen
+import com.pulselink.ui.state.MainViewModel
+import com.pulselink.ui.state.SmsInboxViewModel
+import com.pulselink.ui.state.SmsThreadViewModel
+import com.pulselink.ui.theme.PulseLinkTheme
+import com.pulselink.util.DefaultSmsHelper
+import com.pulselink.util.formatTimestamp
+import com.pulselink.util.hashPin
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+
+@AndroidEntryPoint
+class BeaconInboxActivity : ComponentActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
+    @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
+    @Inject lateinit var subscriptionManager: SubscriptionManager
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            PulseLinkTheme {
+                val navController = rememberNavController()
+                val context = LocalContext.current
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
+                var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
+                val privateThreads = state.settings.privateThreadIds.toSet()
+                var showPrivate by remember { mutableStateOf(false) }
+                var showPinDialog by remember { mutableStateOf(false) }
+                var pinInput by remember { mutableStateOf("") }
+                val defaultSmsSupported = remember {
+                    defaultSmsHelper.buildRoleRequestIntent() != null || defaultSmsHelper.isDefaultSms()
+                }
+                LaunchedEffect(isDefaultSms, state.settings.beaconLauncherEnabled) {
+                    val shouldEnable = isDefaultSms && state.settings.beaconLauncherEnabled
+                    updateBeaconLauncher(shouldEnable)
+                }
+
+                val defaultSmsLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.StartActivityForResult()
+                ) {
+                    isDefaultSms = defaultSmsHelper.isDefaultSms()
+                }
+
+                // Permission handling
+                var hasSmsPermissions by remember {
+                    mutableStateOf(checkSmsPermissions(context))
+                }
+                val permissionLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestMultiplePermissions()
+                ) {
+                    hasSmsPermissions = checkSmsPermissions(context)
+                }
+
+                LaunchedEffect(Unit) {
+                    if (!hasSmsPermissions) {
+                        permissionLauncher.launch(requiredSmsPermissions())
+                    }
+                }
+
+                if (hasSmsPermissions) {
+                    NavHost(navController = navController, startDestination = "sms/inbox") {
+                        composable("sms/inbox") {
+                            val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
+                            val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
+                            val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
+                            LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
+                            SmsInboxScreen(
+                                threads = threads,
+                                archivedThreads = archivedThreads,
+                                onOpenThread = { thread ->
+                                    navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
+                                },
+                                onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
+                                onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
+                                onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
+                                onBack = { finish() },
+                                dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                                isBeaconMode = true,
+                                onOpenSettings = { navController.navigate("beacon_settings") },
+                                onOpenPrivate = {
+                                    if (showPrivate) {
+                                        showPrivate = false
+                                        return@SmsInboxScreen
+                                    }
+                                    if (state.settings.privatePinHash.isNullOrBlank()) {
+                                        navController.navigate("private_pin")
+                                    } else {
+                                        pinInput = ""
+                                        showPinDialog = true
+                                    }
+                                },
+                                privateThreadIds = privateThreads,
+                                showPrivateOnly = showPrivate,
+                                onTogglePrivate = { thread, makePrivate ->
+                                    viewModel.setThreadPrivacy(thread.threadId, makePrivate)
+                                }
+                            )
+                        }
+                        composable(
+                            route = "sms/thread/{threadId}/{address}",
+                            arguments = listOf(
+                                navArgument("threadId") { type = NavType.LongType },
+                                navArgument("address") { type = NavType.StringType }
+                            )
+                        ) { entry ->
+                            val threadId = entry.arguments?.getLong("threadId") ?: return@composable
+                            val address = entry.arguments?.getString("address") ?: ""
+                            val threadViewModel: SmsThreadViewModel = hiltViewModel()
+                            val messages by threadViewModel.messages.collectAsStateWithLifecycle()
+                            LaunchedEffect(threadId) { threadViewModel.load(threadId) }
+                            SmsThreadScreen(
+                                address = Uri.decode(address),
+                                messages = messages,
+                                onBack = { navController.popBackStack() },
+                                dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                                themePreferences = state.settings.themePreferences
+                            )
+                        }
+                        composable("beacon_settings") {
+                            BeaconSettingsScreen(
+                                settings = state.settings,
+                                onBack = { navController.popBackStack() },
+                                onTimeFormatChange = { viewModel.setTimeFormat(it) },
+                                onOpenVisualSettings = { navController.navigate("visual_settings") },
+                                isDefaultSmsApp = isDefaultSms,
+                                defaultSmsSupported = defaultSmsSupported,
+                                onRequestDefaultSms = {
+                                    val intent = defaultSmsHelper.buildRoleRequestIntent()
+                                    if (intent != null) {
+                                        defaultSmsLauncher.launch(intent)
+                                    }
+                                },
+                                remoteWebAccessEnabled = state.settings.remoteWebAccessEnabled,
+                                isPremiumActive = subscriptionUiState.isPremiumActive || state.settings.premiumUnlocked,
+                                onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
+                                onSetPrivatePin = { navController.navigate("private_pin") },
+                                onPurchasePremium = { subscriptionManager.launchSubscribe(this@BeaconInboxActivity) },
+                                beaconLauncherEnabled = state.settings.beaconLauncherEnabled,
+                                onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) }
+                            )
+                        }
+                        composable("visual_settings") {
+                            VisualSettingsScreen(
+                                theme = state.settings.themePreferences,
+                                onSelectTheme = { newTheme -> viewModel.setThemePreferences(newTheme) },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable("private_pin") {
+                            PrivatePinScreen(
+                                hasPin = state.settings.privatePinHash != null,
+                                onSavePin = { newPin ->
+                                    val hashed = newPin?.let { hashPin(it) }
+                                    viewModel.setPrivatePinHash(hashed)
+                                    navController.popBackStack()
+                                },
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+                    }
+                    if (showPinDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showPinDialog = false },
+                            title = { Text("Enter private PIN") },
+                            text = {
+                                OutlinedTextField(
+                                    value = pinInput,
+                                    onValueChange = { pinInput = it },
+                                    label = { Text("PIN") },
+                                    visualTransformation = PasswordVisualTransformation()
+                                )
+                            },
+                            confirmButton = {
+                                Button(onClick = {
+                                    val hashed = hashPin(pinInput)
+                                    if (hashed == state.settings.privatePinHash) {
+                                        showPinDialog = false
+                                        showPrivate = true
+                                    } else {
+                                        pinInput = ""
+                                    }
+                                }) {
+                                    Text("Unlock")
+                                }
+                            },
+                            dismissButton = {
+                                Button(onClick = { showPinDialog = false }) { Text("Cancel") }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun checkSmsPermissions(context: android.content.Context): Boolean {
+        return requiredSmsPermissions().all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun requiredSmsPermissions(): Array<String> =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(
+                Manifest.permission.READ_SMS,
+                Manifest.permission.SEND_SMS,
+                Manifest.permission.RECEIVE_SMS,
+                Manifest.permission.RECEIVE_MMS,
+                Manifest.permission.RECEIVE_WAP_PUSH,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+        } else {
+            arrayOf(
+                Manifest.permission.READ_SMS,
+                Manifest.permission.SEND_SMS,
+                Manifest.permission.RECEIVE_SMS,
+                Manifest.permission.RECEIVE_MMS,
+                Manifest.permission.RECEIVE_WAP_PUSH
+            )
+        }
+
+    private fun updateBeaconLauncher(enable: Boolean) {
+        val component = android.content.ComponentName(this, InboxLauncherActivity::class.java)
+        val newState = if (enable) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        packageManager.setComponentEnabledSetting(
+            component,
+            newState,
+            PackageManager.DONT_KILL_APP
+        )
+    }
+}

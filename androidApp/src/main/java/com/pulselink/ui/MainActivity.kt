@@ -5,6 +5,7 @@ import android.app.Activity
 import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -49,6 +50,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -57,6 +59,7 @@ import androidx.navigation.navArgument
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.pulselink.ui.InboxLauncherActivity
 import com.pulselink.auth.AuthState
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.domain.model.Contact
@@ -117,9 +120,10 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.pulselink.BuildConfig
-import com.pulselink.billing.SubscriptionManager
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.DefaultSmsHelper
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.collectLatest
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -128,7 +132,24 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var callStateMonitor: CallStateMonitor
     @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
-    @Inject lateinit var subscriptionManager: SubscriptionManager
+    private val inboxShortcutFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private fun updateBeaconLauncher(enable: Boolean) {
+        val component = ComponentName(this, InboxLauncherActivity::class.java)
+        val newState = if (enable) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        packageManager.setComponentEnabledSetting(
+            component,
+            newState,
+            PackageManager.DONT_KILL_APP
+        )
+    }
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent?.getBooleanExtra("open_sms_inbox", false) == true) {
+            inboxShortcutFlow.tryEmit(Unit)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -148,21 +169,51 @@ class MainActivity : AppCompatActivity() {
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val authState by viewModel.authState.collectAsStateWithLifecycle()
                 val navController = rememberNavController()
+                var missingSmsPerms by remember { mutableStateOf(requiredSmsPermissions(context)) }
                 val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
                 val ownerName = state.settings.ownerName
                 var isPreparingCall by remember { mutableStateOf(false) }
                 val activity = this@MainActivity
                 var isCancelingEmergency by remember { mutableStateOf(false) }
-                val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
+                var pendingInboxNav by remember { mutableStateOf(false) }
+                val smsPermLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestMultiplePermissions()
+                ) {
+                    missingSmsPerms = requiredSmsPermissions(context)
+                    if (pendingInboxNav && missingSmsPerms.isEmpty()) {
+                        pendingInboxNav = false
+                        navController.navigate("sms/inbox") {
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                            launchSingleTop = true
+                            restoreState = false
+                        }
+                    } else if (pendingInboxNav) {
+                        pendingInboxNav = false
+                    }
+                }
                 val defaultSmsLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
                     isDefaultSms = defaultSmsHelper.isDefaultSms()
+                    missingSmsPerms = requiredSmsPermissions(context)
+                    if (pendingInboxNav && missingSmsPerms.isNotEmpty()) {
+                        smsPermLauncher.launch(missingSmsPerms.toTypedArray())
+                    } else if (pendingInboxNav && isDefaultSms) {
+                        pendingInboxNav = false
+                        navController.navigate("sms/inbox") {
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                            launchSingleTop = true
+                            restoreState = false
+                        }
+                    } else if (pendingInboxNav) {
+                        pendingInboxNav = false
+                    }
                 }
                 val defaultSmsSupported = remember {
                     defaultSmsHelper.buildRoleRequestIntent() != null || defaultSmsHelper.isDefaultSms()
                 }
+                val initialInboxShortcut = intent?.getBooleanExtra("open_sms_inbox", false) == true
                 val requestDefaultSms = remember(defaultSmsLauncher) {
                     {
                         val intent = defaultSmsHelper.buildRoleRequestIntent()
@@ -179,6 +230,35 @@ class MainActivity : AppCompatActivity() {
                 }
                 LaunchedEffect(Unit) {
                     isDefaultSms = defaultSmsHelper.isDefaultSms()
+                    missingSmsPerms = requiredSmsPermissions(context)
+                    if (initialInboxShortcut) inboxShortcutFlow.tryEmit(Unit)
+                }
+                LaunchedEffect(isDefaultSms, state.settings.beaconLauncherEnabled) {
+                    val shouldEnable = isDefaultSms && state.settings.beaconLauncherEnabled
+                    updateBeaconLauncher(shouldEnable)
+                }
+                LaunchedEffect(navController) {
+                    inboxShortcutFlow.collectLatest {
+                        // Re-evaluate state on each request, but always drive navigation to the inbox
+                        isDefaultSms = defaultSmsHelper.isDefaultSms()
+                        val missingNow = requiredSmsPermissions(context)
+                        missingSmsPerms = missingNow
+                        if (!isDefaultSms && defaultSmsSupported) {
+                            pendingInboxNav = true
+                            requestDefaultSms()
+                            return@collectLatest
+                        }
+                        if (missingNow.isNotEmpty()) {
+                            pendingInboxNav = true
+                            smsPermLauncher.launch(missingNow.toTypedArray())
+                            return@collectLatest
+                        }
+                        navController.navigate("sms/inbox") {
+                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
+                            launchSingleTop = true
+                            restoreState = false
+                        }
+                    }
                 }
                 val cancelEmergencyLauncher = rememberCancelEmergencyLauncher(
                     activity = activity,
@@ -259,16 +339,10 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 var pendingPermissionCheck by remember { mutableStateOf(false) }
-                var pendingUnusedRestrictionsCheck by remember { mutableStateOf(true) }
-                var unusedAppRestrictionsStatus by rememberSaveable {
-                    mutableStateOf<Int?>(null)
-                }
-                val unusedRestrictionsRequirementMet = when (val status = unusedAppRestrictionsStatus) {
-                    UnusedAppRestrictionsConstants.FEATURE_NOT_AVAILABLE,
-                    UnusedAppRestrictionsConstants.DISABLED -> true
-                    UnusedAppRestrictionsConstants.ERROR -> true
-                    else -> false
-                }
+                var pendingUnusedRestrictionsCheck by remember { mutableStateOf(false) }
+                var unusedAppRestrictionsStatus by rememberSaveable { mutableStateOf<Int?>(null) }
+                // Unused-app restriction is now optional; treat as satisfied during onboarding.
+                val unusedRestrictionsRequirementMet = true
 
                 val permissionLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -397,7 +471,11 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                NavHost(navController = navController, startDestination = "splash") {
+                val startDestination = remember(initialInboxShortcut) {
+                    if (initialInboxShortcut) "sms/inbox" else "splash"
+                }
+
+                NavHost(navController = navController, startDestination = startDestination) {
                     composable("splash") {
                         SplashScreen()
                         LaunchedEffect(authState, state.onboardingComplete) {
@@ -539,16 +617,15 @@ class MainActivity : AppCompatActivity() {
 
                         val hasDndAccess = notificationManager?.isNotificationPolicyAccessGranted == true
 
-                        LaunchedEffect(state.onboardingComplete, missingPermissions, onboardingName, hasDndAccess, unusedRestrictionsRequirementMet) {
-                            val sanitized = onboardingName.trim()
-                            if (
-                                !state.onboardingComplete &&
-                                missingPermissions.isEmpty() &&
-                                sanitized.isNotBlank() &&
-                                hasDndAccess &&
-                                unusedRestrictionsRequirementMet &&
-                                !viewModel.needsBetaAgreement(state.settings)
-                            ) {
+                LaunchedEffect(state.onboardingComplete, missingPermissions, onboardingName, hasDndAccess) {
+                    val sanitized = onboardingName.trim()
+                    if (
+                        !state.onboardingComplete &&
+                        missingPermissions.isEmpty() &&
+                        sanitized.isNotBlank() &&
+                        hasDndAccess &&
+                        !viewModel.needsBetaAgreement(state.settings)
+                    ) {
                                 if (ownerName != sanitized) {
                                     viewModel.setOwnerName(sanitized)
                                 }
@@ -569,22 +646,6 @@ class MainActivity : AppCompatActivity() {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED
                         val callLogGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
-
-                        val managePermissionCard = OnboardingPermissionState(
-                            icon = Icons.Filled.Schedule,
-                            title = stringResource(R.string.permission_unused_apps_title),
-                            description = stringResource(R.string.permission_unused_apps_description),
-                            granted = unusedRestrictionsRequirementMet,
-                            actionLabel = stringResource(R.string.permission_unused_apps_action),
-                            onAction = {
-                                pendingUnusedRestrictionsCheck = true
-                                openUnusedAppRestrictionsSettings(context)
-                            },
-                            manualHelp = if (!unusedRestrictionsRequirementMet) {
-                                stringResource(R.string.permission_unused_apps_manual)
-                            } else null,
-                            emphasis = stringResource(R.string.permission_unused_apps_emphasis)
-                        )
 
                         val permissionCards = buildList {
                             OnboardingPermissionState(
@@ -625,21 +686,17 @@ class MainActivity : AppCompatActivity() {
                                 description = "Link trusted partners so they receive your alerts.",
                                 granted = contactsGranted
                             ).also { add(it) }
-                            if (unusedRestrictionsRequirementMet) {
-                                add(managePermissionCard)
-                            }
                         }
 
                         val sanitizedOnboardingName = onboardingName.trim()
                         val canContinue = missingPermissions.isEmpty() &&
                             sanitizedOnboardingName.isNotBlank() &&
                             hasDndAccess &&
-                            unusedRestrictionsRequirementMet &&
                             !viewModel.needsBetaAgreement(state.settings)
 
                         OnboardingScreen(
                             permissions = permissionCards,
-                            focusedPermission = if (!unusedRestrictionsRequirementMet) managePermissionCard else null,
+                            focusedPermission = null,
                             isReadyToFinish = canContinue,
                             onGrantPermissions = {
                                 if (missingPermissions.isEmpty()) {
@@ -861,14 +918,8 @@ class MainActivity : AppCompatActivity() {
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
                             showAds = state.showAds,
-                            isDefaultSmsApp = isDefaultSms,
-                            defaultSmsSupported = defaultSmsSupported,
-                            subscriptionAvailable = subscriptionUiState.available,
-                            isPremiumActive = subscriptionUiState.isPremiumActive || state.settings.premiumUnlocked,
-                            subscriptionMessage = subscriptionUiState.statusMessage,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
-                            onRequestDefaultSms = requestDefaultSms,
                             onRequestBatteryOpt = { openBatteryOptimizationSettings(context) },
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
@@ -879,32 +930,31 @@ class MainActivity : AppCompatActivity() {
                             onEditEmergencyTone = { navController.navigate("alerts/default/emergency") },
                             onEditCheckInTone = { navController.navigate("alerts/default/checkin") },
                             onEditCallTone = { navController.navigate("alerts/default/call") },
-                        onReportBug = { navController.navigate("bug_report") },
-                        onBetaTesters = { navController.navigate("beta_testers") },
-                        onOpenHelp = { navController.navigate("settings_help") },
-                        onSignOut = {
-                            viewModel.signOut()
-                        },
-                        onBack = { navController.popBackStack() },
-                        onPurchasePremium = { subscriptionManager.launchSubscribe(activity) },
-                        onOpenSmsInbox = { navController.navigate("sms/inbox") },
-                        onTimeFormatChange = { viewModel.setTimeFormat(it) },
-                        onOpenVisualSettings = { navController.navigate("visual_settings") },
-                        onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
-                        onSetPrivatePin = { navController.navigate("private_pin") }
-                    )
-                }
+                            onReportBug = { navController.navigate("bug_report") },
+                            onBetaTesters = { navController.navigate("beta_testers") },
+                            onOpenHelp = { navController.navigate("settings_help") },
+                            onSignOut = {
+                                viewModel.signOut()
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
                     composable("sms/inbox") {
                         val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
                         val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
+                        val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
                         LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
                         SmsInboxScreen(
                             threads = threads,
+                            archivedThreads = archivedThreads,
                             onOpenThread = { thread ->
                                 navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
                             },
+                            onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
+                            onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
+                            onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
                             onBack = { navController.popBackStack() },
-                            dateFormatter = { ts -> formatTimestamp(context, ts, settings.timeFormat) }
+                            dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) }
                         )
                     }
                     composable(
@@ -923,8 +973,8 @@ class MainActivity : AppCompatActivity() {
                             address = Uri.decode(address),
                             messages = messages,
                             onBack = { navController.popBackStack() },
-                            dateFormatter = { ts -> formatTimestamp(context, ts, settings.timeFormat) },
-                            themePreferences = settings.themePreferences
+                            dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                            themePreferences = state.settings.themePreferences
                         )
                     }
                     composable("settings_help") {
@@ -1008,6 +1058,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+
+private fun requiredSmsPermissions(context: android.content.Context): List<String> =
+    buildList {
+        add(Manifest.permission.SEND_SMS)
+        add(Manifest.permission.RECEIVE_SMS)
+        add(Manifest.permission.READ_SMS)
+        add(Manifest.permission.RECEIVE_MMS)
+        add(Manifest.permission.RECEIVE_WAP_PUSH)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }.filter {
+        ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+    }
 
 @Composable
 private fun rememberCancelEmergencyLauncher(
