@@ -25,7 +25,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.INTERNET" />
 
-<queries>
+<
+        <package android:name="com.google.android.apps.bard" />
+        <package android:name="com.google.android.apps.googleassistant" />>
     <package android:name="com.google.android.googlequicksearchbox" />
 </queries>
 
@@ -84,9 +86,10 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="${admobAppId}" />
 
+        <!-- App Actions configuration using shortcuts framework -->
         <meta-data
-            android:name="com.google.android.actions"
-            android:resource="@xml/actions" />
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
 
         <receiver
             android:name=".receiver.PulseLinkSmsReceiver"
@@ -136,6 +139,18 @@
                 <data
                     android:host="assistant"
                     android:scheme="pulselink" />
+            </intent-filter>
+
+            <!-- App Links intent-filter for HTTPS URLs -->
+            <!-- Requires assetlinks.json hosted at https://pulselink.app/.well-known/assetlinks.json -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="pulselink.app"
+                    android:pathPrefix="/assistant" />
             </intent-filter>
             <intent-filter>
                 <action android:name="com.pulselink.intent.ASSISTANT_EMERGENCY" />

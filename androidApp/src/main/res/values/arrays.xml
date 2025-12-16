@@ -49,4 +49,23 @@
         <item>pulse</item>
         <item>safe check</item>
     </string-array>
+
+    <!-- Synonyms for emergency alert feature -->
+    <string-array name="emergency_synonyms">
+        <item>emergency</item>
+        <item>alert</item>
+        <item>help</item>
+        <item>SOS</item>
+        <item>danger</item>
+        <item>urgent</item>
+    </string-array>
+
+    <!-- Synonyms for cancel feature -->
+    <string-array name="cancel_synonyms">
+        <item>cancel</item>
+        <item>stop</item>
+        <item>abort</item>
+        <item>end alert</item>
+        <item>false alarm</item>
+    </string-array>
 </resources>
