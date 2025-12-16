@@ -43,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -281,9 +282,7 @@ fun InboxScreen(
                             confirmValueChange = { value ->
                                 if (value == SwipeToDismissBoxValue.EndToStart) {
                                     onDeleteThread(item.threadId)
-                                    scope.launch {
-                                        host.showSnackbar("Thread deleted")
-                                    }
+                                    scope.launch { host.showSnackbar("Thread deleted") }
                                 }
                                 false
                             }
@@ -356,9 +355,9 @@ private fun SwipeableThreadRow(
     theme: ThemePalette,
     onClick: () -> Unit
 ) {
-    androidx.compose.material3.SwipeToDismiss(
+    SwipeToDismissBox(
         state = state,
-        background = {
+        backgroundContent = {
             val color = if (state.targetValue == SwipeToDismissBoxValue.EndToStart) Color(0xFFE53935) else Color.Transparent
             Box(
                 modifier = Modifier
@@ -372,10 +371,9 @@ private fun SwipeableThreadRow(
                 }
             }
         },
-        directions = setOf(SwipeToDismissBoxValue.EndToStart),
-        dismissContent = {
-            ThreadRow(thread = thread, theme = theme, onClick = onClick)
-        }
+        content = { ThreadRow(thread = thread, theme = theme, onClick = onClick) },
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = true
     )
 }
 
