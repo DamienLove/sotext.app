@@ -214,6 +214,19 @@ class MainActivity : AppCompatActivity() {
                 val defaultSmsSupported = remember {
                     defaultSmsHelper.buildRoleRequestIntent() != null || defaultSmsHelper.isDefaultSms()
                 }
+                val launchBeaconInbox: () -> Unit = {
+                    if (!defaultSmsSupported && !defaultSmsHelper.isDefaultSms()) {
+                        Toast.makeText(
+                            context,
+                            "Set PulseLink as the default SMS app in Android settings to enable Beacon.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    } else {
+                        viewModel.setBeaconLauncherEnabled(true)
+                        pendingInboxNav = true
+                        inboxShortcutFlow.tryEmit(Unit)
+                    }
+                }
                 val initialInboxShortcut = intent?.getBooleanExtra("open_sms_inbox", false) == true
                 val requestDefaultSms = remember(defaultSmsLauncher) {
                     {
@@ -734,6 +747,7 @@ class MainActivity : AppCompatActivity() {
                             onSendCheckIn = viewModel::sendCheckIn,
                             onSettingsClick = { navController.navigate("settings") },
                             onFaqClick = { navController.navigate("faq") },
+                            onBeaconClick = launchBeaconInbox,
                             onAddContact = viewModel::saveContact,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
@@ -920,6 +934,8 @@ class MainActivity : AppCompatActivity() {
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
                             showAds = state.showAds,
+                            isProUser = state.isProUser,
+                            isDefaultSmsApp = isDefaultSms,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
                             onRequestBatteryOpt = { openBatteryOptimizationSettings(context) },
@@ -935,6 +951,7 @@ class MainActivity : AppCompatActivity() {
                             onReportBug = { navController.navigate("bug_report") },
                             onBetaTesters = { navController.navigate("beta_testers") },
                             onOpenHelp = { navController.navigate("settings_help") },
+                            onOpenBeacon = launchBeaconInbox,
                             onSignOut = {
                                 viewModel.signOut()
                             },

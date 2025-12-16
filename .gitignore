@@ -63,3 +63,8 @@ shared/.gradle/
 /apks-disposable/beaconApp-debug.apk
 /apks-disposable/androidApp-premium-debug.apk
 /apks-disposable/androidApp-free-debug.apk
+/disposable_aabs/pulselink-premium-release.aab
+/disposable_aabs/pulselink-pro-release.aab
+/disposable_aabs/pulselink-free-release.aab
+/ioserror.txt
+/stack-trace.txt

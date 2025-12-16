@@ -122,6 +122,7 @@ fun HomeScreen(
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onFaqClick: () -> Unit = {},
+    onBeaconClick: () -> Unit = {},
     showAddLoginPrompt: Boolean = false,
     onAddLoginClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
@@ -175,6 +176,7 @@ fun HomeScreen(
                 onAlertsClick = onAlertsClick,
                 onSettingsClick = onSettingsClick,
                 onFaqClick = onFaqClick,
+                onBeaconClick = onBeaconClick,
                 onUpgradeClick = onUpgradeClick
             )
             if (showAddLoginPrompt) {
@@ -258,6 +260,7 @@ private fun HeaderSection(
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onFaqClick: () -> Unit,
+    onBeaconClick: () -> Unit,
     onUpgradeClick: () -> Unit
 ) {
     val heroShape = RoundedCornerShape(32.dp)
@@ -301,6 +304,7 @@ private fun HeaderSection(
                     onAlertsClick = onAlertsClick,
                     onSettingsClick = onSettingsClick,
                     onFaqClick = onFaqClick,
+                    onBeaconClick = onBeaconClick,
                     onUpgradeClick = onUpgradeClick,
                     isProUser = state.isProUser
                 )
@@ -478,6 +482,7 @@ private fun NavigationRow(
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onFaqClick: () -> Unit,
+    onBeaconClick: () -> Unit,
     onUpgradeClick: () -> Unit,
     isProUser: Boolean
 ) {
@@ -487,6 +492,9 @@ private fun NavigationRow(
     ) {
         NavButton(icon = Icons.Filled.Notifications, label = "Alerts", onClick = onAlertsClick)
         NavButton(icon = Icons.Filled.Help, label = stringResource(id = R.string.faq_title), onClick = onFaqClick)
+        if (isProUser) {
+            NavButton(icon = Icons.Outlined.WifiTethering, label = stringResource(id = R.string.home_beacon_label), onClick = onBeaconClick)
+        }
         NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick)
         if (!isProUser) {
             NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick)

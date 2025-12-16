@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,6 +54,8 @@ fun SettingsScreen(
     settings: PulseLinkSettings,
     hasDndAccess: Boolean,
     showAds: Boolean,
+    isProUser: Boolean,
+    isDefaultSmsApp: Boolean,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
     onRequestBatteryOpt: () -> Unit,
@@ -68,6 +71,7 @@ fun SettingsScreen(
     onReportBug: () -> Unit,
     onBetaTesters: () -> Unit,
     onOpenHelp: () -> Unit,
+    onOpenBeacon: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -158,6 +162,23 @@ fun SettingsScreen(
                 checked = settings.autoUpdateContactInfo,
                 onCheckedChange = onToggleAutoUpdateContactInfo
             )
+            if (isProUser) {
+                SettingsActionRow(
+                    title = stringResource(id = R.string.settings_beacon_title),
+                    subtitle = if (isDefaultSmsApp && settings.beaconLauncherEnabled) {
+                        stringResource(id = R.string.settings_beacon_enabled_subtitle)
+                    } else {
+                        stringResource(id = R.string.settings_beacon_subtitle)
+                    },
+                    actionLabel = if (isDefaultSmsApp && settings.beaconLauncherEnabled) {
+                        stringResource(id = R.string.settings_beacon_action_open)
+                    } else {
+                        stringResource(id = R.string.settings_beacon_action_enable)
+                    },
+                    onAction = onOpenBeacon,
+                    leadingIcon = Icons.Outlined.WifiTethering
+                )
+            }
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_sync_contacts_title),
                 subtitle = null,
