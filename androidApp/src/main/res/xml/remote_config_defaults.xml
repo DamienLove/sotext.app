@@ -4,4 +4,8 @@
         <key>example_feature_enabled</key>
         <value>false</value>
     </entry>
+    <entry>
+        <key>rapid_lookup_api_key</key>
+        <value></value>
+    </entry>
 </defaultsMap>

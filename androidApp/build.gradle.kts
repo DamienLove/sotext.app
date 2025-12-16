@@ -18,6 +18,8 @@ plugins {
 fun Project.optionalProperty(name: String): String? =
     if (hasProperty(name)) property(name)?.toString()?.takeIf { it.isNotBlank() } else null
 
+fun Project.optionalIntProperty(name: String): Int? = optionalProperty(name)?.toIntOrNull()
+
 data class SigningSpec(
     val storeFile: File?,
     val storePassword: String?,
@@ -61,6 +63,47 @@ val ipqualityscoreApiKey = optionalProperty("ipqualityscoreApiKey")
     ?: System.getenv("IPQS_API_KEY")
     ?: ""
 val escapedIpqualityscoreApiKey = ipqualityscoreApiKey.replace("\"", "\\\"")
+
+// Optional Rapid Lookup API key (RapidAPI); keep secrets out of VCS.
+val rapidLookupApiKey = optionalProperty("rapidLookupApiKey")
+    ?: System.getenv("RAPID_LOOKUP_API_KEY")
+    ?: System.getenv("RAPIDAPI_KEY")
+    ?: ""
+val escapedRapidLookupApiKey = rapidLookupApiKey.replace("\"", "\\\"")
+val rapidLookupApiHost = optionalProperty("rapidLookupApiHost")
+    ?: System.getenv("RAPID_LOOKUP_API_HOST")
+    ?: "phone-number-lookup-api.p.rapidapi.com"
+val escapedRapidLookupApiHost = rapidLookupApiHost.replace("\"", "\\\"")
+val rapidLookupMonthlyCap = optionalIntProperty("rapidLookupMonthlyCap")
+    ?: System.getenv("RAPID_LOOKUP_MONTHLY_CAP")?.toIntOrNull()
+    ?: 100
+
+// Optional Twilio Lookup credentials (keep out of VCS).
+val twilioAccountSid = optionalProperty("twilioAccountSid")
+    ?: System.getenv("TWILIO_ACCOUNT_SID")
+    ?: ""
+val escapedTwilioAccountSid = twilioAccountSid.replace("\"", "\\\"")
+
+val twilioAuthToken = optionalProperty("twilioAuthToken")
+    ?: System.getenv("TWILIO_AUTH_TOKEN")
+    ?: ""
+val escapedTwilioAuthToken = twilioAuthToken.replace("\"", "\\\"")
+val twilioLookupMonthlyCap = optionalIntProperty("twilioLookupMonthlyCap")
+    ?: System.getenv("TWILIO_LOOKUP_MONTHLY_CAP")?.toIntOrNull()
+    ?: 0
+
+val numlookupMonthlyCap = optionalIntProperty("numlookupMonthlyCap")
+    ?: System.getenv("NUMLOOKUP_MONTHLY_CAP")?.toIntOrNull()
+    ?: Int.MAX_VALUE
+val numverifyMonthlyCap = optionalIntProperty("numverifyMonthlyCap")
+    ?: System.getenv("NUMVERIFY_MONTHLY_CAP")?.toIntOrNull()
+    ?: Int.MAX_VALUE
+val ipqsMonthlyCap = optionalIntProperty("ipqsMonthlyCap")
+    ?: System.getenv("IPQS_MONTHLY_CAP")?.toIntOrNull()
+    ?: Int.MAX_VALUE
+val realcallMonthlyCap = optionalIntProperty("realcallMonthlyCap")
+    ?: System.getenv("REALCALL_MONTHLY_CAP")?.toIntOrNull()
+    ?: 100
 
 fun Project.signingEnvKey(base: String, flavor: String?): String {
     val suffix = flavor?.uppercase(Locale.US)?.let { "_${it}" }.orEmpty()
@@ -161,6 +204,19 @@ android {
         buildConfigField("String", "IPQS_API_KEY", "\"$escapedIpqualityscoreApiKey\"")
         buildConfigField("String", "NUMVERIFY_API_KEY", "\"$escapedNumverifyApiKey\"")
         buildConfigField("String", "IPQUALITYSCORE_API_KEY", "\"$escapedIpqualityscoreApiKey\"")
+        buildConfigField("String", "RAPID_LOOKUP_BASE", "\"https://phone-number-lookup-api.p.rapidapi.com/phone-lookup\"")
+        buildConfigField("String", "RAPID_LOOKUP_API_KEY", "\"$escapedRapidLookupApiKey\"")
+        buildConfigField("String", "RAPID_LOOKUP_API_HOST", "\"$escapedRapidLookupApiHost\"")
+        buildConfigField("int", "RAPID_LOOKUP_MONTHLY_CAP", "${rapidLookupMonthlyCap}")
+        buildConfigField("String", "REALCALL_LOOKUP_BASE", "\"https://www.realcall.ai/lookup/search?k=\"")
+        buildConfigField("int", "REALCALL_MONTHLY_CAP", "${realcallMonthlyCap}")
+        buildConfigField("String", "TWILIO_LOOKUP_BASE", "\"https://lookups.twilio.com/v2/PhoneNumbers\"")
+        buildConfigField("String", "TWILIO_ACCOUNT_SID", "\"$escapedTwilioAccountSid\"")
+        buildConfigField("String", "TWILIO_AUTH_TOKEN", "\"$escapedTwilioAuthToken\"")
+        buildConfigField("int", "TWILIO_LOOKUP_MONTHLY_CAP", "${twilioLookupMonthlyCap}")
+        buildConfigField("int", "NUMLOOKUP_MONTHLY_CAP", "${numlookupMonthlyCap}")
+        buildConfigField("int", "NUMVERIFY_MONTHLY_CAP", "${numverifyMonthlyCap}")
+        buildConfigField("int", "IPQS_MONTHLY_CAP", "${ipqsMonthlyCap}")
 
         javaCompileOptions {
             annotationProcessorOptions {

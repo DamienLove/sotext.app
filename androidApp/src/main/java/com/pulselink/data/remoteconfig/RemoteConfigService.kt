@@ -34,6 +34,8 @@ class RemoteConfigService @Inject constructor() {
         return remoteConfig.getBoolean("example_feature_enabled")
     }
 
+    fun getString(key: String): String = remoteConfig.getString(key)
+
     companion object {
         private const val TAG = "RemoteConfigService"
     }

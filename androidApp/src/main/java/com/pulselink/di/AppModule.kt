@@ -218,4 +218,24 @@ object DatabaseModule {
     @Singleton
     @Named("IpQualityScoreApiKey")
     fun provideIpQualityScoreApiKey(): String = BuildConfig.IPQUALITYSCORE_API_KEY
+
+    @Provides
+    @Singleton
+    @Named("RapidLookupApiKeyDefault")
+    fun provideRapidLookupApiKeyDefault(): String = BuildConfig.RAPID_LOOKUP_API_KEY
+
+    @Provides
+    @Singleton
+    @Named("RapidLookupApiHost")
+    fun provideRapidLookupApiHost(): String = BuildConfig.RAPID_LOOKUP_API_HOST
+
+    @Provides
+    @Singleton
+    @Named("TwilioAccountSid")
+    fun provideTwilioAccountSid(): String = BuildConfig.TWILIO_ACCOUNT_SID
+
+    @Provides
+    @Singleton
+    @Named("TwilioAuthToken")
+    fun provideTwilioAuthToken(): String = BuildConfig.TWILIO_AUTH_TOKEN
 }
