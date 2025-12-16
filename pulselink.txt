@@ -36,10 +36,10 @@ Current SMS features
 - Inbox/thread UI with live refresh + contact resolution; time-format preference.
 
  Outstanding (carry-over for next session)
-- Beacon free: handle default-SMS role result callback UX, improve permission rationale, add contact avatars/search, interstitial trigger points, and run lint/unit tests once finalized. Consider launcher/icon entry to inbox from PulseLink home per request.
+ - Beacon free: handle default-SMS role result callback UX, improve permission rationale, add contact avatars, interstitial trigger points, and run lint/unit tests once finalized. Consider launcher/icon entry to inbox from PulseLink home per request.
  - Beacon MMS: current CarrierMessagingService is a stub (immediate OK); implement real carrier-grade MMS download/send pipeline and verify with device/carrier.
 - SMS: Add MMS send/receive UI + compliance tests; enhance inbox with unread badges, delete/archive, and better date formatting; consider content observer cleanup.
-- Beacon visual customization: build full editor (color wheel, per-surface colors, gradients, icon sizing, layout presets, sample chat preview applied globally).
+ - Beacon visual customization: gradients, icon sizing, and presets polishing; add tests for theme persistence and per-contact overrides.
 - Caller ID: implement spam/lookup + in-call overlay; respect permissions.
 - Private contacts/chats: enforce PIN when opening private threads, store messages securely/encrypted, filter UI lists, add "make private" toggles.
 - Trusted contacts/emergency controls: ensure emergency actions (ringer/volume/siren override) are exposed in SMS app for trusted contacts.
@@ -58,3 +58,4 @@ Current SMS features
 2025-12-16
 - Hotfix release v41 (Pro): Room DB version bumped to 11 with destructive migration to resolve launch crash; Beacon inbox shortcut always drives navigation with proper default-SMS/permission prompts; versionCode/Name updated to 41.
 - Added Room schema export args (build/room-schemas) to silence processor warnings; .gitignore updated to exclude local Gradle caches and droidcrash.txt.
+- Beacon customization/search: added ThemePalette DataStore with global + per-contact overrides, Compose customization screen (sample chat tap-to-edit, popular swatches, color wheel, presets, font + radius + inbox icon selector), themed inbox/thread UI, OTP cleanup (expire 10 min short-code codes), and contextual search (contacts -> thread jump; phrase -> body hits; premium hook for Gemini).
