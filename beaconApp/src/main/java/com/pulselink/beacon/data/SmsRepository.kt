@@ -18,9 +18,11 @@ class SmsRepository(private val context: Context) {
 
     @Volatile private var observersRegistered = false
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val otpRegex = Regex("\\b\\d{4,8}\\b")
 
     init {
         ensureObserversRegistered()
+        purgeExpiredOneTimeCodes()
     }
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
@@ -249,6 +251,52 @@ class SmsRepository(private val context: Context) {
         return (smsItems + mmsItems).sortedBy { it.timestamp }.takeLast(limit)
     }
 
+    fun searchMessages(query: String, limit: Int = 40): List<SmsMessageItem> {
+        if (!hasPerms() || query.isBlank()) return emptyList()
+        val pattern = "%${query.trim()}%"
+        val projection = arrayOf(
+            Telephony.Sms._ID,
+            Telephony.Sms.THREAD_ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE,
+            Telephony.Sms.TYPE
+        )
+        val cursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                projection,
+                "${Telephony.Sms.BODY} LIKE ?",
+                arrayOf(pattern),
+                "${Telephony.Sms.DATE} DESC"
+            )
+        }.getOrNull() ?: return emptyList()
+
+        cursor.use { c ->
+            val idIdx = c.getColumnIndexOrThrow(Telephony.Sms._ID)
+            val threadIdx = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
+            val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+            val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
+            val typeIdx = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
+            val hits = mutableListOf<SmsMessageItem>()
+            var count = 0
+            while (c.moveToNext() && count < limit) {
+                val outgoing = c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_SENT || c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_OUTBOX
+                hits += SmsMessageItem(
+                    id = c.getLong(idIdx),
+                    threadId = c.getLong(threadIdx),
+                    address = resolveAddress(c.getString(addrIdx)),
+                    body = c.getString(bodyIdx) ?: "",
+                    timestamp = c.getLong(dateIdx),
+                    outgoing = outgoing
+                )
+                count++
+            }
+            return hits
+        }
+    }
+
     fun sendSms(address: String, body: String): Boolean {
         if (!hasPerms()) return false
         return runCatching {
@@ -256,6 +304,52 @@ class SmsRepository(private val context: Context) {
             smsManager.sendTextMessage(address, null, body, null, null)
             true
         }.getOrDefault(false)
+    }
+
+    fun purgeExpiredOneTimeCodes(expiryMillis: Long = 10 * 60 * 1000L) {
+        if (!hasPerms()) return
+        val cutoff = System.currentTimeMillis() - expiryMillis
+        val projection = arrayOf(
+            Telephony.Sms._ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE
+        )
+        val cursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                projection,
+                "${Telephony.Sms.DATE}<?",
+                arrayOf(cutoff.toString()),
+                "${Telephony.Sms.DATE} ASC"
+            )
+        }.getOrNull() ?: return
+
+        val staleIds = mutableListOf<Long>()
+        cursor.use { c ->
+            val idIdx = c.getColumnIndexOrThrow(Telephony.Sms._ID)
+            val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+            val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            while (c.moveToNext() && staleIds.size < 80) {
+                val addr = c.getString(addrIdx) ?: ""
+                val body = c.getString(bodyIdx) ?: ""
+                val shortCode = addr.length <= 8
+                val looksOtp = shortCode && (body.contains("code", true) || body.contains("login", true) || body.contains("otp", true)) && otpRegex.containsMatchIn(body)
+                if (looksOtp) {
+                    staleIds += c.getLong(idIdx)
+                }
+            }
+        }
+        if (staleIds.isNotEmpty()) {
+            staleIds.forEach { id ->
+                context.contentResolver.delete(
+                    Telephony.Sms.CONTENT_URI,
+                    "${Telephony.Sms._ID}=?",
+                    arrayOf(id.toString())
+                )
+            }
+            observerFlow.tryEmit(Unit)
+        }
     }
 
     fun markThreadRead(threadId: Long) {

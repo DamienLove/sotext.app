@@ -11,8 +11,19 @@ import androidx.lifecycle.viewModelScope
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsRepository
 import com.pulselink.beacon.data.SmsThreadItem
+import com.pulselink.beacon.BuildConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+sealed class SearchResultState {
+    object Idle : SearchResultState()
+    object Searching : SearchResultState()
+    data class Contact(val threadId: Long, val address: String) : SearchResultState()
+    data class Messages(val hits: List<SmsMessageItem>) : SearchResultState()
+    object Empty : SearchResultState()
+}
 
 class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -25,6 +36,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var currentThreadId by mutableStateOf<Long?>(null)
         private set
     var currentAddress by mutableStateOf("")
+        private set
+    var searchState: SearchResultState by mutableStateOf(SearchResultState.Idle)
         private set
 
     init {
@@ -67,6 +80,40 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             messages = emptyList()
         }
         refreshThreads()
+    }
+
+    fun search(query: String) {
+        if (query.isBlank()) {
+            searchState = SearchResultState.Idle
+            return
+        }
+        searchState = SearchResultState.Searching
+        viewModelScope.launch(Dispatchers.IO) {
+            val direct = threads.firstOrNull {
+                it.address.contains(query, ignoreCase = true)
+                        || it.snippet.contains(query, ignoreCase = true)
+            }
+            if (direct != null) {
+                withContext(Dispatchers.Main) {
+                    searchState = SearchResultState.Contact(direct.threadId, direct.address)
+                }
+                return@launch
+            }
+
+            // Premium hook: route through Gemini when available; fallback to local search otherwise
+            val hits = if (BuildConfig.PREMIUM_SEARCH) {
+                repo.searchMessages(query) // placeholder until Gemini backend is wired
+            } else {
+                repo.searchMessages(query)
+            }
+            withContext(Dispatchers.Main) {
+                searchState = if (hits.isEmpty()) SearchResultState.Empty else SearchResultState.Messages(hits)
+            }
+        }
+    }
+
+    fun clearSearch() {
+        searchState = SearchResultState.Idle
     }
 
     companion object {
