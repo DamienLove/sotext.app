@@ -105,6 +105,17 @@ fun SettingsHelpScreen(onBack: () -> Unit) {
                 title = stringResource(id = R.string.settings_help_support_title),
                 body = stringResource(id = R.string.settings_help_support_body)
             )
+
+            // Visual separator before FAQ section
+            Spacer(Modifier.height(24.dp))
+            
+            // FAQ section subtitle
+            Text(
+                text = "Frequently Asked Questions",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
             Spacer(Modifier.height(8.dp))
             FaqList()
         }
