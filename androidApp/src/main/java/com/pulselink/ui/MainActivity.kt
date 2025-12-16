@@ -76,6 +76,7 @@ import com.pulselink.ui.screens.ContactConversationScreen
 import com.pulselink.ui.screens.LoginScreen
 import com.pulselink.ui.screens.OnboardingScreen
 import com.pulselink.ui.screens.OnboardingIntroScreen
+import com.pulselink.ui.screens.FaqScreen
 import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.SplashScreen
@@ -732,6 +733,7 @@ class MainActivity : AppCompatActivity() {
                             onTriggerEmergency = viewModel::triggerEmergency,
                             onSendCheckIn = viewModel::sendCheckIn,
                             onSettingsClick = { navController.navigate("settings") },
+                            onFaqClick = { navController.navigate("faq") },
                             onAddContact = viewModel::saveContact,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
@@ -979,8 +981,12 @@ class MainActivity : AppCompatActivity() {
                     }
                     composable("settings_help") {
                         SettingsHelpScreen(
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            onOpenFaq = { navController.navigate("faq") }
                         )
+                    }
+                    composable("faq") {
+                        FaqScreen(onBack = { navController.popBackStack() })
                     }
                     composable("visual_settings") {
                         val currentTheme = state.settings.themePreferences

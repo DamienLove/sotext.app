@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -120,6 +121,7 @@ fun HomeScreen(
     isCancelingEmergency: Boolean = false,
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
+    onFaqClick: () -> Unit = {},
     showAddLoginPrompt: Boolean = false,
     onAddLoginClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
@@ -172,6 +174,7 @@ fun HomeScreen(
                 onDismissAssistantShortcuts = onDismissAssistantShortcuts,
                 onAlertsClick = onAlertsClick,
                 onSettingsClick = onSettingsClick,
+                onFaqClick = onFaqClick,
                 onUpgradeClick = onUpgradeClick
             )
             if (showAddLoginPrompt) {
@@ -254,6 +257,7 @@ private fun HeaderSection(
     onDismissAssistantShortcuts: () -> Unit,
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onFaqClick: () -> Unit,
     onUpgradeClick: () -> Unit
 ) {
     val heroShape = RoundedCornerShape(32.dp)
@@ -296,6 +300,7 @@ private fun HeaderSection(
                 NavigationRow(
                     onAlertsClick = onAlertsClick,
                     onSettingsClick = onSettingsClick,
+                    onFaqClick = onFaqClick,
                     onUpgradeClick = onUpgradeClick,
                     isProUser = state.isProUser
                 )
@@ -472,6 +477,7 @@ private fun VoiceTipsCard(
 private fun NavigationRow(
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onFaqClick: () -> Unit,
     onUpgradeClick: () -> Unit,
     isProUser: Boolean
 ) {
@@ -480,6 +486,7 @@ private fun NavigationRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         NavButton(icon = Icons.Filled.Notifications, label = "Alerts", onClick = onAlertsClick)
+        NavButton(icon = Icons.Filled.Help, label = stringResource(id = R.string.faq_title), onClick = onFaqClick)
         NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick)
         if (!isProUser) {
             NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick)

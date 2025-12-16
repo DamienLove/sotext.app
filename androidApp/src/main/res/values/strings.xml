@@ -147,6 +147,7 @@
     <string name="settings_help_tone_body">Customize the siren that plays for emergencies, the chime for check-ins, and the ringtone override for incoming escalation calls to make sure every signal stands out.</string>
     <string name="settings_help_support_title">Support &amp; feedback</string>
     <string name="settings_help_support_body">Use Report a bug to send logs and context to the PulseLink team, or open the Beta testers panel to manage preview builds and feature flags.</string>
+    <string name="settings_help_section_heading">Help &amp; troubleshooting</string>
     <string name="settings_help_battery_title">Battery optimizations</string>
     <string name="settings_help_battery_body">Disable battery optimizations for PulseLink so alerts, SMS sync, and trusted contact checks run on time. On most devices this is under Battery &gt; Unrestricted or Don’t optimize.</string>
     <string name="settings_help_unused_title">Unused app pause</string>
@@ -170,6 +171,9 @@
     <string name="faq_answer_5">Grant battery optimization exclusions when prompted, and ensure PulseLink is allowed to run in the background so alerts and inbound links arrive reliably.</string>
     <string name="faq_question_6">Can I unlink or remove a contact later?</string>
     <string name="faq_answer_6">Yes. Open the contact, choose Unlink to stop sharing, or Delete to remove it entirely. They will no longer receive alerts from you.</string>
+    <string name="settings_help_faq_cta">Open FAQ page</string>
+    <string name="faq_title">FAQs</string>
+    <string name="faq_page_subtitle">Answers to the most common PulseLink questions.</string>
     <string name="emergency_alert_title">%1$s triggered an emergency</string>
     <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → PulseLink → Notifications and re-enable bypass.</string>
     <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>
