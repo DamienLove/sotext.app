@@ -68,3 +68,5 @@ shared/.gradle/
 /disposable_aabs/pulselink-free-release.aab
 /ioserror.txt
 /stack-trace.txt
+/droidcrash.txt
+.gradle-local*

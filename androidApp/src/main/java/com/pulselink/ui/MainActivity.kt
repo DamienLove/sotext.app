@@ -211,21 +211,10 @@ class MainActivity : AppCompatActivity() {
                         pendingInboxNav = false
                     }
                 }
-                val defaultSmsSupported = remember {
-                    defaultSmsHelper.buildRoleRequestIntent() != null || defaultSmsHelper.isDefaultSms()
-                }
                 val launchBeaconInbox: () -> Unit = {
-                    if (!defaultSmsSupported && !defaultSmsHelper.isDefaultSms()) {
-                        Toast.makeText(
-                            context,
-                            "Set PulseLink as the default SMS app in Android settings to enable Beacon.",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    } else {
-                        viewModel.setBeaconLauncherEnabled(true)
-                        pendingInboxNav = true
-                        inboxShortcutFlow.tryEmit(Unit)
-                    }
+                    viewModel.setBeaconLauncherEnabled(true)
+                    pendingInboxNav = true
+                    inboxShortcutFlow.tryEmit(Unit)
                 }
                 val initialInboxShortcut = intent?.getBooleanExtra("open_sms_inbox", false) == true
                 val requestDefaultSms = remember(defaultSmsLauncher) {
@@ -257,10 +246,21 @@ class MainActivity : AppCompatActivity() {
                         isDefaultSms = defaultSmsHelper.isDefaultSms()
                         val missingNow = requiredSmsPermissions(context)
                         missingSmsPerms = missingNow
-                        if (!isDefaultSms && defaultSmsSupported) {
-                            pendingInboxNav = true
-                            requestDefaultSms()
-                            return@collectLatest
+                        val canRequestDefaultSms = defaultSmsHelper.buildRoleRequestIntent() != null
+                        if (!isDefaultSms) {
+                            if (canRequestDefaultSms) {
+                                pendingInboxNav = true
+                                requestDefaultSms()
+                                return@collectLatest
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "Set PulseLink as the default SMS app in Android settings to enable Beacon.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                pendingInboxNav = false
+                                return@collectLatest
+                            }
                         }
                         if (missingNow.isNotEmpty()) {
                             pendingInboxNav = true

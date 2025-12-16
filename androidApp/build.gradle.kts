@@ -150,8 +150,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 39
-        versionName = "39"
+        versionCode = 41
+        versionName = "41"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -161,6 +161,17 @@ android {
         buildConfigField("String", "IPQS_API_KEY", "\"$escapedIpqualityscoreApiKey\"")
         buildConfigField("String", "NUMVERIFY_API_KEY", "\"$escapedNumverifyApiKey\"")
         buildConfigField("String", "IPQUALITYSCORE_API_KEY", "\"$escapedIpqualityscoreApiKey\"")
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                // Export Room schemas for migration tracking; stays under build/ so it won't dirty git.
+                arguments += mapOf(
+                    "room.schemaLocation" to "$projectDir/build/room-schemas",
+                    "room.incremental" to "true",
+                    "room.expandProjection" to "true"
+                )
+            }
+        }
     }
 
     buildTypes {
@@ -327,6 +338,11 @@ tasks.withType(GoogleServicesTask::class.java).configureEach {
 
 kapt {
     correctErrorTypes = true
+    arguments {
+        arg("room.schemaLocation", "$projectDir/build/room-schemas")
+        arg("room.incremental", "true")
+        arg("room.expandProjection", "true")
+    }
 }
 
     dependencies {

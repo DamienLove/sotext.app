@@ -132,7 +132,7 @@ interface ArchivedThreadDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
