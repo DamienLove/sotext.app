@@ -54,3 +54,7 @@ Current SMS features
 
 2025-12-15
 - No code changes; refreshed pulselink.txt per request. Latest APKs remain in `apks-disposable/`.
+
+2025-12-16
+- Hotfix release v41 (Pro): Room DB version bumped to 11 with destructive migration to resolve launch crash; Beacon inbox shortcut always drives navigation with proper default-SMS/permission prompts; versionCode/Name updated to 41.
+- Added Room schema export args (build/room-schemas) to silence processor warnings; .gitignore updated to exclude local Gradle caches and droidcrash.txt.
