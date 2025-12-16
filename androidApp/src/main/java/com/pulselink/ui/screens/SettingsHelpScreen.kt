@@ -52,26 +52,45 @@ fun SettingsHelpScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             HelpSection(
-                title = stringResource(id = R.string.settings_help_location_title),
-                body = stringResource(id = R.string.settings_help_location_body)
+                title = "How do I add contacts to PulseLink?",
+                body = "Adding contacts is simple. Select the 'add trusted contact' button and you will then be able to add a contact by name and phone/email or select the \"Import from contacts\" button below it. There is an option to allow remote alert changes just above the 'Save' button in the bottom right of the screen."
             )
             HelpSection(
-                title = stringResource(id = R.string.settings_help_dnd_title),
-                body = stringResource(id = R.string.settings_help_dnd_body)
+                title = "What happens when I press the 'I am safe' button?",
+                body = "When you press the main 'I am safe' button, all your chosen contacts instantly receive a customized alert with your message. They can send you messages, or call for help. The alert goes through PulseLink's secure cloud first, and if contacts are offline or SMS-only."
             )
             HelpSection(
-                title = stringResource(id = R.string.settings_help_remote_title),
-                body = stringResource(id = R.string.settings_help_remote_body)
+                title = "Can I customize how I receive notifications?",
+                body = "Yes. PulseLink uses smart notifications that can reach you via text, call, or app notification—whichever works best. In Settings > Notifications, you can choose different alert tones and vibration patterns for incoming alerts. You can also enable Do Not Disturb exceptions so critical alerts always get through when you need them most."
             )
             HelpSection(
-                title = stringResource(id = R.string.settings_help_tone_title),
-                body = stringResource(id = R.string.settings_help_tone_body)
+                title = "Does PulseLink drain my battery?",
+                body = "PulseLink is optimized for minimal battery drain. It only activates location sharing when an alert is sent or when you press the 'I am safe' button. For best results, allow Battery Optimization mode in Settings. This balances background responsiveness with power efficiency, so you get alerts."
             )
             HelpSection(
-                title = stringResource(id = R.string.settings_help_support_title),
-                body = stringResource(id = R.string.settings_help_support_body)
+                title = "What's the difference between an alert and a check-in?",
+                body = "An alert is sent when you press the 'Emergency Alert' button—it immediately notifies all your contacts with your location and marks the situation as active. A check-in is a wellness message that confirms you're safe without urgency. Check-ins are perfect for letting people know you made it home or arrived safely."
             )
-        }
+            HelpSection(
+                title = "How do I remove a contact or stop sharing with them?",
+                body = "To remove someone from your PulseLink circle, select the contact you want to remove from the list at the bottom of the home screen, find their name, and then select the settings icon. Scroll down to the bottom of that screen and at the bottom is the 'Delete Contact' button."
+            )
+            HelpSection(
+                title = "What's SMS-only mode and when would I use it?",
+                body = "SMS-only mode lets you send and receive alerts via text message without an internet connection. It's perfect for contacts who don't have PulseLink installed yet or prefer text-based communication. Authenticated mode (with a PulseLink account) provides encrypted communication, real-time location sharing, and all premium features. You can use both simultaneously."
+            )
+            HelpSection(
+                title = "How is my location data kept private?",
+                body = "Your location is encrypted in transit and at rest on our secure servers. Only the contacts you explicitly choose can see your location. PulseLink never sells your data to third parties or tracks you without permission. You control exactly who sees what—disable location sharing anytime in Settings > Privacy. Your safety and privacy come first."
+            )
+            HelpSection(
+                title = "Why aren't my contacts receiving my alerts?",
+                body = "First, check that push notifications are enabled in your phone's Settings. Make sure PulseLink has permission to access your location and send notifications. Verify your internet connection is stable—alerts go through the secure cloud first. If a contact is SMS-only, ensure they have your number saved correctly. Restart the app if alerts suddenly stopped working."
+            )
+            HelpSection(
+                title = "What features are in PulseLink Pro?",
+                body = "PulseLink Pro includes advanced customization features like custom alert profiles, priority cloud processing, integration with emergency services, detailed location history, and priority support. You also get early access to beta features as they're developed. Pro users help shape PulseLink's future while getting the most powerful safety tools available."
+            )
     }
 }
 
