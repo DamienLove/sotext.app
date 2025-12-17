@@ -30,6 +30,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.pulselink.BuildConfig
 import com.pulselink.billing.SubscriptionManager
 import com.pulselink.ui.InboxLauncherActivity
 import com.pulselink.ui.screens.BeaconSettingsScreen
@@ -241,23 +242,31 @@ class BeaconInboxActivity : ComponentActivity() {
     }
 
     private fun requiredSmsPermissions(): Array<String> =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            arrayOf(
-                Manifest.permission.READ_SMS,
-                Manifest.permission.SEND_SMS,
-                Manifest.permission.RECEIVE_SMS,
-                Manifest.permission.RECEIVE_MMS,
-                Manifest.permission.RECEIVE_WAP_PUSH,
-                Manifest.permission.POST_NOTIFICATIONS
-            )
+        if (BuildConfig.PRO_FEATURES) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                arrayOf(
+                    Manifest.permission.READ_SMS,
+                    Manifest.permission.SEND_SMS,
+                    Manifest.permission.RECEIVE_SMS,
+                    Manifest.permission.RECEIVE_MMS,
+                    Manifest.permission.RECEIVE_WAP_PUSH,
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            } else {
+                arrayOf(
+                    Manifest.permission.READ_SMS,
+                    Manifest.permission.SEND_SMS,
+                    Manifest.permission.RECEIVE_SMS,
+                    Manifest.permission.RECEIVE_MMS,
+                    Manifest.permission.RECEIVE_WAP_PUSH
+                )
+            }
         } else {
-            arrayOf(
-                Manifest.permission.READ_SMS,
-                Manifest.permission.SEND_SMS,
-                Manifest.permission.RECEIVE_SMS,
-                Manifest.permission.RECEIVE_MMS,
-                Manifest.permission.RECEIVE_WAP_PUSH
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS)
+            } else {
+                emptyArray()
+            }
         }
 
     private fun updateBeaconLauncher(enable: Boolean) {
