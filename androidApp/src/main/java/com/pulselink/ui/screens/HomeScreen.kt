@@ -851,6 +851,13 @@ private fun SearchAndAddRow(
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth(),
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            trailingIcon = if (searchValue.text.isNotEmpty()) {
+                {
+                    IconButton(onClick = { onSearchChange(TextFieldValue()) }) {
+                        Icon(Icons.Filled.Close, contentDescription = "Clear search")
+                    }
+                }
+            } else null,
             label = { Text("Search contacts") },
             singleLine = true,
             shape = RoundedCornerShape(18.dp),
