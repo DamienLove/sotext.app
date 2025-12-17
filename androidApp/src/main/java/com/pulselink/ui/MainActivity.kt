@@ -428,9 +428,11 @@ class MainActivity : AppCompatActivity() {
 
                 val requiredPermissions = remember {
                     buildList {
-                        add(Manifest.permission.SEND_SMS)
-                        add(Manifest.permission.RECEIVE_SMS)
-                        add(Manifest.permission.READ_SMS)
+                        if (BuildConfig.PRO_FEATURES) {
+                            add(Manifest.permission.SEND_SMS)
+                            add(Manifest.permission.RECEIVE_SMS)
+                            add(Manifest.permission.READ_SMS)
+                        }
                         add(Manifest.permission.CALL_PHONE)
                         add(Manifest.permission.READ_CONTACTS)
                         add(Manifest.permission.READ_CALL_LOG)
@@ -738,9 +740,10 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
 
-                        val smsGranted =
+                        val smsGranted = if (BuildConfig.PRO_FEATURES) {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+                        } else true
                         val callPermissionGranted =
                             ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED
                         val locationGranted =
@@ -752,14 +755,25 @@ class MainActivity : AppCompatActivity() {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
 
                         val permissionCards = buildList {
+                            val title = if (BuildConfig.PRO_FEATURES) "SMS & Call" else "Call"
+                            val description = if (BuildConfig.PRO_FEATURES)
+                                "Allow PulseLink to send emergency messages and place calls."
+                            else
+                                "Allow PulseLink to place calls."
+
+                            val manualHelp = if (!smsGranted || !callPermissionGranted) {
+                                if (BuildConfig.PRO_FEATURES)
+                                    "If SMS or Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS and Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch both to Allow."
+                                else
+                                    "If Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch to Allow."
+                            } else null
+
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Call,
-                                title = "SMS & Call",
-                                description = "Allow PulseLink to send emergency messages and place calls.",
+                                title = title,
+                                description = description,
                                 granted = smsGranted && callPermissionGranted,
-                                manualHelp = if (!smsGranted || !callPermissionGranted) {
-                                    "If SMS or Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS and Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch both to Allow."
-                                } else null
+                                manualHelp = manualHelp
                             ).also { add(it) }
                             OnboardingPermissionState(
                                 icon = Icons.Filled.Lock,
@@ -1251,11 +1265,13 @@ private fun BeaconStepRow(label: String, done: Boolean) {
 
 private fun requiredSmsPermissions(context: android.content.Context): List<String> =
     buildList {
-        add(Manifest.permission.SEND_SMS)
-        add(Manifest.permission.RECEIVE_SMS)
-        add(Manifest.permission.READ_SMS)
-        add(Manifest.permission.RECEIVE_MMS)
-        add(Manifest.permission.RECEIVE_WAP_PUSH)
+        if (BuildConfig.PRO_FEATURES) {
+            add(Manifest.permission.SEND_SMS)
+            add(Manifest.permission.RECEIVE_SMS)
+            add(Manifest.permission.READ_SMS)
+            add(Manifest.permission.RECEIVE_MMS)
+            add(Manifest.permission.RECEIVE_WAP_PUSH)
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             add(Manifest.permission.POST_NOTIFICATIONS)
         }
