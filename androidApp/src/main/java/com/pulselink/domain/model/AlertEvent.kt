@@ -15,5 +15,6 @@ data class AlertEvent(
     val contactId: Long? = null,
     val contactName: String? = null,
     val isIncoming: Boolean = false,
-    val soundKey: String? = null
+    val soundKey: String? = null,
+    val isRead: Boolean = false
 )

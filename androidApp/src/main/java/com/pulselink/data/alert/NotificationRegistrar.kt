@@ -124,6 +124,20 @@ class NotificationRegistrar @Inject constructor(
         return channelId
     }
 
+    fun updateBadgeCount(count: Int) {
+        // On Android 8.0+ (API 26+), badges are automatic based on active notifications.
+        // We can't explicitly set the number on the badge for standard launchers.
+        // The badge will show a dot or a number based on the number of active notifications
+        // in the notification shade.
+        // To properly support "unread count" badges, we rely on the summary notification
+        // or individual notifications remaining active until read.
+        // However, some 3rd party launchers support badge counts via intent, but that is
+        // generally discouraged in modern Android development in favor of notification-based badges.
+
+        // For this implementation, we rely on the notification management in AlertDispatcher
+        // to ensure the notification count aligns with unread alerts.
+    }
+
     private fun buildChannelId(category: SoundCategory, soundOption: SoundOption?): String {
         val base = when (category) {
             SoundCategory.SIREN -> "pulse_alert"

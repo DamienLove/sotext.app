@@ -10,6 +10,7 @@ data class PulseLinkUiState(
     val settings: PulseLinkSettings = PulseLinkSettings(),
     val contacts: List<Contact> = emptyList(),
     val recentEvents: List<AlertEvent> = emptyList(),
+    val unreadAlertCount: Int = 0,
     val isDispatching: Boolean = false,
     val lastMessagePreview: String? = null,
     val emergencySoundOptions: List<SoundOption> = emptyList(),
