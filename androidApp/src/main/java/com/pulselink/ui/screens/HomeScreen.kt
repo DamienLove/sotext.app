@@ -90,6 +90,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -834,6 +840,7 @@ private fun SearchAndAddRow(
     onSearchChange: (TextFieldValue) -> Unit,
     onAddClick: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
         unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
@@ -860,6 +867,8 @@ private fun SearchAndAddRow(
             } else null,
             label = { Text("Search contacts") },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             shape = RoundedCornerShape(18.dp),
             colors = fieldColors
         )
@@ -1423,13 +1432,26 @@ private fun AddContactDialog(
                     value = name,
                     onValueChange = onNameChange,
                     label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next
+                    )
                 )
                 OutlinedTextField(
                     value = handle,
                     onValueChange = onHandleChange,
                     label = { Text("Phone or email") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { onSave() }
+                    )
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
