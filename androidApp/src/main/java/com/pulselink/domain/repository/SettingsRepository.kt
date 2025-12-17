@@ -30,4 +30,5 @@ interface SettingsRepository {
     suspend fun setPrivatePinHash(hash: String?)
     suspend fun setPrivateThreads(threadIds: List<Long>)
     suspend fun setBeaconLauncherEnabled(enabled: Boolean)
+    suspend fun setBeaconHintDismissed(dismissed: Boolean)
 }

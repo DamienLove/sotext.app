@@ -51,6 +51,7 @@ private val REMOTE_WEB_ACCESS = booleanPreferencesKey("remote_web_access")
 private val PRIVATE_PIN_HASH = stringPreferencesKey("private_pin_hash")
 private val PRIVATE_THREADS = stringPreferencesKey("private_threads")
 private val BEACON_LAUNCHER_ENABLED = booleanPreferencesKey("beacon_launcher_enabled")
+private val BEACON_HINT_DISMISSED = booleanPreferencesKey("beacon_hint_dismissed")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -94,7 +95,8 @@ class SettingsRepositoryImpl @Inject constructor(
             privateThreadIds = prefs[PRIVATE_THREADS]?.let {
                 runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
             } ?: PulseLinkSettings().privateThreadIds,
-            beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled
+            beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled,
+            beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed
         )
     }
 
@@ -126,6 +128,7 @@ class SettingsRepositoryImpl @Inject constructor(
             updated.privatePinHash?.let { prefs[PRIVATE_PIN_HASH] = it } ?: prefs.remove(PRIVATE_PIN_HASH)
             prefs[PRIVATE_THREADS] = json.encodeToString(updated.privateThreadIds)
             prefs[BEACON_LAUNCHER_ENABLED] = updated.beaconLauncherEnabled
+            prefs[BEACON_HINT_DISMISSED] = updated.beaconHintDismissed
         }
     }
 
@@ -270,6 +273,12 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setBeaconHintDismissed(dismissed: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[BEACON_HINT_DISMISSED] = dismissed
+        }
+    }
+
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
@@ -304,7 +313,8 @@ class SettingsRepositoryImpl @Inject constructor(
             privateThreadIds = prefs[PRIVATE_THREADS]?.let {
                 runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
             } ?: PulseLinkSettings().privateThreadIds,
-            beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled
+            beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled,
+            beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed
         )
     }
 }

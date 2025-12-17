@@ -1015,6 +1015,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setBeaconHintDismissed(dismissed: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setBeaconHintDismissed(dismissed)
+        }
+    }
+
     private fun emitDndStatus(result: AlertResult?) {
         val overrideResult = result?.overrideResult ?: run {
             dndStatus.value = null

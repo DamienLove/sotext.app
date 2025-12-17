@@ -123,6 +123,11 @@ fun HomeScreen(
     onSettingsClick: () -> Unit = {},
     onFaqClick: () -> Unit = {},
     onBeaconClick: () -> Unit = {},
+    showBeaconIcon: Boolean = false,
+    showBeaconHint: Boolean = false,
+    onBeaconHintDismiss: () -> Unit = {},
+    onBeaconHintUse: () -> Unit = {},
+    onBeaconHintDisable: () -> Unit = {},
     showAddLoginPrompt: Boolean = false,
     onAddLoginClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
@@ -177,8 +182,16 @@ fun HomeScreen(
                 onSettingsClick = onSettingsClick,
                 onFaqClick = onFaqClick,
                 onBeaconClick = onBeaconClick,
-                onUpgradeClick = onUpgradeClick
+                onUpgradeClick = onUpgradeClick,
+                showBeacon = showBeaconIcon
             )
+            if (showBeaconHint) {
+                BeaconHintCard(
+                    onDismiss = onBeaconHintDismiss,
+                    onUse = onBeaconHintUse,
+                    onDisable = onBeaconHintDisable
+                )
+            }
             if (showAddLoginPrompt) {
                 AddLoginCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -261,7 +274,8 @@ private fun HeaderSection(
     onSettingsClick: () -> Unit,
     onFaqClick: () -> Unit,
     onBeaconClick: () -> Unit,
-    onUpgradeClick: () -> Unit
+    onUpgradeClick: () -> Unit,
+    showBeacon: Boolean
 ) {
     val heroShape = RoundedCornerShape(32.dp)
     val heroBrush = Brush.verticalGradient(
@@ -306,7 +320,8 @@ private fun HeaderSection(
                     onFaqClick = onFaqClick,
                     onBeaconClick = onBeaconClick,
                     onUpgradeClick = onUpgradeClick,
-                    isProUser = state.isProUser
+                    isProUser = state.isProUser,
+                    showBeacon = showBeacon
                 )
             }
         }
@@ -484,7 +499,8 @@ private fun NavigationRow(
     onFaqClick: () -> Unit,
     onBeaconClick: () -> Unit,
     onUpgradeClick: () -> Unit,
-    isProUser: Boolean
+    isProUser: Boolean,
+    showBeacon: Boolean
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -492,12 +508,65 @@ private fun NavigationRow(
     ) {
         NavButton(icon = Icons.Filled.Notifications, label = "Alerts", onClick = onAlertsClick)
         NavButton(icon = Icons.Filled.Help, label = stringResource(id = R.string.faq_title), onClick = onFaqClick)
-        if (isProUser) {
+        if (showBeacon) {
             NavButton(icon = Icons.Outlined.WifiTethering, label = stringResource(id = R.string.home_beacon_label), onClick = onBeaconClick)
         }
         NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick)
         if (!isProUser) {
             NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick)
+        }
+    }
+}
+
+@Composable
+private fun BeaconHintCard(
+    onDismiss: () -> Unit,
+    onUse: () -> Unit,
+    onDisable: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.WifiTethering,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Beacon inbox",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) {
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = "Dismiss")
+                }
+            }
+            Text(
+                text = "Use Beacon to manage SMS in PulseLink. Keep it on, or disable if you prefer another app.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onDisable, modifier = Modifier.weight(1f)) {
+                    Text("Disable")
+                }
+                Button(onClick = onUse, modifier = Modifier.weight(1f)) {
+                    Text("Use Beacon")
+                }
+            }
         }
     }
 }

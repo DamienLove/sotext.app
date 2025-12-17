@@ -39,7 +39,8 @@ data class PulseLinkSettings(
     val remoteWebAccessEnabled: Boolean = false,
     val privatePinHash: String? = null,
     val privateThreadIds: List<Long> = emptyList(),
-    val beaconLauncherEnabled: Boolean = true
+    val beaconLauncherEnabled: Boolean = true,
+    val beaconHintDismissed: Boolean = false
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

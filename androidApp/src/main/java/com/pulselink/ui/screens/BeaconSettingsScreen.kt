@@ -134,15 +134,9 @@ fun BeaconSettingsScreen(
             )
             BeaconSettingsToggleRow(
                 title = "Beacon inbox icon",
-                subtitle = if (isDefaultSmsApp) "Shows launcher shortcut" else "Requires PulseLink as default SMS",
-                checked = beaconLauncherEnabled && isDefaultSmsApp,
-                onCheckedChange = { enabled ->
-                    if (!isDefaultSmsApp && defaultSmsSupported) {
-                        onRequestDefaultSms()
-                    } else {
-                        onToggleBeaconLauncher(enabled)
-                    }
-                },
+                subtitle = "Shows launcher shortcut",
+                checked = beaconLauncherEnabled,
+                onCheckedChange = onToggleBeaconLauncher,
                 leadingIcon = Icons.Filled.Message
             )
         }

@@ -56,6 +56,12 @@ Current SMS features
 - No code changes; refreshed pulselink.txt per request. Latest APKs remain in `apks-disposable/`.
 
 2025-12-16
-- Hotfix release v41 (Pro): Room DB version bumped to 11 with destructive migration to resolve launch crash; Beacon inbox shortcut always drives navigation with proper default-SMS/permission prompts; versionCode/Name updated to 41.
+- Release v42 (free/pro/premium): versionCode/Name bumped to 42; Room DB version still 11; rebuilt AABs copied to `disposable_aabs/` (pulselink-free|pro|premium-release.aab); release notes drafted (default-SMS inbox, early MMS, Numlookup caller ID, theme presets, premium tier).
 - Added Room schema export args (build/room-schemas) to silence processor warnings; .gitignore updated to exclude local Gradle caches and droidcrash.txt.
 - Beacon customization/search: added ThemePalette DataStore with global + per-contact overrides, Compose customization screen (sample chat tap-to-edit, popular swatches, color wheel, presets, font + radius + inbox icon selector), themed inbox/thread UI, OTP cleanup (expire 10 min short-code codes), and contextual search (contacts -> thread jump; phrase -> body hits; premium hook for Gemini).
+
+2025-12-17
+- Release v43 (free/pro/premium): Beacon inbox access flow hardened (settings toggles for Beacon icon + default SMS, guided dialog that retries permissions/default role), Beacon home shortcut respects toggle, versionCode/Name bumped to 43. New bundles copied to `disposable_aabs/` as pulselink-free-v43.aab / pulselink-pro-v43.aab / pulselink-premium-v43.aab for internal testing.
+
+2025-12-18
+- Release v44/v46 (free/pro/premium): Beacon icon always shown by default for all tiers; home hint lets users disable it or jump to default-SMS chooser; launcher toggles on/off immediately. Restored READ_SMS + READ_CALL_LOG to onboarding to stop false “missing permission” blocks. Beacon assist now only depends on permissions (not default-SMS) to open. Rebuilt AABs in `disposable_aabs/` up to v46 (free/pro/premium).

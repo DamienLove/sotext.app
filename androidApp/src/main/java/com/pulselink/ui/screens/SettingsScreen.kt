@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
@@ -56,12 +57,16 @@ fun SettingsScreen(
     showAds: Boolean,
     isProUser: Boolean,
     isDefaultSmsApp: Boolean,
+    defaultSmsSupported: Boolean,
+    beaconLauncherEnabled: Boolean,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
     onRequestBatteryOpt: () -> Unit,
     onRequestUnusedApps: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
     onToggleAutoUpdateContactInfo: (Boolean) -> Unit,
+    onRequestDefaultSms: () -> Unit,
+    onToggleBeaconLauncher: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
     profileUpdateState: ProfileUpdateUiState,
     onBroadcastProfileUpdate: () -> Unit,
@@ -162,23 +167,46 @@ fun SettingsScreen(
                 checked = settings.autoUpdateContactInfo,
                 onCheckedChange = onToggleAutoUpdateContactInfo
             )
-            if (isProUser) {
-                SettingsActionRow(
-                    title = stringResource(id = R.string.settings_beacon_title),
-                    subtitle = if (isDefaultSmsApp && settings.beaconLauncherEnabled) {
-                        stringResource(id = R.string.settings_beacon_enabled_subtitle)
-                    } else {
-                        stringResource(id = R.string.settings_beacon_subtitle)
-                    },
-                    actionLabel = if (isDefaultSmsApp && settings.beaconLauncherEnabled) {
-                        stringResource(id = R.string.settings_beacon_action_open)
-                    } else {
-                        stringResource(id = R.string.settings_beacon_action_enable)
-                    },
-                    onAction = onOpenBeacon,
-                    leadingIcon = Icons.Outlined.WifiTethering
-                )
+            SettingsToggleRow(
+                title = stringResource(id = R.string.settings_beacon_icon_title),
+                subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),
+                checked = beaconLauncherEnabled,
+                onCheckedChange = onToggleBeaconLauncher
+            )
+            val defaultSmsSubtitle = when {
+                isDefaultSmsApp -> stringResource(id = R.string.settings_default_sms_ready)
+                defaultSmsSupported -> stringResource(id = R.string.settings_default_sms_required)
+                else -> stringResource(id = R.string.settings_default_sms_unavailable)
             }
+            val defaultSmsActionLabel = if (isDefaultSmsApp) {
+                stringResource(id = R.string.settings_default_sms_action_change)
+            } else if (defaultSmsSupported) {
+                stringResource(id = R.string.settings_default_sms_action_make_default)
+            } else {
+                stringResource(id = R.string.settings_default_sms_action_change)
+            }
+            SettingsActionRow(
+                title = stringResource(id = R.string.settings_default_sms_title),
+                subtitle = defaultSmsSubtitle,
+                actionLabel = defaultSmsActionLabel,
+                onAction = onRequestDefaultSms,
+                leadingIcon = Icons.Filled.Message
+            )
+            SettingsActionRow(
+                title = stringResource(id = R.string.settings_beacon_title),
+                subtitle = if (isDefaultSmsApp && beaconLauncherEnabled) {
+                    stringResource(id = R.string.settings_beacon_enabled_subtitle)
+                } else {
+                    stringResource(id = R.string.settings_beacon_subtitle)
+                },
+                actionLabel = if (isDefaultSmsApp && beaconLauncherEnabled) {
+                    stringResource(id = R.string.settings_beacon_action_open)
+                } else {
+                    stringResource(id = R.string.settings_beacon_action_enable)
+                },
+                onAction = onOpenBeacon,
+                leadingIcon = Icons.Outlined.WifiTethering
+            )
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_sync_contacts_title),
                 subtitle = null,

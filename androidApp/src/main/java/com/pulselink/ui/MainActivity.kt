@@ -24,6 +24,8 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -41,6 +43,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.PackageManagerCompat
@@ -96,6 +99,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PowerSettingsNew
@@ -108,6 +112,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
 import dagger.hilt.android.AndroidEntryPoint
@@ -125,6 +131,20 @@ import com.pulselink.util.formatTimestamp
 import com.pulselink.util.DefaultSmsHelper
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+
+private data class BeaconAssistState(
+    val iconEnabled: Boolean = false,
+    val defaultSmsGranted: Boolean = false,
+    val smsPermissionsGranted: Boolean = false,
+    val message: String = "",
+    val error: String? = null
+) {
+    val ready: Boolean get() = iconEnabled && smsPermissionsGranted
+}
+
+private enum class BeaconFlowStage {
+    Idle, RequestedDefault, RequestedPermissions
+}
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -178,19 +198,26 @@ class MainActivity : AppCompatActivity() {
                 var isCancelingEmergency by remember { mutableStateOf(false) }
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
                 var pendingInboxNav by remember { mutableStateOf(false) }
+                var showBeaconAssist by remember { mutableStateOf(false) }
+                var beaconAssistState by remember { mutableStateOf(BeaconAssistState(message = "")) }
+                var beaconFlowStage by remember { mutableStateOf(BeaconFlowStage.Idle) }
+                var beaconEnableAttempted by remember { mutableStateOf(false) }
                 val smsPermLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestMultiplePermissions()
                 ) {
                     missingSmsPerms = requiredSmsPermissions(context)
-                    if (pendingInboxNav && missingSmsPerms.isEmpty()) {
-                        pendingInboxNav = false
-                        navController.navigate("sms/inbox") {
-                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
-                            launchSingleTop = true
-                            restoreState = false
-                        }
-                    } else if (pendingInboxNav) {
-                        pendingInboxNav = false
+                    if (showBeaconAssist) {
+                        beaconAssistState = beaconAssistState.copy(
+                            smsPermissionsGranted = missingSmsPerms.isEmpty(),
+                            message = if (missingSmsPerms.isEmpty()) {
+                                "SMS permissions granted."
+                            } else {
+                                context.getString(R.string.beacon_flow_permissions_needed)
+                            }
+                        )
+                    }
+                    if (pendingInboxNav) {
+                        inboxShortcutFlow.tryEmit(Unit)
                     }
                 }
                 val defaultSmsLauncher = rememberLauncherForActivityResult(
@@ -198,22 +225,33 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     isDefaultSms = defaultSmsHelper.isDefaultSms()
                     missingSmsPerms = requiredSmsPermissions(context)
-                    if (pendingInboxNav && missingSmsPerms.isNotEmpty()) {
-                        smsPermLauncher.launch(missingSmsPerms.toTypedArray())
-                    } else if (pendingInboxNav && isDefaultSms) {
-                        pendingInboxNav = false
-                        navController.navigate("sms/inbox") {
-                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
-                            launchSingleTop = true
-                            restoreState = false
-                        }
-                    } else if (pendingInboxNav) {
-                        pendingInboxNav = false
+                    if (showBeaconAssist) {
+                        beaconAssistState = beaconAssistState.copy(
+                            defaultSmsGranted = isDefaultSms,
+                            message = if (isDefaultSms) {
+                                context.getString(R.string.settings_default_sms_ready)
+                            } else {
+                                context.getString(R.string.settings_default_sms_required)
+                            }
+                        )
+                    }
+                    if (pendingInboxNav) {
+                        inboxShortcutFlow.tryEmit(Unit)
                     }
                 }
                 val launchBeaconInbox: () -> Unit = {
-                    viewModel.setBeaconLauncherEnabled(true)
                     pendingInboxNav = true
+                    beaconFlowStage = BeaconFlowStage.Idle
+                    showBeaconAssist = true
+                    beaconAssistState = BeaconAssistState(
+                        iconEnabled = state.settings.beaconLauncherEnabled,
+                        defaultSmsGranted = isDefaultSms,
+                        smsPermissionsGranted = missingSmsPerms.isEmpty(),
+                        message = context.getString(R.string.settings_beacon_title)
+                    )
+                    if (!state.settings.beaconLauncherEnabled) {
+                        viewModel.setBeaconLauncherEnabled(true)
+                    }
                     inboxShortcutFlow.tryEmit(Unit)
                 }
                 val initialInboxShortcut = intent?.getBooleanExtra("open_sms_inbox", false) == true
@@ -221,6 +259,7 @@ class MainActivity : AppCompatActivity() {
                     {
                         val intent = defaultSmsHelper.buildRoleRequestIntent()
                         if (intent != null) {
+                            beaconFlowStage = BeaconFlowStage.RequestedDefault
                             defaultSmsLauncher.launch(intent)
                         } else {
                             Toast.makeText(
@@ -236,42 +275,92 @@ class MainActivity : AppCompatActivity() {
                     missingSmsPerms = requiredSmsPermissions(context)
                     if (initialInboxShortcut) inboxShortcutFlow.tryEmit(Unit)
                 }
-                LaunchedEffect(isDefaultSms, state.settings.beaconLauncherEnabled) {
-                    val shouldEnable = isDefaultSms && state.settings.beaconLauncherEnabled
-                    updateBeaconLauncher(shouldEnable)
+                LaunchedEffect(state.settings.beaconLauncherEnabled) {
+                    updateBeaconLauncher(state.settings.beaconLauncherEnabled)
                 }
                 LaunchedEffect(navController) {
                     inboxShortcutFlow.collectLatest {
-                        // Re-evaluate state on each request, but always drive navigation to the inbox
+                        pendingInboxNav = true
                         isDefaultSms = defaultSmsHelper.isDefaultSms()
                         val missingNow = requiredSmsPermissions(context)
                         missingSmsPerms = missingNow
-                        val canRequestDefaultSms = defaultSmsHelper.buildRoleRequestIntent() != null
-                        if (!isDefaultSms) {
-                            if (canRequestDefaultSms) {
-                                pendingInboxNav = true
-                                requestDefaultSms()
+                        val currentBeaconEnabled = viewModel.uiState.value.settings.beaconLauncherEnabled
+                        if (showBeaconAssist) {
+                            beaconAssistState = beaconAssistState.copy(
+                                iconEnabled = currentBeaconEnabled,
+                                defaultSmsGranted = isDefaultSms,
+                                smsPermissionsGranted = missingNow.isEmpty(),
+                                message = context.getString(R.string.settings_beacon_subtitle),
+                                error = null
+                            )
+                        }
+                        val shouldEnable = currentBeaconEnabled
+                        updateBeaconLauncher(shouldEnable)
+
+                        if (!currentBeaconEnabled) {
+                            if (showBeaconAssist) {
+                                beaconAssistState = beaconAssistState.copy(
+                                    message = context.getString(R.string.beacon_flow_enable_icon)
+                                )
+                            }
+                            if (!beaconEnableAttempted) {
+                                beaconEnableAttempted = true
+                                viewModel.setBeaconLauncherEnabled(true)
+                                inboxShortcutFlow.tryEmit(Unit)
                                 return@collectLatest
                             } else {
-                                Toast.makeText(
-                                    context,
-                                    "Set PulseLink as the default SMS app in Android settings to enable Beacon.",
-                                    Toast.LENGTH_LONG
-                                ).show()
                                 pendingInboxNav = false
+                                beaconFlowStage = BeaconFlowStage.Idle
+                                if (showBeaconAssist) {
+                                    beaconAssistState = beaconAssistState.copy(
+                                        error = context.getString(R.string.beacon_flow_retry)
+                                    )
+                                }
                                 return@collectLatest
                             }
                         }
+                        beaconEnableAttempted = false
+
                         if (missingNow.isNotEmpty()) {
+                            if (beaconFlowStage == BeaconFlowStage.RequestedPermissions) {
+                                pendingInboxNav = false
+                                beaconFlowStage = BeaconFlowStage.Idle
+                                if (showBeaconAssist) {
+                                    beaconAssistState = beaconAssistState.copy(
+                                        error = context.getString(R.string.beacon_flow_permissions_needed)
+                                    )
+                                }
+                                return@collectLatest
+                            }
                             pendingInboxNav = true
+                            beaconFlowStage = BeaconFlowStage.RequestedPermissions
+                            if (showBeaconAssist) {
+                                beaconAssistState = beaconAssistState.copy(
+                                    smsPermissionsGranted = false,
+                                    message = context.getString(R.string.beacon_flow_permissions_needed),
+                                    error = null
+                                )
+                            }
                             smsPermLauncher.launch(missingNow.toTypedArray())
                             return@collectLatest
+                        }
+
+                        pendingInboxNav = false
+                        beaconFlowStage = BeaconFlowStage.Idle
+                        if (showBeaconAssist) {
+                            beaconAssistState = beaconAssistState.copy(
+                                iconEnabled = true,
+                                smsPermissionsGranted = true,
+                                message = context.getString(R.string.beacon_flow_ready),
+                                error = null
+                            )
                         }
                         navController.navigate("sms/inbox") {
                             popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
                             launchSingleTop = true
                             restoreState = false
                         }
+                        showBeaconAssist = false
                     }
                 }
                 val cancelEmergencyLauncher = rememberCancelEmergencyLauncher(
@@ -341,6 +430,7 @@ class MainActivity : AppCompatActivity() {
                     buildList {
                         add(Manifest.permission.SEND_SMS)
                         add(Manifest.permission.RECEIVE_SMS)
+                        add(Manifest.permission.READ_SMS)
                         add(Manifest.permission.CALL_PHONE)
                         add(Manifest.permission.READ_CONTACTS)
                         add(Manifest.permission.READ_CALL_LOG)
@@ -748,6 +838,17 @@ class MainActivity : AppCompatActivity() {
                             onSettingsClick = { navController.navigate("settings") },
                             onFaqClick = { navController.navigate("faq") },
                             onBeaconClick = launchBeaconInbox,
+                            showBeaconIcon = state.settings.beaconLauncherEnabled,
+                            showBeaconHint = !state.settings.beaconHintDismissed,
+                            onBeaconHintDismiss = { viewModel.setBeaconHintDismissed(true) },
+                            onBeaconHintDisable = {
+                                viewModel.setBeaconHintDismissed(true)
+                                viewModel.setBeaconLauncherEnabled(false)
+                            },
+                            onBeaconHintUse = {
+                                viewModel.setBeaconHintDismissed(true)
+                                requestDefaultSms()
+                            },
                             onAddContact = viewModel::saveContact,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
@@ -936,12 +1037,16 @@ class MainActivity : AppCompatActivity() {
                             showAds = state.showAds,
                             isProUser = state.isProUser,
                             isDefaultSmsApp = isDefaultSms,
+                            defaultSmsSupported = defaultSmsHelper.buildRoleRequestIntent() != null || isDefaultSms,
+                            beaconLauncherEnabled = state.settings.beaconLauncherEnabled,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onRequestDndAccess = { openDndSettings(context) },
                             onRequestBatteryOpt = { openBatteryOptimizationSettings(context) },
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
                             onToggleAutoUpdateContactInfo = viewModel::setAutoUpdateContactInfo,
+                            onRequestDefaultSms = requestDefaultSms,
+                            onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) },
                             onSyncNow = viewModel::syncContactsNow,
                             profileUpdateState = state.profileUpdate,
                             onBroadcastProfileUpdate = viewModel::broadcastProfileToContacts,
@@ -1039,6 +1144,22 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
+                if (showBeaconAssist) {
+                    BeaconAssistDialog(
+                        state = beaconAssistState,
+                        onDismiss = {
+                            showBeaconAssist = false
+                            pendingInboxNav = false
+                            beaconFlowStage = BeaconFlowStage.Idle
+                        },
+                        onRetry = {
+                            pendingInboxNav = true
+                            beaconFlowStage = BeaconFlowStage.Idle
+                            inboxShortcutFlow.tryEmit(Unit)
+                        }
+                    )
+                }
+
                 if (isPreparingCall) {
                     CallPreparationDialog()
                 }
@@ -1079,6 +1200,52 @@ class MainActivity : AppCompatActivity() {
             val params = PictureInPictureParams.Builder().build()
             enterPictureInPictureMode(params)
         }
+    }
+}
+
+@Composable
+private fun BeaconAssistDialog(
+    state: BeaconAssistState,
+    onDismiss: () -> Unit,
+    onRetry: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "Beacon inbox setup") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                BeaconStepRow(label = "Enable Beacon icon", done = state.iconEnabled)
+                BeaconStepRow(label = "Grant SMS permissions", done = state.smsPermissionsGranted)
+                Text(text = state.error ?: state.message)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = if (state.ready) onDismiss else onRetry) {
+                Text(text = if (state.ready) "Close" else "Retry")
+            }
+        },
+        dismissButton = {
+            if (!state.ready) {
+                TextButton(onClick = onDismiss) {
+                    Text(text = "Cancel")
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun BeaconStepRow(label: String, done: Boolean) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = if (done) Icons.Filled.CheckCircle else Icons.Filled.Schedule,
+            contentDescription = null,
+            tint = if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(text = label, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
