@@ -45,7 +45,7 @@ export const alertRelay = functions.https.onCall(async (data: RelayRequest, cont
     message: data.message,
     severity: data.severity ?? "non_urgent",
     recipients: cleanRecipients,
-    senderId: data.senderId ?? context.auth.uid,
+    senderId: context.auth.uid,
     location: data.location ?? null,
     metadata: data.metadata ?? {},
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -79,10 +79,21 @@ export const alertRelayHttp = functions.https.onRequest(async (req, res) => {
     try {
       const decoded = await admin.auth().verifyIdToken(token);
       authUid = decoded.uid;
-    } catch (_err) {
-      // Ignore invalid tokens; treat as anonymous
-      authUid = null;
+    } catch {
+      res.status(401).send({
+        error: "unauthenticated",
+        message: "Invalid auth token",
+      });
+      return;
     }
+  }
+
+  if (!authUid) {
+    res.status(401).send({
+      error: "unauthenticated",
+      message: "Authentication required",
+    });
+    return;
   }
 
   const data = req.body as RelayRequest | undefined;
@@ -108,7 +119,7 @@ export const alertRelayHttp = functions.https.onRequest(async (req, res) => {
     message: data.message,
     severity: data.severity ?? "non_urgent",
     recipients: cleanRecipients,
-    senderId: data.senderId ?? authUid,
+    senderId: authUid,
     location: data.location ?? null,
     metadata: data.metadata ?? {},
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
