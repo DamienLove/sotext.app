@@ -66,8 +66,14 @@ interface AlertEventDao {
     @Query("SELECT * FROM alert_events ORDER BY timestamp DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<AlertEvent>>
 
+    @Query("SELECT COUNT(*) FROM alert_events WHERE isRead = 0")
+    fun observeUnreadCount(): Flow<Int>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(event: AlertEvent)
+
+    @Query("UPDATE alert_events SET isRead = 1 WHERE id IN (:ids)")
+    suspend fun markAsRead(ids: List<Long>)
 
     @Query("DELETE FROM alert_events")
     suspend fun clear()
@@ -132,7 +138,7 @@ interface ArchivedThreadDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class],
-    version = 11,
+    version = 12,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -195,6 +201,12 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+            }
+        }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE alert_events ADD COLUMN isRead INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

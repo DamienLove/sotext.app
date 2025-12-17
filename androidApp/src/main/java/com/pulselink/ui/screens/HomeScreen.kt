@@ -54,6 +54,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -321,7 +323,8 @@ private fun HeaderSection(
                     onBeaconClick = onBeaconClick,
                     onUpgradeClick = onUpgradeClick,
                     isProUser = state.isProUser,
-                    showBeacon = showBeacon
+                    showBeacon = showBeacon,
+                    unreadAlertCount = state.unreadAlertCount
                 )
             }
         }
@@ -500,13 +503,19 @@ private fun NavigationRow(
     onBeaconClick: () -> Unit,
     onUpgradeClick: () -> Unit,
     isProUser: Boolean,
-    showBeacon: Boolean
+    showBeacon: Boolean,
+    unreadAlertCount: Int
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        NavButton(icon = Icons.Filled.Notifications, label = "Alerts", onClick = onAlertsClick)
+        NavButton(
+            icon = Icons.Filled.Notifications,
+            label = "Alerts",
+            onClick = onAlertsClick,
+            badgeCount = unreadAlertCount
+        )
         NavButton(icon = Icons.Filled.Help, label = stringResource(id = R.string.faq_title), onClick = onFaqClick)
         if (showBeacon) {
             NavButton(icon = Icons.Outlined.WifiTethering, label = stringResource(id = R.string.home_beacon_label), onClick = onBeaconClick)
@@ -575,7 +584,8 @@ private fun BeaconHintCard(
 private fun NavButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    badgeCount: Int? = null
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -592,11 +602,33 @@ private fun NavButton(
             tonalElevation = 0.dp
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    icon,
-                    contentDescription = label,
-                    tint = Color.White
-                )
+                if (badgeCount != null && badgeCount > 0) {
+                    BadgedBox(
+                        badge = {
+                            Badge(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ) {
+                                Text(
+                                    text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    ) {
+                        Icon(
+                            icon,
+                            contentDescription = label,
+                            tint = Color.White
+                        )
+                    }
+                } else {
+                    Icon(
+                        icon,
+                        contentDescription = label,
+                        tint = Color.White
+                    )
+                }
             }
         }
         Text(

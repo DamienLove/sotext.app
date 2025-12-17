@@ -96,9 +96,10 @@ class MainViewModel @Inject constructor(
                 settingsRepository.settings,
                 contactRepository.observeContacts(),
                 alertRepository.observeRecent(10),
+                alertRepository.observeUnreadCount(),
                 dispatching,
                 lastMessage
-            ) { settings, contacts, events, isDispatching, message ->
+            ) { settings, contacts, events, unreadCount, isDispatching, message ->
                 val normalizedSettings = ensureSoundDefaults(settings)
                 val adsAvailable = BuildConfig.ADS_ENABLED
                 val showAds = adsAvailable && !normalizedSettings.proUnlocked && !normalizedSettings.premiumUnlocked
@@ -108,6 +109,7 @@ class MainViewModel @Inject constructor(
                     settings = normalizedSettings,
                     contacts = contacts,
                     recentEvents = events,
+                    unreadAlertCount = unreadCount,
                     isDispatching = isDispatching,
                     lastMessagePreview = message,
                     emergencySoundOptions = emergencySounds,
@@ -193,6 +195,12 @@ class MainViewModel @Inject constructor(
                     Log.w(TAG, "Unable to auto-send link request for ${contact.displayName}", error)
                 }
             }
+        }
+    }
+
+    fun markAlertsAsRead(alertIds: List<Long>) {
+        viewModelScope.launch {
+            alertRepository.markAsRead(alertIds)
         }
     }
 

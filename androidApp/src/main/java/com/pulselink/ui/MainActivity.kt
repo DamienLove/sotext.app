@@ -860,7 +860,7 @@ class MainActivity : AppCompatActivity() {
                             onReorderContacts = viewModel::reorderContacts,
                             onRequestCancelEmergency = cancelEmergencyHandler,
                             isCancelingEmergency = isCancelingEmergency,
-                            onAlertsClick = { navController.navigate("alert_history") },
+                            onAlertsClick = { navController.navigate("alerts_history") },
                             showAddLoginPrompt = isSmsOnlyUser,
                             onAddLoginClick = {
                                 navController.navigate("login") {
@@ -883,13 +883,11 @@ class MainActivity : AppCompatActivity() {
                             }
                         )
                     }
-                    composable("alert_history") {
+                    composable("alerts_history") {
                         AlertHistoryScreen(
-                            alerts = state.recentEvents,
-                            contacts = state.contacts,
-                            showAds = state.showAds,
-                            onBack = { navController.popBackStack() },
-                            onContactClick = { contactId -> navController.navigate("contact/$contactId") }
+                            state = state,
+                            onBackClick = { navController.popBackStack() },
+                            onMarkAlertsAsRead = { ids -> viewModel.markAlertsAsRead(ids) }
                         )
                     }
                     composable(
