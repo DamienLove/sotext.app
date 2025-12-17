@@ -71,10 +71,6 @@ class BeaconInboxActivity : ComponentActivity() {
                 val defaultSmsSupported = remember {
                     defaultSmsHelper.buildRoleRequestIntent() != null || defaultSmsHelper.isDefaultSms()
                 }
-                LaunchedEffect(isDefaultSms, state.settings.beaconLauncherEnabled) {
-                    val shouldEnable = isDefaultSms && state.settings.beaconLauncherEnabled
-                    updateBeaconLauncher(shouldEnable)
-                }
 
                 val defaultSmsLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
@@ -259,15 +255,4 @@ class BeaconInboxActivity : ComponentActivity() {
                 Manifest.permission.RECEIVE_WAP_PUSH
             )
         }
-
-    private fun updateBeaconLauncher(enable: Boolean) {
-        val component = android.content.ComponentName(this, InboxLauncherActivity::class.java)
-        val newState = if (enable) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-        else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-        packageManager.setComponentEnabledSetting(
-            component,
-            newState,
-            PackageManager.DONT_KILL_APP
-        )
-    }
 }
