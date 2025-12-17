@@ -111,7 +111,7 @@ fun AlertHistoryScreen(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(state.recentEvents) { event ->
+                items(state.recentEvents, key = { it.id }) { event ->
                     AlertEventItem(event = event)
                 }
             }
