@@ -41,3 +41,30 @@ PulseLink guarantees that critical alerts are audible even when the device is in
 - **Android 15+ device still silent** – Channel bypass is mandatory on API 35+. Re-enable bypass inside Settings → Apps → PulseLink → Notifications.
 - **Partial override** – If PulseLink reports a partial override, volumes were raised but global DND could not be disabled (policy missing or Android 15 restriction). Check notification-policy permissions and channel settings.
 - **Remote call siren too quiet** – Ensure linked contacts are allowed to override audio (`allowRemoteOverride=true`) and that STREAM_ALARM wasn't manually muted immediately beforehand. The app restores user volume after the override window.
+
+## Multi-Channel Message Delivery
+PulseLink employs a robust "Firebase-First, SMS-Fallback" strategy to ensure message delivery under various network conditions.
+
+1. **Firebase Cloud Messaging (FCM) & Firestore**:
+   - Primary channel for real-time delivery when both devices are online.
+   - Messages are written to Firestore `linkChannels/{channelId}/messages`.
+   - Firebase Functions trigger FCM notifications to wake up the recipient device.
+   - Requires internet connection and valid authentication.
+
+2. **SMS Fallback**:
+   - Automatically used if Firebase delivery fails or times out (default timeout: 5s).
+   - Also used if the recipient is known to be offline or not linked via Firebase.
+   - Ensures delivery even without data connectivity (requires cellular network).
+   - Encodes message payload in a compact format prefixed with `PULSELINK`.
+
+3. **Email Fallback (Tertiary)**:
+   - Optional fallback if both Firebase and SMS fail.
+   - Triggered via Firebase Functions (`sendEmailNotification`).
+   - Sends an email with deep links to the recipient.
+   - Requires "Email Fallback" to be enabled in Settings.
+
+### Delivery Tracking
+The app tracks delivery success rates for each channel per contact. This data is used to optimize channel selection and provide insights into connectivity issues. Users can view delivery statistics in the "Message Delivery Preferences" settings.
+
+### Channel Preferences
+Users can configure channel priorities and enable/disable specific channels (e.g., disable Firebase to force SMS-only mode) via Settings.

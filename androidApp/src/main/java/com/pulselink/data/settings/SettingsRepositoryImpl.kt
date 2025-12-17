@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.pulselink.domain.model.AlertProfile
+import com.pulselink.domain.model.MessageChannel
 import com.pulselink.domain.model.PulseLinkSettings
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -52,6 +53,9 @@ private val PRIVATE_PIN_HASH = stringPreferencesKey("private_pin_hash")
 private val PRIVATE_THREADS = stringPreferencesKey("private_threads")
 private val BEACON_LAUNCHER_ENABLED = booleanPreferencesKey("beacon_launcher_enabled")
 private val BEACON_HINT_DISMISSED = booleanPreferencesKey("beacon_hint_dismissed")
+private val FIREBASE_MESSAGING_ENABLED = booleanPreferencesKey("firebase_messaging_enabled")
+private val EMAIL_FALLBACK_ENABLED = booleanPreferencesKey("email_fallback_enabled")
+private val MESSAGING_CHANNEL_PRIORITY = stringPreferencesKey("messaging_channel_priority")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -96,7 +100,12 @@ class SettingsRepositoryImpl @Inject constructor(
                 runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
             } ?: PulseLinkSettings().privateThreadIds,
             beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled,
-            beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed
+            beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed,
+            firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
+            emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
+            messagingChannelPriority = prefs[MESSAGING_CHANNEL_PRIORITY]?.let {
+                runCatching { json.decodeFromString<List<MessageChannel>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().messagingChannelPriority
         )
     }
 
@@ -129,6 +138,9 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[PRIVATE_THREADS] = json.encodeToString(updated.privateThreadIds)
             prefs[BEACON_LAUNCHER_ENABLED] = updated.beaconLauncherEnabled
             prefs[BEACON_HINT_DISMISSED] = updated.beaconHintDismissed
+            prefs[FIREBASE_MESSAGING_ENABLED] = updated.firebaseMessagingEnabled
+            prefs[EMAIL_FALLBACK_ENABLED] = updated.emailFallbackEnabled
+            prefs[MESSAGING_CHANNEL_PRIORITY] = json.encodeToString(updated.messagingChannelPriority)
         }
     }
 
@@ -279,6 +291,24 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setFirebaseMessagingEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[FIREBASE_MESSAGING_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setEmailFallbackEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[EMAIL_FALLBACK_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setMessagingChannelPriority(priority: List<MessageChannel>) {
+        dataStore.edit { prefs ->
+            prefs[MESSAGING_CHANNEL_PRIORITY] = json.encodeToString(priority)
+        }
+    }
+
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
@@ -314,7 +344,12 @@ class SettingsRepositoryImpl @Inject constructor(
                 runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
             } ?: PulseLinkSettings().privateThreadIds,
             beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled,
-            beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed
+            beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed,
+            firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
+            emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
+            messagingChannelPriority = prefs[MESSAGING_CHANNEL_PRIORITY]?.let {
+                runCatching { json.decodeFromString<List<MessageChannel>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().messagingChannelPriority
         )
     }
 }

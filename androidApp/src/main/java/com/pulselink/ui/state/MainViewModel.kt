@@ -1021,6 +1021,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setFirebaseMessagingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setFirebaseMessagingEnabled(enabled)
+        }
+    }
+
+    fun setEmailFallbackEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setEmailFallbackEnabled(enabled)
+        }
+    }
+
     private fun emitDndStatus(result: AlertResult?) {
         val overrideResult = result?.overrideResult ?: run {
             dndStatus.value = null

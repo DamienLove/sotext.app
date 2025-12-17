@@ -20,6 +20,7 @@ import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
+import com.pulselink.domain.model.MessageChannel
 import com.pulselink.domain.model.MessageDirection
 import com.pulselink.domain.model.RemotePresence
 import com.pulselink.domain.model.SoundCategory
@@ -39,6 +40,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.Timestamp
+import com.google.firebase.functions.FirebaseFunctions
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -72,7 +74,9 @@ class ContactLinkManager @Inject constructor(
     private val linkChannelService: LinkChannelService,
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-    private val widgetStateManager: WidgetStateManager
+    private val functions: FirebaseFunctions,
+    private val widgetStateManager: WidgetStateManager,
+    private val messageDeliveryTracker: MessageDeliveryTracker
 ) {
 
     private val notificationManager by lazy { NotificationManagerCompat.from(context) }
@@ -86,10 +90,87 @@ class ContactLinkManager @Inject constructor(
         linkChannelService.start()
         monitorScope.launch {
             linkChannelService.inboundMessages.collect { payload ->
-                handleRealtimeManualMessage(payload)
+                handleRealtimeMessage(payload)
             }
         }
     }
+
+    private suspend fun sendMessageWithFallback(
+        contact: Contact,
+        message: PulseLinkMessage,
+        smsBody: String,
+        awaitSmsResult: Boolean = true
+    ): Boolean {
+        val settings = settingsRepository.settings.first()
+        val priority = settings.messagingChannelPriority // Default is [FIREBASE, SMS, EMAIL]
+
+        for (channel in priority) {
+            when (channel) {
+                MessageChannel.FIREBASE -> {
+                    if (settings.firebaseMessagingEnabled &&
+                        !contact.remoteDeviceId.isNullOrBlank() &&
+                        contact.linkStatus == LinkStatus.LINKED) {
+
+                        messageDeliveryTracker.recordAttempt(contact.id, MessageChannel.FIREBASE)
+                        val success = linkChannelService.sendMessage(message)
+                        if (success) {
+                            messageDeliveryTracker.recordSuccess(contact.id, MessageChannel.FIREBASE)
+                            return true
+                        } else {
+                            messageDeliveryTracker.recordFailure(contact.id, MessageChannel.FIREBASE)
+                        }
+                    }
+                }
+                MessageChannel.SMS -> {
+                     val targetPhone = contact.primaryPhone()
+                     if (!targetPhone.isNullOrBlank() && hasSmsPermission()) {
+                         messageDeliveryTracker.recordAttempt(contact.id, MessageChannel.SMS)
+                         val success = smsSender.sendSms(targetPhone, smsBody, awaitResult = awaitSmsResult)
+                         if (success) {
+                             messageDeliveryTracker.recordSuccess(contact.id, MessageChannel.SMS)
+                             return true
+                         } else {
+                             messageDeliveryTracker.recordFailure(contact.id, MessageChannel.SMS)
+                         }
+                     }
+                }
+                MessageChannel.EMAIL -> {
+                    if (settings.emailFallbackEnabled && !contact.email.isNullOrBlank()) {
+                        messageDeliveryTracker.recordAttempt(contact.id, MessageChannel.EMAIL)
+                        // Trigger email via Cloud Function
+                        val success = sendEmailNotification(contact, message)
+                        if (success) {
+                             messageDeliveryTracker.recordSuccess(contact.id, MessageChannel.EMAIL)
+                             return true
+                        } else {
+                             messageDeliveryTracker.recordFailure(contact.id, MessageChannel.EMAIL)
+                        }
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    private suspend fun sendEmailNotification(contact: Contact, message: PulseLinkMessage): Boolean {
+        // Call the Firebase Function 'sendEmailNotification'
+        val data = hashMapOf(
+            "email" to contact.email,
+            "messageType" to message::class.simpleName,
+            "senderName" to (auth.currentUser?.displayName ?: "PulseLink User"),
+            "payload" to when(message) {
+                is PulseLinkMessage.LinkRequest -> mapOf("code" to message.code, "senderName" to message.senderName)
+                is PulseLinkMessage.ManualMessage -> mapOf("body" to message.body, "urgency" to message.urgency.name)
+                // Add other types as needed for email templates
+                else -> mapOf("code" to message.code)
+            }
+        )
+
+        return runCatching {
+            functions.getHttpsCallable("sendEmailNotification").call(data).await()
+        }.isSuccess
+    }
+
 
     @android.annotation.SuppressLint("MissingPermission")
     suspend fun sendLinkRequest(contactId: Long) {
@@ -105,24 +186,26 @@ class ContactLinkManager @Inject constructor(
         upsertLinkDoc(code)
         val senderName = settingsRepository.settings.first().ownerName.ifBlank { contact.displayName }
 
-        val targetPhone = contact.primaryPhone()
-        if (!targetPhone.isNullOrBlank()) {
-            val payload = SmsCodec.encodeLinkRequest(deviceId, code, senderName)
-            if (hasSmsPermission()) {
-                smsSender.sendSms(targetPhone, payload)
-            } else {
-                Log.w(TAG, "SEND_SMS not granted; cannot send link request to $targetPhone")
-            }
-            return
-        }
+        val message = PulseLinkMessage.LinkRequest(deviceId, code, senderName)
+        val smsBody = SmsCodec.encodeLinkRequest(deviceId, code, senderName)
 
-        val targetEmail = normalizeEmail(contact.primaryEmail())
-        if (targetEmail.isNotBlank()) {
-            sendEmailLinkRequest(code, targetEmail, senderName, updated)
-            return
-        }
+        // Use standard fallback, but note that Firebase might fail if remoteDeviceId is unknown.
+        // sendMessageWithFallback handles null remoteDeviceId gracefully by skipping Firebase.
+        val sent = sendMessageWithFallback(contact, message, smsBody)
 
-        Log.w(TAG, "sendLinkRequest: no phone/email available for contactId=$contactId")
+        if (!sent) {
+             // If standard fallback failed (e.g. no phone, or SMS failed), try email explicitly if not covered by fallback loop
+             // (Though email IS in the fallback loop if enabled).
+             // But sendEmailLinkRequest in original code had specific logic for invites.
+             // We should preserve the specific email invite logic if fallback didn't handle it.
+
+             val targetEmail = normalizeEmail(contact.primaryEmail())
+             if (targetEmail.isNotBlank()) {
+                 sendEmailLinkRequest(code, targetEmail, senderName, updated)
+             } else {
+                 Log.w(TAG, "sendLinkRequest: no channel available for contactId=$contactId")
+             }
+        }
     }
 
     private suspend fun sendEmailLinkRequest(
@@ -171,21 +254,24 @@ class ContactLinkManager @Inject constructor(
         )
         contactRepository.upsert(updated)
         upsertLinkDoc(code)
+
         val targetPhone = contact.primaryPhone()
         if (!targetPhone.isNullOrBlank()) {
             maybeApplyRemoteUid(code, targetPhone)
-            val payload = SmsCodec.encodeLinkAccept(deviceId, code)
-            if (hasSmsPermission()) {
-                smsSender.sendSms(targetPhone, payload)
-            } else {
-                Log.w(TAG, "SEND_SMS not granted; cannot send link accept to $targetPhone")
-            }
-            return
         }
-        val targetEmail = normalizeEmail(contact.primaryEmail())
-        if (targetEmail.isNotBlank()) {
-            Log.i(TAG, "approveLink: recorded cloud approval for code=$code (email-only contact)")
-            return
+
+        val message = PulseLinkMessage.LinkAccept(deviceId, code)
+        val smsBody = SmsCodec.encodeLinkAccept(deviceId, code)
+
+        val sent = sendMessageWithFallback(contact, message, smsBody)
+
+        if (!sent) {
+            val targetEmail = normalizeEmail(contact.primaryEmail())
+            if (targetEmail.isNotBlank()) {
+                Log.i(TAG, "approveLink: recorded cloud approval for code=$code (email-only contact)")
+            } else {
+                Log.w(TAG, "approveLink: failed to send accept to $contactId")
+            }
         }
     }
 
@@ -198,14 +284,18 @@ class ContactLinkManager @Inject constructor(
     suspend fun sendPing(contactId: Long): Boolean {
         val contact = contactRepository.getContact(contactId) ?: return false
         if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) return false
+
         val ready = requestRemotePrepare(
             contact = contact,
             tier = EscalationTier.CHECK_IN,
             reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
         )
+
         val deviceId = settingsRepository.ensureDeviceId()
-        val payload = SmsCodec.encodePing(deviceId, contact.linkCode)
-        contact.primaryPhone()?.let { smsSender.sendSms(it, payload) }
+        val message = PulseLinkMessage.Ping(deviceId, contact.linkCode!!)
+        val smsBody = SmsCodec.encodePing(deviceId, contact.linkCode!!)
+
+        sendMessageWithFallback(contact, message, smsBody)
         return ready
     }
 
@@ -214,7 +304,7 @@ class ContactLinkManager @Inject constructor(
         if (contact.linkStatus != LinkStatus.LINKED || contact.linkCode.isNullOrBlank()) {
             return CallPreparationResult.FAILED
         }
-        if (contact.primaryPhone().isNullOrBlank()) return CallPreparationResult.FAILED
+
         val ready = requestRemotePrepare(
             contact = contact,
             tier = EscalationTier.EMERGENCY,
@@ -227,8 +317,11 @@ class ContactLinkManager @Inject constructor(
         val contact = contactRepository.getContact(contactId) ?: return
         val code = contact.linkCode ?: return
         val deviceId = settingsRepository.ensureDeviceId()
-        val payload = SmsCodec.encodeCallEnded(deviceId, code, callDuration)
-        contact.primaryPhone()?.let { smsSender.sendSms(it, payload, awaitResult = false) }
+
+        val message = PulseLinkMessage.CallEnded(deviceId, code, callDuration)
+        val smsBody = SmsCodec.encodeCallEnded(deviceId, code, callDuration)
+
+        sendMessageWithFallback(contact, message, smsBody, awaitSmsResult = false)
     }
 
     suspend fun sendSoundOverride(contactId: Long, tier: EscalationTier, soundKey: String?) {
@@ -236,8 +329,11 @@ class ContactLinkManager @Inject constructor(
         if (contact.linkStatus != LinkStatus.LINKED) return
         val code = contact.linkCode ?: return
         val deviceId = settingsRepository.ensureDeviceId()
-        val payload = SmsCodec.encodeSoundOverride(deviceId, code, tier, soundKey)
-        contact.primaryPhone()?.let { smsSender.sendSms(it, payload, awaitResult = false) }
+
+        val message = PulseLinkMessage.SoundOverride(deviceId, code, tier, soundKey)
+        val smsBody = SmsCodec.encodeSoundOverride(deviceId, code, tier, soundKey)
+
+        sendMessageWithFallback(contact, message, smsBody, awaitSmsResult = false)
     }
 
     suspend fun handleInbound(message: PulseLinkMessage, fromPhone: String) {
@@ -292,7 +388,7 @@ class ContactLinkManager @Inject constructor(
         contactRepository.upsert(updated)
         mirrorContactToCloud(updated)
         upsertLinkDoc(message.code)
-        maybeApplyRemoteUid(message.code, fromPhone)
+        if (fromPhone.isNotBlank()) maybeApplyRemoteUid(message.code, fromPhone)
         val persisted = contactRepository.getByLinkCode(message.code)
             ?: findContactByPhoneFlexible(fromPhone)
             ?: updated
@@ -329,7 +425,7 @@ class ContactLinkManager @Inject constructor(
         contactRepository.upsert(linked)
         mirrorContactToCloud(linked)
         upsertLinkDoc(message.code)
-        maybeApplyRemoteUid(message.code, fromPhone)
+        if (fromPhone.isNotBlank()) maybeApplyRemoteUid(message.code, fromPhone)
         notifyLinked(linked)
     }
 
@@ -414,10 +510,11 @@ class ContactLinkManager @Inject constructor(
             )
         }
         val deviceId = settingsRepository.ensureDeviceId()
-        val response = SmsCodec.encodeAlertReady(deviceId, message.code, overrideApplied)
-        // Fire-and-forget so we don't block the inbound SMS broadcast while waiting for
-        // the modem to confirm send/delivery of the acknowledgement.
-        contact.primaryPhone()?.let { smsSender.sendSms(it, response, awaitResult = false) }
+        val response = PulseLinkMessage.AlertReady(deviceId, message.code, overrideApplied)
+        val smsBody = SmsCodec.encodeAlertReady(deviceId, message.code, overrideApplied)
+
+        sendMessageWithFallback(contact, response, smsBody, awaitSmsResult = false)
+
         if (message.reason == PulseLinkMessage.AlertPrepareReason.CALL) {
             remoteActionHandler.notifyIncomingCall(contact, message.tier)
         }
@@ -465,29 +562,63 @@ class ContactLinkManager @Inject constructor(
                 urgency = message.urgency,
                 volumeHint = message.volumeHint
             )
-            maybeApplyRemoteUid(message.code, fromPhone)
+            if (fromPhone.isNotBlank()) maybeApplyRemoteUid(message.code, fromPhone)
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process manual message from $fromPhone", error)
         }
     }
 
-    private suspend fun handleRealtimeManualMessage(payload: LinkChannelPayload) {
+    private suspend fun handleRealtimeMessage(payload: LinkChannelPayload) {
         try {
-            val contact = payload.linkCode?.takeIf { it.isNotBlank() }?.let { contactRepository.getByLinkCode(it) }
-                ?: contactRepository.getByRemoteDeviceId(payload.senderId)
-                ?: payload.phoneNumber?.takeIf { it.isNotBlank() }?.let { contactRepository.getByPhone(it) }
-                ?: return
-            markPresence(contact, payload.timestamp)
-            deliverManualMessage(
-                contact = contact,
-                rawBody = payload.body,
-                overrideApplied = true,
-                urgency = payload.urgency,
-                volumeHint = payload.volumeHint
-            )
-            payload.linkCode?.let { maybeApplyRemoteUid(it, contact.primaryPhone().orEmpty()) }
+            val message = convertPayloadToMessage(payload) ?: return
+
+            // Find contact to process. Note: payload has phoneNumber if available.
+            // Also message.code might be useful.
+            val phoneNumber = payload.payload["phoneNumber"] as? String ?: ""
+
+            handleInbound(message, phoneNumber)
+
         } catch (error: Exception) {
             Log.e(TAG, "Failed to process realtime message ${payload.id}", error)
+        }
+    }
+
+    private fun convertPayloadToMessage(payload: LinkChannelPayload): PulseLinkMessage? {
+        val map = payload.payload
+        val linkCode = map["linkCode"] as? String ?: return null
+        val senderId = payload.senderId
+
+        // Helper to check map types
+        fun getStr(k: String) = map[k] as? String
+
+        return when (payload.type) {
+            "link_request" -> PulseLinkMessage.LinkRequest(senderId, linkCode, getStr("senderName").orEmpty())
+            "link_accept" -> PulseLinkMessage.LinkAccept(senderId, linkCode)
+            "ping" -> PulseLinkMessage.Ping(senderId, linkCode)
+            "alert" -> {
+                val tier = runCatching { EscalationTier.valueOf(getStr("tier").orEmpty()) }.getOrNull() ?: return null
+                PulseLinkMessage.RemoteAlert(senderId, linkCode, tier)
+            }
+            "alert_prepare" -> {
+                val tier = runCatching { EscalationTier.valueOf(getStr("tier").orEmpty()) }.getOrNull() ?: return null
+                val reason = runCatching { PulseLinkMessage.AlertPrepareReason.valueOf(getStr("reason").orEmpty()) }.getOrDefault(PulseLinkMessage.AlertPrepareReason.ALERT)
+                PulseLinkMessage.AlertPrepare(senderId, linkCode, tier, reason)
+            }
+            "alert_ready" -> {
+                PulseLinkMessage.AlertReady(senderId, linkCode, map["ready"] == true)
+            }
+            "sound_override" -> {
+                val tier = runCatching { EscalationTier.valueOf(getStr("tier").orEmpty()) }.getOrNull() ?: return null
+                PulseLinkMessage.SoundOverride(senderId, linkCode, tier, getStr("soundKey"))
+            }
+            "manual" -> {
+                val urgency = runCatching { com.pulselink.domain.model.MessageUrgency.valueOf(getStr("urgency").orEmpty()) }.getOrDefault(com.pulselink.domain.model.MessageUrgency.STANDARD)
+                val volume = getStr("volumeHint")?.let { runCatching { com.pulselink.domain.model.VolumeHint.valueOf(it) }.getOrNull() }
+                PulseLinkMessage.ManualMessage(senderId, linkCode, getStr("body").orEmpty(), urgency, volume)
+            }
+            "config" -> PulseLinkMessage.ConfigUpdate(senderId, linkCode, getStr("key").orEmpty(), getStr("value").orEmpty())
+            "call_ended" -> PulseLinkMessage.CallEnded(senderId, linkCode, (map["callDuration"] as? Number)?.toLong() ?: 0L)
+            else -> null
         }
     }
 
@@ -606,15 +737,22 @@ class ContactLinkManager @Inject constructor(
         var sentAny = false
         contacts.forEach { contact ->
             val code = contact.linkCode ?: return@forEach
-            val payload = SmsCodec.encodeManualMessage(
+            val message = PulseLinkMessage.ManualMessage(
                 deviceId,
                 code,
                 body,
                 com.pulselink.domain.model.MessageUrgency.STANDARD,
                 null
             )
-            val targetPhone = contact.primaryPhone()
-            if (targetPhone != null && smsSender.sendSms(targetPhone, payload)) {
+            val smsBody = SmsCodec.encodeManualMessage(
+                deviceId,
+                code,
+                body,
+                com.pulselink.domain.model.MessageUrgency.STANDARD,
+                null
+            )
+
+            if (sendMessageWithFallback(contact, message, smsBody)) {
                 sentAny = true
                 messageRepository.record(
                     ContactMessage(
@@ -753,8 +891,9 @@ class ContactLinkManager @Inject constructor(
         contactRepository.upsert(updated)
         if (contact.linkStatus == LinkStatus.LINKED && !contact.linkCode.isNullOrBlank()) {
             val deviceId = settingsRepository.ensureDeviceId()
-            val payload = SmsCodec.encodeConfig(deviceId, contact.linkCode, CONFIG_REMOTE_SOUND, if (allow) "1" else "0")
-            contact.primaryPhone()?.let { smsSender.sendSms(it, payload) }
+            val message = PulseLinkMessage.ConfigUpdate(deviceId, contact.linkCode!!, CONFIG_REMOTE_SOUND, if (allow) "1" else "0")
+            val smsBody = SmsCodec.encodeConfig(deviceId, contact.linkCode!!, CONFIG_REMOTE_SOUND, if (allow) "1" else "0")
+            sendMessageWithFallback(contact, message, smsBody)
         }
     }
 
@@ -764,8 +903,9 @@ class ContactLinkManager @Inject constructor(
         contactRepository.upsert(updated)
         if (contact.linkStatus == LinkStatus.LINKED && !contact.linkCode.isNullOrBlank()) {
             val deviceId = settingsRepository.ensureDeviceId()
-            val payload = SmsCodec.encodeConfig(deviceId, contact.linkCode, CONFIG_REMOTE_OVERRIDE, if (allow) "1" else "0")
-            contact.primaryPhone()?.let { smsSender.sendSms(it, payload) }
+            val message = PulseLinkMessage.ConfigUpdate(deviceId, contact.linkCode!!, CONFIG_REMOTE_OVERRIDE, if (allow) "1" else "0")
+            val smsBody = SmsCodec.encodeConfig(deviceId, contact.linkCode!!, CONFIG_REMOTE_OVERRIDE, if (allow) "1" else "0")
+            sendMessageWithFallback(contact, message, smsBody)
         }
     }
 
@@ -779,15 +919,18 @@ class ContactLinkManager @Inject constructor(
             val code = contact.linkCode ?: return@forEach
             phone?.let {
                 contact.primaryPhone()?.let { target ->
-                    smsSender.sendSms(target, SmsCodec.encodeConfig(deviceId, code, CONFIG_PHONE_UPDATE, it))
+                    val message = PulseLinkMessage.ConfigUpdate(deviceId, code, CONFIG_PHONE_UPDATE, it)
+                    val smsBody = SmsCodec.encodeConfig(deviceId, code, CONFIG_PHONE_UPDATE, it)
+                    if (sendMessageWithFallback(contact, message, smsBody)) sent++
                 }
             }
             email?.let {
                 contact.primaryPhone()?.let { target ->
-                    smsSender.sendSms(target, SmsCodec.encodeConfig(deviceId, code, CONFIG_EMAIL_UPDATE, it))
+                    val message = PulseLinkMessage.ConfigUpdate(deviceId, code, CONFIG_EMAIL_UPDATE, it)
+                    val smsBody = SmsCodec.encodeConfig(deviceId, code, CONFIG_EMAIL_UPDATE, it)
+                    if (sendMessageWithFallback(contact, message, smsBody)) sent++
                 }
             }
-            sent++
         }
         sent
     }
@@ -823,70 +966,51 @@ class ContactLinkManager @Inject constructor(
             }
         }
 
-        val hasRealtimeChannel = contact.linkStatus == LinkStatus.LINKED && !contact.remoteDeviceId.isNullOrBlank()
-        val hasSmsMirror = (contact.primaryPhone()?.isNotBlank() == true) && !contact.linkCode.isNullOrBlank()
-
-        if (!hasRealtimeChannel && !hasSmsMirror) {
-            Log.w(TAG, "sendManualMessage: FAILED. Reason: NOT_LINKED for contactId=$contactId")
-            return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
+        // Just use sendMessageWithFallback.
+        val deviceId = settingsRepository.ensureDeviceId()
+        if (contact.linkCode.isNullOrBlank()) {
+             Log.w(TAG, "sendManualMessage: FAILED. Reason: NOT_LINKED for contactId=$contactId")
+             return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.NOT_LINKED)
         }
 
-        return try {
-            val realtimeSent = if (hasRealtimeChannel) {
-                Log.d(TAG, "sendManualMessage: Attempting realtime send for contactId=$contactId.")
-                linkChannelService.sendManualMessage(contact, message, urgency, volumeHint)
-            } else {
-                false
-            }
-            val ready = if (hasRealtimeChannel && contact.linkCode != null) {
-                requestRemotePrepare(
-                    contact,
-                    EscalationTier.CHECK_IN,
-                    reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
+        val plMessage = PulseLinkMessage.ManualMessage(
+            deviceId,
+            contact.linkCode!!,
+            message,
+            urgency,
+            volumeHint
+        )
+        val smsBody = SmsCodec.encodeManualMessage(
+            deviceId,
+            contact.linkCode!!,
+            message,
+            urgency,
+            volumeHint
+        )
+
+        val ready = if (contact.linkStatus == LinkStatus.LINKED) {
+            requestRemotePrepare(
+                contact,
+                EscalationTier.CHECK_IN,
+                reason = PulseLinkMessage.AlertPrepareReason.MESSAGE
+            )
+        } else false
+
+        val success = sendMessageWithFallback(contact, plMessage, smsBody)
+
+        if (success) {
+            Log.d(TAG, "Recording outbound message for contact=$contactId overrideReady=$ready")
+             messageRepository.record(
+                ContactMessage(
+                    contactId = contact.id,
+                    body = message,
+                    direction = MessageDirection.OUTBOUND,
+                    overrideSucceeded = ready
                 )
-            } else {
-                false
-            }
-            if (!realtimeSent && hasSmsMirror) {
-                Log.d(TAG, "sendManualMessage: Realtime send failed, falling back to SMS for contactId=$contactId.")
-            } else if (realtimeSent && hasSmsMirror) {
-                Log.d(TAG, "sendManualMessage: Realtime send succeeded; mirroring via SMS for contactId=$contactId.")
-            }
-
-            val deviceId = settingsRepository.ensureDeviceId()
-            val smsSent = if (hasSmsMirror) {
-                val payload = SmsCodec.encodeManualMessage(deviceId, contact.linkCode!!, message, urgency, volumeHint)
-                contact.primaryPhone()?.let { smsSender.sendSms(it, payload) } ?: false
-            } else {
-                false
-            }
-
-            val overallSuccess = realtimeSent || smsSent
-            if (overallSuccess) {
-                Log.d(TAG, "Recording outbound message for contact=$contactId overrideReady=$ready")
-                messageRepository.record(
-                    ContactMessage(
-                        contactId = contact.id,
-                        body = message,
-                        direction = MessageDirection.OUTBOUND,
-                        overrideSucceeded = ready
-                    )
-                )
-            }
-
-            when {
-                smsSent -> ManualMessageResult.Success(overrideApplied = ready)
-                realtimeSent -> {
-                    if (!smsSent && hasSmsMirror) {
-                        Log.w(TAG, "sendManualMessage: SMS mirror failed but realtime dispatch succeeded for contactId=$contactId")
-                    }
-                    ManualMessageResult.Success(overrideApplied = ready)
-                }
-                else -> ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED)
-            }
-        } catch (error: Exception) {
-            Log.e(TAG, "Unable to send manual message for contactId=$contactId", error)
-            ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.UNKNOWN)
+            )
+            return ManualMessageResult.Success(overrideApplied = ready)
+        } else {
+            return ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.SMS_FAILED) // Use generalized failure?
         }
     }
 
@@ -901,8 +1025,12 @@ class ContactLinkManager @Inject constructor(
         val deviceId = settingsRepository.ensureDeviceId()
         val deferred = CompletableDeferred<Boolean>()
         alertHandshake[code] = deferred
-        val payload = SmsCodec.encodeAlertPrepare(deviceId, code, tier, reason)
-        contact.primaryPhone()?.let { smsSender.sendSms(it, payload) }
+
+        val message = PulseLinkMessage.AlertPrepare(deviceId, code, tier, reason)
+        val smsBody = SmsCodec.encodeAlertPrepare(deviceId, code, tier, reason)
+
+        sendMessageWithFallback(contact, message, smsBody)
+
         val ready = withTimeoutOrNull(PREPARE_TIMEOUT_MS) { deferred.await() } ?: false
         alertHandshake.remove(code)
         if (!ready) {
@@ -979,17 +1107,30 @@ class ContactLinkManager @Inject constructor(
             return RemoteAlertResult(contact.id, contact.displayName, RemoteAlertStatus.NOT_LINKED, tier)
         }
         val deviceId = settingsRepository.ensureDeviceId()
-        val code = contact.linkCode
-        val preparePayload = SmsCodec.encodeAlertPrepare(
+        val code = contact.linkCode!!
+
+        // Prepare
+        val prepareMessage = PulseLinkMessage.AlertPrepare(
             deviceId,
             code,
             tier,
             PulseLinkMessage.AlertPrepareReason.ALERT
         )
-        val targetPhone = contact.primaryPhone() ?: return RemoteAlertResult(contact.id, contact.displayName, RemoteAlertStatus.NOT_LINKED, tier)
-        smsSender.sendSms(targetPhone, preparePayload, awaitResult = false)
-        val alertPayload = SmsCodec.encodeRemoteAlert(deviceId, code, tier)
-        val alertSent = smsSender.sendSms(targetPhone, alertPayload, awaitResult = false)
+        val prepareSms = SmsCodec.encodeAlertPrepare(
+            deviceId,
+            code,
+            tier,
+            PulseLinkMessage.AlertPrepareReason.ALERT
+        )
+
+        sendMessageWithFallback(contact, prepareMessage, prepareSms, awaitSmsResult = false)
+
+        // Alert
+        val alertMessage = PulseLinkMessage.RemoteAlert(deviceId, code, tier)
+        val alertSms = SmsCodec.encodeRemoteAlert(deviceId, code, tier)
+
+        val alertSent = sendMessageWithFallback(contact, alertMessage, alertSms, awaitSmsResult = false)
+
         return if (alertSent) {
             RemoteAlertResult(contact.id, contact.displayName, RemoteAlertStatus.SUCCESS, tier)
         } else {

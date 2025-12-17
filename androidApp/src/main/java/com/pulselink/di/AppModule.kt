@@ -10,6 +10,7 @@ import androidx.room.Room
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.messaging.FirebaseMessaging
 import com.pulselink.BuildConfig
 import com.pulselink.data.alert.AlertDispatcher
 import com.pulselink.data.alert.NotificationRegistrar
@@ -93,7 +94,8 @@ object DatabaseModule {
                 PulseLinkDatabase.MIGRATION_6_7,
                 PulseLinkDatabase.MIGRATION_7_8,
                 PulseLinkDatabase.MIGRATION_8_9,
-                PulseLinkDatabase.MIGRATION_9_10
+                PulseLinkDatabase.MIGRATION_9_10,
+                PulseLinkDatabase.MIGRATION_11_12
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -183,6 +185,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideFirebaseFunctions(): FirebaseFunctions = FirebaseFunctions.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseMessaging(): FirebaseMessaging = FirebaseMessaging.getInstance()
 
     @Provides
     @Singleton

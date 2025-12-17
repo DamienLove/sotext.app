@@ -1045,6 +1045,8 @@ class MainActivity : AppCompatActivity() {
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },
                             onToggleAutoAllowRemoteSoundChange = viewModel::setAutoAllowRemoteSoundChange,
                             onToggleAutoUpdateContactInfo = viewModel::setAutoUpdateContactInfo,
+                            onToggleFirebaseMessaging = viewModel::setFirebaseMessagingEnabled,
+                            onToggleEmailFallback = viewModel::setEmailFallbackEnabled,
                             onRequestDefaultSms = requestDefaultSms,
                             onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) },
                             onSyncNow = viewModel::syncContactsNow,

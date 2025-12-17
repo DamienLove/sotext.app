@@ -65,6 +65,8 @@ fun SettingsScreen(
     onRequestUnusedApps: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
     onToggleAutoUpdateContactInfo: (Boolean) -> Unit,
+    onToggleFirebaseMessaging: (Boolean) -> Unit,
+    onToggleEmailFallback: (Boolean) -> Unit,
     onRequestDefaultSms: () -> Unit,
     onToggleBeaconLauncher: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
@@ -166,6 +168,18 @@ fun SettingsScreen(
                 subtitle = null,
                 checked = settings.autoUpdateContactInfo,
                 onCheckedChange = onToggleAutoUpdateContactInfo
+            )
+            SettingsToggleRow(
+                title = "Firebase Messaging (Faster)",
+                subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
+                checked = settings.firebaseMessagingEnabled,
+                onCheckedChange = onToggleFirebaseMessaging
+            )
+            SettingsToggleRow(
+                title = "Email Fallback",
+                subtitle = "Send email if other channels fail.",
+                checked = settings.emailFallbackEnabled,
+                onCheckedChange = onToggleEmailFallback
             )
             SettingsToggleRow(
                 title = stringResource(id = R.string.settings_beacon_icon_title),

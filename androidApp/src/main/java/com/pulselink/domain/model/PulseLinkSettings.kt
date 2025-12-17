@@ -40,7 +40,10 @@ data class PulseLinkSettings(
     val privatePinHash: String? = null,
     val privateThreadIds: List<Long> = emptyList(),
     val beaconLauncherEnabled: Boolean = true,
-    val beaconHintDismissed: Boolean = false
+    val beaconHintDismissed: Boolean = false,
+    val firebaseMessagingEnabled: Boolean = true,
+    val emailFallbackEnabled: Boolean = false,
+    val messagingChannelPriority: List<MessageChannel> = listOf(MessageChannel.FIREBASE, MessageChannel.SMS, MessageChannel.EMAIL)
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }
