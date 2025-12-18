@@ -1,5 +1,6 @@
 package com.pulselink.ui.state
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -40,6 +41,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.auth.FirebaseUser
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,6 +55,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val contactRepository: ContactRepository,
     private val alertRepository: AlertRepository,
     private val settingsRepository: SettingsRepository,
@@ -274,6 +277,16 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setOwnerAvatarUrl(url: String?) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(ownerAvatarUrl = url) }
+            (firebaseAuthManager.currentUser()?.takeIf { user -> !user.isAnonymous })?.let { user ->
+                val currentName = settingsRepository.settings.first().ownerName
+                pushProfileToCloud(user, currentName)
+            }
+        }
+    }
+
     fun setAutoAllowRemoteSoundChange(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAutoAllowRemoteSoundChange(enabled)
@@ -355,6 +368,15 @@ class MainViewModel @Inject constructor(
     fun updateContact(contact: Contact) {
         viewModelScope.launch {
             contactRepository.upsert(contact)
+        }
+    }
+
+    fun updateContactTheme(contactId: Long, theme: com.pulselink.domain.model.ThemePreferences?) {
+        viewModelScope.launch {
+            val contact = contactRepository.getContact(contactId)
+            if (contact != null) {
+                contactRepository.upsert(contact.copy(themeOverride = theme))
+            }
         }
     }
 
@@ -493,8 +515,14 @@ class MainViewModel @Inject constructor(
             val snapshot = profileRef.get().await()
             val remoteName = snapshot.getString("ownerName")
                 ?: user.displayName
+            val remoteAvatar = snapshot.getString("avatarUrl")
             val remoteEmail = snapshot.getString("email")
             val remoteDeviceId = snapshot.getString("deviceId")
+
+            if (!remoteAvatar.isNullOrBlank() && localSettings.ownerAvatarUrl != remoteAvatar) {
+                settingsRepository.update { it.copy(ownerAvatarUrl = remoteAvatar) }
+            }
+
             when {
                 !remoteName.isNullOrBlank() && localSettings.ownerName.isBlank() -> {
                     settingsRepository.setOwnerName(remoteName)
@@ -537,11 +565,13 @@ class MainViewModel @Inject constructor(
 
     private suspend fun pushProfileToCloud(user: FirebaseUser, ownerName: String) {
         runCatching {
+            val settings = settingsRepository.settings.first()
             val deviceId = settingsRepository.ensureDeviceId()
             val payload = mutableMapOf<String, Any>(
                 "ownerName" to ownerName,
                 "deviceId" to deviceId
             )
+            settings.ownerAvatarUrl?.let { payload["avatarUrl"] = it }
             user.email?.let { email ->
                 payload["email"] = email
                 payload["emailLowercase"] = email.lowercase()
@@ -993,7 +1023,36 @@ class MainViewModel @Inject constructor(
 
     fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences) {
         viewModelScope.launch {
+            val oldTheme = settingsRepository.settings.first().themePreferences
             settingsRepository.setThemePreferences(theme)
+            if (oldTheme.inboxIconVariant != theme.inboxIconVariant) {
+                applyInboxIconVariant(theme.inboxIconVariant)
+            }
+        }
+    }
+
+    private fun applyInboxIconVariant(variant: String) {
+        try {
+            val pm = context.packageManager
+            val pkg = context.packageName
+            val defaultComp = ComponentName(pkg, "com.pulselink.ui.InboxLauncherActivity")
+            val logoComp = ComponentName(pkg, "com.pulselink.BeaconInboxLogo")
+            val proComp = ComponentName(pkg, "com.pulselink.BeaconInboxPro")
+
+            val (toEnable, toDisable) = when (variant) {
+                "Logo" -> listOf(logoComp) to listOf(defaultComp, proComp)
+                "Pro" -> listOf(proComp) to listOf(defaultComp, logoComp)
+                else -> listOf(defaultComp) to listOf(logoComp, proComp)
+            }
+
+            toEnable.forEach {
+                pm.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+            }
+            toDisable.forEach {
+                pm.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update app icon", e)
         }
     }
 

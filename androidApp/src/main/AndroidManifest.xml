@@ -73,6 +73,32 @@
             </intent-filter>
         </activity>
 
+        <activity-alias
+            android:name="com.pulselink.BeaconInboxLogo"
+            android:enabled="false"
+            android:icon="@drawable/ic_logo"
+            android:label="Beacon Inbox"
+            android:roundIcon="@drawable/ic_logo"
+            android:targetActivity=".ui.InboxLauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.pulselink.BeaconInboxPro"
+            android:enabled="false"
+            android:icon="@drawable/ic_pulselink_pro"
+            android:label="Beacon Inbox"
+            android:roundIcon="@drawable/ic_pulselink_pro"
+            android:targetActivity=".ui.InboxLauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Beacon inbox activity (opened from launcher shortcut or in-app) -->
         <activity
             android:name=".ui.BeaconInboxActivity"

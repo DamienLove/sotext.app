@@ -5,6 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.pulselink.data.sms.SmsMessageItem
 import com.pulselink.data.sms.SmsRepository
 import com.pulselink.data.sms.SmsThreadItem
+import com.pulselink.domain.model.Contact
+import com.pulselink.domain.model.ThemePreferences
+import com.pulselink.domain.repository.ContactRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,19 +63,38 @@ class SmsInboxViewModel @Inject constructor(
 
 @HiltViewModel
 class SmsThreadViewModel @Inject constructor(
-    private val smsRepository: SmsRepository
+    private val smsRepository: SmsRepository,
+    private val contactRepository: ContactRepository
 ) : ViewModel() {
     private val _messages = MutableStateFlow<List<SmsMessageItem>>(emptyList())
     val messages: StateFlow<List<SmsMessageItem>> = _messages
+    private val _contact = MutableStateFlow<Contact?>(null)
+    val contact: StateFlow<Contact?> = _contact
 
     fun load(threadId: Long) {
         viewModelScope.launch {
-            _messages.value = smsRepository.messagesForThread(threadId)
+            val msgs = smsRepository.messagesForThread(threadId)
+            _messages.value = msgs
+            if (msgs.isNotEmpty()) {
+                val address = msgs.first().address
+                _contact.value = contactRepository.getByPhone(address)
+            }
         }
         smsRepository.changes()
             .onEach {
-                _messages.value = smsRepository.messagesForThread(threadId)
+                val msgs = smsRepository.messagesForThread(threadId)
+                _messages.value = msgs
             }
             .launchIn(viewModelScope)
+    }
+
+    fun setContactTheme(theme: ThemePreferences?) {
+        viewModelScope.launch {
+            _contact.value?.let { currentContact ->
+                val updated = currentContact.copy(themeOverride = theme)
+                contactRepository.upsert(updated)
+                _contact.value = updated
+            }
+        }
     }
 }

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,6 +42,7 @@ fun BeaconSettingsScreen(
     onBack: () -> Unit,
     onTimeFormatChange: (TimeFormat) -> Unit,
     onOpenVisualSettings: () -> Unit,
+    onOpenProfileSettings: () -> Unit,
     isDefaultSmsApp: Boolean,
     defaultSmsSupported: Boolean,
     onRequestDefaultSms: () -> Unit,
@@ -107,6 +109,13 @@ fun BeaconSettingsScreen(
                 actionLabel = "Open",
                 onAction = onOpenVisualSettings,
                 leadingIcon = Icons.Filled.Palette
+            )
+            BeaconSettingsActionRow(
+                title = "Public Profile",
+                subtitle = "Name and Avatar seen by others.",
+                actionLabel = "Edit",
+                onAction = onOpenProfileSettings,
+                leadingIcon = Icons.Filled.Person
             )
             BeaconSettingsToggleRow(
                 title = "Web access to messages",

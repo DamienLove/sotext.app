@@ -43,6 +43,7 @@ import com.pulselink.billing.SubscriptionManager
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BeaconSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
+import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
@@ -160,13 +161,22 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val address = entry.arguments?.getString("address") ?: ""
                                     val threadViewModel: SmsThreadViewModel = hiltViewModel()
                                     val messages by threadViewModel.messages.collectAsStateWithLifecycle()
+                                    val contact by threadViewModel.contact.collectAsStateWithLifecycle()
                                     LaunchedEffect(threadId) { threadViewModel.load(threadId) }
                                     SmsThreadScreen(
                                         address = Uri.decode(address),
                                         messages = messages,
+                                        contact = contact,
                                         onBack = { navController.popBackStack() },
                                         dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
-                                        themePreferences = state.settings.themePreferences
+                                        globalTheme = state.settings.themePreferences,
+                                        onUpdateContactTheme = { theme -> threadViewModel.setContactTheme(theme) },
+                                        onCustomizeTheme = {
+                                            val contactId = contact?.id ?: -1L
+                                            if (contactId != -1L) {
+                                                navController.navigate("visual_settings?contactId=$contactId")
+                                            }
+                                        }
                                     )
                                 }
                                 composable("beacon_settings") {
@@ -175,6 +185,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onBack = { navController.popBackStack() },
                                         onTimeFormatChange = { viewModel.setTimeFormat(it) },
                                         onOpenVisualSettings = { navController.navigate("visual_settings") },
+                                        onOpenProfileSettings = { navController.navigate("profile_settings") },
                                         isDefaultSmsApp = isDefaultSms,
                                         defaultSmsSupported = defaultSmsSupported,
                                         onRequestDefaultSms = {
@@ -192,10 +203,37 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) }
                                     )
                                 }
-                                composable("visual_settings") {
-                                    VisualSettingsScreen(
-                                        theme = state.settings.themePreferences,
-                                        onSelectTheme = { newTheme -> viewModel.setThemePreferences(newTheme) },
+                                composable(
+                                    route = "visual_settings?contactId={contactId}",
+                                    arguments = listOf(navArgument("contactId") {
+                                        type = NavType.LongType
+                                        defaultValue = -1L
+                                    })
+                                ) { entry ->
+                                    val contactId = entry.arguments?.getLong("contactId") ?: -1L
+                                    if (contactId != -1L) {
+                                        val contact = state.contacts.find { it.id == contactId }
+                                        val theme = contact?.themeOverride ?: state.settings.themePreferences
+                                        VisualSettingsScreen(
+                                            theme = theme,
+                                            onSelectTheme = { newTheme -> viewModel.updateContactTheme(contactId, newTheme) },
+                                            onBack = { navController.popBackStack() },
+                                            isGlobal = false
+                                        )
+                                    } else {
+                                        VisualSettingsScreen(
+                                            theme = state.settings.themePreferences,
+                                            onSelectTheme = { newTheme -> viewModel.setThemePreferences(newTheme) },
+                                            onBack = { navController.popBackStack() },
+                                            isGlobal = true
+                                        )
+                                    }
+                                }
+                                composable("profile_settings") {
+                                    ProfileSettingsScreen(
+                                        settings = state.settings,
+                                        onSaveName = { viewModel.setOwnerName(it) },
+                                        onSaveAvatar = { viewModel.setOwnerAvatarUrl(it) },
                                         onBack = { navController.popBackStack() }
                                     )
                                 }

@@ -32,7 +32,10 @@ data class Contact(
     val isPrivate: Boolean = false,
     val fcmToken: String? = null,
     val preferredChannel: MessageChannel? = null,
-    val lastSuccessfulChannel: MessageChannel? = null
+    val lastSuccessfulChannel: MessageChannel? = null,
+    val themeOverride: ThemePreferences? = null,
+    val avatarUrl: String? = null,
+    val remoteDisplayName: String? = null
 )
 
 @Serializable

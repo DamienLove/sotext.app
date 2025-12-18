@@ -33,6 +33,7 @@ data class PulseLinkSettings(
     val deviceId: String = "",
     val isBetaTester: Boolean = false,
     val ownerName: String = "",
+    val ownerAvatarUrl: String? = null,
     val autoUpdateContactInfo: Boolean = true,
     val timeFormat: TimeFormat = TimeFormat.AUTO,
     val themePreferences: ThemePreferences = ThemePreferences(),
@@ -61,5 +62,8 @@ data class ThemePreferences(
     val bubbleOutgoing: String = "#D0BCFF",
     val bubbleIncoming: String = "#E8DEF8",
     val backgroundColor: String = "#FFFFFF",
-    val iconSizeFactor: Float = 1.0f
+    val iconSizeFactor: Float = 1.0f,
+    val fontStyle: String = "Default",
+    val bubbleCornerRadius: Int = 12,
+    val inboxIconVariant: String = "Default"
 )
