@@ -70,5 +70,14 @@ data class ThemePreferences(
     val onBubbleIncoming: String = "#000000",
     val onBackground: String = "#000000",
     val topBarColor: String = "#FFFFFF",
-    val onTopBarColor: String = "#000000"
+    val onTopBarColor: String = "#000000",
+    val bubbleCornerRadiusTopStart: Int? = null,
+    val bubbleCornerRadiusTopEnd: Int? = null,
+    val bubbleCornerRadiusBottomStart: Int? = null,
+    val bubbleCornerRadiusBottomEnd: Int? = null,
+    val timestampColor: String? = null,
+    val dividerColor: String? = null,
+    val appBackgroundGradientStart: String? = null,
+    val appBackgroundGradientEnd: String? = null,
+    val fontScale: Float = 1.0f
 )
