@@ -33,6 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -78,9 +82,9 @@ class BeaconInboxActivity : ComponentActivity() {
                 var showPrivate by remember { mutableStateOf(false) }
                 var showPinDialog by remember { mutableStateOf(false) }
                 var pinInput by remember { mutableStateOf("") }
-                val defaultSmsSupported = remember {
-                    defaultSmsHelper.buildRoleRequestIntent() != null || defaultSmsHelper.isDefaultSms()
-                }
+                val defaultSmsSupported =
+                    defaultSmsHelper.buildRoleRequestIntent() != null || isDefaultSms
+                val lifecycleOwner = LocalLifecycleOwner.current
 
                 val defaultSmsLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
@@ -97,6 +101,17 @@ class BeaconInboxActivity : ComponentActivity() {
                     contract = ActivityResultContracts.RequestMultiplePermissions()
                 ) {
                     hasSmsPermissions = checkSmsPermissions(context)
+                }
+
+                // Refresh default-SMS status whenever the activity resumes.
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            isDefaultSms = defaultSmsHelper.isDefaultSms()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
 
                 LaunchedEffect(isDefaultSms, hasSmsPermissions, requestedDefaultOnce) {
