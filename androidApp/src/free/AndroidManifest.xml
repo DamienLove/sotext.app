@@ -2,16 +2,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false"
+        tools:node="merge" />
+
     <!-- Free flavor should not expose default SMS capabilities -->
     <uses-permission
         android:name="android.permission.SEND_SMS"
         tools:node="remove"
         tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
-    <uses-permission android:name="android.permission.RECEIVE_SMS" tools:node="remove" />
-    <uses-permission android:name="android.permission.READ_SMS" tools:node="remove" />
-    <uses-permission android:name="android.permission.WRITE_SMS" tools:node="remove" />
-    <uses-permission android:name="android.permission.RECEIVE_MMS" tools:node="remove" />
-    <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" tools:node="remove" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" tools:node="remove" tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
+    <uses-permission android:name="android.permission.READ_SMS" tools:node="remove" tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
+    <uses-permission android:name="android.permission.WRITE_SMS" tools:node="remove" tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
+    <uses-permission android:name="android.permission.RECEIVE_MMS" tools:node="remove" tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
+    <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" tools:node="remove" tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
     <uses-permission
         android:name="android.permission.SEND_RESPOND_VIA_MESSAGE"
         tools:node="remove"
@@ -25,6 +30,7 @@
         <!-- Remove default-SMS related hooks for the free tier -->
         <activity
             android:name=".ui.MainActivity"
+            android:exported="true"
             tools:node="merge">
             <intent-filter tools:node="remove">
                 <action android:name="android.intent.action.SENDTO" />

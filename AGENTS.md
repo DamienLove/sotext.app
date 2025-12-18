@@ -28,3 +28,4 @@
 ## Security & Configuration Tips
 - Keep signing secrets in `keystore.properties` or `UPLOAD_KEYSTORE_*`; only the template belongs in git.
 - Store Firebase Admin keys and Genkit credentials outside the repo (use `firebase login:ci` or Application Default Credentials) and scrub logs before attaching them to tickets.
+- Read the pulselink.txt file for more information about current stats or configurations, as well as updates and functionality changes, and more.
