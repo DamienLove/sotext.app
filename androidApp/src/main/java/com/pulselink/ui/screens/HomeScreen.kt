@@ -88,7 +88,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -1081,7 +1085,7 @@ private fun ContactRow(
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1089,41 +1093,46 @@ private fun ContactRow(
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(10.dp)
+                                .size(8.dp)
                                 .clip(CircleShape)
                                 .background(presenceColor)
                         )
                         Text(
                             text = contact.displayName,
+                            style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+                    val contactInfo = when {
+                        phone.isNotBlank() -> phone
+                        contact.email?.isNotBlank() == true -> contact.email
+                        contact.additionalEmails.firstOrNull { it.isNotBlank() } != null -> contact.additionalEmails.first { it.isNotBlank() }
+                        else -> stringResource(id = R.string.contact_no_reachability)
+                    }
                     Text(
-                        text = when {
-                            phone.isNotBlank() -> phone
-                            contact.email?.isNotBlank() == true -> contact.email
-                            contact.additionalEmails.firstOrNull { it.isNotBlank() } != null -> contact.additionalEmails.first { it.isNotBlank() }
-                            else -> stringResource(id = R.string.contact_no_reachability)
+                        text = buildAnnotatedString {
+                            append(contactInfo)
+                            append(" • ")
+                            withStyle(SpanStyle(color = statusColor)) {
+                                append(statusLabel)
+                            }
                         },
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = statusLabel,
-                        color = statusColor,
-                        style = MaterialTheme.typography.bodySmall
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
                     val callEnabled = phone.isNotBlank()
                     IconButton(onClick = onCall, enabled = callEnabled) {
                         Icon(
