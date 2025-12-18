@@ -1,24 +1,25 @@
-
-import { genkit, z } from "genkit";
-import { vertexAI, gemini15Pro } from "@genkit-ai/vertexai";
-import { onCall } from "firebase-functions/v2/https";
-import { defineSecret } from "firebase-functions/params";
-import { HttpsError } from "firebase-functions/v2/https";
+/* eslint-disable max-len */
+import {genkit, z} from "genkit";
+import {vertexAI, gemini15Flash} from "@genkit-ai/vertexai";
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {defineSecret} from "firebase-functions/params";
 
 const apiKey = defineSecret("GOOGLE_GENAI_API_KEY");
 
 const ai = genkit({
   plugins: [
-    vertexAI({ location: "us-central1" }),
+    vertexAI({location: "us-central1"}),
   ],
 });
 
 export const naturalLanguageQueryFlow = ai.defineFlow({
   name: "naturalLanguageQueryFlow",
-  inputSchema: z.string().describe("A natural language query from a PulseLink user"),
+  inputSchema: z.string()
+      .describe("A natural language query from a PulseLink user"),
   outputSchema: z.object({
     intent: z.string().describe("One of the supported PulseLink intents"),
-    entities: z.record(z.string()).describe("Key/value pairs that parameterize the intent"),
+    entities: z.record(z.string())
+        .describe("Key/value pairs that parameterize the intent"),
   }),
 }, async (query) => {
   const prompt = `
@@ -51,10 +52,10 @@ export const naturalLanguageQueryFlow = ai.defineFlow({
   `;
 
   const response = await ai.generate({
-    model: gemini15Pro,
+    model: gemini15Flash,
     prompt,
     output: {
-      format: 'json',
+      format: "json",
       schema: z.object({
         intent: z.string(),
         entities: z.record(z.string()),
@@ -75,11 +76,17 @@ export const naturalLanguageQueryFlow = ai.defineFlow({
 export const naturalLanguageQuery = onCall({
   secrets: [apiKey],
 }, async (request) => {
-    if (!request.auth) {
-        throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
-    }
-    if (request.auth.token.pro !== true) {
-        throw new HttpsError('permission-denied', `The function must be called by a user with the 'pro' claim.`);
-    }
-    return await naturalLanguageQueryFlow.run(request.data);
+  if (!request.auth) {
+    throw new HttpsError(
+        "unauthenticated",
+        "The function must be called while authenticated.",
+    );
+  }
+  if (request.auth.token.pro !== true) {
+    throw new HttpsError(
+        "permission-denied",
+        "The function must be called by a user with the 'pro' claim.",
+    );
+  }
+  return await naturalLanguageQueryFlow.run(request.data);
 });
