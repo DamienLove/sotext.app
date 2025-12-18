@@ -70,3 +70,4 @@ shared/.gradle/
 /stack-trace.txt
 /droidcrash.txt
 .gradle-local*
+/disposable_aabs/*.aab

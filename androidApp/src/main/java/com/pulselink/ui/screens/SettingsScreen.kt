@@ -46,7 +46,6 @@ import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.PulseLinkSettings
 import com.pulselink.domain.model.TimeFormat
-import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.state.ProfileUpdateUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,12 +101,6 @@ fun SettingsScreen(
             )
         },
         contentWindowInsets = WindowInsets.safeDrawing
-        ,
-        bottomBar = {
-            if (BuildConfig.ADS_ENABLED && showAds && !settings.proUnlocked) {
-                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
-            }
-        }
     ) { padding ->
         Column(
             modifier = Modifier

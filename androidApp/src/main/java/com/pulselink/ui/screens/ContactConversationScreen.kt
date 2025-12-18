@@ -68,14 +68,12 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.layout.widthIn
 import com.pulselink.R
-import com.pulselink.BuildConfig
 import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.MessageDirection
-import com.pulselink.ui.ads.BannerAdSlot
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -334,11 +332,11 @@ private fun ConversationBody(
                     }
                 }
             },
-            onVoice = {
-                if (!isProUser) {
-                    Toast.makeText(context, context.getString(R.string.voice_command_upgrade_required), Toast.LENGTH_SHORT).show()
-                    onUpgradeClick()
-                    return@ComposerRow
+        onVoice = {
+            if (!isProUser) {
+                Toast.makeText(context, context.getString(R.string.voice_command_upgrade_required), Toast.LENGTH_SHORT).show()
+                onUpgradeClick()
+                return@ComposerRow
                 }
                 if (!SpeechRecognizer.isRecognitionAvailable(context)) {
                     Toast.makeText(context, context.getString(R.string.voice_command_no_recognizer), Toast.LENGTH_SHORT).show()
@@ -352,9 +350,6 @@ private fun ConversationBody(
                 voiceLauncher.launch(intent)
             }
         )
-        if (BuildConfig.ADS_ENABLED && showAds) {
-            BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
-        }
     }
 }
 

@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -60,12 +62,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
-import com.pulselink.ui.ads.BannerAdSlot
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,12 +120,6 @@ fun ContactDetailScreen(
             )
         },
         contentWindowInsets = WindowInsets.safeDrawing
-        ,
-        bottomBar = {
-            if (BuildConfig.ADS_ENABLED && showAds) {
-                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
-            }
-        }
     ) { padding ->
         if (contact == null) {
             Column(
@@ -409,6 +403,13 @@ private fun EditContactDialog(
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
                         imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (canSave) {
+                                onSave(name.trim(), phone.trim(), email.trim().ifBlank { null })
+                            }
+                        }
                     )
                 )
             }
