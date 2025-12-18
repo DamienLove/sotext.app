@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -84,7 +85,8 @@ fun CustomizeTab(
     isGlobal: Boolean
 ) {
     val scrollState = rememberScrollState()
-    var showColorPickerTarget by remember { mutableStateOf<String?>(null) } // "outgoing", "incoming", "bg", "text_outgoing", "text_incoming", "text_bg", "topbar", "text_topbar"
+    var showColorPickerTarget by remember { mutableStateOf<String?>(null) }
+    // Targets: "outgoing", "incoming", "bg", "text_outgoing", "text_incoming", "text_bg", "topbar", "text_topbar", "timestamp", "divider", "grad_start", "grad_end"
 
     if (showColorPickerTarget != null) {
         val initialColor = when(showColorPickerTarget) {
@@ -95,6 +97,10 @@ fun CustomizeTab(
             "text_bg" -> theme.onBackground
             "topbar" -> theme.topBarColor
             "text_topbar" -> theme.onTopBarColor
+            "timestamp" -> theme.timestampColor ?: theme.onBubbleOutgoing
+            "divider" -> theme.dividerColor ?: theme.onBackground
+            "grad_start" -> theme.appBackgroundGradientStart ?: theme.backgroundColor
+            "grad_end" -> theme.appBackgroundGradientEnd ?: theme.backgroundColor
             else -> theme.backgroundColor
         }
         ColorPickerDialog(
@@ -108,6 +114,10 @@ fun CustomizeTab(
                     "text_bg" -> theme.copy(onBackground = color)
                     "topbar" -> theme.copy(topBarColor = color)
                     "text_topbar" -> theme.copy(onTopBarColor = color)
+                    "timestamp" -> theme.copy(timestampColor = color)
+                    "divider" -> theme.copy(dividerColor = color)
+                    "grad_start" -> theme.copy(appBackgroundGradientStart = color)
+                    "grad_end" -> theme.copy(appBackgroundGradientEnd = color)
                     else -> theme.copy(backgroundColor = color)
                 }
                 onUpdate(newTheme)
@@ -123,73 +133,101 @@ fun CustomizeTab(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Text("Live Preview (Tap to edit)", style = MaterialTheme.typography.titleMedium)
+        Text("Live Preview", style = MaterialTheme.typography.titleMedium)
 
         // Preview Container
+        val bgModifier = if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
+             Modifier.background(
+                 brush = Brush.verticalGradient(
+                     colors = listOf(
+                         parseColorOr(Color.White, theme.appBackgroundGradientStart!!),
+                         parseColorOr(Color.White, theme.appBackgroundGradientEnd!!)
+                     )
+                 )
+             )
+        } else {
+             Modifier.background(parseColorOr(Color.White, theme.backgroundColor))
+        }
+
         Card(
             modifier = Modifier.fillMaxWidth().clickable { showColorPickerTarget = "bg" },
-            colors = CardDefaults.cardColors(containerColor = parseColorOr(Color.White, theme.backgroundColor))
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent) // Use manual background
         ) {
-             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                 // Top Bar Preview
-                 Surface(
-                     color = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor),
-                     modifier = Modifier.fillMaxWidth().clickable { showColorPickerTarget = "topbar" }
-                 ) {
-                     Row(
-                         modifier = Modifier.padding(12.dp),
-                         horizontalArrangement = Arrangement.SpaceBetween,
-                         verticalAlignment = Alignment.CenterVertically
+             Box(modifier = bgModifier.fillMaxWidth()) {
+                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                     // Top Bar Preview
+                     Surface(
+                         color = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor),
+                         modifier = Modifier.fillMaxWidth().clickable { showColorPickerTarget = "topbar" }
                      ) {
-                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = parseColorOr(Color.Black, theme.onTopBarColor))
-                         Text(
-                             "Contact Name",
-                             color = parseColorOr(Color.Black, theme.onTopBarColor),
-                             style = MaterialTheme.typography.titleMedium
-                         )
-                         Box(modifier = Modifier.size(24.dp).clickable { showColorPickerTarget = "text_topbar" }) // Hidden click target for text color if needed, but row handles it
+                         Row(
+                             modifier = Modifier.padding(12.dp),
+                             horizontalArrangement = Arrangement.SpaceBetween,
+                             verticalAlignment = Alignment.CenterVertically
+                         ) {
+                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = parseColorOr(Color.Black, theme.onTopBarColor))
+                             Text(
+                                 "Contact Name",
+                                 color = parseColorOr(Color.Black, theme.onTopBarColor),
+                                 style = MaterialTheme.typography.titleMedium
+                             )
+                             Box(modifier = Modifier.size(24.dp))
+                         }
                      }
-                 }
 
-                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                     // Background Text Preview
-                     Text(
-                         "Today 10:23 AM",
-                         modifier = Modifier.align(Alignment.CenterHorizontally).clickable { showColorPickerTarget = "text_bg" },
-                         style = MaterialTheme.typography.labelSmall,
-                         color = parseColorOr(Color.Black, theme.onBackground)
-                     )
+                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                         Text(
+                             "Today 10:23 AM",
+                             modifier = Modifier.align(Alignment.CenterHorizontally).clickable { showColorPickerTarget = "text_bg" },
+                             style = MaterialTheme.typography.labelSmall,
+                             color = parseColorOr(Color.Black, theme.onBackground)
+                         )
 
-                     PreviewBubble(
-                         text = "Tap me to change outgoing color!",
-                         color = parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing),
-                         textColor = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
-                         align = Alignment.End,
-                         radius = theme.bubbleCornerRadius,
-                         fontStyle = theme.fontStyle,
-                         onBubbleClick = { showColorPickerTarget = "outgoing" },
-                         onTextClick = { showColorPickerTarget = "text_outgoing" }
-                     )
-                     PreviewBubble(
-                         text = "Tap text to change text color.",
-                         color = parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming),
-                         textColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming),
-                         align = Alignment.Start,
-                         radius = theme.bubbleCornerRadius,
-                         fontStyle = theme.fontStyle,
-                         onBubbleClick = { showColorPickerTarget = "incoming" },
-                         onTextClick = { showColorPickerTarget = "text_incoming" }
-                     )
+                         PreviewBubble(
+                             text = "Outgoing message.",
+                             color = parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing),
+                             textColor = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
+                             timestampColor = parseColorOr(Color.Gray, theme.timestampColor ?: theme.onBubbleOutgoing),
+                             align = Alignment.End,
+                             theme = theme,
+                             onBubbleClick = { showColorPickerTarget = "outgoing" },
+                             onTextClick = { showColorPickerTarget = "text_outgoing" }
+                         )
+                         PreviewBubble(
+                             text = "Incoming message.",
+                             color = parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming),
+                             textColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming),
+                             timestampColor = parseColorOr(Color.Gray, theme.timestampColor ?: theme.onBubbleIncoming),
+                             align = Alignment.Start,
+                             theme = theme,
+                             onBubbleClick = { showColorPickerTarget = "incoming" },
+                             onTextClick = { showColorPickerTarget = "text_incoming" }
+                         )
+                     }
                  }
              }
         }
 
         HorizontalDivider()
 
-        Text("Colors", style = MaterialTheme.typography.titleMedium)
-
+        Text("Background", style = MaterialTheme.typography.titleMedium)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ColorChip("Bg", parseColorOr(Color.White, theme.backgroundColor)) { showColorPickerTarget = "bg" }
+            ColorChip("Solid Bg", parseColorOr(Color.White, theme.backgroundColor)) { showColorPickerTarget = "bg" }
+            ColorChip("Grad Start", parseColorOr(Color.Transparent, theme.appBackgroundGradientStart ?: "#FFFFFF")) { showColorPickerTarget = "grad_start" }
+            ColorChip("Grad End", parseColorOr(Color.Transparent, theme.appBackgroundGradientEnd ?: "#FFFFFF")) { showColorPickerTarget = "grad_end" }
+        }
+        Button(
+            onClick = {
+                 onUpdate(theme.copy(appBackgroundGradientStart = null, appBackgroundGradientEnd = null))
+            },
+            enabled = theme.appBackgroundGradientStart != null
+        ) {
+            Text("Clear Gradient")
+        }
+
+
+        Text("Colors", style = MaterialTheme.typography.titleMedium)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ColorChip("Text Bg", parseColorOr(Color.Black, theme.onBackground)) { showColorPickerTarget = "text_bg" }
             ColorChip("Top Bar", parseColorOr(Color.White, theme.topBarColor)) { showColorPickerTarget = "topbar" }
             ColorChip("TB Text", parseColorOr(Color.Black, theme.onTopBarColor)) { showColorPickerTarget = "text_topbar" }
@@ -200,12 +238,14 @@ fun CustomizeTab(
             ColorChip("In", parseColorOr(Color.Gray, theme.bubbleIncoming)) { showColorPickerTarget = "incoming" }
             ColorChip("In Text", parseColorOr(Color.Black, theme.onBubbleIncoming)) { showColorPickerTarget = "text_incoming" }
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+             ColorChip("Timestamp", parseColorOr(Color.Gray, theme.timestampColor ?: "#888888")) { showColorPickerTarget = "timestamp" }
+             ColorChip("Divider", parseColorOr(Color.Gray, theme.dividerColor ?: "#CCCCCC")) { showColorPickerTarget = "divider" }
+        }
 
         HorizontalDivider()
 
-        Text("Typography & Shape", style = MaterialTheme.typography.titleMedium)
-
-        Text("Font Style")
+        Text("Typography", style = MaterialTheme.typography.titleMedium)
         val fonts = listOf("Default", "Serif", "Monospace", "Cursive")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             fonts.forEach { font ->
@@ -216,14 +256,72 @@ fun CustomizeTab(
                  )
             }
         }
+        Text("Font Scale: ${"%.1f".format(theme.fontScale)}x")
+        Slider(
+            value = theme.fontScale,
+            onValueChange = { onUpdate(theme.copy(fontScale = it)) },
+            valueRange = 0.5f..2.0f,
+            steps = 15
+        )
 
-        Text("Corner Radius: ${theme.bubbleCornerRadius}dp")
+        HorizontalDivider()
+
+        Text("Shape (Corner Radius)", style = MaterialTheme.typography.titleMedium)
+
+        Text("Base Radius: ${theme.bubbleCornerRadius}dp")
         Slider(
             value = theme.bubbleCornerRadius.toFloat(),
-            onValueChange = { onUpdate(theme.copy(bubbleCornerRadius = it.toInt())) },
-            valueRange = 4f..24f,
-            steps = 20
+            onValueChange = {
+                onUpdate(theme.copy(
+                    bubbleCornerRadius = it.toInt(),
+                    bubbleCornerRadiusTopStart = null,
+                    bubbleCornerRadiusTopEnd = null,
+                    bubbleCornerRadiusBottomStart = null,
+                    bubbleCornerRadiusBottomEnd = null
+                ))
+            },
+            valueRange = 0f..32f,
+            steps = 32
         )
+
+        Text("Advanced Corners (Overrides Base)", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Top Start: ${theme.bubbleCornerRadiusTopStart ?: "-"}")
+                Slider(
+                    value = (theme.bubbleCornerRadiusTopStart ?: theme.bubbleCornerRadius).toFloat(),
+                    onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusTopStart = it.toInt())) },
+                    valueRange = 0f..32f
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Top End: ${theme.bubbleCornerRadiusTopEnd ?: "-"}")
+                Slider(
+                    value = (theme.bubbleCornerRadiusTopEnd ?: theme.bubbleCornerRadius).toFloat(),
+                    onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusTopEnd = it.toInt())) },
+                    valueRange = 0f..32f
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+             Column(modifier = Modifier.weight(1f)) {
+                 Text("Bot Start: ${theme.bubbleCornerRadiusBottomStart ?: "-"}")
+                 Slider(
+                     value = (theme.bubbleCornerRadiusBottomStart ?: theme.bubbleCornerRadius).toFloat(),
+                     onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusBottomStart = it.toInt())) },
+                     valueRange = 0f..32f
+                 )
+             }
+             Column(modifier = Modifier.weight(1f)) {
+                 Text("Bot End: ${theme.bubbleCornerRadiusBottomEnd ?: "-"}")
+                 Slider(
+                     value = (theme.bubbleCornerRadiusBottomEnd ?: theme.bubbleCornerRadius).toFloat(),
+                     onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusBottomEnd = it.toInt())) },
+                     valueRange = 0f..32f
+                 )
+             }
+        }
+
 
         HorizontalDivider()
 
@@ -392,6 +490,22 @@ fun PresetsTab(onSelect: (ThemePreferences) -> Unit) {
             bubbleIncoming = "#FECDD3", // Rose 200
             onBubbleIncoming = "#881337",
             primaryColor = "#E11D48"
+        ),
+        // Gradient Sunset
+        ThemePreferences(
+            fontStyle = "Default",
+            bubbleCornerRadius = 24,
+            appBackgroundGradientStart = "#FF5F6D",
+            appBackgroundGradientEnd = "#FFC371",
+            onBackground = "#FFFFFF",
+            topBarColor = "#FF5F6D",
+            onTopBarColor = "#FFFFFF",
+            bubbleOutgoing = "#FFFFFF",
+            onBubbleOutgoing = "#FF5F6D",
+            bubbleIncoming = "#FFFFFF",
+            onBubbleIncoming = "#FF5F6D",
+            bubbleCornerRadiusTopStart = 0,
+            bubbleCornerRadiusBottomEnd = 0
         )
     )
 
@@ -407,14 +521,33 @@ fun PresetsTab(onSelect: (ThemePreferences) -> Unit) {
                 elevation = CardDefaults.cardElevation(4.dp)
             ) {
                  Column(modifier = Modifier.padding(12.dp)) {
-                     Box(modifier = Modifier.fillMaxWidth().height(80.dp).background(parseColorOr(Color.White, preset.backgroundColor)).border(1.dp, Color.LightGray)) {
+                     Box(
+                         modifier = Modifier
+                             .fillMaxWidth()
+                             .height(80.dp)
+                             .then(
+                                 if (preset.appBackgroundGradientStart != null) {
+                                     Modifier.background(
+                                         brush = Brush.verticalGradient(
+                                             colors = listOf(
+                                                 parseColorOr(Color.White, preset.appBackgroundGradientStart),
+                                                 parseColorOr(Color.White, preset.appBackgroundGradientEnd ?: preset.appBackgroundGradientStart)
+                                             )
+                                         )
+                                     )
+                                 } else {
+                                     Modifier.background(parseColorOr(Color.White, preset.backgroundColor))
+                                 }
+                             )
+                             .border(1.dp, Color.LightGray)
+                     ) {
                          Box(modifier = Modifier.size(30.dp).align(Alignment.Center).background(parseColorOr(Color.Blue, preset.bubbleOutgoing), CircleShape))
                      }
                      val name = when(preset.backgroundColor) {
                          "#121212" -> "Dark Mode"
                          "#0F172A" -> "Ocean"
                          "#FFF1F2" -> "Rose"
-                         else -> "Default Light"
+                         else -> if (preset.appBackgroundGradientStart != null) "Sunset" else "Default Light"
                      }
                      Text(name, modifier = Modifier.padding(top = 8.dp))
                  }
@@ -428,24 +561,37 @@ private fun PreviewBubble(
     text: String,
     color: Color,
     textColor: Color,
+    timestampColor: Color,
     align: Alignment.Horizontal,
-    radius: Int,
-    fontStyle: String,
+    theme: ThemePreferences,
     onBubbleClick: () -> Unit,
     onTextClick: () -> Unit
 ) {
+    val radius = theme.bubbleCornerRadius
     val shape = if (align == Alignment.End) {
-         RoundedCornerShape(topStart = radius.dp, topEnd = 2.dp, bottomStart = radius.dp, bottomEnd = radius.dp)
+         RoundedCornerShape(
+             topStart = (theme.bubbleCornerRadiusTopStart ?: radius).dp,
+             topEnd = (theme.bubbleCornerRadiusTopEnd ?: 2).dp, // Default small for outgoing arrow effect if not overridden
+             bottomStart = (theme.bubbleCornerRadiusBottomStart ?: radius).dp,
+             bottomEnd = (theme.bubbleCornerRadiusBottomEnd ?: radius).dp
+         )
     } else {
-         RoundedCornerShape(topStart = 2.dp, topEnd = radius.dp, bottomStart = radius.dp, bottomEnd = radius.dp)
+         RoundedCornerShape(
+             topStart = (theme.bubbleCornerRadiusTopStart ?: 2).dp,
+             topEnd = (theme.bubbleCornerRadiusTopEnd ?: radius).dp,
+             bottomStart = (theme.bubbleCornerRadiusBottomStart ?: radius).dp,
+             bottomEnd = (theme.bubbleCornerRadiusBottomEnd ?: radius).dp
+         )
     }
 
-    val font = when(fontStyle) {
+    val font = when(theme.fontStyle) {
         "Serif" -> FontFamily.Serif
         "Monospace" -> FontFamily.Monospace
         "Cursive" -> FontFamily.Cursive
         else -> FontFamily.Default
     }
+
+    val fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -456,12 +602,21 @@ private fun PreviewBubble(
             shape = shape,
             modifier = Modifier.clickable(onClick = onBubbleClick)
         ) {
-            Text(
-                text,
-                modifier = Modifier.padding(12.dp).clickable(onClick = onTextClick),
-                fontFamily = font,
-                color = textColor
-            )
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text,
+                    modifier = Modifier.clickable(onClick = onTextClick),
+                    fontFamily = font,
+                    color = textColor,
+                    fontSize = fontSize
+                )
+                Text(
+                    "10:00 AM",
+                    fontFamily = font,
+                    color = timestampColor,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
         }
     }
 }
