@@ -65,5 +65,10 @@ data class ThemePreferences(
     val iconSizeFactor: Float = 1.0f,
     val fontStyle: String = "Default",
     val bubbleCornerRadius: Int = 12,
-    val inboxIconVariant: String = "Default"
+    val inboxIconVariant: String = "Default",
+    val onBubbleOutgoing: String = "#000000",
+    val onBubbleIncoming: String = "#000000",
+    val onBackground: String = "#000000",
+    val topBarColor: String = "#FFFFFF",
+    val onTopBarColor: String = "#000000"
 )

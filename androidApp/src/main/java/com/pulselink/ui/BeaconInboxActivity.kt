@@ -147,7 +147,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                         showPrivateOnly = showPrivate,
                                         onTogglePrivate = { thread, makePrivate ->
                                             viewModel.setThreadPrivacy(thread.threadId, makePrivate)
-                                        }
+                                        },
+                                        theme = state.settings.themePreferences
                                     )
                                 }
                                 composable(

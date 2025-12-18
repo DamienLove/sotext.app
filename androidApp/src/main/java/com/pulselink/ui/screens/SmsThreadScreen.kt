@@ -69,20 +69,27 @@ fun SmsThreadScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(contact?.displayName?.takeIf { it.isNotBlank() } ?: address.ifBlank { "Conversation" })
+                        Text(
+                            contact?.displayName?.takeIf { it.isNotBlank() } ?: address.ifBlank { "Conversation" },
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor)
+                        )
                         if (contact?.remoteDisplayName != null) {
-                             Text(contact.remoteDisplayName, style = MaterialTheme.typography.bodySmall)
+                             Text(
+                                 contact.remoteDisplayName,
+                                 style = MaterialTheme.typography.bodySmall,
+                                 color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, effectiveTheme.onTopBarColor).copy(alpha = 0.8f)
+                             )
                         }
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor))
                     }
                 },
                 actions = {
                     IconButton(onClick = { showThemeMenu = true }) {
-                        Icon(Icons.Filled.Palette, contentDescription = "Theme")
+                        Icon(Icons.Filled.Palette, contentDescription = "Theme", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor))
                     }
                     DropdownMenu(
                         expanded = showThemeMenu,
@@ -107,7 +114,7 @@ fun SmsThreadScreen(
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = parseColorOr(MaterialTheme.colorScheme.surface, effectiveTheme.backgroundColor)
+                    containerColor = parseColorOr(MaterialTheme.colorScheme.surface, effectiveTheme.topBarColor)
                 )
             )
         }
@@ -133,6 +140,12 @@ private fun MessageBubble(msg: SmsMessageItem, dateFormatter: (Long) -> String, 
         parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)
     } else {
         parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming)
+    }
+
+    val textColor = if (isOutgoing) {
+        parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing)
+    } else {
+        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
     }
 
     val shape = if (isOutgoing) {
@@ -185,12 +198,14 @@ private fun MessageBubble(msg: SmsMessageItem, dateFormatter: (Long) -> String, 
                     text = msg.body,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    fontFamily = font
+                    fontFamily = font,
+                    color = textColor
                 )
                 Text(
                     text = dateFormatter(msg.timestamp),
                     style = MaterialTheme.typography.labelSmall,
-                    fontFamily = font
+                    fontFamily = font,
+                    color = textColor.copy(alpha = 0.7f)
                 )
             }
         }

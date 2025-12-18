@@ -49,6 +49,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.data.sms.SmsThreadItem
+import com.pulselink.domain.model.ThemePreferences
+import com.pulselink.util.parseColorOr
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -67,7 +69,8 @@ fun SmsInboxScreen(
     onOpenPrivate: () -> Unit = {},
     privateThreadIds: Set<Long> = emptySet(),
     showPrivateOnly: Boolean = false,
-    onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> }
+    onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
+    theme: ThemePreferences = ThemePreferences()
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     val base = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
@@ -85,26 +88,30 @@ fun SmsInboxScreen(
     }
 
     Scaffold(
+        containerColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(if (isBeaconMode) "Beacon Inbox" else "Messages") },
+                title = { Text(if (isBeaconMode) "Beacon Inbox" else "Messages", color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)) },
                 navigationIcon = {
                     if (!isBeaconMode) {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor))
                         }
                     }
                 },
                 actions = {
                     if (isBeaconMode) {
                         IconButton(onClick = onOpenPrivate) {
-                            Icon(Icons.Filled.Lock, contentDescription = "Private inbox")
+                            Icon(Icons.Filled.Lock, contentDescription = "Private inbox", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor))
                         }
                         IconButton(onClick = onOpenSettings) {
-                            Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                            Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor))
                         }
                     }
-                }
+                },
+                colors = androidx.compose.material3.TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor)
+                )
             )
         }
     ) { padding ->
@@ -118,7 +125,8 @@ fun SmsInboxScreen(
             TabsRow(
                 filter = filter,
                 unreadCount = threads.count { it.unread },
-                onFilterChange = { filter = it }
+                onFilterChange = { filter = it },
+                theme = theme
             )
 
             LazyColumn(
@@ -131,7 +139,7 @@ fun SmsInboxScreen(
                         Text(
                             text = "No messages here yet.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
                         )
                     }
                 }
@@ -145,7 +153,8 @@ fun SmsInboxScreen(
                         dateFormatter = dateFormatter,
                         isArchiveFilter = filter == InboxFilter.ARCHIVED,
                         isPrivate = privateThreadIds.contains(thread.threadId),
-                        onTogglePrivate = { makePrivate -> onTogglePrivate(thread, makePrivate) }
+                        onTogglePrivate = { makePrivate -> onTogglePrivate(thread, makePrivate) },
+                        theme = theme
                     )
                 }
             }
@@ -164,7 +173,8 @@ private fun ThreadRow(
     dateFormatter: (Long) -> String,
     isArchiveFilter: Boolean,
     isPrivate: Boolean,
-    onTogglePrivate: (Boolean) -> Unit
+    onTogglePrivate: (Boolean) -> Unit,
+    theme: ThemePreferences
 ) {
     val (displayName, number) = splitDisplay(thread.address)
     val dismissState = rememberSwipeToDismissBoxState(
@@ -214,14 +224,20 @@ private fun ThreadRow(
                         onLongClick = { onTogglePrivate(!isPrivate) }
                     ),
                 tonalElevation = 1.dp,
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(14.dp),
+                color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor) // Use surface or BG? Or a slightly lighter shade if BG is dark?
+                // Actually, Surface defaults to surface color. If BG is custom, we might want this to be custom too or transparent?
+                // For simplicity, let's keep it tonal or slightly varied if needed, or just follow BG + onBG.
+                // Let's make it transparent so it blends with scaffold BG, or keep elevation.
+                // If the user sets BG to Black, Tonal Elevation 1.dp will make it Dark Grey. That is good.
+                // But we need to ensure text color matches onBackground.
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AvatarCircle(text = displayName)
+                    AvatarCircle(text = displayName, theme = theme)
                     Column(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -236,19 +252,20 @@ private fun ThreadRow(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
                             )
                             Text(
                                 text = dateFormatter(thread.timestamp),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
                             )
                         }
                         if (!number.isNullOrBlank() && number != displayName) {
                             Text(
                                 text = number,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -257,7 +274,8 @@ private fun ThreadRow(
                             text = thread.snippet.ifBlank { "No preview available." },
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f)
                         )
                         if (thread.unread) {
                             Spacer(modifier = Modifier.height(4.dp))
@@ -275,19 +293,19 @@ private fun ThreadRow(
 }
 
 @Composable
-private fun AvatarCircle(text: String) {
+private fun AvatarCircle(text: String, theme: ThemePreferences) {
     val initial = text.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     Box(
         modifier = Modifier
             .size(44.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primaryContainer),
+            .background(parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)), // Reuse outgoing bubble color for avatar bg? Or Primary?
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = initial.toString(),
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
             fontWeight = FontWeight.Bold
         )
     }
@@ -335,7 +353,8 @@ private fun splitDisplay(address: String): Pair<String, String?> {
 private fun TabsRow(
     filter: InboxFilter,
     unreadCount: Int,
-    onFilterChange: (InboxFilter) -> Unit
+    onFilterChange: (InboxFilter) -> Unit,
+    theme: ThemePreferences
 ) {
     Row(
         modifier = Modifier
@@ -344,23 +363,24 @@ private fun TabsRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TabText(label = "All Messages", selected = filter == InboxFilter.ALL) {
+        TabText(label = "All Messages", selected = filter == InboxFilter.ALL, theme = theme) {
             onFilterChange(InboxFilter.ALL)
         }
-        TabText(label = "Read", selected = filter == InboxFilter.READ) {
+        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
             onFilterChange(InboxFilter.READ)
         }
-        TabText(label = "Unread${if (unreadCount > 0) " ($unreadCount)" else ""}", selected = filter == InboxFilter.UNREAD) {
+        TabText(label = "Unread${if (unreadCount > 0) " ($unreadCount)" else ""}", selected = filter == InboxFilter.UNREAD, theme = theme) {
             onFilterChange(InboxFilter.UNREAD)
         }
-        TabText(label = "Archived", selected = filter == InboxFilter.ARCHIVED) {
+        TabText(label = "Archived", selected = filter == InboxFilter.ARCHIVED, theme = theme) {
             onFilterChange(InboxFilter.ARCHIVED)
         }
     }
 }
 
 @Composable
-private fun TabText(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun TabText(label: String, selected: Boolean, theme: ThemePreferences, onClick: () -> Unit) {
+    val selectedColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable { onClick() }
@@ -369,14 +389,14 @@ private fun TabText(label: String, selected: Boolean, onClick: () -> Unit) {
             text = label,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant
+            color = if (selected) parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground) else parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.6f)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Box(
             modifier = Modifier
                 .height(2.dp)
                 .fillMaxWidth(0.8f)
-                .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                .background(if (selected) selectedColor else Color.Transparent)
         )
     }
 }
