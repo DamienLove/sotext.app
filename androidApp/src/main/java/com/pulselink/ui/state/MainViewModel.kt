@@ -97,8 +97,9 @@ class MainViewModel @Inject constructor(
                 contactRepository.observeContacts(),
                 alertRepository.observeRecent(10),
                 dispatching,
-                lastMessage
-            ) { settings, contacts, events, isDispatching, message ->
+                lastMessage,
+                alertRepository.observeUnreadCount()
+            ) { settings, contacts, events, isDispatching, message, unreadCount ->
                 val normalizedSettings = ensureSoundDefaults(settings)
                 val adsAvailable = BuildConfig.ADS_ENABLED
                 val showAds = adsAvailable && !normalizedSettings.proUnlocked && !normalizedSettings.premiumUnlocked
@@ -108,6 +109,7 @@ class MainViewModel @Inject constructor(
                     settings = normalizedSettings,
                     contacts = contacts,
                     recentEvents = events,
+                unreadAlertCount = unreadCount,
                     isDispatching = isDispatching,
                     lastMessagePreview = message,
                     emergencySoundOptions = emergencySounds,
@@ -194,6 +196,12 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
+
+    fun markAlertsAsRead(alertIds: List<Long>) {
+        viewModelScope.launch {
+            alertRepository.markAsRead(alertIds)
+        }
+    }
     }
 
     fun deleteContact(id: Long) {
