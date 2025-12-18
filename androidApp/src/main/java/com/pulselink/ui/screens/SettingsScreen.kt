@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,12 +35,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.BuildConfig
@@ -110,45 +110,13 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // General
+            SettingsSectionHeader("General")
             SettingsToggleRow(
                 title = "Share location in alerts",
                 subtitle = null,
                 checked = settings.includeLocation,
                 onCheckedChange = onToggleIncludeLocation
-            )
-            val dndSubtitle = if (hasDndAccess) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                    stringResource(R.string.dnd_override_android15_note)
-                } else {
-                    stringResource(R.string.dnd_override_ready)
-                }
-            } else {
-                stringResource(R.string.dnd_override_permission_prompt)
-            }
-            SettingsActionRow(
-                title = stringResource(R.string.dnd_override_title),
-                subtitle = null,
-                actionLabel = if (hasDndAccess) {
-                    stringResource(R.string.dnd_override_action_manage)
-                } else {
-                    stringResource(R.string.dnd_override_action_allow)
-                },
-                onAction = onRequestDndAccess,
-                leadingIcon = Icons.Filled.NotificationsActive
-            )
-            SettingsActionRow(
-                title = stringResource(R.string.permission_battery_opt_title),
-                subtitle = null,
-                actionLabel = stringResource(R.string.permission_battery_opt_action),
-                onAction = onRequestBatteryOpt,
-                leadingIcon = Icons.Filled.PowerSettingsNew
-            )
-            SettingsActionRow(
-                title = stringResource(R.string.permission_unused_apps_title),
-                subtitle = null,
-                actionLabel = stringResource(R.string.permission_unused_apps_action),
-                onAction = onRequestUnusedApps,
-                leadingIcon = Icons.Filled.Schedule
             )
             SettingsToggleRow(
                 title = "Auto-allow remote sound change",
@@ -156,11 +124,42 @@ fun SettingsScreen(
                 checked = settings.autoAllowRemoteSoundChange,
                 onCheckedChange = onToggleAutoAllowRemoteSoundChange
             )
-            SettingsToggleRow(
-                title = stringResource(id = R.string.settings_auto_update_contact_title),
-                subtitle = null,
-                checked = settings.autoUpdateContactInfo,
-                onCheckedChange = onToggleAutoUpdateContactInfo
+
+            // Notifications & Tones
+            SettingsSectionHeader("Notifications & Tones")
+            SettingsActionRow(
+                title = "Emergency alert tone",
+                actionLabel = "Edit",
+                onAction = onEditEmergencyTone
+            )
+            SettingsActionRow(
+                title = "Check-in alert tone",
+                actionLabel = "Edit",
+                onAction = onEditCheckInTone
+            )
+            SettingsActionRow(
+                title = stringResource(R.string.settings_call_tone_title),
+                actionLabel = "Edit",
+                onAction = onEditCallTone
+            )
+            SettingsActionRow(
+                title = stringResource(R.string.dnd_override_title),
+                subtitle = if (hasDndAccess) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                        stringResource(R.string.dnd_override_android15_note)
+                    } else {
+                        stringResource(R.string.dnd_override_ready)
+                    }
+                } else {
+                    stringResource(R.string.dnd_override_permission_prompt)
+                },
+                actionLabel = if (hasDndAccess) {
+                    stringResource(R.string.dnd_override_action_manage)
+                } else {
+                    stringResource(R.string.dnd_override_action_allow)
+                },
+                onAction = onRequestDndAccess,
+                leadingIcon = Icons.Filled.NotificationsActive
             )
             SettingsToggleRow(
                 title = "Firebase Messaging (Faster)",
@@ -174,11 +173,22 @@ fun SettingsScreen(
                 checked = settings.emailFallbackEnabled,
                 onCheckedChange = onToggleEmailFallback
             )
-            SettingsToggleRow(
-                title = stringResource(id = R.string.settings_beacon_icon_title),
-                subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),
-                checked = beaconLauncherEnabled,
-                onCheckedChange = onToggleBeaconLauncher
+
+            // Permissions & System
+            SettingsSectionHeader("Permissions & System")
+            SettingsActionRow(
+                title = stringResource(R.string.permission_battery_opt_title),
+                subtitle = null,
+                actionLabel = stringResource(R.string.permission_battery_opt_action),
+                onAction = onRequestBatteryOpt,
+                leadingIcon = Icons.Filled.PowerSettingsNew
+            )
+            SettingsActionRow(
+                title = stringResource(R.string.permission_unused_apps_title),
+                subtitle = null,
+                actionLabel = stringResource(R.string.permission_unused_apps_action),
+                onAction = onRequestUnusedApps,
+                leadingIcon = Icons.Filled.Schedule
             )
             val defaultSmsSubtitle = when {
                 isDefaultSmsApp -> stringResource(id = R.string.settings_default_sms_ready)
@@ -199,20 +209,14 @@ fun SettingsScreen(
                 onAction = onRequestDefaultSms,
                 leadingIcon = Icons.Filled.Message
             )
-            SettingsActionRow(
-                title = stringResource(id = R.string.settings_beacon_title),
-                subtitle = if (isDefaultSmsApp && beaconLauncherEnabled) {
-                    stringResource(id = R.string.settings_beacon_enabled_subtitle)
-                } else {
-                    stringResource(id = R.string.settings_beacon_subtitle)
-                },
-                actionLabel = if (isDefaultSmsApp && beaconLauncherEnabled) {
-                    stringResource(id = R.string.settings_beacon_action_open)
-                } else {
-                    stringResource(id = R.string.settings_beacon_action_enable)
-                },
-                onAction = onOpenBeacon,
-                leadingIcon = Icons.Outlined.WifiTethering
+
+            // Contacts & Sync
+            SettingsSectionHeader("Contacts & Sync")
+            SettingsToggleRow(
+                title = stringResource(id = R.string.settings_auto_update_contact_title),
+                subtitle = null,
+                checked = settings.autoUpdateContactInfo,
+                onCheckedChange = onToggleAutoUpdateContactInfo
             )
             SettingsActionRow(
                 title = stringResource(id = R.string.settings_sync_contacts_title),
@@ -246,21 +250,33 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.error
                 )
             }
-            SettingsActionRow(
-                title = "Emergency alert tone",
-                actionLabel = "Edit",
-                onAction = onEditEmergencyTone
+
+            // Beacon Feature
+            SettingsSectionHeader("Beacon Feature")
+            SettingsToggleRow(
+                title = stringResource(id = R.string.settings_beacon_icon_title),
+                subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),
+                checked = beaconLauncherEnabled,
+                onCheckedChange = onToggleBeaconLauncher
             )
             SettingsActionRow(
-                title = "Check-in alert tone",
-                actionLabel = "Edit",
-                onAction = onEditCheckInTone
+                title = stringResource(id = R.string.settings_beacon_title),
+                subtitle = if (isDefaultSmsApp && beaconLauncherEnabled) {
+                    stringResource(id = R.string.settings_beacon_enabled_subtitle)
+                } else {
+                    stringResource(id = R.string.settings_beacon_subtitle)
+                },
+                actionLabel = if (isDefaultSmsApp && beaconLauncherEnabled) {
+                    stringResource(id = R.string.settings_beacon_action_open)
+                } else {
+                    stringResource(id = R.string.settings_beacon_action_enable)
+                },
+                onAction = onOpenBeacon,
+                leadingIcon = Icons.Outlined.WifiTethering
             )
-            SettingsActionRow(
-                title = stringResource(R.string.settings_call_tone_title),
-                actionLabel = "Edit",
-                onAction = onEditCallTone
-            )
+
+            // Support & Account
+            SettingsSectionHeader("Support & Account")
             AssistantCommandsCard(
                 proEnabled = !BuildConfig.ADS_ENABLED || settings.proUnlocked,
                 onOpenHelp = onOpenHelp
@@ -294,6 +310,18 @@ fun SettingsScreen(
             )
         }
     }
+}
+
+@Composable
+private fun SettingsSectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 8.dp, start = 4.dp)
+    )
 }
 
 @Composable
