@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /trustedContacts/{contactId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    match /devices/{deviceId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (request.resource.data.uid == request.auth.uid || resource.data.uid == request.auth.uid);
+    }
+
+    match /linkChannels/{channelId} {
+       allow read, write: if request.auth != null;
+
+       match /messages/{messageId} {
+         allow read, write: if request.auth != null;
+       }
+    }
+
+    match /links/{linkCode} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /linkEmailInvites/{inviteId} {
+      allow read, write: if request.auth != null;
+    }
+
+    match /relayAlerts/{alertId} {
+      allow create: if request.auth != null;
+    }
+  }
+}

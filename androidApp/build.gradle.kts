@@ -460,6 +460,7 @@ kapt {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
     implementation("com.google.firebase:firebase-functions-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-config-ktx")
     implementation("com.google.assistant.appactions:suggestions:1.0.0")
     implementation("com.google.android.play:integrity:1.5.0")

@@ -209,6 +209,14 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name=".data.messaging.PulseLinkFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <!-- Home screen widget (available in all flavors, incl. Pro) -->
         <receiver
             android:name=".widget.PulseLinkWidgetProvider"
