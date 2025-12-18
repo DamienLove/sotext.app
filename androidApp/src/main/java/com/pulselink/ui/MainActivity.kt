@@ -1119,9 +1119,12 @@ class MainActivity : AppCompatActivity() {
                         SmsThreadScreen(
                             address = Uri.decode(address),
                             messages = messages,
+                            contact = null,
                             onBack = { navController.popBackStack() },
                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
-                            themePreferences = state.settings.themePreferences
+                            globalTheme = state.settings.themePreferences,
+                            onUpdateContactTheme = { /* no-op for SMS inbox contacts */ },
+                            onCustomizeTheme = { navController.navigate("visual_settings") }
                         )
                     }
                     composable("settings_help") {

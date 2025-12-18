@@ -79,6 +79,7 @@
             android:icon="@drawable/ic_logo"
             android:label="Beacon Inbox"
             android:roundIcon="@drawable/ic_logo"
+            android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -92,6 +93,7 @@
             android:icon="@drawable/ic_pulselink_pro"
             android:label="Beacon Inbox"
             android:roundIcon="@drawable/ic_pulselink_pro"
+            android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
