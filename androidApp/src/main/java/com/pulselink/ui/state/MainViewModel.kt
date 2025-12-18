@@ -97,9 +97,8 @@ class MainViewModel @Inject constructor(
                 contactRepository.observeContacts(),
                 alertRepository.observeRecent(10),
                 alertRepository.observeUnreadCount(),
-                dispatching,
-                lastMessage
-            ) { settings, contacts, events, unreadCount, isDispatching, message ->
+                dispatching
+            ) { settings, contacts, events, unreadCount, isDispatching ->
                 val normalizedSettings = ensureSoundDefaults(settings)
                 val adsAvailable = BuildConfig.ADS_ENABLED
                 val showAds = adsAvailable && !normalizedSettings.proUnlocked && !normalizedSettings.premiumUnlocked
@@ -111,7 +110,7 @@ class MainViewModel @Inject constructor(
                     recentEvents = events,
                     unreadAlertCount = unreadCount,
                     isDispatching = isDispatching,
-                    lastMessagePreview = message,
+                    lastMessagePreview = null,
                     emergencySoundOptions = emergencySounds,
                     checkInSoundOptions = checkInSounds,
                     callSoundOptions = callSounds,
@@ -123,7 +122,10 @@ class MainViewModel @Inject constructor(
                     autoUpdateContactInfo = normalizedSettings.autoUpdateContactInfo
                 )
             }
-            val withProfile = combine(baseState, profileUpdate) { state, profile ->
+            val withLastMessage = combine(baseState, lastMessage) { state, message ->
+                state.copy(lastMessagePreview = message)
+            }
+            val withProfile = combine(withLastMessage, profileUpdate) { state, profile ->
                 state.copy(profileUpdate = profile)
             }
             combine(withProfile, dndStatus, emergencyActive) { state, dndStatusMessage, isEmergencyActive ->

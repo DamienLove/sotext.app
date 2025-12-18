@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -68,6 +69,7 @@ import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.R
+import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BetaTesterListScreen
 import com.pulselink.ui.screens.HomeScreen
 import com.pulselink.ui.screens.AlertHistoryScreen
@@ -581,7 +583,14 @@ class MainActivity : AppCompatActivity() {
                     if (initialInboxShortcut) "sms/inbox" else "splash"
                 }
 
-                NavHost(navController = navController, startDestination = startDestination) {
+                val bannerHeight = 50.dp
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = if (state.showAds) bannerHeight else 0.dp)
+                    ) {
+                        NavHost(navController = navController, startDestination = startDestination) {
                     composable("splash") {
                         SplashScreen()
                         LaunchedEffect(authState, state.onboardingComplete) {
@@ -1156,6 +1165,16 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() }
                         )
                     }
+                }
+                    }
+
+                    BannerAdSlot(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .navigationBarsPadding(),
+                        enabled = state.showAds
+                    )
                 }
 
                 if (showBeaconAssist) {

@@ -11,6 +11,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
@@ -20,8 +25,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,7 +40,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.pulselink.BuildConfig
 import com.pulselink.billing.SubscriptionManager
-import com.pulselink.ui.InboxLauncherActivity
+import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BeaconSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.SmsInboxScreen
@@ -96,105 +104,122 @@ class BeaconInboxActivity : ComponentActivity() {
                 }
 
                 if (hasSmsPermissions) {
-                    NavHost(navController = navController, startDestination = "sms/inbox") {
-                        composable("sms/inbox") {
-                            val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
-                            val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
-                            val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
-                            LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
-                            SmsInboxScreen(
-                                threads = threads,
-                                archivedThreads = archivedThreads,
-                                onOpenThread = { thread ->
-                                    navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
-                                },
-                                onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
-                                onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
-                                onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
-                                onBack = { finish() },
-                                dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
-                                isBeaconMode = true,
-                                onOpenSettings = { navController.navigate("beacon_settings") },
-                                onOpenPrivate = {
-                                    if (showPrivate) {
-                                        showPrivate = false
-                                        return@SmsInboxScreen
-                                    }
-                                    if (state.settings.privatePinHash.isNullOrBlank()) {
-                                        navController.navigate("private_pin")
-                                    } else {
-                                        pinInput = ""
-                                        showPinDialog = true
-                                    }
-                                },
-                                privateThreadIds = privateThreads,
-                                showPrivateOnly = showPrivate,
-                                onTogglePrivate = { thread, makePrivate ->
-                                    viewModel.setThreadPrivacy(thread.threadId, makePrivate)
+                    val bannerHeight = 50.dp
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(bottom = if (state.showAds) bannerHeight else 0.dp)
+                        ) {
+                            NavHost(navController = navController, startDestination = "sms/inbox") {
+                                composable("sms/inbox") {
+                                    val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
+                                    val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
+                                    val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
+                                    LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
+                                    SmsInboxScreen(
+                                        threads = threads,
+                                        archivedThreads = archivedThreads,
+                                        onOpenThread = { thread ->
+                                            navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
+                                        },
+                                        onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
+                                        onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
+                                        onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
+                                        onBack = { finish() },
+                                        dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                                        isBeaconMode = true,
+                                        onOpenSettings = { navController.navigate("beacon_settings") },
+                                        onOpenPrivate = {
+                                            if (showPrivate) {
+                                                showPrivate = false
+                                                return@SmsInboxScreen
+                                            }
+                                            if (state.settings.privatePinHash.isNullOrBlank()) {
+                                                navController.navigate("private_pin")
+                                            } else {
+                                                pinInput = ""
+                                                showPinDialog = true
+                                            }
+                                        },
+                                        privateThreadIds = privateThreads,
+                                        showPrivateOnly = showPrivate,
+                                        onTogglePrivate = { thread, makePrivate ->
+                                            viewModel.setThreadPrivacy(thread.threadId, makePrivate)
+                                        }
+                                    )
                                 }
-                            )
+                                composable(
+                                    route = "sms/thread/{threadId}/{address}",
+                                    arguments = listOf(
+                                        navArgument("threadId") { type = NavType.LongType },
+                                        navArgument("address") { type = NavType.StringType }
+                                    )
+                                ) { entry ->
+                                    val threadId = entry.arguments?.getLong("threadId") ?: return@composable
+                                    val address = entry.arguments?.getString("address") ?: ""
+                                    val threadViewModel: SmsThreadViewModel = hiltViewModel()
+                                    val messages by threadViewModel.messages.collectAsStateWithLifecycle()
+                                    LaunchedEffect(threadId) { threadViewModel.load(threadId) }
+                                    SmsThreadScreen(
+                                        address = Uri.decode(address),
+                                        messages = messages,
+                                        onBack = { navController.popBackStack() },
+                                        dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                                        themePreferences = state.settings.themePreferences
+                                    )
+                                }
+                                composable("beacon_settings") {
+                                    BeaconSettingsScreen(
+                                        settings = state.settings,
+                                        onBack = { navController.popBackStack() },
+                                        onTimeFormatChange = { viewModel.setTimeFormat(it) },
+                                        onOpenVisualSettings = { navController.navigate("visual_settings") },
+                                        isDefaultSmsApp = isDefaultSms,
+                                        defaultSmsSupported = defaultSmsSupported,
+                                        onRequestDefaultSms = {
+                                            val intent = defaultSmsHelper.buildRoleRequestIntent()
+                                            if (intent != null) {
+                                                defaultSmsLauncher.launch(intent)
+                                            }
+                                        },
+                                        remoteWebAccessEnabled = state.settings.remoteWebAccessEnabled,
+                                        isPremiumActive = subscriptionUiState.isPremiumActive || state.settings.premiumUnlocked,
+                                        onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
+                                        onSetPrivatePin = { navController.navigate("private_pin") },
+                                        onPurchasePremium = { subscriptionManager.launchSubscribe(this@BeaconInboxActivity) },
+                                        beaconLauncherEnabled = state.settings.beaconLauncherEnabled,
+                                        onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) }
+                                    )
+                                }
+                                composable("visual_settings") {
+                                    VisualSettingsScreen(
+                                        theme = state.settings.themePreferences,
+                                        onSelectTheme = { newTheme -> viewModel.setThemePreferences(newTheme) },
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("private_pin") {
+                                    PrivatePinScreen(
+                                        hasPin = state.settings.privatePinHash != null,
+                                        onSavePin = { newPin ->
+                                            val hashed = newPin?.let { hashPin(it) }
+                                            viewModel.setPrivatePinHash(hashed)
+                                            navController.popBackStack()
+                                        },
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                            }
                         }
-                        composable(
-                            route = "sms/thread/{threadId}/{address}",
-                            arguments = listOf(
-                                navArgument("threadId") { type = NavType.LongType },
-                                navArgument("address") { type = NavType.StringType }
-                            )
-                        ) { entry ->
-                            val threadId = entry.arguments?.getLong("threadId") ?: return@composable
-                            val address = entry.arguments?.getString("address") ?: ""
-                            val threadViewModel: SmsThreadViewModel = hiltViewModel()
-                            val messages by threadViewModel.messages.collectAsStateWithLifecycle()
-                            LaunchedEffect(threadId) { threadViewModel.load(threadId) }
-                            SmsThreadScreen(
-                                address = Uri.decode(address),
-                                messages = messages,
-                                onBack = { navController.popBackStack() },
-                                dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
-                                themePreferences = state.settings.themePreferences
-                            )
-                        }
-                        composable("beacon_settings") {
-                            BeaconSettingsScreen(
-                                settings = state.settings,
-                                onBack = { navController.popBackStack() },
-                                onTimeFormatChange = { viewModel.setTimeFormat(it) },
-                                onOpenVisualSettings = { navController.navigate("visual_settings") },
-                                isDefaultSmsApp = isDefaultSms,
-                                defaultSmsSupported = defaultSmsSupported,
-                                onRequestDefaultSms = {
-                                    val intent = defaultSmsHelper.buildRoleRequestIntent()
-                                    if (intent != null) {
-                                        defaultSmsLauncher.launch(intent)
-                                    }
-                                },
-                                remoteWebAccessEnabled = state.settings.remoteWebAccessEnabled,
-                                isPremiumActive = subscriptionUiState.isPremiumActive || state.settings.premiumUnlocked,
-                                onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
-                                onSetPrivatePin = { navController.navigate("private_pin") },
-                                onPurchasePremium = { subscriptionManager.launchSubscribe(this@BeaconInboxActivity) },
-                                beaconLauncherEnabled = state.settings.beaconLauncherEnabled,
-                                onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) }
-                            )
-                        }
-                        composable("visual_settings") {
-                            VisualSettingsScreen(
-                                theme = state.settings.themePreferences,
-                                onSelectTheme = { newTheme -> viewModel.setThemePreferences(newTheme) },
-                                onBack = { navController.popBackStack() }
-                            )
-                        }
-                        composable("private_pin") {
-                            PrivatePinScreen(
-                                hasPin = state.settings.privatePinHash != null,
-                                onSavePin = { newPin ->
-                                    val hashed = newPin?.let { hashPin(it) }
-                                    viewModel.setPrivatePinHash(hashed)
-                                    navController.popBackStack()
-                                },
-                                onBack = { navController.popBackStack() }
-                            )
-                        }
+
+                        BannerAdSlot(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .navigationBarsPadding(),
+                            enabled = state.showAds
+                        )
                     }
                     if (showPinDialog) {
                         AlertDialog(

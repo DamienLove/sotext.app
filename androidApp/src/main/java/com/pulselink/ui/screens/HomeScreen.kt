@@ -103,7 +103,6 @@ import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
-import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.state.PulseLinkUiState
 import kotlinx.coroutines.launch
@@ -235,7 +234,6 @@ fun HomeScreen(
             }
             if (state.showAds) {
                 NativeAdCard(enabled = true)
-                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
             }
         }
     }

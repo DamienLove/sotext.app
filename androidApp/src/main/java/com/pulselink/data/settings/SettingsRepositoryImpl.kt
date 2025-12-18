@@ -1,6 +1,9 @@
 package com.pulselink.data.settings
 
 import android.content.Context
+import android.content.ComponentName
+import android.content.pm.PackageManager
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -283,6 +286,18 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { prefs ->
             prefs[BEACON_LAUNCHER_ENABLED] = enabled
         }
+        runCatching {
+            val component = ComponentName(context, com.pulselink.ui.InboxLauncherActivity::class.java)
+            val newState = if (enabled) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            context.packageManager.setComponentEnabledSetting(
+                component,
+                newState,
+                PackageManager.DONT_KILL_APP
+            )
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to update Beacon launcher icon enabled=$enabled", error)
+        }
     }
 
     override suspend fun setBeaconHintDismissed(dismissed: Boolean) {
@@ -351,6 +366,10 @@ class SettingsRepositoryImpl @Inject constructor(
                 runCatching { json.decodeFromString<List<MessageChannel>>(it) }.getOrNull()
             } ?: PulseLinkSettings().messagingChannelPriority
         )
+    }
+
+    companion object {
+        private const val TAG = "SettingsRepositoryImpl"
     }
 }
 

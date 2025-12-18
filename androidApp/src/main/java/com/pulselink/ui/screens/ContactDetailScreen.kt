@@ -56,12 +56,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
-import com.pulselink.ui.ads.BannerAdSlot
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -116,12 +114,6 @@ fun ContactDetailScreen(
             )
         },
         contentWindowInsets = WindowInsets.safeDrawing
-        ,
-        bottomBar = {
-            if (BuildConfig.ADS_ENABLED && showAds) {
-                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
-            }
-        }
     ) { padding ->
         if (contact == null) {
             Column(
