@@ -1,25 +1,28 @@
 package com.pulselink.widget
 
-import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.view.View
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Typeface
+import android.net.Uri
 import android.widget.RemoteViews
 import com.pulselink.R
 import com.pulselink.ui.MainActivity
 import com.pulselink.domain.model.Contact
-import com.pulselink.domain.model.EscalationTier
-import com.pulselink.domain.model.RemotePresence
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
 import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.runBlocking
+import kotlin.math.absoluteValue
 
+@AndroidEntryPoint
 class PulseLinkWidgetProvider : AppWidgetProvider() {
 
     @EntryPoint
@@ -28,155 +31,131 @@ class PulseLinkWidgetProvider : AppWidgetProvider() {
         fun widgetStateManager(): WidgetStateManager
     }
 
-    private fun entryPoint(context: Context): WidgetProviderEntryPoint =
-        EntryPointAccessors.fromApplication(context, WidgetProviderEntryPoint::class.java)
-
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        runCatching { updateWidgetsSync(context, appWidgetManager, appWidgetIds) }
-            .onFailure { provideFallback(context, appWidgetManager, appWidgetIds) }
+        appWidgetIds.forEach { id ->
+            updateAppWidget(context, appWidgetManager, id)
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
-            val mgr = AppWidgetManager.getInstance(context)
-            val ids = mgr.getAppWidgetIds(ComponentName(context, PulseLinkWidgetProvider::class.java))
-            runCatching { updateWidgetsSync(context, mgr, ids) }
-                .onFailure { provideFallback(context, mgr, ids) }
-        }
     }
 
-    @SuppressLint("RemoteViewLayout")
-    private fun updateWidgetsSync(
+    private fun updateAppWidget(
         context: Context,
         appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
+        appWidgetId: Int
     ) {
-        val widgetStateManager = runCatching { entryPoint(context).widgetStateManager() }.getOrNull()
-        if (widgetStateManager == null) {
-            provideFallback(context, appWidgetManager, appWidgetIds)
-            return
-        }
+        val views = RemoteViews(context.packageName, R.layout.widget_pulselink)
 
-        val isEmergencyActive = runBlocking {
-            runCatching { widgetStateManager.getEmergencyState() }.getOrDefault(false)
+        // Header
+        val settingsIntent = Intent(context, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-        val timeText = java.text.SimpleDateFormat("h:mm a").format(java.util.Date())
+        val settingsPendingIntent = PendingIntent.getActivity(
+            context, 0, settingsIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_settings_button, settingsPendingIntent)
+        views.setOnClickPendingIntent(R.id.widget_app_icon, settingsPendingIntent)
 
+        // Actions
+        val emergencyIntent = Intent(context, PulseLinkWidgetActionReceiver::class.java).apply {
+            action = PulseLinkWidgetActionReceiver.ACTION_EMERGENCY
+        }
+        val emergencyPendingIntent = PendingIntent.getBroadcast(
+            context, 1, emergencyIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_emergency_action, emergencyPendingIntent)
+
+        val checkinIntent = Intent(context, PulseLinkWidgetActionReceiver::class.java).apply {
+            action = PulseLinkWidgetActionReceiver.ACTION_CHECKIN
+        }
+        val checkinPendingIntent = PendingIntent.getBroadcast(
+            context, 2, checkinIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_checkin_action, checkinPendingIntent)
+
+        // Shortcuts
+        val entryPoint = EntryPointAccessors.fromApplication(context, WidgetProviderEntryPoint::class.java)
+        val stateManager = entryPoint.widgetStateManager()
         val contacts = runBlocking {
-            runCatching { widgetStateManager.getEmergencyContactsForWidget() }
-                .getOrDefault(emptyList())
+            runCatching { stateManager.getEmergencyContactsForWidget() }.getOrDefault(emptyList())
         }
 
-        val calendar = java.util.Calendar.getInstance()
-        val hourAngle = calendar.get(java.util.Calendar.HOUR) * 30f + calendar.get(java.util.Calendar.MINUTE) * 0.5f
-        val minuteAngle = calendar.get(java.util.Calendar.MINUTE) * 6f
+        views.removeAllViews(R.id.widget_shortcuts_row)
+        contacts.take(4).forEach { contact ->
+            val itemView = RemoteViews(context.packageName, R.layout.widget_contact_shortcut_item)
+            itemView.setTextViewText(R.id.shortcut_name, contact.displayName)
+            itemView.setImageViewBitmap(R.id.shortcut_avatar, generateAvatar(contact.displayName))
 
-        appWidgetIds.forEach { id ->
-            val views = RemoteViews(context.packageName, R.layout.widget_pulselink)
-
-            val emergencyIntent = Intent(context, PulseLinkWidgetActionReceiver::class.java).apply {
-                action = PulseLinkWidgetActionReceiver.ACTION_EMERGENCY
-            }
-            val emergencyPendingIntent = PendingIntent.getBroadcast(
-                context, 0, emergencyIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.widget_emergency_button, emergencyPendingIntent)
-            // No text overlay on logo; tooltip handled in receiver
-
-            val settingsIntent = Intent(context, MainActivity::class.java).apply {
+            // On Click -> Open Thread or Call? "Contact shortcuts"
+            // Let's open the app with contact ID or just main app.
+            // Opening MainActivity is safest.
+             val contactIntent = Intent(context, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra("contact_id", contact.id)
             }
-            val settingsPendingIntent = PendingIntent.getActivity(
-                context, 3, settingsIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            val contactPendingIntent = PendingIntent.getActivity(
+                context, contact.id.toInt(), contactIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.widget_settings_button, settingsPendingIntent)
+            itemView.setOnClickPendingIntent(R.id.shortcut_avatar, contactPendingIntent)
 
-            // Tooltip visibility and glow
-            views.setViewVisibility(R.id.widget_tooltip, if (isEmergencyActive) View.GONE else View.VISIBLE)
-            views.setViewVisibility(R.id.widget_center_glow, View.VISIBLE)
-
-            // Clock hands rotation
-            views.setFloat(R.id.widget_hand_hour, "setRotation", hourAngle)
-            views.setFloat(R.id.widget_hand_minute, "setRotation", minuteAngle)
-            views.setFloat(R.id.widget_hand_hour, "setPivotX", 2f)
-            views.setFloat(R.id.widget_hand_hour, "setPivotY", 70f)
-            views.setFloat(R.id.widget_hand_minute, "setPivotX", 1.5f)
-            views.setFloat(R.id.widget_hand_minute, "setPivotY", 90f)
-
-            runCatching { bindContacts(views, contacts, context) }
-            runCatching { appWidgetManager.updateAppWidget(id, views) }
+            views.addView(R.id.widget_shortcuts_row, itemView)
         }
-    }
+        // Add spacers? RemoteViews linear layout just stacks them.
+        // widget_contact_shortcut_item has padding/margin.
 
-    private fun provideFallback(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        val fallback = RemoteViews(context.packageName, R.layout.widget_pulselink)
-        appWidgetIds.forEach { id -> runCatching { appWidgetManager.updateAppWidget(id, fallback) } }
-    }
+        // List
+        val listIntent = Intent(context, PulseLinkWidgetService::class.java).apply {
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+        }
+        views.setRemoteAdapter(R.id.widget_list, listIntent)
+        views.setEmptyView(R.id.widget_list, R.id.widget_empty_view)
 
-    private fun bindContacts(views: RemoteViews, contacts: List<Contact>, context: Context) {
-        val rows = listOf(
-            ContactRow(R.id.widget_row_1, R.id.contact_status_1, R.id.contact_name_1, R.id.contact_role_1),
-            ContactRow(R.id.widget_row_2, R.id.contact_status_2, R.id.contact_name_2, R.id.contact_role_2),
-            ContactRow(R.id.widget_row_3, R.id.contact_status_3, R.id.contact_name_3, R.id.contact_role_3),
-            ContactRow(R.id.widget_row_4, R.id.contact_status_4, R.id.contact_name_4, R.id.contact_role_4),
-            ContactRow(R.id.widget_row_5, R.id.contact_status_5, R.id.contact_name_5, R.id.contact_role_5)
+        val clickIntent = Intent(context, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            action = Intent.ACTION_VIEW
+        }
+        val clickPendingTemplate = PendingIntent.getActivity(
+            context, 3, clickIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
         )
+        views.setPendingIntentTemplate(R.id.widget_list, clickPendingTemplate)
 
-        val fallback = listOf(
-            Placeholder("Dr. Emily", "PRIMARY PHYSICIAN", RemotePresence.ONLINE),
-            Placeholder("Mom", "EMERGENCY CONTACT", RemotePresence.ONLINE),
-            Placeholder("John (Husband)", "SPOUSE", RemotePresence.UNKNOWN),
-            Placeholder("Sarah (Sister)", "SISTER", RemotePresence.ONLINE),
-            Placeholder("Dad", "EMERGENCY CONTACT", RemotePresence.OFFLINE)
-        )
-
-        rows.forEachIndexed { index, row ->
-            val contact = contacts.getOrNull(index)
-            if (contact == null) {
-                val placeholder = fallback.getOrNull(index)
-                if (placeholder == null) {
-                    views.setViewVisibility(row.containerId, View.GONE)
-                } else {
-                    views.setViewVisibility(row.containerId, View.VISIBLE)
-                    views.setTextViewText(row.nameId, placeholder.name)
-                    views.setTextViewText(row.roleId, placeholder.role)
-                    views.setImageViewResource(row.statusId, placeholder.dotRes())
-                }
-            } else {
-                views.setViewVisibility(row.containerId, View.VISIBLE)
-                views.setTextViewText(row.nameId, contact.displayName)
-                val role = when (contact.escalationTier) {
-                    EscalationTier.EMERGENCY -> context.getString(R.string.widget_role_emergency)
-                    EscalationTier.CHECK_IN -> context.getString(R.string.widget_role_checkin)
-                }
-                views.setTextViewText(row.roleId, role.uppercase())
-                val dotRes = when (contact.remotePresence) {
-                    RemotePresence.ONLINE, RemotePresence.RECENT -> R.drawable.widget_status_dot_green
-                    RemotePresence.OFFLINE, RemotePresence.STALE -> R.drawable.widget_status_dot_red
-                    RemotePresence.UNKNOWN -> R.drawable.widget_status_dot_gray
-                }
-                views.setImageViewResource(row.statusId, dotRes)
-            }
-        }
+        appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    private data class ContactRow(
-        val containerId: Int,
-        val statusId: Int,
-        val nameId: Int,
-        val roleId: Int
-    )
+    private fun generateAvatar(name: String): Bitmap {
+        val size = 96 // larger for density
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val paint = Paint()
 
-    private data class Placeholder(
-        val name: String,
-        val role: String,
-        val presence: RemotePresence
-    ) {
-        fun dotRes(): Int = when (presence) {
-            RemotePresence.ONLINE, RemotePresence.RECENT -> R.drawable.widget_status_dot_green
-            RemotePresence.OFFLINE, RemotePresence.STALE -> R.drawable.widget_status_dot_red
-            RemotePresence.UNKNOWN -> R.drawable.widget_status_dot_gray
-        }
+        val colors = listOf(
+            0xFFEF5350.toInt(), 0xFFAB47BC.toInt(), 0xFF5C6BC0.toInt(),
+            0xFF29B6F6.toInt(), 0xFF26A69A.toInt(), 0xFF66BB6A.toInt(),
+            0xFFFFA726.toInt(), 0xFF8D6E63.toInt()
+        )
+        val colorIndex = (name.hashCode().absoluteValue) % colors.size
+        paint.color = colors[colorIndex]
+        paint.style = Paint.Style.FILL
+        canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+
+        paint.color = -1
+        paint.textSize = 40f
+        paint.typeface = Typeface.DEFAULT_BOLD
+        paint.textAlign = Paint.Align.CENTER
+
+        val initials = name.split(" ")
+            .take(2)
+            .mapNotNull { it.firstOrNull()?.uppercase() }
+            .joinToString("")
+            .ifEmpty { "?" }
+
+        val xPos = size / 2f
+        val yPos = (size / 2f) - ((paint.descent() + paint.ascent()) / 2)
+
+        canvas.drawText(initials, xPos, yPos, paint)
+        return bitmap
     }
 }

@@ -87,6 +87,7 @@ class PulseLinkWidgetActionReceiver : BroadcastReceiver() {
     }
 
     private suspend fun handleCheckIn() {
+        // Dispatch check-in alert
         alertRouter.dispatchManual(EscalationTier.CHECK_IN, "Widget check-in")
         widgetStateManager.requestWidgetUpdate()
     }
