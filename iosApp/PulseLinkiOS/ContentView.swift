@@ -217,7 +217,7 @@ private struct ContactsTab: View {
                                 Spacer()
                                 PresenceDot(presence: contact.presence)
                                 if contact.unread > 0 {
-                                    Badge("\(contact.unread)")
+                                    Badge(text: "\(contact.unread)")
                                 }
                             }
                         }
