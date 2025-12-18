@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -63,8 +64,21 @@ fun SmsThreadScreen(
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
 
+    val bgModifier = if (effectiveTheme.appBackgroundGradientStart != null && effectiveTheme.appBackgroundGradientEnd != null) {
+        Modifier.background(
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientStart!!),
+                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientEnd!!)
+                )
+            )
+        )
+    } else {
+        Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor))
+    }
+
     Scaffold(
-        containerColor = parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor),
+        containerColor = if (effectiveTheme.appBackgroundGradientStart != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -122,6 +136,7 @@ fun SmsThreadScreen(
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
+                .then(bgModifier) // Apply gradient here
                 .padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -148,10 +163,21 @@ private fun MessageBubble(msg: SmsMessageItem, dateFormatter: (Long) -> String, 
         parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
     }
 
+    val baseRadius = theme.bubbleCornerRadius
     val shape = if (isOutgoing) {
-         RoundedCornerShape(topStart = theme.bubbleCornerRadius.dp, topEnd = 2.dp, bottomStart = theme.bubbleCornerRadius.dp, bottomEnd = theme.bubbleCornerRadius.dp)
+         RoundedCornerShape(
+             topStart = (theme.bubbleCornerRadiusTopStart ?: baseRadius).dp,
+             topEnd = (theme.bubbleCornerRadiusTopEnd ?: 2).dp, // Default smaller for outgoing effect
+             bottomStart = (theme.bubbleCornerRadiusBottomStart ?: baseRadius).dp,
+             bottomEnd = (theme.bubbleCornerRadiusBottomEnd ?: baseRadius).dp
+         )
     } else {
-         RoundedCornerShape(topStart = 2.dp, topEnd = theme.bubbleCornerRadius.dp, bottomStart = theme.bubbleCornerRadius.dp, bottomEnd = theme.bubbleCornerRadius.dp)
+         RoundedCornerShape(
+             topStart = (theme.bubbleCornerRadiusTopStart ?: 2).dp, // Default smaller for incoming effect
+             topEnd = (theme.bubbleCornerRadiusTopEnd ?: baseRadius).dp,
+             bottomStart = (theme.bubbleCornerRadiusBottomStart ?: baseRadius).dp,
+             bottomEnd = (theme.bubbleCornerRadiusBottomEnd ?: baseRadius).dp
+         )
     }
 
     val font = when(theme.fontStyle) {
@@ -160,6 +186,8 @@ private fun MessageBubble(msg: SmsMessageItem, dateFormatter: (Long) -> String, 
         "Cursive" -> FontFamily.Cursive
         else -> FontFamily.Default
     }
+
+    val fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -199,13 +227,14 @@ private fun MessageBubble(msg: SmsMessageItem, dateFormatter: (Long) -> String, 
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     fontFamily = font,
-                    color = textColor
+                    color = textColor,
+                    fontSize = fontSize
                 )
                 Text(
                     text = dateFormatter(msg.timestamp),
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = font,
-                    color = textColor.copy(alpha = 0.7f)
+                    color = parseColorOr(textColor.copy(alpha = 0.7f), theme.timestampColor) // Override if specific timestamp color
                 )
             }
         }

@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,8 +88,21 @@ fun SmsInboxScreen(
         }
     }
 
+    val bgModifier = if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
+        Modifier.background(
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    parseColorOr(Color.White, theme.appBackgroundGradientStart!!),
+                    parseColorOr(Color.White, theme.appBackgroundGradientEnd!!)
+                )
+            )
+        )
+    } else {
+        Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor))
+    }
+
     Scaffold(
-        containerColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor),
+        containerColor = if (theme.appBackgroundGradientStart != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor),
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(if (isBeaconMode) "Beacon Inbox" else "Messages", color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)) },
@@ -118,6 +132,7 @@ fun SmsInboxScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
+                .then(bgModifier) // Apply gradient here to fill size
                 .padding(padding)
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -253,12 +268,13 @@ private fun ThreadRow(
                                 fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
+                            fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
                             )
                             Text(
                                 text = dateFormatter(thread.timestamp),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground).copy(alpha = 0.7f)
                             )
                         }
                         if (!number.isNullOrBlank() && number != displayName) {
@@ -275,7 +291,8 @@ private fun ThreadRow(
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f)
+                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f),
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
                         )
                         if (thread.unread) {
                             Spacer(modifier = Modifier.height(4.dp))
