@@ -204,6 +204,12 @@ class AlertDispatcher @Inject constructor(
             }
             titleValue to countText
         }
+
+        val notificationId = when (tier) {
+            EscalationTier.EMERGENCY -> NOTIFICATION_ID_EMERGENCY
+            EscalationTier.CHECK_IN -> NOTIFICATION_ID_CHECKIN
+        }
+
         val builder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_logo)
             .setContentTitle(title)
@@ -211,6 +217,8 @@ class AlertDispatcher @Inject constructor(
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(if (shouldPlaySound) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
+            .setGroup(GROUP_KEY_ALERTS)
+            .setGroupSummary(false)
 
         if (shouldPlaySound && profile.vibrate) builder.setVibrate(longArrayOf(0, 250, 250, 250, 500, 250))
         if (shouldPlaySound && profile.breakThroughDnd) builder.setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -254,7 +262,21 @@ class AlertDispatcher @Inject constructor(
             }
         }
 
-        manager.notify(tier.ordinal + 100, builder.build())
+        manager.notify(notificationId, builder.build())
+
+        // Post a summary notification to group them if needed (mostly useful if we had multiple distinct notifications)
+        // Since we are using constant IDs per tier, we might not strictly need this if we only show one per tier,
+        // but it's good practice for grouping.
+        val summaryNotification = NotificationCompat.Builder(context, channel)
+            .setSmallIcon(R.drawable.ic_logo)
+            .setStyle(NotificationCompat.InboxStyle()
+                .setSummaryText("PulseLink Alerts"))
+            .setGroup(GROUP_KEY_ALERTS)
+            .setGroupSummary(true)
+            .setAutoCancel(true)
+            .build()
+
+        manager.notify(NOTIFICATION_ID_SUMMARY, summaryNotification)
     }
 
     data class AlertResult(
@@ -269,5 +291,9 @@ class AlertDispatcher @Inject constructor(
     companion object {
         private const val TAG = "AlertDispatcher"
         private const val SEQUENTIAL_CONTACT_DELAY_MS = 1_500L
+        private const val GROUP_KEY_ALERTS = "PULSELINK_ALERTS"
+        private const val NOTIFICATION_ID_EMERGENCY = 1001
+        private const val NOTIFICATION_ID_CHECKIN = 1002
+        private const val NOTIFICATION_ID_SUMMARY = 1000
     }
 }

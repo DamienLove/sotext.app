@@ -78,7 +78,7 @@
             android:name=".ui.BeaconInboxActivity"
             android:exported="true"
             android:taskAffinity="com.pulselink.beacon.inbox"
-            android:launchMode="singleTask" />
+            android:launchMode="singleTop" />
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
