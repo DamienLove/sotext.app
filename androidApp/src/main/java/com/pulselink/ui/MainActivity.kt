@@ -299,6 +299,46 @@ class MainActivity : AppCompatActivity() {
                         val shouldEnable = currentBeaconEnabled
                         updateBeaconLauncher(shouldEnable)
 
+                        // Policy: default-SMS prompt must precede runtime SMS permissions.
+                        if (!isDefaultSms) {
+                            if (beaconFlowStage == BeaconFlowStage.RequestedDefault) {
+                                // User declined or canceled; keep other features, hide Beacon launcher.
+                                pendingInboxNav = false
+                                beaconFlowStage = BeaconFlowStage.Idle
+                                viewModel.setBeaconLauncherEnabled(false)
+                                if (showBeaconAssist) {
+                                    beaconAssistState = beaconAssistState.copy(
+                                        defaultSmsGranted = false,
+                                        message = context.getString(R.string.settings_default_sms_required),
+                                        error = context.getString(R.string.beacon_flow_retry)
+                                    )
+                                }
+                                return@collectLatest
+                            }
+                            beaconFlowStage = BeaconFlowStage.RequestedDefault
+                            if (showBeaconAssist) {
+                                beaconAssistState = beaconAssistState.copy(
+                                    defaultSmsGranted = false,
+                                    message = context.getString(R.string.settings_default_sms_required),
+                                    error = null
+                                )
+                            }
+                            val intent = defaultSmsHelper.buildRoleRequestIntent()
+                            if (intent != null) {
+                                pendingInboxNav = true
+                                defaultSmsLauncher.launch(intent)
+                            } else {
+                                pendingInboxNav = false
+                                beaconFlowStage = BeaconFlowStage.Idle
+                                if (showBeaconAssist) {
+                                    beaconAssistState = beaconAssistState.copy(
+                                        error = "Default SMS role not available on this device."
+                                    )
+                                }
+                            }
+                            return@collectLatest
+                        }
+
                         if (!currentBeaconEnabled) {
                             if (showBeaconAssist) {
                                 beaconAssistState = beaconAssistState.copy(
@@ -569,7 +609,10 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val sendMessageHandler: suspend (Long, String) -> ManualMessageResult = { contactId, body ->
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                    if (!defaultSmsHelper.isDefaultSms()) {
+                        requestDefaultSms()
+                        ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED)
+                    } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
                         permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
                         ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED)
                     } else {
@@ -844,7 +887,12 @@ class MainActivity : AppCompatActivity() {
                                         viewModel.completeOnboarding()
                                     }
                                 } else {
-                                    permissionLauncher.launch(missingPermissions.toTypedArray())
+                                    val missingSms = missingPermissions.any { it.contains("SMS") }
+                                    if (missingSms && !defaultSmsHelper.isDefaultSms()) {
+                                        requestDefaultSms()
+                                    } else {
+                                        permissionLauncher.launch(missingPermissions.toTypedArray())
+                                    }
                                 }
                             },
                             onOpenAppSettings = { openAppSettings(context) },

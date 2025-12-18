@@ -92,13 +92,23 @@ class BeaconInboxActivity : ComponentActivity() {
                 var hasSmsPermissions by remember {
                     mutableStateOf(checkSmsPermissions(context))
                 }
+                var requestedDefaultOnce by remember { mutableStateOf(false) }
                 val permissionLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestMultiplePermissions()
                 ) {
                     hasSmsPermissions = checkSmsPermissions(context)
                 }
 
-                LaunchedEffect(Unit) {
+                LaunchedEffect(isDefaultSms, hasSmsPermissions, requestedDefaultOnce) {
+                    if (!isDefaultSms) {
+                        if (!requestedDefaultOnce) {
+                            requestedDefaultOnce = true
+                            defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
+                                defaultSmsLauncher.launch(intent)
+                            }
+                        }
+                        return@LaunchedEffect
+                    }
                     if (!hasSmsPermissions) {
                         permissionLauncher.launch(requiredSmsPermissions())
                     }
