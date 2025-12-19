@@ -5,6 +5,8 @@ import com.pulselink.domain.model.EscalationTier
 
 object SmsCodec {
     private const val PREFIX = "PULSELINK"
+            const val CONFIG_PHONE_UPDATE = "PHONE"
+                    const val CONFIG_EMAIL_UPDATE = "EMAIL"
 
     enum class Type(val wire: String) {
         LINK_REQUEST("LINK_REQ"),

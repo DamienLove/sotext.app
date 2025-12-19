@@ -307,6 +307,32 @@ class SettingsRepositoryImpl @Inject constructor(
             beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled
         )
     }
+
+        override suspend fun setLastKnownPhone(phone: String?) {
+                    dataStore.edit { prefs ->
+                                if (phone == null) {
+                                                    prefs.remove(LAST_KNOWN_PHONE)
+                                                                } else {
+
+                                                                                }
+                                                                                        }
+                                                                                            }
+
+                                                                                                override suspend fun getLastKnownPhone(): String? =
+                                                                                                        dataStore.data.first()[LAST_KNOWN_PHONE]
+
+                                                                                                            override suspend fun setLastKnownEmail(email: String?) {
+                                                                                                                        dataStore.edit { prefs ->
+                                                                                                                                    if (email == null) {
+                                                                                                                                                        prefs.remove(LAST_KNOWN_EMAIL)
+                                                                                                                                                                    } else {
+                                                                                                                                                                                        prefs[LAST_KNOWN_EMAIL] = email
+                                                                                                                                                                                                    }
+                                                                                                                                                                                                            }
+                                                                                                                                                                                                                }
+
+                                                                                                                                                                                                                    override suspend fun getLastKnownEmail(): String? =
+                                                                                                                                                                                                                            dataStore.data.first()[LAST_KNOWN_EMAIL]
 }
 
 fun provideSettingsDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
