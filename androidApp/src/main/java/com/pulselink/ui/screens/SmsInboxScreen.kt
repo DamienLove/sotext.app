@@ -22,9 +22,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -151,11 +153,29 @@ fun SmsInboxScreen(
             ) {
                 if (filtered.isEmpty()) {
                     item {
-                        Text(
-                            text = "No messages here yet.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillParentMaxSize()
+                                .padding(bottom = 60.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Inbox,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(72.dp),
+                                    tint = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.2f)
+                                )
+                                Text(
+                                    text = "No messages here yet",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.6f)
+                                )
+                            }
+                        }
                     }
                 }
                 items(filtered, key = { it.threadId }) { thread ->
@@ -400,7 +420,7 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePreferences, o
     val selectedColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }
+        modifier = Modifier.clickable(role = Role.Tab) { onClick() }
     ) {
         Text(
             text = label,
