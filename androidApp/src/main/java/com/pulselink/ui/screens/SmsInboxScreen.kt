@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -42,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -151,11 +153,34 @@ fun SmsInboxScreen(
             ) {
                 if (filtered.isEmpty()) {
                     item {
-                        Text(
-                            text = "No messages here yet.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
-                        )
+                        Box(
+                            modifier = Modifier.fillParentMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.alpha(0.6f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Inbox,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = parseColorOr(
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                        theme.onBackground
+                                    )
+                                )
+                                Text(
+                                    text = "No messages here yet.",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = parseColorOr(
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                        theme.onBackground
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
                 items(filtered, key = { it.threadId }) { thread ->
