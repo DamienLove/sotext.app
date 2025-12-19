@@ -543,6 +543,16 @@ class MainActivity : AppCompatActivity() {
                         if (event == Lifecycle.Event.ON_RESUME) {
                             pendingPermissionCheck = true
                             pendingUnusedRestrictionsCheck = true
+                            // Refresh default-SMS status and auto-enable Beacon launcher if we just became default.
+                            val wasDefault = isDefaultSms
+                            val isNowDefault = defaultSmsHelper.isDefaultSms()
+                            isDefaultSms = isNowDefault
+
+                            // Only auto-enable if we transitioned from NOT default to DEFAULT.
+                            // This respects the user's choice if they are already default but explicitly disabled the Beacon.
+                            if (!wasDefault && isNowDefault && !viewModel.uiState.value.settings.beaconLauncherEnabled) {
+                                viewModel.setBeaconLauncherEnabled(true)
+                            }
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
@@ -1298,6 +1308,7 @@ private fun BeaconAssistDialog(
         title = { Text(text = "Beacon inbox setup") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                BeaconStepRow(label = "Set as Default SMS App", done = state.defaultSmsGranted)
                 BeaconStepRow(label = "Enable Beacon icon", done = state.iconEnabled)
                 BeaconStepRow(label = "Grant SMS permissions", done = state.smsPermissionsGranted)
                 Text(text = state.error ?: state.message)
