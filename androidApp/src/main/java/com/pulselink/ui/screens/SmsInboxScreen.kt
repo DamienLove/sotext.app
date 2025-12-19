@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -151,11 +152,27 @@ fun SmsInboxScreen(
             ) {
                 if (filtered.isEmpty()) {
                     item {
-                        Text(
-                            text = "No messages here yet.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
-                        )
+                        Box(
+                            modifier = Modifier.fillParentMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Inbox,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.5f)
+                                )
+                                Text(
+                                    text = "No messages here yet.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f)
+                                )
+                            }
+                        }
                     }
                 }
                 items(filtered, key = { it.threadId }) { thread ->
