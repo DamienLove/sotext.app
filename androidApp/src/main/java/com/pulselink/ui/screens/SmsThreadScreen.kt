@@ -141,7 +141,7 @@ fun SmsThreadScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(messages) { msg ->
+            items(messages, key = { it.id }) { msg ->
                 MessageBubble(msg, dateFormatter, effectiveTheme, contact)
             }
         }
