@@ -12,6 +12,6 @@
 **Learning:** Hidden password fields without a toggle increase user error rate and anxiety, especially on mobile devices where typing is prone to errors.
 **Action:** Always include a "Show Password" toggle on password fields to improve accessibility and usability.
 
-## 2025-05-18 - Empty State Visuals
-**Learning:** Text-only empty states feel unfinished and lack prominence.
-**Action:** Implement centered visual layouts with a decorative icon and descriptive text using `Modifier.fillParentMaxSize()` inside `LazyColumn` items.
+## 2025-12-19 - Empty State Delight
+**Learning:** Text-only empty states feel broken or incomplete. Visual reinforcement (icons) centered on screen confirms the state is intentional.
+**Action:** Replace plain text empty states with centered Icon + Text pairs to improve perceived polish.
