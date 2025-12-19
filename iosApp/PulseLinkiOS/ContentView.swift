@@ -217,6 +217,7 @@ private struct ContactsTab: View {
                                 Spacer()
                                 PresenceDot(presence: contact.presence)
                                 if contact.unread > 0 {
+                                    // Explicit 'text' label required for Swift 6 / Xcode 16.1
                                     Badge(text: "\(contact.unread)")
                                 }
                             }
