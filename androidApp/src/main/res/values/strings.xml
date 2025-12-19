@@ -450,4 +450,13 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="assistant_urgent_message_sent">Urgent alert sent to %1$s.</string>
     <string name="assistant_urgent_message_failed">Failed to send urgent alert to %1$s.</string>
     <string name="assistant_non_urgent_sent">Non-urgent message sent to %1$s at %2$s volume.</string>
+
+    <!-- Widget Strings -->
+    <string name="widget_emergency_title">PulseLink Emergency</string>
+    <string name="widget_emergency_description">Quick access to emergency alerts and check-ins</string>
+    <string name="widget_button_emergency">Emergency Alert</string>
+    <string name="widget_button_check_in">Check In</string>
+    <string name="widget_trigger_emergency">Emergency alert sent from widget</string>
+    <string name="widget_trigger_check_in">Check-in sent from widget</string>
+    <string name="widget_error_no_contacts">Add emergency contacts before using widget</string>
 </resources>
