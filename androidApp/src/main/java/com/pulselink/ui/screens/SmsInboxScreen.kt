@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -425,7 +426,7 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePreferences, o
     val selectedColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }
+        modifier = Modifier.clickable(role = Role.Tab) { onClick() }
     ) {
         Text(
             text = label,
