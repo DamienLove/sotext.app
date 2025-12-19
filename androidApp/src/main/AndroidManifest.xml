@@ -90,9 +90,9 @@
         <activity-alias
             android:name="com.pulselink.BeaconInboxPro"
             android:enabled="false"
-            android:icon="@drawable/ic_pulselink_pro"
+            android:icon="@drawable/ic_beacon_inbox"
             android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_pulselink_pro"
+            android:roundIcon="@drawable/ic_beacon_inbox"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
             <intent-filter>
