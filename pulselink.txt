@@ -47,6 +47,12 @@ Current SMS features
 - Billing: replace placeholder product IDs, add server-side validation, handle subscription states, and add premium google-services file.
 - Tests: device tests for default SMS role, call screening, and PIN flows.
 
+2025-12-19
+- Released v54 (free/pro/premium): versionCode/Name -> 54; bundles copied to `disposable_aabs/pulselink-{free|pro|premium}-v54.aab`.
+- Beacon launcher icon now uses tier-specific branding (pro/premium icons swapped in from branding folder).
+- Emergency/Check-in Glance widget buttons now forward through lightweight activities into the Assistant shortcuts (no more broken ActionCallback path).
+- Material Components bumped to 1.13.0 to align with Android 15 edge-to-edge changes; rebuilt release bundles.
+
 2025-12-14
 - Beacon/PulseLink inbox crash hardening: SMS repositories now re-check permissions per call, wrap Telephony/Contacts queries in runCatching, and lazily register observers only after permissions are granted (prevents READ_SMS SecurityException). Applied to both androidApp and beaconApp.
 - Inbox launcher reliability: MainActivity startDestination switches to sms/inbox when launched from beacon shortcut, and shortcut flow now waits for default-SMS role + runtime SMS/MMS/WAP permissions before navigating; re-emits after the user grants to avoid dead-ends.

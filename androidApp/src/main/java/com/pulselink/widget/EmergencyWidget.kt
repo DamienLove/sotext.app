@@ -9,10 +9,8 @@ import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
-import androidx.glance.action.ActionParameters
-import androidx.glance.action.actionParametersOf
+import androidx.glance.action.actionStartActivity
 import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -27,10 +25,9 @@ import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.pulselink.R
-import com.pulselink.domain.model.EscalationTier
 import androidx.glance.LocalContext
+import android.content.ComponentName
 
 class EmergencyWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -79,10 +76,8 @@ class EmergencyWidget : GlanceAppWidget() {
             ) {
                 Button(
                     text = context.getString(R.string.widget_button_emergency),
-                    onClick = actionRunCallback<EmergencyWidgetActionWorker>(
-                        actionParametersOf(
-                            EmergencyWidgetActionWorker.ACTION_KEY to EmergencyWidgetActionWorker.ACTION_EMERGENCY
-                        )
+                    onClick = actionStartActivity(
+                        ComponentName(context, EmergencyWidgetEmergencyActivity::class.java)
                     ),
                     modifier = GlanceModifier.defaultWeight()
                 )
@@ -91,10 +86,8 @@ class EmergencyWidget : GlanceAppWidget() {
 
                 Button(
                     text = context.getString(R.string.widget_button_check_in),
-                    onClick = actionRunCallback<EmergencyWidgetActionWorker>(
-                        actionParametersOf(
-                            EmergencyWidgetActionWorker.ACTION_KEY to EmergencyWidgetActionWorker.ACTION_CHECK_IN
-                        )
+                    onClick = actionStartActivity(
+                        ComponentName(context, EmergencyWidgetCheckInActivity::class.java)
                     ),
                     modifier = GlanceModifier.defaultWeight()
                 )

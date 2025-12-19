@@ -192,6 +192,21 @@
             </intent-filter>
         </activity>
 
+        <!-- Forwarders for Glance widget actions -->
+        <activity
+            android:name=".widget.EmergencyWidgetEmergencyActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.PulseLink.Transparent" />
+
+        <activity
+            android:name=".widget.EmergencyWidgetCheckInActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.PulseLink.Transparent" />
+
         <activity
             android:name=".ui.EmergencyPopupActivity"
             android:exported="false"
