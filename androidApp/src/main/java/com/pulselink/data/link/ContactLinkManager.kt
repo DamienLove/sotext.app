@@ -107,9 +107,10 @@ class ContactLinkManager @Inject constructor(
         for (channel in priority) {
             when (channel) {
                 MessageChannel.FIREBASE -> {
+                    val isHandshake = message is PulseLinkMessage.LinkRequest || message is PulseLinkMessage.LinkAccept
                     if (settings.firebaseMessagingEnabled &&
                         !contact.remoteDeviceId.isNullOrBlank() &&
-                        contact.linkStatus == LinkStatus.LINKED) {
+                        (contact.linkStatus == LinkStatus.LINKED || isHandshake)) {
 
                         messageDeliveryTracker.recordAttempt(contact.id, MessageChannel.FIREBASE)
                         val success = linkChannelService.sendMessage(message)
@@ -193,7 +194,22 @@ class ContactLinkManager @Inject constructor(
         // sendMessageWithFallback handles null remoteDeviceId gracefully by skipping Firebase.
         val sent = sendMessageWithFallback(contact, message, smsBody)
 
-        if (!sent) {
+        var finalSent = sent
+        if (!finalSent && contact.remoteDeviceId.isNullOrBlank()) {
+             val phone = contact.primaryPhone()?.takeIf { it.isNotBlank() }
+             val email = contact.primaryEmail()?.takeIf { it.isNotBlank() }
+             val info = resolveRemoteUser(phone, email)
+             if (info != null) {
+                 val resolvedContact = updated.copy(
+                     remoteUid = info.uid,
+                     remoteDeviceId = info.deviceId
+                 )
+                 contactRepository.upsert(resolvedContact)
+                 finalSent = sendMessageWithFallback(resolvedContact, message, smsBody)
+             }
+        }
+
+        if (!finalSent) {
              // If standard fallback failed (e.g. no phone, or SMS failed), try email explicitly if not covered by fallback loop
              // (Though email IS in the fallback loop if enabled).
              // But sendEmailLinkRequest in original code had specific logic for invites.
@@ -1264,27 +1280,17 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun maybeResolveRemoteIdentity(contact: Contact): Contact? {
         val email = normalizeEmail(contact.primaryEmail()).takeIf { it.isNotBlank() } ?: return null
-        return runCatching {
-            val query = firestore.collection("users")
-                .whereEqualTo("emailLowercase", email)
-                .limit(1)
-                .get()
-                .await()
-            val doc = query.documents.firstOrNull() ?: return@runCatching null
-            val remoteUid = doc.id
-            val remoteDeviceId = doc.getString("deviceId") ?: return@runCatching null
-            val updated = contact.copy(
-                remoteUid = remoteUid,
-                remoteDeviceId = remoteDeviceId,
-                linkStatus = LinkStatus.LINKED,
-                pendingApproval = false
-            )
-            contactRepository.upsert(updated)
-            mirrorContactToCloud(updated)
-            updated
-        }.onFailure {
-            Log.w(TAG, "Unable to resolve remote identity for email=$email", it)
-        }.getOrNull()
+        val info = resolveRemoteUser(null, email) ?: return null
+
+        val updated = contact.copy(
+            remoteUid = info.uid,
+            remoteDeviceId = info.deviceId,
+            linkStatus = LinkStatus.LINKED,
+            pendingApproval = false
+        )
+        contactRepository.upsert(updated)
+        mirrorContactToCloud(updated)
+        return updated
     }
 
     private suspend fun mirrorContactToCloud(contact: Contact) {
@@ -1322,6 +1328,33 @@ class ContactLinkManager @Inject constructor(
             Log.w(TAG, "Unable to mirror contact to cloud", error)
         }
     }
+
+    private suspend fun resolveRemoteUser(phone: String?, email: String?): ContactLinkInfo? {
+        if (phone.isNullOrBlank() && email.isNullOrBlank()) return null
+        return runCatching {
+            val data = hashMapOf(
+                "phoneNumber" to phone,
+                "email" to email
+            )
+            val result = functions.getHttpsCallable("findUser").call(data).await()
+            val map = result.data as? Map<String, Any> ?: return@runCatching null
+            if (map["found"] != true) return@runCatching null
+
+            ContactLinkInfo(
+                uid = map["uid"] as String,
+                deviceId = map["deviceId"] as String,
+                displayName = map["displayName"] as? String,
+                avatarUrl = map["avatarUrl"] as? String
+            )
+        }.getOrNull()
+    }
+
+    private data class ContactLinkInfo(
+        val uid: String,
+        val deviceId: String,
+        val displayName: String?,
+        val avatarUrl: String?
+    )
 
     companion object {
         private const val TAG = "ContactLinkManager"
