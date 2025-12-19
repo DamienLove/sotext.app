@@ -24,3 +24,4 @@ export { menuSuggestion } from './genkit-sample';
 export { alertRelay, alertRelayHttp } from './alertRelay';
 export { onMessageCreated } from './messaging';
 export { sendEmailNotification } from './email';
+export { findUser } from './users';
