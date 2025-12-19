@@ -417,7 +417,8 @@ kapt {
     implementation("com.google.guava:guava:32.1.2-android")
     implementation("androidx.concurrent:concurrent-futures:1.1.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.11.0")
+    // Update for Android 15 edge-to-edge handling (avoids deprecated status/nav bar color APIs)
+    implementation("com.google.android.material:material:1.13.0")
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")

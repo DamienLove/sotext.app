@@ -1,0 +1,15 @@
+[debug] [2025-12-19T18:58:15.327Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-19T18:58:15.329Z] > authorizing via signed-in user (damien@dmnlat.com)
+[debug] [2025-12-19T18:58:15.329Z] Checked if tokens are valid: false, expires at: 1765931437980
+[debug] [2025-12-19T18:58:15.330Z] Checked if tokens are valid: false, expires at: 1765931437980
+[debug] [2025-12-19T18:58:15.330Z] > refreshing access token with scopes: []
+[debug] [2025-12-19T18:58:15.331Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-12-19T18:58:15.331Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-12-19T18:58:15.333Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-12-19T18:58:15.333Z] > authorizing via signed-in user (damien@dmnlat.com)
+[debug] [2025-12-19T18:58:15.333Z] Checked if tokens are valid: false, expires at: 1765931437980
+[debug] [2025-12-19T18:58:15.333Z] Checked if tokens are valid: false, expires at: 1765931437980
+[debug] [2025-12-19T18:58:15.333Z] > refreshing access token with scopes: []
+[debug] [2025-12-19T18:58:15.333Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-12-19T18:58:15.334Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-12-19T18:58:15.470Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 400
