@@ -7,10 +7,9 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.net.Uri
-import android.text.SpannableString
-import android.text.style.StyleSpan
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
+import androidx.core.content.ContextCompat
 import com.pulselink.R
 import com.pulselink.data.sms.SmsRepository
 import com.pulselink.data.sms.SmsThreadItem
@@ -19,7 +18,6 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.runBlocking
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -69,36 +67,44 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
     override fun getCount(): Int = items.size
 
     override fun getViewAt(position: Int): RemoteViews {
-        if (position >= items.size) return RemoteViews(context.packageName, R.layout.widget_list_item)
-        val item = items[position]
+        try {
+            if (position >= items.size) return RemoteViews(context.packageName, R.layout.widget_list_item)
+            val item = items[position]
 
-        val views = RemoteViews(context.packageName, R.layout.widget_list_item)
+            val views = RemoteViews(context.packageName, R.layout.widget_list_item)
 
-        val displayName = item.address.split(" · ").firstOrNull() ?: item.address
+            val displayName = item.address.split(" · ").firstOrNull() ?: item.address
 
-        // Use SpannableString for bolding unread messages
-        val titleText = SpannableString(displayName)
-        if (item.unread) {
-             titleText.setSpan(StyleSpan(Typeface.BOLD), 0, titleText.length, 0)
-             views.setTextColor(R.id.widget_item_title, context.getColor(android.R.color.white))
-        } else {
-             views.setTextColor(R.id.widget_item_title, context.getColor(R.color.widget_text_secondary))
+            // Simplified text handling to prevent RemoteViews crashes
+            views.setTextViewText(R.id.widget_item_title, displayName)
+
+            val titleColor = if (item.unread) {
+                // For unread, we use white.
+                ContextCompat.getColor(context, android.R.color.white)
+            } else {
+                ContextCompat.getColor(context, R.color.widget_text_secondary)
+            }
+            views.setTextColor(R.id.widget_item_title, titleColor)
+
+            views.setTextViewText(R.id.widget_item_snippet, item.snippet)
+
+            val avatar = generateAvatar(displayName)
+            views.setImageViewBitmap(R.id.widget_item_avatar, avatar)
+
+            val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
+            views.setTextViewText(R.id.widget_item_time, timeFormat.format(Date(item.timestamp)))
+
+            val fillInIntent = Intent().apply {
+                putExtra("thread_id", item.threadId)
+            }
+            views.setOnClickFillInIntent(R.id.widget_item_root, fillInIntent)
+
+            return views
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Return a safe empty view in case of crash
+            return RemoteViews(context.packageName, R.layout.widget_list_item)
         }
-        views.setTextViewText(R.id.widget_item_title, titleText)
-        views.setTextViewText(R.id.widget_item_snippet, item.snippet)
-
-        val avatar = generateAvatar(displayName)
-        views.setImageViewBitmap(R.id.widget_item_avatar, avatar)
-
-        val timeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-        views.setTextViewText(R.id.widget_item_time, timeFormat.format(Date(item.timestamp)))
-
-        val fillInIntent = Intent().apply {
-            putExtra("thread_id", item.threadId)
-        }
-        views.setOnClickFillInIntent(R.id.widget_item_root, fillInIntent)
-
-        return views
     }
 
     private fun generateAvatar(name: String): Bitmap {
