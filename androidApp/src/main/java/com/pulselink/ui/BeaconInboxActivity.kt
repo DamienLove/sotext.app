@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +65,8 @@ import com.pulselink.util.DefaultSmsHelper
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.hashPin
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -90,11 +93,24 @@ class BeaconInboxActivity : ComponentActivity() {
                 val defaultSmsSupported =
                     defaultSmsHelper.buildRoleRequestIntent() != null || isDefaultSms
                 val lifecycleOwner = LocalLifecycleOwner.current
+                val scope = rememberCoroutineScope()
+                val refreshDefaultSms = remember(defaultSmsHelper) {
+                    {
+                        scope.launch {
+                            repeat(6) {
+                                val latest = defaultSmsHelper.isDefaultSms()
+                                isDefaultSms = latest
+                                if (latest) return@launch
+                                delay(250)
+                            }
+                        }
+                    }
+                }
 
                 val defaultSmsLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
-                    isDefaultSms = defaultSmsHelper.isDefaultSms()
+                    refreshDefaultSms()
                 }
 
                 // Permission handling
@@ -112,7 +128,7 @@ class BeaconInboxActivity : ComponentActivity() {
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
-                            isDefaultSms = defaultSmsHelper.isDefaultSms()
+                            refreshDefaultSms()
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
