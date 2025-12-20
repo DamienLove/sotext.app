@@ -5,7 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.provider.Telephony
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,5 +39,27 @@ class DefaultSmsHelper @Inject constructor(
                 putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, context.packageName)
             }
         }
+    }
+
+    suspend fun checkDefaultSmsWithRetry(
+        maxAttempts: Int = 5,
+        initialDelayMs: Long = 300
+    ): Boolean {
+        var delayMs = initialDelayMs
+        var latest = false
+        repeat(maxAttempts) { attempt ->
+            latest = isDefaultSms()
+            Log.d(TAG, "checkDefaultSmsWithRetry attempt ${attempt + 1}/$maxAttempts -> $latest")
+            if (latest) return true
+            if (attempt < maxAttempts - 1) {
+                delay(delayMs)
+                delayMs *= 2
+            }
+        }
+        return latest
+    }
+
+    private companion object {
+        private const val TAG = "DefaultSmsHelper"
     }
 }

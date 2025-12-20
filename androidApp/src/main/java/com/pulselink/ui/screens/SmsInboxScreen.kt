@@ -78,6 +78,7 @@ fun SmsInboxScreen(
     showPrivateOnly: Boolean = false,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
     theme: ThemePreferences = ThemePreferences(),
+    banner: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {}
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
@@ -151,6 +152,7 @@ fun SmsInboxScreen(
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            banner()
             val unreadCount = remember(threads) { threads.count { it.unread } }
             TabsRow(
                 filter = filter,
