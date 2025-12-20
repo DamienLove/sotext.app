@@ -26,6 +26,19 @@ class DefaultSmsHelper @Inject constructor(
         return current == context.packageName
     }
 
+    suspend fun checkDefaultSmsWithRetry(maxAttempts: Int = 5, initialDelayMs: Long = 300): Boolean {
+        var currentDelay = initialDelayMs
+        repeat(maxAttempts) { attempt ->
+            if (isDefaultSms()) {
+                return true
+            }
+            android.util.Log.d("DefaultSmsHelper", "Default SMS check attempt ${attempt + 1} failed. Retrying in ${currentDelay}ms...")
+            kotlinx.coroutines.delay(currentDelay)
+            currentDelay *= 2
+        }
+        return isDefaultSms()
+    }
+
     fun buildRoleRequestIntent(): Intent? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val roleManager = context.getSystemService(RoleManager::class.java)

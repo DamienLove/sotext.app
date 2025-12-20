@@ -32,12 +32,20 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +58,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import kotlinx.coroutines.launch
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -92,6 +101,7 @@ class BeaconInboxActivity : ComponentActivity() {
             PulseLinkTheme {
                 val navController = rememberNavController()
                 val context = LocalContext.current
+                val scope = rememberCoroutineScope()
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
@@ -160,14 +170,101 @@ class BeaconInboxActivity : ComponentActivity() {
                     }
                 }
 
-                val bannerHeight = 50.dp
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = if (state.showAds) bannerHeight else 0.dp)
-                    ) {
-                        NavHost(navController = navController, startDestination = "sms/inbox") {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (!isDefaultSms) {
+                        Surface(
+                            tonalElevation = 2.dp,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    if (isCheckingDefaultSms) {
+                                        Text(
+                                            "Verifying default SMS status...",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    } else {
+                                        Text(
+                                            "Beacon is not your default SMS app",
+                                            style = MaterialTheme.typography.titleSmall
+                                        )
+                                        Text(
+                                            "Set as default to send/receive messages",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                                if (isCheckingDefaultSms) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Row {
+                                        IconButton(onClick = {
+                                            scope.launch {
+                                                isCheckingDefaultSms = true
+                                                isDefaultSms = defaultSmsHelper.checkDefaultSmsWithRetry()
+                                                isCheckingDefaultSms = false
+                                            }
+                                        }) {
+                                            Icon(
+                                                Icons.Default.Refresh,
+                                                contentDescription = "Refresh Status"
+                                            )
+                                        }
+                                        Button(onClick = {
+                                            defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
+                                                defaultSmsLauncher.launch(intent)
+                                            }
+                                        }) {
+                                            Text("Set Default")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (!hasSmsPermissions) {
+                        Surface(
+                            tonalElevation = 2.dp,
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "SMS permissions missing",
+                                    modifier = Modifier.weight(1f),
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Button(onClick = { permissionLauncher.launch(requiredSmsPermissions()) }) {
+                                    Text("Grant")
+                                }
+                            }
+                        }
+                    }
+
+                    val bannerHeight = 50.dp
+                    Box(modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(bottom = if (state.showAds) bannerHeight else 0.dp)
+                        ) {
+                            NavHost(navController = navController, startDestination = "sms/inbox") {
                                 composable("sms/inbox") {
                                     val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
                                     val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()

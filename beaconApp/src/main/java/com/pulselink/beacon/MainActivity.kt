@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.google.android.gms.ads.MobileAds
 import com.pulselink.beacon.ui.ads.BannerAd
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
 private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: ThemeState) {
     val navController = rememberNavController()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var isDefaultSms by remember {
         mutableStateOf(isDefaultSmsRoleHeld(context))
     }
@@ -205,6 +207,19 @@ private fun requestDefaultSms(context: android.content.Context) {
         }
         context.startActivity(intent)
     }
+}
+
+private suspend fun checkDefaultSmsWithRetry(context: android.content.Context, maxAttempts: Int = 5, initialDelayMs: Long = 300): Boolean {
+    var currentDelay = initialDelayMs
+    repeat(maxAttempts) { attempt ->
+        if (isDefaultSmsRoleHeld(context)) {
+            return true
+        }
+        android.util.Log.d("DefaultSmsHelper", "Default SMS check attempt ${attempt + 1} failed. Retrying in ${currentDelay}ms...")
+        delay(currentDelay)
+        currentDelay *= 2
+    }
+    return isDefaultSmsRoleHeld(context)
 }
 
 private fun isDefaultSmsRoleHeld(context: android.content.Context): Boolean {

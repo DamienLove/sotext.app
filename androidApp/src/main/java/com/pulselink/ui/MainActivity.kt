@@ -235,6 +235,7 @@ class MainActivity : AppCompatActivity() {
                         inboxShortcutFlow.tryEmit(Unit)
                     }
                 }
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
                 val defaultSmsLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
