@@ -3,6 +3,11 @@ package com.pulselink
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequest
+import androidx.work.WorkManager
 import com.google.android.gms.ads.MobileAds
 import com.google.firebase.FirebaseApp
 import com.pulselink.auth.FirebaseAuthManager
@@ -42,6 +47,26 @@ class PulseLinkApp : Application(), Configuration.Provider {
         if (AdConfig.isAdsEnabled) {
             MobileAds.initialize(this)
             appOpenAdController.updateAvailability(false)
+        }
+
+        if (BuildConfig.PREMIUM_FEATURES) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val syncRequest = PeriodicWorkRequest.Builder(
+                com.pulselink.data.sms.SmsSyncWorker::class.java,
+                15,
+                java.util.concurrent.TimeUnit.MINUTES
+            )
+                .setConstraints(constraints)
+                .build()
+
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                "SmsSync",
+                ExistingPeriodicWorkPolicy.KEEP,
+                syncRequest
+            )
         }
     }
 }

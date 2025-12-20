@@ -200,6 +200,7 @@
     <string name="assistant_trigger_check_in">Check-in sent via Google Assistant.</string>
     <string name="assistant_shortcut_emergency_long">Send a PulseLink emergency alert</string>
     <string name="assistant_shortcut_check_in_long">Send a PulseLink check-in</string>
+    <string name="assistant_shortcut_cancel_long">Cancel a PulseLink alert</string>
     <string name="assistant_hint_title">Voice commands, no setup</string>
     <string name="assistant_hint_subtitle">Say "Hey Google" or "Hey Google, talk to Gemini" and ask PulseLink for help.</string>
     <string name="assistant_hint_examples_title">Try saying:</string>

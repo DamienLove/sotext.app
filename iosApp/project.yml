@@ -11,7 +11,7 @@ settings:
   CODE_SIGN_STYLE: Automatic
   ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 targets:
-  PulseLinkiOS:
+  PulseLinkFree:
     type: application
     platform: iOS
     sources:
@@ -20,5 +20,37 @@ targets:
           - "**/*.xcworkspace"
           - "**/*.xcuserstate"
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.pulselink.ios
+      PRODUCT_BUNDLE_IDENTIFIER: com.pulselink.ios.free
       INFOPLIST_FILE: PulseLinkiOS/Info.plist
+
+  PulseLinkPro:
+    type: application
+    platform: iOS
+    sources:
+      - path: PulseLinkiOS
+        excludes:
+          - "**/*.xcworkspace"
+          - "**/*.xcuserstate"
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.pulselink.ios.pro
+      INFOPLIST_FILE: PulseLinkiOS/Info.plist
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: PRO
+
+  BeaconFree:
+    type: application
+    platform: iOS
+    sources:
+      - path: BeaconiOS
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.pulselink.beacon.ios.free
+      INFOPLIST_FILE: BeaconiOS/Info.plist
+
+  BeaconPro:
+    type: application
+    platform: iOS
+    sources:
+      - path: BeaconiOS
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.pulselink.beacon.ios.pro
+      INFOPLIST_FILE: BeaconiOS/Info.plist
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: PRO

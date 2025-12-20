@@ -10,7 +10,6 @@ interface ContactRepository {
     suspend fun getContact(contactId: Long): Contact?
     suspend fun getEmergencyContacts(): List<Contact>
     suspend fun getCheckInContacts(): List<Contact>
-        suspend fun getLinkedContacts(): List<Contact>
     suspend fun getByLinkCode(code: String): Contact?
     suspend fun getByPhone(phone: String): Contact?
     suspend fun getByEmail(email: String?): Contact?

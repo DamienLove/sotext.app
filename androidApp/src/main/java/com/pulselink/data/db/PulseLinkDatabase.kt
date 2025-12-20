@@ -77,12 +77,6 @@ interface AlertEventDao {
 
     @Query("DELETE FROM alert_events")
     suspend fun clear()
-
-    @Query("SELECT COUNT(*) FROM alert_events WHERE isRead = 0")
-    fun observeUnreadCount(): Flow<Int>
-
-    @Query("UPDATE alert_events SET isRead = 1 WHERE id IN (:ids)")
-    suspend fun markAsRead(ids: List<Long>)
 }
 
 @Dao
@@ -210,19 +204,68 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // No schema changes; version bump only.
+            }
+        }
+
         val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE contacts ADD COLUMN fcmToken TEXT")
-                database.execSQL("ALTER TABLE contacts ADD COLUMN preferredChannel TEXT")
-                database.execSQL("ALTER TABLE contacts ADD COLUMN lastSuccessfulChannel TEXT")
-                database.execSQL("ALTER TABLE alert_events ADD COLUMN isRead INTEGER NOT NULL DEFAULT 0")
+                addColumnIfMissing(database, "contacts", "fcmToken", "TEXT")
+                addColumnIfMissing(database, "contacts", "preferredChannel", "TEXT")
+                addColumnIfMissing(database, "contacts", "lastSuccessfulChannel", "TEXT")
+                addColumnIfMissing(database, "alert_events", "isRead", "INTEGER NOT NULL DEFAULT 0")
             }
         }
 
         val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE contacts ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+                addColumnIfMissing(database, "contacts", "isFavorite", "INTEGER NOT NULL DEFAULT 0")
+                addColumnIfMissing(database, "contacts", "themeOverride", "TEXT")
+                addColumnIfMissing(database, "contacts", "avatarUrl", "TEXT")
+                addColumnIfMissing(database, "contacts", "remoteDisplayName", "TEXT")
             }
+        }
+
+        val ALL_MIGRATIONS = arrayOf(
+            MIGRATION_3_4,
+            MIGRATION_4_5,
+            MIGRATION_5_6,
+            MIGRATION_6_7,
+            MIGRATION_7_8,
+            MIGRATION_8_9,
+            MIGRATION_9_10,
+            MIGRATION_10_11,
+            MIGRATION_11_12,
+            MIGRATION_12_13
+        )
+
+        private fun addColumnIfMissing(
+            database: SupportSQLiteDatabase,
+            table: String,
+            column: String,
+            definition: String
+        ) {
+            if (!columnExists(database, table, column)) {
+                database.execSQL("ALTER TABLE $table ADD COLUMN $column $definition")
+            }
+        }
+
+        private fun columnExists(
+            database: SupportSQLiteDatabase,
+            table: String,
+            column: String
+        ): Boolean {
+            database.query("PRAGMA table_info(`$table`)").use { cursor ->
+                val nameIndex = cursor.getColumnIndex("name")
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(nameIndex).equals(column, ignoreCase = true)) {
+                        return true
+                    }
+                }
+            }
+            return false
         }
     }
 }

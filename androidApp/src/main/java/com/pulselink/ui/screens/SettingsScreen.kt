@@ -9,12 +9,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -38,6 +41,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -260,6 +265,18 @@ fun SettingsScreen(
 
             // Beacon Feature
             SettingsSectionHeader("Beacon Feature")
+
+            val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
+            val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            SettingsActionRow(
+                title = "Default SMS Check",
+                subtitle = if (isDefaultSmsApp) "PulseLink is your default SMS app" else "PulseLink is NOT set as default",
+                actionLabel = "Check",
+                onAction = onRequestDefaultSms,
+                leadingIcon = smsStatusIcon,
+                iconTint = smsStatusColor
+            )
+
             SettingsToggleRow(
                 title = stringResource(id = R.string.settings_beacon_icon_title),
                 subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),
@@ -339,7 +356,13 @@ private fun SettingsToggleRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked,
+                onValueChange = onCheckedChange,
+                role = Role.Switch
+            ),
         shape = RoundedCornerShape(18.dp),
         tonalElevation = 1.dp,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -369,7 +392,10 @@ private fun SettingsToggleRow(
                     )
                 }
             }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            Switch(
+                checked = checked,
+                onCheckedChange = null // Handled by toggleable container
+            )
         }
     }
 }
@@ -380,9 +406,11 @@ private fun SettingsActionRow(
     subtitle: String? = null,
     actionLabel: String,
     onAction: () -> Unit,
-    leadingIcon: ImageVector = Icons.Filled.NotificationsActive
+    leadingIcon: ImageVector = Icons.Filled.NotificationsActive,
+    iconTint: Color = MaterialTheme.colorScheme.primary
 ) {
     Surface(
+        onClick = onAction,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         tonalElevation = 1.dp,
@@ -397,7 +425,7 @@ private fun SettingsActionRow(
             Icon(
                 imageVector = leadingIcon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = iconTint
             )
             Column(
                 modifier = Modifier
@@ -419,9 +447,13 @@ private fun SettingsActionRow(
                     )
                 }
             }
-            TextButton(onClick = onAction) {
-                Text(text = actionLabel)
-            }
+            Text(
+                text = actionLabel,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
         }
     }
 }

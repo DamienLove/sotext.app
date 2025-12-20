@@ -71,3 +71,75 @@ Current SMS features
 
 2025-12-18
 - Release v44/v46 (free/pro/premium): Beacon icon always shown by default for all tiers; home hint lets users disable it or jump to default-SMS chooser; launcher toggles on/off immediately. Restored READ_SMS + READ_CALL_LOG to onboarding to stop false “missing permission” blocks. Beacon assist now only depends on permissions (not default-SMS) to open. Rebuilt AABs in `disposable_aabs/` up to v46 (free/pro/premium).
+Branch: feature/remove-app-shortcuts (tracking origin/feature/remove-app-shortcuts)
+Recent commits on branch:
+ - 9cb9a78 chore: bump version to 24 for Play upload
+ - 8c96371 chore: remove app shortcuts to fix Play upload
+ - 26e1c67 fix: stabilize google sign-in config
+ - 1d647cf fix: hide assistant promo and clean contact edit
+ - 78d791a feat: link invites fall back to email when no phone
+
+Build/run status:
+ - Not re-run in this session (last recorded run in previous note; rerun as needed).
+
+Ad configuration (free flavor):
+ - AdMob app id: ca-app-pub-5327057757821609~9533221188
+ - Banner unit: ca-app-pub-5327057757821609/3955684775
+ - Interstitial unit: ca-app-pub-5327057757821609/3170992810
+ - Rewarded interstitial unit: ca-app-pub-5327057757821609/8428571815
+ - Native advanced unit: ca-app-pub-5327057757821609/2153424615
+ - App open unit: ca-app-pub-5327057757821609/4210125201
+ - Ads disabled for pro flavor (MobileAdsInitProvider removed; build config ADS_ENABLED=false).
+
+Ad units quick list (free):
+ - native-advanced = ca-app-pub-5327057757821609/2153424615
+ - rewards-interstitual = ca-app-pub-5327057757821609/8428571815
+ - banner = ca-app-pub-5327057757821609/3955684775
+ - app-open = ca-app-pub-5327057757821609/4210125201
+
+Current ad behavior in app:
+ - Banners shown only on Home, Settings, Contact Detail, Contact Conversation, and Alert History screens; not globally pinned.
+ - App-open ad loads when ads are allowed; shown after onboarding completes and whenever the app resumes (no emergency-aware gating yet).
+ - No interstitial/rewarded interstitial display logic is implemented; only the IDs are configured.
+
+2025-12-20
+- Rebuilt v54 AABs (free/pro/premium) and copied to `disposable_aabs/pulselink-{free|pro|premium}-v54.aab` with `disposable_aabs/release-notes-v54.txt`.
+- Fixed release build blockers: cleaned manifest queries tag, restored assistant shortcut resources, removed duplicate repository/DAO declarations, repaired ContactLinkManager/MainViewModel corruption, wired SmsRepository contactDao, and updated EmailInvitationManager to current APIs.
+
+2025-12-20
+- Corrected version to v55 (versionCode/Name 55) and rebuilt AABs for free/pro/premium.
+- Copied bundles to `disposable_aabs/pulselink-{free|pro|premium}-v55.aab` and wrote `disposable_aabs/release-notes-v55.txt`.
+
+2025-12-20
+- Release v55 notes: Beacon launcher icon now uses tier-specific branding (pro/premium); Emergency/Check-in Glance widget actions forward via Assistant shortcuts; Material Components 1.13.0 for Android 15 edge-to-edge.
+
+2025-12-20
+- Prepared v55 tester checklist (free/pro only); no code changes.
+
+2025-12-20
+- Looked up v28 features: only confirmed item is email-based link invites fallback (cloud invite when no phone); no v28 release-notes file found in repo.
+
+2025-12-20
+- Added v55 tester checklist at docs/v55-tester-checklist.md (free/pro only).
+
+2025-12-20
+- Room migration hardening: added MIGRATION_10_11 (no-op), expanded MIGRATION_12_13 to include themeOverride/avatarUrl/remoteDisplayName, made 11_12 and 12_13 column adds conditional, and centralized ALL_MIGRATIONS in AppModule.
+
+2025-12-20
+- Pulled latest Suite-Beta updates, reran ./gradlew lintFreeDebug testFreeDebugUnitTest (warnings only).
+- Room migration hardening: added missing MIGRATION_10_11, made 11_12 + 12_13 column adds idempotent, and included themeOverride/avatarUrl/remoteDisplayName in 12_13; centralized ALL_MIGRATIONS.
+- Fixed SmsInboxScreen background remember to avoid composable calls inside remember calculation.
+- Bumped versionCode/Name to 56 and rebuilt AABs; copied to disposable_aabs/pulselink-{free|pro|premium}-v56.aab and wrote disposable_aabs/release-notes-v56.txt.
+
+2025-12-20
+- Fixed default-SMS detection: DefaultSmsHelper now uses RoleManager.isRoleHeld on Android Q+ with Telephony fallback; updated Beacon app to use the same role-based check. Ran lintFreeDebug + testFreeDebugUnitTest (warnings only).
+
+2025-12-20
+- Default-SMS flow hardened: added retry/polling after role change in MainActivity + BeaconInboxActivity to handle delayed role propagation; refreshes role on resume. Ran lintFreeDebug + testFreeDebugUnitTest (warnings only).
+
+2025-12-20
+- Default-SMS blocker fix: added DefaultSmsHelper.checkDefaultSmsWithRetry (exponential backoff) + logging, non-blocking banner with refresh in BeaconInboxActivity, and retry-based status checks in MainActivity and beaconApp. Inbox no longer blocks when default-SMS is still propagating. Ran lintFreeDebug + testFreeDebugUnitTest (warnings only).
+
+2025-12-21
+- Verified fixes for GitHub issues #168 (Beacon inbox), #149 (SMS sending), #129 (Default SMS check), #127 (iOS build), #67 (Firebase backend).
+- Fixed issue #91 (Squashed text input) by adding `android:windowSoftInputMode="adjustResize"` to `BeaconInboxActivity` in `androidApp/src/main/AndroidManifest.xml`.

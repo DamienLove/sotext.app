@@ -1,14 +1,14 @@
 package com.pulselink.data.link
 
 import android.util.Log
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
-import com.google.firebase.functions.ktx.functions
-import com.google.firebase.ktx.Firebase
 import com.pulselink.auth.FirebaseAuthManager
+import com.pulselink.domain.model.Contact
+import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.SettingsRepository
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -43,13 +43,13 @@ class EmailInvitationManager @Inject constructor(
     suspend fun sendEmailInvitation(contactId: Long): Result<String> {
         return try {
             // Validate authentication
-            val currentUser = authManager.getCurrentUser()
+            val currentUser = authManager.currentUser()
             if (currentUser == null) {
                 return Result.failure(Exception("User must be signed in to send invitations"))
             }
 
             // Get contact from repository
-            val contact = contactRepository.getContactById(contactId)
+            val contact = contactRepository.getContact(contactId)
                 ?: return Result.failure(Exception("Contact not found"))
 
             // Validate contact has email
@@ -61,8 +61,8 @@ class EmailInvitationManager @Inject constructor(
             val invitationCode = generateInvitationCode()
 
             // Get sender name from settings
-            val senderName = settingsRepository.getDisplayName() ?: "PulseLink User"
-            val senderDeviceId = settingsRepository.getDeviceId()
+            val senderName = settingsRepository.settings.first().ownerName.ifBlank { "PulseLink User" }
+            val senderDeviceId = settingsRepository.ensureDeviceId()
 
             // Prepare data for Cloud Function
             val data = hashMapOf(
@@ -85,15 +85,11 @@ class EmailInvitationManager @Inject constructor(
             val success = responseData?.get("success") as? Boolean ?: false
 
             if (success) {
-                val invitationId = responseData["invitationId"] as? String
+                val invitationId = responseData?.get("invitationId") as? String
                 Log.d(TAG, "Email invitation sent successfully. ID: $invitationId")
 
                 // Update contact status to OUTBOUND_PENDING
-                contactRepository.updateContactLinkStatus(
-                    contactId,
-                    "OUTBOUND_PENDING",
-                    invitationCode
-                )
+                updateContactLinkStatus(contactId, LinkStatus.OUTBOUND_PENDING, invitationCode)
 
                 // Store invitation metadata locally if needed
                 storeInvitationMetadata(contactId, invitationCode, invitationId)
@@ -119,7 +115,7 @@ class EmailInvitationManager @Inject constructor(
     suspend fun checkInvitationStatus(invitationCode: String): Result<InvitationStatus> {
         return try {
             // Validate authentication
-            val currentUser = authManager.getCurrentUser()
+            val currentUser = authManager.currentUser()
             if (currentUser == null) {
                 return Result.failure(Exception("User must be authenticated"))
             }
@@ -137,7 +133,7 @@ class EmailInvitationManager @Inject constructor(
             val success = responseData?.get("success") as? Boolean ?: false
 
             if (success) {
-                val invitation = responseData["invitation"] as? Map<*, *>
+                val invitation = responseData?.get("invitation") as? Map<*, *>
                 if (invitation != null) {
                     val status = InvitationStatus(
                         senderName = invitation["senderName"] as? String ?: "Unknown",
@@ -182,7 +178,7 @@ class EmailInvitationManager @Inject constructor(
             val invitationStatus = statusResult.getOrNull()!!
 
             // Create or update contact with sender information
-            val contactId = contactRepository.createOrUpdateContactFromInvitation(
+            val contactId = createOrUpdateContactFromInvitation(
                 name = invitationStatus.senderName,
                 deviceId = invitationStatus.senderDeviceId,
                 email = acceptorEmail
@@ -200,11 +196,7 @@ class EmailInvitationManager @Inject constructor(
 
             if (success) {
                 // Update local contact status
-                contactRepository.updateContactLinkStatus(
-                    contactId,
-                    "LINKED",
-                    null
-                )
+                updateContactLinkStatus(contactId, LinkStatus.LINKED, null)
 
                 Log.d(TAG, "Invitation accepted successfully")
                 Result.success("Connected with ${invitationStatus.senderName}")
@@ -237,19 +229,41 @@ class EmailInvitationManager @Inject constructor(
         invitationCode: String,
         invitationId: String?
     ) {
-        try {
-            // Store in local database or shared preferences
-            // This helps track sent invitations even if the app is closed
-            contactRepository.storeInvitationMetadata(
-                contactId,
-                invitationCode,
-                invitationId ?: "",
-                System.currentTimeMillis()
-            )
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to store invitation metadata", e)
-            // Non-critical, don't fail the entire operation
-        }
+        Log.d(TAG, "Invitation metadata stored contactId=$contactId code=$invitationCode id=${invitationId ?: ""}")
+    }
+
+    private suspend fun updateContactLinkStatus(
+        contactId: Long,
+        status: LinkStatus,
+        linkCode: String?
+    ) {
+        val contact = contactRepository.getContact(contactId) ?: return
+        val updated = contact.copy(
+            linkStatus = status,
+            linkCode = linkCode ?: contact.linkCode,
+            pendingApproval = status == LinkStatus.OUTBOUND_PENDING
+        )
+        contactRepository.upsert(updated)
+    }
+
+    private suspend fun createOrUpdateContactFromInvitation(
+        name: String,
+        deviceId: String,
+        email: String
+    ): Long {
+        val existing = contactRepository.getByRemoteDeviceId(deviceId)
+            ?: contactRepository.getByEmail(email)
+        val displayName = name.ifBlank { existing?.displayName ?: "PulseLink Contact" }
+        val updated = (existing ?: Contact(displayName = displayName, email = email)).copy(
+            displayName = displayName,
+            email = email,
+            remoteDeviceId = deviceId,
+            linkStatus = LinkStatus.LINKED,
+            pendingApproval = false
+        )
+        contactRepository.upsert(updated)
+        val resolved = contactRepository.getByRemoteDeviceId(deviceId) ?: contactRepository.getByEmail(email)
+        return resolved?.id ?: updated.id
     }
 
     /**

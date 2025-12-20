@@ -31,12 +31,6 @@ interface SettingsRepository {
     suspend fun setPrivatePinHash(hash: String?)
     suspend fun setPrivateThreads(threadIds: List<Long>)
     suspend fun setBeaconLauncherEnabled(enabled: Boolean)
-
-        suspend fun setLastKnownPhone(phone: String?)
-            suspend fun getLastKnownPhone(): String?
-
-                suspend fun setLastKnownEmail(email: String?)
-                    suspend fun getLastKnownEmail(): String?
     suspend fun setBeaconHintDismissed(dismissed: Boolean)
     suspend fun setFirebaseMessagingEnabled(enabled: Boolean)
     suspend fun setEmailFallbackEnabled(enabled: Boolean)

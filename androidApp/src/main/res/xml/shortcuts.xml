@@ -6,7 +6,7 @@
     <shortcut
         android:shortcutId="emergency_alert"
         android:enabled="true"
-        android:icon="@drawable/ic_emergency"
+        android:icon="@drawable/ic_logo"
         android:shortcutShortLabel="@string/assistant_shortcut_emergency_short"
         android:shortcutLongLabel="@string/assistant_shortcut_emergency_long">
         
@@ -30,7 +30,7 @@
     <shortcut
         android:shortcutId="checkin"
         android:enabled="true"
-        android:icon="@drawable/ic_check"
+        android:icon="@drawable/ic_logo"
         android:shortcutShortLabel="@string/assistant_shortcut_check_in_short"
         android:shortcutLongLabel="@string/assistant_shortcut_check_in_long">
         
@@ -52,7 +52,7 @@
     <shortcut
         android:shortcutId="cancel_emergency"
         android:enabled="true"
-        android:icon="@drawable/ic_cancel"
+        android:icon="@drawable/ic_logo"
         android:shortcutShortLabel="@string/assistant_shortcut_cancel_short"
         android:shortcutLongLabel="@string/assistant_shortcut_cancel_long">
         

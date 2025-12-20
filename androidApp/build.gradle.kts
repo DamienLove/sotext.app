@@ -193,8 +193,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 54
-        versionName = "54"
+        versionCode = 56
+        versionName = "56"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

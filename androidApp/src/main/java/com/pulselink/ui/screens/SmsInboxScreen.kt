@@ -42,6 +42,7 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,34 +78,41 @@ fun SmsInboxScreen(
     showPrivateOnly: Boolean = false,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
     theme: ThemePreferences = ThemePreferences(),
+    banner: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {}
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
-    val base = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
-    val source = base.filter { thread ->
-        val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
-        if (showPrivateOnly) isPrivate else !isPrivate
-    }
-    val filtered = source.filter { thread ->
-        when (filter) {
-            InboxFilter.ALL -> true
-            InboxFilter.READ -> !thread.unread
-            InboxFilter.UNREAD -> thread.unread
-            InboxFilter.ARCHIVED -> true
+
+    val filtered = remember(filter, threads, archivedThreads, privateThreadIds, showPrivateOnly) {
+        val base = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
+        val source = base.filter { thread ->
+            val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
+            if (showPrivateOnly) isPrivate else !isPrivate
+        }
+        source.filter { thread ->
+            when (filter) {
+                InboxFilter.ALL -> true
+                InboxFilter.READ -> !thread.unread
+                InboxFilter.UNREAD -> thread.unread
+                InboxFilter.ARCHIVED -> true
+            }
         }
     }
 
-    val bgModifier = if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
-        Modifier.background(
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    parseColorOr(Color.White, theme.appBackgroundGradientStart!!),
-                    parseColorOr(Color.White, theme.appBackgroundGradientEnd!!)
+    val colorScheme = MaterialTheme.colorScheme
+    val bgModifier = remember(theme, colorScheme) {
+        if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
+            Modifier.background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        parseColorOr(Color.White, theme.appBackgroundGradientStart!!),
+                        parseColorOr(Color.White, theme.appBackgroundGradientEnd!!)
+                    )
                 )
             )
-        )
-    } else {
-        Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor))
+        } else {
+            Modifier.background(parseColorOr(colorScheme.background, theme.backgroundColor))
+        }
     }
 
     Scaffold(
@@ -144,9 +152,11 @@ fun SmsInboxScreen(
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            banner()
+            val unreadCount = remember(threads) { threads.count { it.unread } }
             TabsRow(
                 filter = filter,
-                unreadCount = threads.count { it.unread },
+                unreadCount = unreadCount,
                 onFilterChange = { filter = it },
                 theme = theme
             )

@@ -18,6 +18,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.runBlocking
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -51,7 +52,7 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
     override fun onDataSetChanged() {
         val identityToken = android.os.Binder.clearCallingIdentity()
         try {
-            items = smsRepository.listThreads(limit = 20)
+            items = runBlocking { smsRepository.listThreads(limit = 20) }
         } catch (e: Exception) {
             e.printStackTrace()
             items = emptyList()
