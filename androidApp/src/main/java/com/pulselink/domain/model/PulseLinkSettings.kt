@@ -38,6 +38,8 @@ data class PulseLinkSettings(
     val timeFormat: TimeFormat = TimeFormat.AUTO,
     val themePreferences: ThemePreferences = ThemePreferences(),
     val remoteWebAccessEnabled: Boolean = false,
+    val otpCleanupEnabled: Boolean = true,
+    val otpCleanupDays: Int = 1,
     val privatePinHash: String? = null,
     val privateThreadIds: List<Long> = emptyList(),
     val beaconLauncherEnabled: Boolean = true,

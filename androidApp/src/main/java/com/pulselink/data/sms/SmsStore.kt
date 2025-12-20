@@ -17,6 +17,7 @@ class SmsStore @Inject constructor(
     @ApplicationContext private val context: Context
 ){
     fun insertIncoming(address: String, body: String, timestamp: Long = System.currentTimeMillis()) {
+        if (SmsCodec.isPulseLinkPayload(body)) return
         val values = ContentValues().apply {
             put(Telephony.TextBasedSmsColumns.ADDRESS, address)
             put(Telephony.TextBasedSmsColumns.BODY, body)
@@ -25,6 +26,11 @@ class SmsStore @Inject constructor(
             put(Telephony.TextBasedSmsColumns.READ, 0)
             put(Telephony.TextBasedSmsColumns.SEEN, 0)
             put(Telephony.TextBasedSmsColumns.TYPE, Telephony.TextBasedSmsColumns.MESSAGE_TYPE_INBOX)
+            runCatching {
+                Telephony.Threads.getOrCreateThreadId(context, setOf(address))
+            }.getOrNull()?.let { threadId ->
+                put(Telephony.TextBasedSmsColumns.THREAD_ID, threadId)
+            }
         }
         runCatching {
             context.contentResolver.insert(Telephony.Sms.Inbox.CONTENT_URI, values)
@@ -34,6 +40,7 @@ class SmsStore @Inject constructor(
     }
 
     fun insertOutgoing(address: String, body: String, timestamp: Long = System.currentTimeMillis()) {
+        if (SmsCodec.isPulseLinkPayload(body)) return
         val values = ContentValues().apply {
             put(Telephony.TextBasedSmsColumns.ADDRESS, address)
             put(Telephony.TextBasedSmsColumns.BODY, body)
@@ -43,6 +50,11 @@ class SmsStore @Inject constructor(
             put(Telephony.TextBasedSmsColumns.SEEN, 1)
             put(Telephony.TextBasedSmsColumns.TYPE, Telephony.TextBasedSmsColumns.MESSAGE_TYPE_SENT)
             put(Telephony.TextBasedSmsColumns.STATUS, Telephony.TextBasedSmsColumns.STATUS_COMPLETE)
+            runCatching {
+                Telephony.Threads.getOrCreateThreadId(context, setOf(address))
+            }.getOrNull()?.let { threadId ->
+                put(Telephony.TextBasedSmsColumns.THREAD_ID, threadId)
+            }
         }
         runCatching {
             context.contentResolver.insert(Telephony.Sms.Sent.CONTENT_URI, values)

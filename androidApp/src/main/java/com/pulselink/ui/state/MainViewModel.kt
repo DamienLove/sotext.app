@@ -1068,6 +1068,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setOtpCleanupEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setOtpCleanupEnabled(enabled)
+        }
+    }
+
+    fun setOtpCleanupDays(days: Int) {
+        viewModelScope.launch {
+            settingsRepository.setOtpCleanupDays(days)
+        }
+    }
+
     fun setPrivatePinHash(hash: String?) {
         viewModelScope.launch {
             settingsRepository.setPrivatePinHash(hash)

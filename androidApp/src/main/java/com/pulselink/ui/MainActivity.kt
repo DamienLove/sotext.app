@@ -81,6 +81,7 @@ import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.ContactConversationScreen
 import com.pulselink.ui.screens.LoginScreen
 import com.pulselink.ui.screens.OnboardingScreen
+import com.pulselink.ui.screens.OtpCleanupOnboardingCard
 import com.pulselink.ui.screens.OnboardingIntroScreen
 import com.pulselink.ui.screens.FaqScreen
 import com.pulselink.ui.screens.SettingsHelpScreen
@@ -980,7 +981,15 @@ class MainActivity : AppCompatActivity() {
                                 }
                             },
                             onOpenAppSettings = { openAppSettings(context) },
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            extraSection = {
+                                OtpCleanupOnboardingCard(
+                                    enabled = state.settings.otpCleanupEnabled,
+                                    days = state.settings.otpCleanupDays,
+                                    onToggle = viewModel::setOtpCleanupEnabled,
+                                    onChangeDays = viewModel::setOtpCleanupDays
+                                )
+                            }
                         )
                     }
                     composable("home") {

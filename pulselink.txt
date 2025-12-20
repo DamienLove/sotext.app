@@ -163,3 +163,15 @@ Current ad behavior in app:
 
 2025-12-20
 - Rebuilt v57 AABs with adapters temporarily disabled (InMobi repo DNS failure, Pangle adapter unresolved, adapters compiled with newer Kotlin); built using play-services-ads 22.6.0 for compatibility and overwrote disposable_aabs/pulselink-{free|pro|premium}-v57.aab. Restore adapters after build.
+
+2025-12-20
+- Added threadId assignment when inserting SMS into Telephony provider (SmsStore) so inbound/outbound messages reliably appear in Threads/Beacon inbox.
+
+2025-12-20
+- SmsRepository now treats default-SMS role as sufficient permission (androidApp + beaconApp) to avoid missing inbox updates when runtime SMS perms are not yet granted.
+
+2025-12-20
+- Drafted plan for SMS inbox sections (all/2-step/trusted/favorites/most common/private) with OTP clipboard/overlay + auto-delete; awaiting clarifications on overlay permission, delete scope, and whether to apply to Beacon only or both apps.
+
+2025-12-20
+- Added OTP handling: 2-step detection, clipboard copy + heads-up notification, onboarding prompt for cleanup, cleanup window settings + periodic cleanup worker (24h), and Beacon sections (All/2-step/Trusted/Favorites/Private) with trusted/OTP pills. PulseLink-encoded SMS no longer inserted into Telephony (keeps Beacon inbox clean).

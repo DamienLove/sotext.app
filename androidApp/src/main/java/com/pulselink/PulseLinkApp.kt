@@ -22,6 +22,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 @HiltAndroidApp
 class PulseLinkApp : Application(), Configuration.Provider {
@@ -74,6 +75,18 @@ class PulseLinkApp : Application(), Configuration.Provider {
                 syncRequest
             )
         }
+
+        val otpCleanupRequest = PeriodicWorkRequest.Builder(
+            com.pulselink.data.sms.OtpCleanupWorker::class.java,
+            24,
+            TimeUnit.HOURS
+        ).build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "OtpCleanup",
+            ExistingPeriodicWorkPolicy.KEEP,
+            otpCleanupRequest
+        )
     }
 
     private fun logAdapterStatus(initializationStatus: InitializationStatus) {

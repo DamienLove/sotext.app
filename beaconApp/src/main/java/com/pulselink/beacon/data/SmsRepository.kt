@@ -411,6 +411,10 @@ class SmsRepository(private val context: Context) {
 
     companion object {
         private fun hasSmsPermissions(context: Context): Boolean {
+            val isDefault = runCatching {
+                Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+            }.getOrDefault(false)
+            if (isDefault) return true
             val perms = listOf(
                 android.Manifest.permission.READ_SMS,
                 android.Manifest.permission.RECEIVE_SMS,

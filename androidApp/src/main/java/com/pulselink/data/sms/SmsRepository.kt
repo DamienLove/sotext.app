@@ -8,6 +8,7 @@ import com.pulselink.data.db.ArchivedThreadDao
 import com.pulselink.data.db.ContactDao
 import com.pulselink.domain.model.ArchivedThread
 import com.pulselink.domain.model.EscalationTier
+import com.pulselink.domain.model.MessageUrgency
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -71,6 +72,10 @@ class SmsRepository @Inject constructor(
             while (c.moveToNext() && count < limit) {
                 val threadId = c.getLong(idIdx)
                 val snippet = c.getString(snippetIdx) ?: ""
+                if (SmsCodec.isPulseLinkPayload(snippet)) {
+                    count++
+                    continue
+                }
                 val ts = c.getLong(dateIdx)
                 val unread = c.getInt(readIdx) == 0
                 val rawAddress = c.getString(addressIdx)
@@ -79,14 +84,22 @@ class SmsRepository @Inject constructor(
 
                 val parts = address.split(" · ")
                 val phone = if (parts.size > 1) parts[1] else parts[0]
+                val normalized = normalizePhone(phone)
                 val contact = contactDao.getByPhone(phone)
-                    ?: contactDao.getByPhone(phone.replace(" ", "").replace("-", ""))
+                    ?: contactDao.getByPhone(normalized)
 
                 if (onlyArchived && !isArchived) {
                     // skip
                 } else if (!includeArchived && isArchived) {
                     // skip
                 } else {
+                    val trustedUrgency = contact?.let {
+                        when {
+                            OtpHelper.isUrgentBody(snippet) -> MessageUrgency.URGENT
+                            it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
+                            else -> MessageUrgency.STANDARD
+                        }
+                    }
                     items += SmsThreadItem(
                         threadId = threadId,
                         address = address,
@@ -95,7 +108,9 @@ class SmsRepository @Inject constructor(
                         unread = unread,
                         isPrivate = contact?.isPrivate == true,
                         isFavorite = contact?.isFavorite == true,
-                        isTrusted = contact?.escalationTier == EscalationTier.EMERGENCY
+                        isTrusted = contact != null,
+                        trustedUrgency = trustedUrgency,
+                        isOtp = OtpHelper.isOtpMessage(phone, snippet)
                     )
                 }
                 count++
@@ -141,6 +156,10 @@ class SmsRepository @Inject constructor(
                 val id = c.getLong(idIdx)
                 val addr = resolveAddress(c.getString(addrIdx))
                 val body = c.getString(bodyIdx) ?: ""
+                if (SmsCodec.isPulseLinkPayload(body)) {
+                    count++
+                    continue
+                }
                 val ts = c.getLong(dateIdx)
                 val type = c.getInt(typeIdx)
                 val outgoing = type == Telephony.Sms.MESSAGE_TYPE_SENT || type == Telephony.Sms.MESSAGE_TYPE_OUTBOX
@@ -155,6 +174,51 @@ class SmsRepository @Inject constructor(
                 count++
             }
             return items.sortedBy { it.timestamp }
+        }
+    }
+
+    fun purgeExpiredOtpMessages(expiryMillis: Long) {
+        if (!hasPerms()) return
+        val cutoff = System.currentTimeMillis() - expiryMillis
+        val projection = arrayOf(
+            Telephony.Sms._ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE
+        )
+        val cursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                projection,
+                "${Telephony.Sms.DATE}<?",
+                arrayOf(cutoff.toString()),
+                "${Telephony.Sms.DATE} ASC"
+            )
+        }.getOrNull() ?: return
+
+        val staleIds = mutableListOf<Long>()
+        cursor.use { c ->
+            val idIdx = c.getColumnIndexOrThrow(Telephony.Sms._ID)
+            val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+            val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            while (c.moveToNext() && staleIds.size < 200) {
+                val addr = c.getString(addrIdx) ?: ""
+                val body = c.getString(bodyIdx) ?: ""
+                if (OtpHelper.isOtpMessage(addr, body)) {
+                    staleIds += c.getLong(idIdx)
+                }
+            }
+        }
+
+        if (staleIds.isNotEmpty()) {
+            staleIds.forEach { id ->
+                context.contentResolver.delete(
+                    Telephony.Sms.CONTENT_URI,
+                    "${Telephony.Sms._ID}=?",
+                    arrayOf(id.toString())
+                )
+            }
+            observerFlow.tryEmit(Unit)
         }
     }
 
@@ -182,6 +246,16 @@ class SmsRepository @Inject constructor(
             }
         }
         return number
+    }
+
+    private fun normalizePhone(input: String): String {
+        if (input.isBlank()) return ""
+        val digits = buildString {
+            input.forEach { ch ->
+                if (ch.isDigit()) append(ch)
+            }
+        }
+        return if (input.startsWith("+")) "+$digits" else digits
     }
 
     fun markThreadRead(threadId: Long): Boolean {
@@ -240,6 +314,10 @@ class SmsRepository @Inject constructor(
 
     companion object {
         private fun hasSmsPermissions(context: Context): Boolean {
+            val isDefault = runCatching {
+                Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+            }.getOrDefault(false)
+            if (isDefault) return true
             val perms = listOf(
                 android.Manifest.permission.READ_SMS,
                 android.Manifest.permission.RECEIVE_SMS,

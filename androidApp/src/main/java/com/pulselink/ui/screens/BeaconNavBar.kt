@@ -5,6 +5,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -28,7 +29,13 @@ fun BeaconNavBar(
             selected = currentRoute == BeaconNavRoute.Inbox,
             onClick = { onNavigate(BeaconNavRoute.Inbox) },
             icon = { Icon(Icons.Filled.History, contentDescription = "Recent") },
-            label = { Text("Recent") }
+            label = { Text("All") }
+        )
+        NavigationBarItem(
+            selected = currentRoute == BeaconNavRoute.Otp,
+            onClick = { onNavigate(BeaconNavRoute.Otp) },
+            icon = { Icon(Icons.Filled.VpnKey, contentDescription = "2-step") },
+            label = { Text("2-step") }
         )
         NavigationBarItem(
             selected = currentRoute == BeaconNavRoute.Trusted,
@@ -53,6 +60,7 @@ fun BeaconNavBar(
 
 enum class BeaconNavRoute {
     Inbox,
+    Otp,
     Trusted,
     Favorites,
     Private

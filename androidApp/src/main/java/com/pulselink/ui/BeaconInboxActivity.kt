@@ -180,6 +180,7 @@ class BeaconInboxActivity : ComponentActivity() {
 
                                     val displayedThreads = when (currentRoute) {
                                         BeaconNavRoute.Inbox -> threads
+                                        BeaconNavRoute.Otp -> threads.filter { it.isOtp }
                                         BeaconNavRoute.Trusted -> threads.filter { it.isTrusted }
                                         BeaconNavRoute.Favorites -> threads.filter { it.isFavorite }
                                         BeaconNavRoute.Private -> threads
@@ -187,6 +188,7 @@ class BeaconInboxActivity : ComponentActivity() {
 
                                     val displayedArchived = when (currentRoute) {
                                         BeaconNavRoute.Inbox -> archivedThreads
+                                        BeaconNavRoute.Otp -> archivedThreads.filter { it.isOtp }
                                         BeaconNavRoute.Trusted -> archivedThreads.filter { it.isTrusted }
                                         BeaconNavRoute.Favorites -> archivedThreads.filter { it.isFavorite }
                                         BeaconNavRoute.Private -> archivedThreads
@@ -212,6 +214,14 @@ class BeaconInboxActivity : ComponentActivity() {
                                             viewModel.setThreadPrivacy(thread.threadId, thread.address, makePrivate)
                                         },
                                         theme = state.settings.themePreferences,
+                                        sectionTitle = when (currentRoute) {
+                                            BeaconNavRoute.Inbox -> "All messages"
+                                            BeaconNavRoute.Otp -> "2-step codes"
+                                            BeaconNavRoute.Trusted -> "Trusted contacts"
+                                            BeaconNavRoute.Favorites -> "Favorites"
+                                            BeaconNavRoute.Private -> "Private"
+                                        },
+                                        showFilterTabs = currentRoute == BeaconNavRoute.Inbox,
                                         banner = {
                                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 if (!hasSmsPermissions) {
@@ -371,6 +381,10 @@ class BeaconInboxActivity : ComponentActivity() {
                                         remoteWebAccessEnabled = state.settings.remoteWebAccessEnabled,
                                         isPremiumActive = subscriptionUiState.isPremiumActive || state.settings.premiumUnlocked,
                                         onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
+                                        otpCleanupEnabled = state.settings.otpCleanupEnabled,
+                                        otpCleanupDays = state.settings.otpCleanupDays,
+                                        onToggleOtpCleanup = { enabled -> viewModel.setOtpCleanupEnabled(enabled) },
+                                        onChangeOtpCleanupDays = { days -> viewModel.setOtpCleanupDays(days) },
                                         onSetPrivatePin = { navController.navigate("private_pin") },
                                         onPurchasePremium = { subscriptionManager.launchSubscribe(this@BeaconInboxActivity) },
                                         beaconLauncherEnabled = state.settings.beaconLauncherEnabled,

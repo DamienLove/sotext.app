@@ -75,6 +75,8 @@ object SmsCodec {
     private fun build(type: Type, vararg parts: String): String =
         listOf(PREFIX, type.wire, *parts).joinToString("|")
 
+    fun isPulseLinkPayload(body: String): Boolean = body.startsWith(PREFIX)
+
     fun parse(body: String): PulseLinkMessage? {
         if (!body.startsWith(PREFIX)) return null
         val tokens = body.split('|')

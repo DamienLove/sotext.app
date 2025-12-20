@@ -56,6 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.data.sms.SmsThreadItem
+import com.pulselink.domain.model.MessageUrgency
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.util.parseColorOr
 
@@ -78,6 +79,8 @@ fun SmsInboxScreen(
     showPrivateOnly: Boolean = false,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
     theme: ThemePreferences = ThemePreferences(),
+    sectionTitle: String? = null,
+    showFilterTabs: Boolean = true,
     banner: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {}
 ) {
@@ -153,13 +156,23 @@ fun SmsInboxScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             banner()
+            if (sectionTitle != null) {
+                Text(
+                    text = sectionTitle,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                )
+            }
             val unreadCount = remember(threads) { threads.count { it.unread } }
-            TabsRow(
-                filter = filter,
-                unreadCount = unreadCount,
-                onFilterChange = { filter = it },
-                theme = theme
-            )
+            if (showFilterTabs) {
+                TabsRow(
+                    filter = filter,
+                    unreadCount = unreadCount,
+                    onFilterChange = { filter = it },
+                    theme = theme
+                )
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -338,6 +351,14 @@ private fun ThreadRow(
                             Spacer(modifier = Modifier.height(4.dp))
                             UnreadPill()
                         }
+                        if (thread.isTrusted && thread.trustedUrgency != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            TrustedPill(thread.trustedUrgency)
+                        }
+                        if (thread.isOtp) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            OtpPill()
+                        }
                         if (isPrivate) {
                             Spacer(modifier = Modifier.height(4.dp))
                             PrivatePill()
@@ -378,6 +399,42 @@ private fun UnreadPill() {
             text = "Unread",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun TrustedPill(urgency: MessageUrgency) {
+    val (label, color) = when (urgency) {
+        MessageUrgency.EMERGENCY -> "Emergency" to Color(0xFFB91C1C)
+        MessageUrgency.URGENT -> "Urgent" to Color(0xFFF59E0B)
+        MessageUrgency.STANDARD -> "Check-in" to Color(0xFF059669)
+    }
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun OtpPill() {
+    val color = Color(0xFF2563EB)
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = "2-step",
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
         )
     }

@@ -28,6 +28,8 @@ interface SettingsRepository {
     suspend fun setTimeFormat(format: com.pulselink.domain.model.TimeFormat)
     suspend fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences)
     suspend fun setRemoteWebAccessEnabled(enabled: Boolean)
+    suspend fun setOtpCleanupEnabled(enabled: Boolean)
+    suspend fun setOtpCleanupDays(days: Int)
     suspend fun setPrivatePinHash(hash: String?)
     suspend fun setPrivateThreads(threadIds: List<Long>)
     suspend fun setBeaconLauncherEnabled(enabled: Boolean)
