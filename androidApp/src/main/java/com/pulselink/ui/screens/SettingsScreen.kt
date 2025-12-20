@@ -15,6 +15,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -38,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -260,6 +263,18 @@ fun SettingsScreen(
 
             // Beacon Feature
             SettingsSectionHeader("Beacon Feature")
+
+            val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
+            val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            SettingsActionRow(
+                title = "Default SMS Check",
+                subtitle = if (isDefaultSmsApp) "PulseLink is your default SMS app" else "PulseLink is NOT set as default",
+                actionLabel = "Check",
+                onAction = onRequestDefaultSms,
+                leadingIcon = smsStatusIcon,
+                iconTint = smsStatusColor
+            )
+
             SettingsToggleRow(
                 title = stringResource(id = R.string.settings_beacon_icon_title),
                 subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),
@@ -380,7 +395,8 @@ private fun SettingsActionRow(
     subtitle: String? = null,
     actionLabel: String,
     onAction: () -> Unit,
-    leadingIcon: ImageVector = Icons.Filled.NotificationsActive
+    leadingIcon: ImageVector = Icons.Filled.NotificationsActive,
+    iconTint: Color = MaterialTheme.colorScheme.primary
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -397,7 +413,7 @@ private fun SettingsActionRow(
             Icon(
                 imageVector = leadingIcon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = iconTint
             )
             Column(
                 modifier = Modifier
