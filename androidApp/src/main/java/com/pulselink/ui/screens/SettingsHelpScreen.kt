@@ -12,10 +12,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
@@ -28,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -110,6 +113,23 @@ fun SettingsHelpScreen(
             HelpSection(
                 title = stringResource(id = R.string.settings_help_support_title),
                 body = stringResource(id = R.string.settings_help_support_body)
+            )
+
+                        // Google Assistant App Actions section
+            HelpSection(
+                title = "Using Google Assistant",
+                body = "You can trigger PulseLink emergency features using voice commands with Google Assistant. Try saying 'Hey Google, emergency alert with PulseLink' or 'Hey Google, check in with PulseLink'."
+            )
+
+            // Visual separator before FAQ section
+            Spacer(Modifier.height(24.dp))
+            
+            // FAQ section subtitle
+            Text(
+                text = "Frequently Asked Questions",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             Spacer(Modifier.height(8.dp))
             FaqList(
@@ -217,7 +237,11 @@ private fun FaqItem(question: String, answer: String) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { expanded = !expanded },
+                .animateContentSize()
+            .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple()
+                ) { expanded = !expanded },
         shape = RoundedCornerShape(16.dp),
         tonalElevation = 1.dp,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f)

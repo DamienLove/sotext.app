@@ -24,8 +24,13 @@
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
-<queries>
+<
+        <package android:name="com.google.android.apps.bard" />
+        <package android:name="com.google.android.apps.googleassistant" />>
     <package android:name="com.google.android.googlequicksearchbox" />
 </queries>
 
@@ -112,9 +117,10 @@
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="${admobAppId}" />
 
+        <!-- App Actions configuration using shortcuts framework -->
         <meta-data
-            android:name="com.google.android.actions"
-            android:resource="@xml/actions" />
+            android:name="android.app.shortcuts"
+            android:resource="@xml/shortcuts" />
 
         <receiver
             android:name=".receiver.PulseLinkSmsReceiver"
@@ -177,6 +183,18 @@
                 <data
                     android:host="assistant"
                     android:scheme="pulselink" />
+            </intent-filter>
+
+            <!-- App Links intent-filter for HTTPS URLs -->
+            <!-- Requires assetlinks.json hosted at https://pulselink.app/.well-known/assetlinks.json -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="pulselink.app"
+                    android:pathPrefix="/assistant" />
             </intent-filter>
             <intent-filter>
                 <action android:name="com.pulselink.intent.ASSISTANT_EMERGENCY" />
@@ -292,6 +310,12 @@
             android:name=".widget.PulseLinkWidgetService"
             android:permission="android.permission.BIND_REMOTEVIEWS"
             android:exported="true" />
+
+        <service
+            android:name=".service.CrashDetectionService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
     </application>
 </manifest>

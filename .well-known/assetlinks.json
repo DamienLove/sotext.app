@@ -1,0 +1,31 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.pulselink",
+    "sha256_cert_fingerprints":
+    [
+      "TODO_REPLACE_WITH_RELEASE_KEY_SHA256_FINGERPRINT",
+      "TODO_REPLACE_WITH_DEBUG_KEY_SHA256_FINGERPRINT"
+    ]
+  }
+}]
+
+<!-- IMPORTANT: Replace the SHA-256 fingerprints above with actual values -->
+<!-- 
+  To get SHA-256 fingerprints:
+  
+  For release keystore:
+  keytool -list -v -keystore /path/to/release.keystore
+  
+  For debug keystore:
+  keytool -list -v -keystore ~/.android/debug.keystore
+  (Default password: android)
+  
+  Copy the SHA-256 value and paste it above.
+  
+  This file must be hosted at:
+  https://pulselink.app/.well-known/assetlinks.json
+  
+  The domain must have a valid SSL certificate.
+-->

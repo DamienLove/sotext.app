@@ -88,6 +88,7 @@ class EmergencyPopupActivity : AppCompatActivity() {
 
         val contactName = intent.getStringExtra(EXTRA_CONTACT_NAME) ?: "Unknown"
         val tier = intent.getStringExtra(EXTRA_ESCALATION_TIER) ?: "Emergency"
+        val triggerSource = intent.getStringExtra("EXTRA_TRIGGER_SOURCE") ?: "Widget emergency"
 
         setContent {
             PulseLinkTheme {
@@ -98,7 +99,7 @@ class EmergencyPopupActivity : AppCompatActivity() {
                     onTimeout = { 
                         // Dispatch Emergency Alert
                         lifecycleScope.launch {
-                            alertRouter.dispatchManual(EscalationTier.EMERGENCY, "Widget emergency")
+                            alertRouter.dispatchManual(EscalationTier.EMERGENCY, triggerSource)
                         }
                     }
                 )
@@ -201,7 +202,7 @@ fun EmergencyPopupScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "EMERGENCY ACTIVE",
+            text = if (contactName == "Crash Detected") "CRASH DETECTED" else "EMERGENCY ACTIVE",
             color = contentColor,
             fontSize = 32.sp,
             fontWeight = FontWeight.Black

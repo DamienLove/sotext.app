@@ -49,6 +49,7 @@ import com.pulselink.ui.screens.BeaconNavBar
 import com.pulselink.ui.screens.BeaconNavRoute
 import com.pulselink.ui.screens.BeaconSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
+import com.pulselink.ui.screens.NewMessageScreen
 import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
@@ -117,21 +118,64 @@ class BeaconInboxActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(isDefaultSms, hasSmsPermissions, requestedDefaultOnce) {
-                    if (!isDefaultSms) {
-                        if (!requestedDefaultOnce) {
-                            requestedDefaultOnce = true
-                            defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
-                                defaultSmsLauncher.launch(intent)
-                            }
+                    if (!isDefaultSms && !requestedDefaultOnce) {
+                        // Attempt to request role once automatically
+                        requestedDefaultOnce = true
+                        defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
+                            defaultSmsLauncher.launch(intent)
                         }
-                        return@LaunchedEffect
                     }
-                    if (!hasSmsPermissions) {
+                    if (isDefaultSms && !hasSmsPermissions) {
                         permissionLauncher.launch(requiredSmsPermissions())
                     }
                 }
 
-                if (hasSmsPermissions) {
+                // Show UI even if not default, but wrap in a check or show a banner/blocking UI if critical?
+                // The requirement is "should just confirm it is default sms, instead of always saying its not...".
+                // If we are not default, we should probably show a UI asking to become default,
+                // rather than returning early and showing nothing.
+
+                if (!isDefaultSms) {
+                    // Show "Make Default" UI
+                    PulseLinkTheme {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(32.dp)
+                            ) {
+                                Text(
+                                    text = "Beacon Inbox requires being the default SMS app.",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                                Button(onClick = {
+                                    defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
+                                        defaultSmsLauncher.launch(intent)
+                                    }
+                                }) {
+                                    Text("Set as Default SMS App")
+                                }
+                                Button(
+                                    onClick = { finish() },
+                                    modifier = Modifier.padding(top = 8.dp)
+                                ) {
+                                    Text("Close")
+                                }
+                            }
+                        }
+                    }
+                } else if (!hasSmsPermissions) {
+                     // Fallback if permissions are denied but is default (unlikely but possible)
+                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                         Text("SMS Permissions are required.")
+                         Button(onClick = { permissionLauncher.launch(requiredSmsPermissions()) }) {
+                             Text("Grant Permissions")
+                         }
+                     }
+                } else {
                     val bannerHeight = 50.dp
                     Box(modifier = Modifier.fillMaxSize()) {
                         Box(
@@ -233,7 +277,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                             if (contactId != -1L) {
                                                 navController.navigate("visual_settings?contactId=$contactId")
                                             }
-                                        }
+                                        },
+                                        onSendMessage = { body -> threadViewModel.sendMessage(address, body) }
                                     )
                                 }
                                 composable("beacon_settings") {

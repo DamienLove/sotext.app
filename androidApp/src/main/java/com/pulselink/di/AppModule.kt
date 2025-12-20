@@ -85,6 +85,11 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideSensorManager(@ApplicationContext context: Context): android.hardware.SensorManager =
+        context.getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager
+
+    @Provides
+    @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PulseLinkDatabase =
         Room.databaseBuilder(context, PulseLinkDatabase::class.java, "pulselink.db")
             .addMigrations(

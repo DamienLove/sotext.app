@@ -59,6 +59,7 @@ private val BEACON_HINT_DISMISSED = booleanPreferencesKey("beacon_hint_dismissed
 private val FIREBASE_MESSAGING_ENABLED = booleanPreferencesKey("firebase_messaging_enabled")
 private val EMAIL_FALLBACK_ENABLED = booleanPreferencesKey("email_fallback_enabled")
 private val MESSAGING_CHANNEL_PRIORITY = stringPreferencesKey("messaging_channel_priority")
+private val CRASH_DETECTION_ENABLED = booleanPreferencesKey("crash_detection_enabled")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -108,7 +109,8 @@ class SettingsRepositoryImpl @Inject constructor(
             emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
             messagingChannelPriority = prefs[MESSAGING_CHANNEL_PRIORITY]?.let {
                 runCatching { json.decodeFromString<List<MessageChannel>>(it) }.getOrNull()
-            } ?: PulseLinkSettings().messagingChannelPriority
+            } ?: PulseLinkSettings().messagingChannelPriority,
+            crashDetectionEnabled = prefs[CRASH_DETECTION_ENABLED] ?: PulseLinkSettings().crashDetectionEnabled
         )
     }
 
@@ -144,6 +146,13 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[FIREBASE_MESSAGING_ENABLED] = updated.firebaseMessagingEnabled
             prefs[EMAIL_FALLBACK_ENABLED] = updated.emailFallbackEnabled
             prefs[MESSAGING_CHANNEL_PRIORITY] = json.encodeToString(updated.messagingChannelPriority)
+            prefs[CRASH_DETECTION_ENABLED] = updated.crashDetectionEnabled
+        }
+    }
+
+    override suspend fun setCrashDetectionEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[CRASH_DETECTION_ENABLED] = enabled
         }
     }
 
@@ -368,6 +377,31 @@ class SettingsRepositoryImpl @Inject constructor(
         )
     }
 
+        override suspend fun setLastKnownPhone(phone: String?) {
+                    dataStore.edit { prefs ->
+                                if (phone == null) {
+                                                    prefs.remove(LAST_KNOWN_PHONE)
+                                                                } else {
+
+                                                                                }
+                                                                                        }
+                                                                                            }
+
+                                                                                                override suspend fun getLastKnownPhone(): String? =
+                                                                                                        dataStore.data.first()[LAST_KNOWN_PHONE]
+
+                                                                                                            override suspend fun setLastKnownEmail(email: String?) {
+                                                                                                                        dataStore.edit { prefs ->
+                                                                                                                                    if (email == null) {
+                                                                                                                                                        prefs.remove(LAST_KNOWN_EMAIL)
+                                                                                                                                                                    } else {
+                                                                                                                                                                                        prefs[LAST_KNOWN_EMAIL] = email
+                                                                                                                                                                                                    }
+                                                                                                                                                                                                            }
+                                                                                                                                                                                                                }
+
+                                                                                                                                                                                                                    override suspend fun getLastKnownEmail(): String? =
+                                                                                                                                                                                                                            dataStore.data.first()[LAST_KNOWN_EMAIL]
     companion object {
         private const val TAG = "SettingsRepositoryImpl"
     }

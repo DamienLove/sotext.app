@@ -59,6 +59,7 @@ fun SettingsScreen(
     defaultSmsSupported: Boolean,
     beaconLauncherEnabled: Boolean,
     onToggleIncludeLocation: (Boolean) -> Unit,
+    onToggleCrashDetection: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
     onRequestBatteryOpt: () -> Unit,
     onRequestUnusedApps: () -> Unit,
@@ -117,6 +118,12 @@ fun SettingsScreen(
                 subtitle = null,
                 checked = settings.includeLocation,
                 onCheckedChange = onToggleIncludeLocation
+            )
+            SettingsToggleRow(
+                title = "Crash Detection",
+                subtitle = "Alert trusted contacts if a vehicle crash is detected.",
+                checked = settings.crashDetectionEnabled,
+                onCheckedChange = onToggleCrashDetection
             )
             SettingsToggleRow(
                 title = "Auto-allow remote sound change",

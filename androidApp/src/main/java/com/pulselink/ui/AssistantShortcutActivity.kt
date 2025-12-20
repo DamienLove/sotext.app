@@ -37,7 +37,17 @@ class AssistantShortcutActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
+        // Debug logging for Assistant integration troubleshooting
+        android.util.Log.d("AssistantShortcut", "onCreate called")
+        android.util.Log.d("AssistantShortcut", "Intent action: ${intent?.action}")
+        android.util.Log.d("AssistantShortcut", "Intent data: ${intent?.data}")
+        android.util.Log.d("AssistantShortcut", "Intent extras: ${intent?.extras}")
+        intent?.extras?.let { extras ->
+            for (key in extras.keySet()) {
+                android.util.Log.d("AssistantShortcut", "  Extra: $key = ${extras.get(key)}")
+            }
+        }        
         val intent = intent ?: run {
             finishSilently()
             return
@@ -267,12 +277,59 @@ class AssistantShortcutActivity : FragmentActivity() {
         ).firstOrNull { !it.isNullOrBlank() }?.trim()
     }
 
+    /**
+     * Extract feature parameter from both deep links (pulselink://assistant/{feature})
+     * and App Links (https://pulselink.app/assistant/{feature})
+     * 
+     * @param intent The intent containing the link
+     * @return The feature name (e.g., "emergency", "checkin", "cancel") or null if invalid
+     */
     private fun extractDeepLinkFeature(intent: Intent?): String? {
         val data = intent?.data ?: return null
-        if (intent.action != Intent.ACTION_VIEW) return null
-        if (data.scheme != "pulselink" || data.host != "assistant") return null
-        return data.lastPathSegment
-    }
+        
+        android.util.Log.d("AssistantShortcut", "Extracting feature from URI: $data")
+        
+        if (intent.action != Intent.ACTION_VIEW) {
+            android.util.Log.w("AssistantShortcut", "Invalid action: ${intent.action}, expected ACTION_VIEW")
+            return null
+        }
+        
+        // Handle deep links (pulselink://assistant/{feature})
+        if (data.scheme == "pulselink") {
+            if (data.host != "assistant") {
+                android.util.Log.w("AssistantShortcut", "Invalid deep link host: ${data.host}")
+                return null
+            }
+            val feature = data.lastPathSegment
+            android.util.Log.d("AssistantShortcut", "Extracted feature from deep link: $feature")
+            return feature
+        }
+        
+        // Handle App Links (https://pulselink.app/assistant/{feature})
+        if (data.scheme == "https") {
+            // Validate that the host matches our verified domain
+            if (data.host != APP_LINKS_HOST) {
+                android.util.Log.w("AssistantShortcut", "Security: Rejecting unverified domain: ${data.host}")
+                Toast.makeText(this, "Invalid link domain", Toast.LENGTH_SHORT).show()
+                return null
+            }
+            
+            // Check that path starts with /assistant/
+            val path = data.path ?: ""
+            if (!path.startsWith("/assistant/")) {
+                android.util.Log.w("AssistantShortcut", "Invalid App Link path: $path")
+                return null
+            }
+            
+            // Extract feature from path (e.g., /assistant/emergency -> emergency)
+            val feature = data.lastPathSegment
+            android.util.Log.d("AssistantShortcut", "Extracted feature from App Link: $feature")
+            return feature
+        }
+        
+        android.util.Log.w("AssistantShortcut", "Unsupported scheme: ${data.scheme}")
+        return null
+        
 
     private suspend fun triggerAlert(tier: EscalationTier) {
         val statusMessage = when (tier) {
@@ -311,5 +368,8 @@ class AssistantShortcutActivity : FragmentActivity() {
         private const val FEATURE_EMERGENCY = "emergency"
         private const val FEATURE_CANCEL = "cancel"
         private const val FEATURE_CHECK_IN = "checkin"
+        
+        // App Links host for validation
+        private const val APP_LINKS_HOST = "pulselink.app"
     }
 }

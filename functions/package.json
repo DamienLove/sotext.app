@@ -22,6 +22,7 @@
     "handlebars": "4.7.8",
     "nodemailer": "^6.9.13"
   },
+    "nodemailer": "^6.9.0",
   "devDependencies": {
     "@google-cloud/firestore": "latest",
     "@types/handlebars": "latest",
@@ -33,6 +34,9 @@
     "eslint-config-google": "^0.14.0",
     "firebase-tools": "^13.0.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "@google-cloud/firestore": "latest",
+    "@types/handlebars": "latest",
+    "@types/nodemailer": "^6.4.0"
   }
 }
