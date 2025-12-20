@@ -157,3 +157,6 @@ Current ad behavior in app:
 2025-12-20
 - Added AdMob mediation adapters (AppLovin, InMobi, ironSource, Meta, Pangle, Vungle) and bumped play-services-ads to 24.9.0 in androidApp build.gradle.kts.
 - PulseLinkApp now initializes MobileAds on a background thread and logs adapter status on init.
+
+2025-12-20
+- Added mediation repositories (InMobi/Pangle/IronSource) in settings.gradle.kts; local build blocked because InMobi repo host is not resolving (DNS).

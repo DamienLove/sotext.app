@@ -14,6 +14,9 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven("https://maven.pkg.jetbrains.space/kotlin/p/kotlin/gradle-plugin")
+        maven("https://artifact.inmobi.com/repository/inmobi-sdk/")
+        maven("https://artifact.bytedance.com/repository/pangle")
+        maven("https://android-sdk.is.com")
     }
 }
 
