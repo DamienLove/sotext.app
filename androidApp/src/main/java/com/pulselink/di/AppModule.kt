@@ -92,16 +92,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): PulseLinkDatabase =
         Room.databaseBuilder(context, PulseLinkDatabase::class.java, "pulselink.db")
-            .addMigrations(
-                PulseLinkDatabase.MIGRATION_3_4,
-                PulseLinkDatabase.MIGRATION_4_5,
-                PulseLinkDatabase.MIGRATION_5_6,
-                PulseLinkDatabase.MIGRATION_6_7,
-                PulseLinkDatabase.MIGRATION_7_8,
-                PulseLinkDatabase.MIGRATION_8_9,
-                PulseLinkDatabase.MIGRATION_9_10,
-                PulseLinkDatabase.MIGRATION_11_12
-            )
+            .addMigrations(*PulseLinkDatabase.ALL_MIGRATIONS)
             .fallbackToDestructiveMigration()
             .build()
 

@@ -109,3 +109,24 @@ Current ad behavior in app:
 2025-12-20
 - Corrected version to v55 (versionCode/Name 55) and rebuilt AABs for free/pro/premium.
 - Copied bundles to `disposable_aabs/pulselink-{free|pro|premium}-v55.aab` and wrote `disposable_aabs/release-notes-v55.txt`.
+
+2025-12-20
+- Release v55 notes: Beacon launcher icon now uses tier-specific branding (pro/premium); Emergency/Check-in Glance widget actions forward via Assistant shortcuts; Material Components 1.13.0 for Android 15 edge-to-edge.
+
+2025-12-20
+- Prepared v55 tester checklist (free/pro only); no code changes.
+
+2025-12-20
+- Looked up v28 features: only confirmed item is email-based link invites fallback (cloud invite when no phone); no v28 release-notes file found in repo.
+
+2025-12-20
+- Added v55 tester checklist at docs/v55-tester-checklist.md (free/pro only).
+
+2025-12-20
+- Room migration hardening: added MIGRATION_10_11 (no-op), expanded MIGRATION_12_13 to include themeOverride/avatarUrl/remoteDisplayName, made 11_12 and 12_13 column adds conditional, and centralized ALL_MIGRATIONS in AppModule.
+
+2025-12-20
+- Pulled latest Suite-Beta updates, reran ./gradlew lintFreeDebug testFreeDebugUnitTest (warnings only).
+- Room migration hardening: added missing MIGRATION_10_11, made 11_12 + 12_13 column adds idempotent, and included themeOverride/avatarUrl/remoteDisplayName in 12_13; centralized ALL_MIGRATIONS.
+- Fixed SmsInboxScreen background remember to avoid composable calls inside remember calculation.
+- Bumped versionCode/Name to 56 and rebuilt AABs; copied to disposable_aabs/pulselink-{free|pro|premium}-v56.aab and wrote disposable_aabs/release-notes-v56.txt.

@@ -98,7 +98,8 @@ fun SmsInboxScreen(
         }
     }
 
-    val bgModifier = remember(theme) {
+    val colorScheme = MaterialTheme.colorScheme
+    val bgModifier = remember(theme, colorScheme) {
         if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
             Modifier.background(
                 brush = Brush.verticalGradient(
@@ -109,7 +110,7 @@ fun SmsInboxScreen(
                 )
             )
         } else {
-            Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor))
+            Modifier.background(parseColorOr(colorScheme.background, theme.backgroundColor))
         }
     }
 
