@@ -160,3 +160,6 @@ Current ad behavior in app:
 
 2025-12-20
 - Added mediation repositories (InMobi/Pangle/IronSource) in settings.gradle.kts; local build blocked because InMobi repo host is not resolving (DNS).
+
+2025-12-20
+- Rebuilt v57 AABs with adapters temporarily disabled (InMobi repo DNS failure, Pangle adapter unresolved, adapters compiled with newer Kotlin); built using play-services-ads 22.6.0 for compatibility and overwrote disposable_aabs/pulselink-{free|pro|premium}-v57.aab. Restore adapters after build.
