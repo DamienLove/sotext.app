@@ -139,3 +139,7 @@ Current ad behavior in app:
 
 2025-12-20
 - Default-SMS blocker fix: added DefaultSmsHelper.checkDefaultSmsWithRetry (exponential backoff) + logging, non-blocking banner with refresh in BeaconInboxActivity, and retry-based status checks in MainActivity and beaconApp. Inbox no longer blocks when default-SMS is still propagating. Ran lintFreeDebug + testFreeDebugUnitTest (warnings only).
+
+2025-12-21
+- Verified fixes for GitHub issues #168 (Beacon inbox), #149 (SMS sending), #129 (Default SMS check), #127 (iOS build), #67 (Firebase backend).
+- Fixed issue #91 (Squashed text input) by adding `android:windowSoftInputMode="adjustResize"` to `BeaconInboxActivity` in `androidApp/src/main/AndroidManifest.xml`.
