@@ -37,6 +37,14 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
         val origin = messages.firstOrNull()?.originatingAddress.orEmpty()
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            // Prioritize persisting the message to the database to ensure it's not lost.
+            // We do this before any internal processing logic.
+            try {
+                smsStore.insertIncoming(origin, body, System.currentTimeMillis())
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to insert incoming SMS from $origin", e)
+            }
+
             try {
                 val completed = withTimeoutOrNull(8_000L) {
                     val parsed = SmsCodec.parse(body)
@@ -45,7 +53,6 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                     } else {
                         alertRouter.onInboundMessage(body)
                     }
-                    smsStore.insertIncoming(origin, body, System.currentTimeMillis())
                 }
                 if (completed == null) {
                     Log.w(TAG, "SMS processing timed out for sender: $origin")
