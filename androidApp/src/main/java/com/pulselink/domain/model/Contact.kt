@@ -30,6 +30,7 @@ data class Contact(
     val remoteLastSeen: Long? = null,
     val remotePresence: RemotePresence = RemotePresence.UNKNOWN,
     val isPrivate: Boolean = false,
+    val isFavorite: Boolean = false,
     val fcmToken: String? = null,
     val preferredChannel: MessageChannel? = null,
     val lastSuccessfulChannel: MessageChannel? = null,

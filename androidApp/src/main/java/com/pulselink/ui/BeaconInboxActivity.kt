@@ -45,6 +45,8 @@ import androidx.navigation.navArgument
 import com.pulselink.BuildConfig
 import com.pulselink.billing.SubscriptionManager
 import com.pulselink.ui.ads.BannerAdSlot
+import com.pulselink.ui.screens.BeaconNavBar
+import com.pulselink.ui.screens.BeaconNavRoute
 import com.pulselink.ui.screens.BeaconSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.ProfileSettingsScreen
@@ -143,9 +145,26 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
                                     val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
                                     LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
+
+                                    var currentRoute by remember { mutableStateOf(BeaconNavRoute.Inbox) }
+
+                                    val displayedThreads = when (currentRoute) {
+                                        BeaconNavRoute.Inbox -> threads
+                                        BeaconNavRoute.Trusted -> threads.filter { it.isTrusted }
+                                        BeaconNavRoute.Favorites -> threads.filter { it.isFavorite }
+                                        BeaconNavRoute.Private -> threads
+                                    }
+
+                                    val displayedArchived = when (currentRoute) {
+                                        BeaconNavRoute.Inbox -> archivedThreads
+                                        BeaconNavRoute.Trusted -> archivedThreads.filter { it.isTrusted }
+                                        BeaconNavRoute.Favorites -> archivedThreads.filter { it.isFavorite }
+                                        BeaconNavRoute.Private -> archivedThreads
+                                    }
+
                                     SmsInboxScreen(
-                                        threads = threads,
-                                        archivedThreads = archivedThreads,
+                                        threads = displayedThreads,
+                                        archivedThreads = displayedArchived,
                                         onOpenThread = { thread ->
                                             navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
                                         },
@@ -156,25 +175,37 @@ class BeaconInboxActivity : ComponentActivity() {
                                         dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
                                         isBeaconMode = true,
                                         onOpenSettings = { navController.navigate("beacon_settings") },
-                                        onOpenPrivate = {
-                                            if (showPrivate) {
-                                                showPrivate = false
-                                                return@SmsInboxScreen
-                                            }
-                                            if (state.settings.privatePinHash.isNullOrBlank()) {
-                                                navController.navigate("private_pin")
-                                            } else {
-                                                pinInput = ""
-                                                showPinDialog = true
-                                            }
-                                        },
+                                        onOpenPrivate = {},
                                         privateThreadIds = privateThreads,
-                                        showPrivateOnly = showPrivate,
+                                        showPrivateOnly = currentRoute == BeaconNavRoute.Private,
                                         onTogglePrivate = { thread, makePrivate ->
-                                            viewModel.setThreadPrivacy(thread.threadId, makePrivate)
+                                            viewModel.setThreadPrivacy(thread.threadId, thread.address, makePrivate)
                                         },
-                                        theme = state.settings.themePreferences
+                                        theme = state.settings.themePreferences,
+                                        bottomBar = {
+                                            BeaconNavBar(
+                                                currentRoute = currentRoute,
+                                                onNavigate = { route ->
+                                                    if (route == BeaconNavRoute.Private && currentRoute != BeaconNavRoute.Private) {
+                                                        if (state.settings.privatePinHash.isNullOrBlank()) {
+                                                            navController.navigate("private_pin")
+                                                        } else {
+                                                            pinInput = ""
+                                                            showPinDialog = true
+                                                        }
+                                                    } else {
+                                                        currentRoute = route
+                                                    }
+                                                },
+                                                theme = state.settings.themePreferences
+                                            )
+                                        }
                                     )
+
+                                    if (showPrivate && currentRoute != BeaconNavRoute.Private) {
+                                         currentRoute = BeaconNavRoute.Private
+                                         showPrivate = false
+                                    }
                                 }
                                 composable(
                                     route = "sms/thread/{threadId}/{address}",

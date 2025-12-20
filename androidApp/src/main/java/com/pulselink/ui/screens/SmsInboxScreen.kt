@@ -74,12 +74,13 @@ fun SmsInboxScreen(
     privateThreadIds: Set<Long> = emptySet(),
     showPrivateOnly: Boolean = false,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
-    theme: ThemePreferences = ThemePreferences()
+    theme: ThemePreferences = ThemePreferences(),
+    bottomBar: @Composable () -> Unit = {}
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     val base = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
     val source = base.filter { thread ->
-        val isPrivate = privateThreadIds.contains(thread.threadId)
+        val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
         if (showPrivateOnly) isPrivate else !isPrivate
     }
     val filtered = source.filter { thread ->
@@ -130,7 +131,8 @@ fun SmsInboxScreen(
                     containerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor)
                 )
             )
-        }
+        },
+        bottomBar = bottomBar
     ) { padding ->
         Column(
             modifier = modifier
@@ -193,7 +195,7 @@ fun SmsInboxScreen(
                         onDelete = { onDeleteThread(thread) },
                         dateFormatter = dateFormatter,
                         isArchiveFilter = filter == InboxFilter.ARCHIVED,
-                        isPrivate = privateThreadIds.contains(thread.threadId),
+                        isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
                         onTogglePrivate = { makePrivate -> onTogglePrivate(thread, makePrivate) },
                         theme = theme
                     )
