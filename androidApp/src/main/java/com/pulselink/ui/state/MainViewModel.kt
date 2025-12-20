@@ -1102,6 +1102,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setCrashDetectionEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setCrashDetectionEnabled(enabled)
+        }
+    }
+
     private fun emitDndStatus(result: AlertResult?) {
         val overrideResult = result?.overrideResult ?: run {
             dndStatus.value = null

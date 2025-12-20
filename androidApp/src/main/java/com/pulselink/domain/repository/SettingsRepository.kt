@@ -35,4 +35,5 @@ interface SettingsRepository {
     suspend fun setFirebaseMessagingEnabled(enabled: Boolean)
     suspend fun setEmailFallbackEnabled(enabled: Boolean)
     suspend fun setMessagingChannelPriority(priority: List<MessageChannel>)
+    suspend fun setCrashDetectionEnabled(enabled: Boolean)
 }
