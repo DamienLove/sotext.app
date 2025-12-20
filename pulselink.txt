@@ -175,3 +175,13 @@ Current ad behavior in app:
 
 2025-12-20
 - Added OTP handling: 2-step detection, clipboard copy + heads-up notification, onboarding prompt for cleanup, cleanup window settings + periodic cleanup worker (24h), and Beacon sections (All/2-step/Trusted/Favorites/Private) with trusted/OTP pills. PulseLink-encoded SMS no longer inserted into Telephony (keeps Beacon inbox clean).
+
+2025-12-20
+- Committed/pushed OTP + Beacon inbox sections work (commit fa67c9f).
+- AAB build initially failed due to InMobi repo DNS + Kotlin 2.x metadata in play-services-ads 24.9.0/mediation adapters; built bundles after temporarily disabling adapters and downgrading ads to 22.6.0, then restored build.gradle.kts.
+- Rebuilt AABs (free/pro/premium) for v57 and copied to disposable_aabs/pulselink-{free|pro|premium}-v57.aab; release notes saved at disposable_aabs/release-notes-v57.txt.
+
+2025-12-20
+- Bumped versionCode/Name to 58.
+- Rebuilt v58 AABs (free/pro/premium) and copied to disposable_aabs/pulselink-{free|pro|premium}-v58.aab; release notes saved at disposable_aabs/release-notes-v58.txt.
+- Build required temporary ads dependency downgrade/adapter disable (play-services-ads 22.6.0; mediation adapters commented) due to Kotlin 2.x metadata + InMobi DNS; restored build.gradle.kts after bundle output.
