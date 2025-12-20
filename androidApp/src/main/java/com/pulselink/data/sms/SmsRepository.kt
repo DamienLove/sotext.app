@@ -5,7 +5,9 @@ import android.provider.Telephony
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import com.pulselink.data.db.ArchivedThreadDao
+import com.pulselink.data.db.ContactDao
 import com.pulselink.domain.model.ArchivedThread
+import com.pulselink.domain.model.EscalationTier
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,7 +24,8 @@ import android.net.Uri
 @Singleton
 class SmsRepository @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val archivedThreadDao: ArchivedThreadDao
+    private val archivedThreadDao: ArchivedThreadDao,
+    private val contactDao: ContactDao
 ) {
 
     @Volatile private var observersRegistered = false
@@ -34,7 +37,7 @@ class SmsRepository @Inject constructor(
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
 
-    fun listThreads(limit: Int = 50, includeArchived: Boolean = false, onlyArchived: Boolean = false): List<SmsThreadItem> {
+    suspend fun listThreads(limit: Int = 50, includeArchived: Boolean = false, onlyArchived: Boolean = false): List<SmsThreadItem> {
         if (!hasPerms()) return emptyList()
         ensureObserversRegistered()
         val archivedIds = runCatching { archivedThreadDao.getAllIds() }.getOrDefault(emptyList())
@@ -70,8 +73,15 @@ class SmsRepository @Inject constructor(
                 val snippet = c.getString(snippetIdx) ?: ""
                 val ts = c.getLong(dateIdx)
                 val unread = c.getInt(readIdx) == 0
-                val address = resolveAddress(c.getString(addressIdx))
+                val rawAddress = c.getString(addressIdx)
+                val address = resolveAddress(rawAddress)
                 val isArchived = archivedIds.contains(threadId)
+
+                val parts = address.split(" · ")
+                val phone = if (parts.size > 1) parts[1] else parts[0]
+                val contact = contactDao.getByPhone(phone)
+                    ?: contactDao.getByPhone(phone.replace(" ", "").replace("-", ""))
+
                 if (onlyArchived && !isArchived) {
                     // skip
                 } else if (!includeArchived && isArchived) {
@@ -82,7 +92,10 @@ class SmsRepository @Inject constructor(
                         address = address,
                         snippet = snippet,
                         timestamp = ts,
-                        unread = unread
+                        unread = unread,
+                        isPrivate = contact?.isPrivate == true,
+                        isFavorite = contact?.isFavorite == true,
+                        isTrusted = contact?.escalationTier == EscalationTier.EMERGENCY
                     )
                 }
                 count++
@@ -91,7 +104,7 @@ class SmsRepository @Inject constructor(
         }
     }
 
-    fun listArchivedThreads(limit: Int = 50): List<SmsThreadItem> =
+    suspend fun listArchivedThreads(limit: Int = 50): List<SmsThreadItem> =
         listThreads(limit = limit, includeArchived = true, onlyArchived = true)
 
     fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> {

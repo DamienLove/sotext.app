@@ -144,7 +144,7 @@ interface ArchivedThreadDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -216,6 +216,12 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE contacts ADD COLUMN preferredChannel TEXT")
                 database.execSQL("ALTER TABLE contacts ADD COLUMN lastSuccessfulChannel TEXT")
                 database.execSQL("ALTER TABLE alert_events ADD COLUMN isRead INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE contacts ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
             }
         }
     }
