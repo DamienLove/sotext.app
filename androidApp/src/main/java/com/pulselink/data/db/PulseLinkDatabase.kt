@@ -77,12 +77,6 @@ interface AlertEventDao {
 
     @Query("DELETE FROM alert_events")
     suspend fun clear()
-
-    @Query("SELECT COUNT(*) FROM alert_events WHERE isRead = 0")
-    fun observeUnreadCount(): Flow<Int>
-
-    @Query("UPDATE alert_events SET isRead = 1 WHERE id IN (:ids)")
-    suspend fun markAsRead(ids: List<Long>)
 }
 
 @Dao

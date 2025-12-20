@@ -71,3 +71,41 @@ Current SMS features
 
 2025-12-18
 - Release v44/v46 (free/pro/premium): Beacon icon always shown by default for all tiers; home hint lets users disable it or jump to default-SMS chooser; launcher toggles on/off immediately. Restored READ_SMS + READ_CALL_LOG to onboarding to stop false “missing permission” blocks. Beacon assist now only depends on permissions (not default-SMS) to open. Rebuilt AABs in `disposable_aabs/` up to v46 (free/pro/premium).
+Branch: feature/remove-app-shortcuts (tracking origin/feature/remove-app-shortcuts)
+Recent commits on branch:
+ - 9cb9a78 chore: bump version to 24 for Play upload
+ - 8c96371 chore: remove app shortcuts to fix Play upload
+ - 26e1c67 fix: stabilize google sign-in config
+ - 1d647cf fix: hide assistant promo and clean contact edit
+ - 78d791a feat: link invites fall back to email when no phone
+
+Build/run status:
+ - Not re-run in this session (last recorded run in previous note; rerun as needed).
+
+Ad configuration (free flavor):
+ - AdMob app id: ca-app-pub-5327057757821609~9533221188
+ - Banner unit: ca-app-pub-5327057757821609/3955684775
+ - Interstitial unit: ca-app-pub-5327057757821609/3170992810
+ - Rewarded interstitial unit: ca-app-pub-5327057757821609/8428571815
+ - Native advanced unit: ca-app-pub-5327057757821609/2153424615
+ - App open unit: ca-app-pub-5327057757821609/4210125201
+ - Ads disabled for pro flavor (MobileAdsInitProvider removed; build config ADS_ENABLED=false).
+
+Ad units quick list (free):
+ - native-advanced = ca-app-pub-5327057757821609/2153424615
+ - rewards-interstitual = ca-app-pub-5327057757821609/8428571815
+ - banner = ca-app-pub-5327057757821609/3955684775
+ - app-open = ca-app-pub-5327057757821609/4210125201
+
+Current ad behavior in app:
+ - Banners shown only on Home, Settings, Contact Detail, Contact Conversation, and Alert History screens; not globally pinned.
+ - App-open ad loads when ads are allowed; shown after onboarding completes and whenever the app resumes (no emergency-aware gating yet).
+ - No interstitial/rewarded interstitial display logic is implemented; only the IDs are configured.
+
+2025-12-20
+- Rebuilt v54 AABs (free/pro/premium) and copied to `disposable_aabs/pulselink-{free|pro|premium}-v54.aab` with `disposable_aabs/release-notes-v54.txt`.
+- Fixed release build blockers: cleaned manifest queries tag, restored assistant shortcut resources, removed duplicate repository/DAO declarations, repaired ContactLinkManager/MainViewModel corruption, wired SmsRepository contactDao, and updated EmailInvitationManager to current APIs.
+
+2025-12-20
+- Corrected version to v55 (versionCode/Name 55) and rebuilt AABs for free/pro/premium.
+- Copied bundles to `disposable_aabs/pulselink-{free|pro|premium}-v55.aab` and wrote `disposable_aabs/release-notes-v55.txt`.

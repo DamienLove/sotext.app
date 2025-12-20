@@ -329,7 +329,7 @@ class AssistantShortcutActivity : FragmentActivity() {
         
         android.util.Log.w("AssistantShortcut", "Unsupported scheme: ${data.scheme}")
         return null
-        
+    }
 
     private suspend fun triggerAlert(tier: EscalationTier) {
         val statusMessage = when (tier) {

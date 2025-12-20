@@ -30,10 +30,6 @@ class ContactRepositoryImpl @Inject constructor(
         return contactDao.getByTier("CHECK_IN")
     }
 
-        override suspend fun getLinkedContacts(): List<Contact> {
-                    return contactDao.getLinkedContacts()
-                        }
-
     override suspend fun getByLinkCode(code: String): Contact? = contactDao.getByLinkCode(code)
 
     override suspend fun getByPhone(phone: String): Contact? = contactDao.getByPhone(phone)

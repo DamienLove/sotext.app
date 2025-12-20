@@ -50,6 +50,13 @@
         <item>safe check</item>
     </string-array>
 
+    <string-array name="checkin_synonyms">
+        <item>check in</item>
+        <item>status</item>
+        <item>pulse</item>
+        <item>safe check</item>
+    </string-array>
+
     <!-- Synonyms for emergency alert feature -->
     <string-array name="emergency_synonyms">
         <item>emergency</item>

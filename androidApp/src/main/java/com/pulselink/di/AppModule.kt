@@ -153,8 +153,9 @@ object DatabaseModule {
     @Singleton
     fun provideSmsRepository(
         @ApplicationContext context: Context,
-        archivedThreadDao: ArchivedThreadDao
-    ): SmsRepository = SmsRepository(context, archivedThreadDao)
+        archivedThreadDao: ArchivedThreadDao,
+        contactDao: ContactDao
+    ): SmsRepository = SmsRepository(context, archivedThreadDao, contactDao)
 
     @Provides
     @Singleton

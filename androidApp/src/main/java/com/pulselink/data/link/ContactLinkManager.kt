@@ -253,37 +253,6 @@ class ContactLinkManager @Inject constructor(
         }
     }
 
-        suspend fun broadcastProfileUpdate(): Result<Int> {
-                    return runCatching {
-                                    val phone = auth.currentUser?.phoneNumber
-                                                val email = auth.currentUser?.email
-                                                            settingsRepository.ensureDeviceId()
-
-                                                                        val linkedContacts = contactRepository.getLinkedContacts()
-                                                                                    var count = 0
-
-                                                                                                for (contact in linkedContacts) {
-                                                                                                                    if (!contact.linkCode.isNullOrEmpty()) {
-                                                                                                                                            phone?.let {
-                                                                                                                                                                        smsSender.sendSms(
-                                                                                                                                                                                                        contact.phoneNumber,
-                                                                                                                                                                                                                                    SmsCodec.encodeConfig(SmsCodec.CONFIG_PHONE_UPDATE, it)
-                                                                                                                                                                                                                                                            )
-                                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                                                    email?.let {
-                                                                                                                                                                                                                                                                                                                                smsSender.sendSms(
-                                                                                                                                                                                                                                                                                                                                                                contact.phoneNumber,
-                                                                                                                                                                                                                                                                                                                                                                                            SmsCodec.encodeConfig(SmsCodec.CONFIG_EMAIL_UPDATE, it)
-                                                                                                                                                                                                                                                                                                                                                                                                                    )
-                                                                                                                                                                                                                                                                                                                                                                                                                                        }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                            count++
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    count
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        }
-
     @android.annotation.SuppressLint("MissingPermission")
     suspend fun approveLink(contactId: Long) {
         val contact = contactRepository.getContact(contactId) ?: return

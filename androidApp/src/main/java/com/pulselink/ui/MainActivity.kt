@@ -1190,16 +1190,19 @@ class MainActivity : AppCompatActivity() {
                         val address = entry.arguments?.getString("address") ?: ""
                         val threadViewModel: SmsThreadViewModel = hiltViewModel()
                         val messages by threadViewModel.messages.collectAsStateWithLifecycle()
+                        val contact by threadViewModel.contact.collectAsStateWithLifecycle()
                         LaunchedEffect(threadId) { threadViewModel.load(threadId) }
+                        val decodedAddress = Uri.decode(address)
                         SmsThreadScreen(
-                            address = Uri.decode(address),
+                            address = decodedAddress,
                             messages = messages,
-                            contact = null,
+                            contact = contact,
                             onBack = { navController.popBackStack() },
                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
                             globalTheme = state.settings.themePreferences,
                             onUpdateContactTheme = { /* no-op for SMS inbox contacts */ },
-                            onCustomizeTheme = { navController.navigate("visual_settings") }
+                            onCustomizeTheme = { navController.navigate("visual_settings") },
+                            onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) }
                         )
                     }
                     composable("settings_help") {
