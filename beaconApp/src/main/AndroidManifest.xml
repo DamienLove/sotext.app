@@ -43,13 +43,15 @@
 
             <!-- Default SMS handler intents -->
             <intent-filter>
-                <action android:name="android.intent.action.SENDTO" />
+                <action android:name="android.intent.action.VIEW" />
+
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="sms" />
-                <data android:scheme="smsto" />
+
                 <data android:scheme="mms" />
                 <data android:scheme="mmsto" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
             </intent-filter>
         </activity>
 
