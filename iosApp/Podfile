@@ -1,11 +1,27 @@
 platform :ios, '16.0'
 use_frameworks!
 
-target 'PulseLinkiOS' do
+def shared_pods
   pod 'Shared', :path => '../shared'
   pod 'Firebase/CoreOnly'
   pod 'Firebase/Auth'
   pod 'Firebase/Firestore'
+end
+
+target 'PulseLinkFree' do
+  shared_pods
+end
+
+target 'PulseLinkPro' do
+  shared_pods
+end
+
+target 'BeaconFree' do
+  shared_pods
+end
+
+target 'BeaconPro' do
+  shared_pods
 end
 
 # Remove KMP-generated build phase; we prebuild in CI via generateDummyFramework.

@@ -5,7 +5,7 @@ workflows:
     environment:
       vars:
         XCODE_WORKSPACE: "PulseLinkiOS.xcworkspace"
-        XCODE_SCHEME: "PulseLinkiOS"
+        XCODE_SCHEME: "PulseLinkFree"
         SIM_DEVICE: "iPhone 15"
         DERIVED_DATA: "$CM_BUILD_DIR/derivedData"
       node: v20.12.2
@@ -49,6 +49,10 @@ workflows:
           if [ ! -f "iosApp/PulseLinkiOS/GoogleService-Info.plist" ]; then
             echo "GoogleService-Info.plist missing. Add it to iosApp/PulseLinkiOS in repo or provide via secure files." && exit 1
           fi
+          if [ ! -f "iosApp/BeaconiOS/GoogleService-Info.plist" ]; then
+             echo "GoogleService-Info.plist missing in BeaconiOS. Copying from PulseLinkiOS as fallback..."
+             cp "iosApp/PulseLinkiOS/GoogleService-Info.plist" "iosApp/BeaconiOS/GoogleService-Info.plist"
+          fi
       - name: Build iOS simulator app
         script: |
           cd iosApp
@@ -63,10 +67,10 @@ workflows:
             build
       - name: Package simulator app
         script: |
-          APP_PATH=$(find "$DERIVED_DATA" -name "PulseLinkiOS.app" -path "*Build/Products/Debug-iphonesimulator/*" -print -quit)
+          APP_PATH=$(find "$DERIVED_DATA" -name "PulseLinkFree.app" -path "*Build/Products/Debug-iphonesimulator/*" -print -quit)
           if [ -z "$APP_PATH" ]; then
             echo "Simulator app not found" && exit 1
           fi
-          zip -r PulseLinkIOS-sim-debug.zip "$APP_PATH"
+          zip -r PulseLinkFree-sim-debug.zip "$APP_PATH"
     artifacts:
-      - PulseLinkIOS-sim-debug.zip
+      - PulseLinkFree-sim-debug.zip
