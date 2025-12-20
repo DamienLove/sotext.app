@@ -37,6 +37,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -59,7 +66,8 @@ fun SmsThreadScreen(
     dateFormatter: (Long) -> String,
     globalTheme: ThemePreferences,
     onUpdateContactTheme: (ThemePreferences?) -> Unit,
-    onCustomizeTheme: () -> Unit
+    onCustomizeTheme: () -> Unit,
+    onSendMessage: (String) -> Unit
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -79,6 +87,12 @@ fun SmsThreadScreen(
 
     Scaffold(
         containerColor = if (effectiveTheme.appBackgroundGradientStart != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor),
+        bottomBar = {
+            MessageInput(
+                onSend = onSendMessage,
+                theme = effectiveTheme
+            )
+        },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -144,6 +158,61 @@ fun SmsThreadScreen(
             items(messages, key = { it.id }) { msg ->
                 MessageBubble(msg, dateFormatter, effectiveTheme, contact)
             }
+        }
+    }
+}
+
+@Composable
+private fun MessageInput(
+    onSend: (String) -> Unit,
+    theme: ThemePreferences
+) {
+    var text by remember { mutableStateOf("") }
+    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val onSurface = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+
+    Surface(
+        color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor), // Or distinct input BG
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Text message") },
+                maxLines = 4,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    autoCorrect = true,
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Send
+                ),
+                trailingIcon = {
+                    if (text.isNotBlank()) {
+                        IconButton(onClick = {
+                            onSend(text)
+                            text = ""
+                        }) {
+                            Icon(Icons.Filled.Send, contentDescription = "Send", tint = primary)
+                        }
+                    }
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = primary,
+                    unfocusedBorderColor = onSurface.copy(alpha = 0.5f),
+                    focusedTextColor = onSurface,
+                    unfocusedTextColor = onSurface,
+                    cursorColor = primary
+                ),
+                shape = RoundedCornerShape(24.dp)
+            )
         }
     }
 }

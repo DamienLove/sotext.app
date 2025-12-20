@@ -618,6 +618,22 @@ class MainActivity : AppCompatActivity() {
                     appOpenAdController.updateAvailability(state.showAds)
                 }
 
+                LaunchedEffect(state.settings.crashDetectionEnabled) {
+                    val intent = Intent(context, com.pulselink.service.CrashDetectionService::class.java)
+                    if (state.settings.crashDetectionEnabled) {
+                        val hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        if (hasLocation) {
+                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                 context.startForegroundService(intent)
+                             } else {
+                                 context.startService(intent)
+                             }
+                        }
+                    } else {
+                        context.stopService(intent)
+                    }
+                }
+
                 val sendMessageHandler: suspend (Long, String) -> ManualMessageResult = { contactId, body ->
                     if (!defaultSmsHelper.isDefaultSms()) {
                         requestDefaultSms()
@@ -1119,6 +1135,7 @@ class MainActivity : AppCompatActivity() {
                             defaultSmsSupported = defaultSmsHelper.buildRoleRequestIntent() != null || isDefaultSms,
                             beaconLauncherEnabled = state.settings.beaconLauncherEnabled,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
+                            onToggleCrashDetection = viewModel::setCrashDetectionEnabled,
                             onRequestDndAccess = { openDndSettings(context) },
                             onRequestBatteryOpt = { openBatteryOptimizationSettings(context) },
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },

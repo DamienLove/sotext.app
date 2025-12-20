@@ -47,6 +47,7 @@ import com.pulselink.billing.SubscriptionManager
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BeaconSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
+import com.pulselink.ui.screens.NewMessageScreen
 import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
@@ -115,21 +116,64 @@ class BeaconInboxActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(isDefaultSms, hasSmsPermissions, requestedDefaultOnce) {
-                    if (!isDefaultSms) {
-                        if (!requestedDefaultOnce) {
-                            requestedDefaultOnce = true
-                            defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
-                                defaultSmsLauncher.launch(intent)
-                            }
+                    if (!isDefaultSms && !requestedDefaultOnce) {
+                        // Attempt to request role once automatically
+                        requestedDefaultOnce = true
+                        defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
+                            defaultSmsLauncher.launch(intent)
                         }
-                        return@LaunchedEffect
                     }
-                    if (!hasSmsPermissions) {
+                    if (isDefaultSms && !hasSmsPermissions) {
                         permissionLauncher.launch(requiredSmsPermissions())
                     }
                 }
 
-                if (hasSmsPermissions) {
+                // Show UI even if not default, but wrap in a check or show a banner/blocking UI if critical?
+                // The requirement is "should just confirm it is default sms, instead of always saying its not...".
+                // If we are not default, we should probably show a UI asking to become default,
+                // rather than returning early and showing nothing.
+
+                if (!isDefaultSms) {
+                    // Show "Make Default" UI
+                    PulseLinkTheme {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(32.dp)
+                            ) {
+                                Text(
+                                    text = "Beacon Inbox requires being the default SMS app.",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(bottom = 16.dp)
+                                )
+                                Button(onClick = {
+                                    defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
+                                        defaultSmsLauncher.launch(intent)
+                                    }
+                                }) {
+                                    Text("Set as Default SMS App")
+                                }
+                                Button(
+                                    onClick = { finish() },
+                                    modifier = Modifier.padding(top = 8.dp)
+                                ) {
+                                    Text("Close")
+                                }
+                            }
+                        }
+                    }
+                } else if (!hasSmsPermissions) {
+                     // Fallback if permissions are denied but is default (unlikely but possible)
+                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                         Text("SMS Permissions are required.")
+                         Button(onClick = { permissionLauncher.launch(requiredSmsPermissions()) }) {
+                             Text("Grant Permissions")
+                         }
+                     }
+                } else {
                     val bannerHeight = 50.dp
                     Box(modifier = Modifier.fillMaxSize()) {
                         Box(
@@ -173,7 +217,60 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onTogglePrivate = { thread, makePrivate ->
                                             viewModel.setThreadPrivacy(thread.threadId, makePrivate)
                                         },
-                                        theme = state.settings.themePreferences
+                                        theme = state.settings.themePreferences,
+                                        onNewMessage = { navController.navigate("sms/new") }
+                                    )
+                                }
+                                composable("sms/new") {
+                                    val threads by hiltViewModel<SmsInboxViewModel>().threads.collectAsStateWithLifecycle()
+                                    NewMessageScreen(
+                                        contacts = state.contacts,
+                                        onBack = { navController.popBackStack() },
+                                        theme = state.settings.themePreferences,
+                                        onCreateConversation = { selected ->
+                                            // Helper to normalize phone numbers for comparison (keep last 10 digits)
+                                            fun normalize(s: String): String {
+                                                val digits = s.filter { it.isDigit() }
+                                                return if (digits.length > 10) digits.takeLast(10) else digits
+                                            }
+
+                                            if (selected.size == 1) {
+                                                val contact = selected.first()
+                                                val normalizedContact = normalize(contact.phoneNumber)
+
+                                                // Strict check for existing 1-1 thread
+                                                val existing = threads.find { thread ->
+                                                    // Thread address might be "Name Ł Number" or just "Number"
+                                                    val parts = thread.address.split(" Ł ")
+                                                    val threadNumber = if (parts.size > 1) parts[1] else parts[0]
+                                                    normalize(threadNumber) == normalizedContact
+                                                }
+
+                                                val threadId = existing?.threadId ?: 0L
+                                                val address = existing?.address ?: contact.phoneNumber
+                                                navController.navigate("sms/thread/$threadId/${Uri.encode(address)}") {
+                                                    popUpTo("sms/inbox")
+                                                }
+                                            } else {
+                                                // Group/Broadcast
+                                                // Attempt to find existing group thread if possible, otherwise create new.
+                                                // This implementation currently defaults to creating a new conversation context (threadId=0)
+                                                // because matching group participants against Telephony threads reliably is complex
+                                                // without expensive queries.
+                                                val address = selected.joinToString(";") { it.phoneNumber }
+                                                navController.navigate("sms/thread/0/${Uri.encode(address)}") {
+                                                    popUpTo("sms/inbox")
+                                                }
+                                            }
+                                        },
+                                        onManualInput = { number ->
+                                             val existing = threads.find { it.address.contains(number) }
+                                             val threadId = existing?.threadId ?: 0L
+                                             val address = existing?.address ?: number
+                                             navController.navigate("sms/thread/$threadId/${Uri.encode(address)}") {
+                                                 popUpTo("sms/inbox")
+                                             }
+                                        }
                                     )
                                 }
                                 composable(
@@ -202,7 +299,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                             if (contactId != -1L) {
                                                 navController.navigate("visual_settings?contactId=$contactId")
                                             }
-                                        }
+                                        },
+                                        onSendMessage = { body -> threadViewModel.sendMessage(address, body) }
                                     )
                                 }
                                 composable("beacon_settings") {
