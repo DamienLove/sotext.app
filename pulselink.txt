@@ -130,3 +130,6 @@ Current ad behavior in app:
 - Room migration hardening: added missing MIGRATION_10_11, made 11_12 + 12_13 column adds idempotent, and included themeOverride/avatarUrl/remoteDisplayName in 12_13; centralized ALL_MIGRATIONS.
 - Fixed SmsInboxScreen background remember to avoid composable calls inside remember calculation.
 - Bumped versionCode/Name to 56 and rebuilt AABs; copied to disposable_aabs/pulselink-{free|pro|premium}-v56.aab and wrote disposable_aabs/release-notes-v56.txt.
+
+2025-12-20
+- Fixed default-SMS detection: DefaultSmsHelper now uses RoleManager.isRoleHeld on Android Q+ with Telephony fallback; updated Beacon app to use the same role-based check. Ran lintFreeDebug + testFreeDebugUnitTest (warnings only).

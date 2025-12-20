@@ -60,7 +60,7 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
     val navController = rememberNavController()
     val context = LocalContext.current
     var isDefaultSms by remember {
-        mutableStateOf(Telephony.Sms.getDefaultSmsPackage(context) == context.packageName)
+        mutableStateOf(isDefaultSmsRoleHeld(context))
     }
     var missingPerms by remember { mutableStateOf(requiredPermissions(context)) }
 
@@ -71,7 +71,7 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
     }
 
     LaunchedEffect(Unit) {
-        isDefaultSms = Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+        isDefaultSms = isDefaultSmsRoleHeld(context)
         missingPerms = requiredPermissions(context)
     }
 
@@ -97,7 +97,7 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
                     },
                     onRequestDefault = {
                         requestDefaultSms(context)
-                        isDefaultSms = Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+                        isDefaultSms = isDefaultSmsRoleHeld(context)
                         missingPerms = requiredPermissions(context)
                     },
                     onOpenThread = { id, address ->
@@ -168,7 +168,7 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
 
 private fun requestDefaultSms(context: android.content.Context) {
     val packageName = context.packageName
-    if (Telephony.Sms.getDefaultSmsPackage(context) == packageName) return
+    if (isDefaultSmsRoleHeld(context)) return
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         val roleManager = context.getSystemService(RoleManager::class.java)
@@ -182,6 +182,16 @@ private fun requestDefaultSms(context: android.content.Context) {
         }
         context.startActivity(intent)
     }
+}
+
+private fun isDefaultSmsRoleHeld(context: android.content.Context): Boolean {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val roleManager = context.getSystemService(RoleManager::class.java)
+        if (roleManager?.isRoleHeld(RoleManager.ROLE_SMS) == true) {
+            return true
+        }
+    }
+    return Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
 }
 
 private fun requiredPermissions(context: android.content.Context): List<String> {
