@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -77,10 +78,11 @@ fun InboxScreen(
     theme: ThemePalette,
     searchState: SearchResultState,
     isDefaultSms: Boolean,
-    isCheckingDefaultSms: Boolean = false,
+    isCheckingDefaultSms: Boolean,
     missingPermissions: List<String>,
     onRequestPermissions: () -> Unit,
     onRequestDefault: () -> Unit,
+    onRefreshDefaultStatus: () -> Unit,
     onOpenThread: (Long, String) -> Unit,
     onDeleteThread: (Long) -> Unit,
     onRefresh: () -> Unit,
@@ -216,7 +218,7 @@ fun InboxScreen(
                 }
             }
 
-            if (!isDefaultSms) {
+            if (!isDefaultSms || isCheckingDefaultSms) {
                 Surface(
                     tonalElevation = 2.dp,
                     modifier = Modifier
@@ -230,29 +232,25 @@ fun InboxScreen(
                     ) {
                         Icon(Icons.Default.Sms, contentDescription = null)
                         Column(Modifier.weight(1f)) {
-                            if (isCheckingDefaultSms) {
-                                Text("Verifying status...", fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    "Please wait...",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            } else {
-                                Text("Set as default SMS", fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    "Required for receiving texts and showing notifications.",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            }
+                            Text(
+                                if (isCheckingDefaultSms) "Checking default SMS status..." else "Set as default SMS",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                "Required for receiving texts and showing notifications.",
+                                style = MaterialTheme.typography.bodySmall
+                            )
                         }
                         if (isCheckingDefaultSms) {
-                            androidx.compose.material3.CircularProgressIndicator(
-                                modifier = Modifier.width(24.dp).height(24.dp),
-                                strokeWidth = 2.dp
-                            )
+                            CircularProgressIndicator(strokeWidth = 2.dp)
                         } else {
                             OutlinedButton(onClick = onRequestDefault) {
                                 Text("Set")
                             }
+                        }
+                        OutlinedButton(onClick = onRefreshDefaultStatus, enabled = !isCheckingDefaultSms) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Text("Refresh", modifier = Modifier.padding(start = 6.dp))
                         }
                     }
                 }

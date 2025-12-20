@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -40,8 +41,8 @@ import android.provider.Telephony
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,6 +69,24 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
     }
     var isCheckingDefaultSms by remember { mutableStateOf(false) }
     var missingPerms by remember { mutableStateOf(requiredPermissions(context)) }
+    val scope = rememberCoroutineScope()
+    val refreshDefaultSms = remember {
+        suspend {
+            isCheckingDefaultSms = true
+            val latest = checkDefaultSmsWithRetry(context)
+            isDefaultSms = latest
+            isCheckingDefaultSms = false
+            latest
+        }
+    }
+    val launchDefaultSmsCheck: () -> Unit = {
+        if (!isCheckingDefaultSms) {
+            scope.launch {
+                refreshDefaultSms()
+                missingPerms = requiredPermissions(context)
+            }
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -76,7 +95,7 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
     }
 
     LaunchedEffect(Unit) {
-        isDefaultSms = isDefaultSmsRoleHeld(context)
+        refreshDefaultSms()
         missingPerms = requiredPermissions(context)
     }
 
@@ -103,13 +122,9 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
                     },
                     onRequestDefault = {
                         requestDefaultSms(context)
-                        scope.launch {
-                             isCheckingDefaultSms = true
-                             isDefaultSms = checkDefaultSmsWithRetry(context)
-                             isCheckingDefaultSms = false
-                             missingPerms = requiredPermissions(context)
-                        }
+                        launchDefaultSmsCheck()
                     },
+                    onRefreshDefaultStatus = launchDefaultSmsCheck,
                     onOpenThread = { id, address ->
                         vm.openThread(id, address)
                         navController.navigate("thread/$id/${Uri.encode(address)}")
@@ -215,6 +230,24 @@ private fun isDefaultSmsRoleHeld(context: android.content.Context): Boolean {
         }
     }
     return Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+}
+
+private suspend fun checkDefaultSmsWithRetry(
+    context: android.content.Context,
+    maxAttempts: Int = 5,
+    initialDelayMs: Long = 300
+): Boolean {
+    var delayMs = initialDelayMs
+    var latest = false
+    repeat(maxAttempts) { attempt ->
+        latest = isDefaultSmsRoleHeld(context)
+        if (latest) return true
+        if (attempt < maxAttempts - 1) {
+            delay(delayMs)
+            delayMs *= 2
+        }
+    }
+    return latest
 }
 
 private fun requiredPermissions(context: android.content.Context): List<String> {

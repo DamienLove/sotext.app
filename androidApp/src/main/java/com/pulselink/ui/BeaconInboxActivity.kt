@@ -11,16 +11,26 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -33,6 +43,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -73,6 +84,7 @@ import com.pulselink.util.DefaultSmsHelper
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.hashPin
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -101,15 +113,26 @@ class BeaconInboxActivity : ComponentActivity() {
                 val defaultSmsSupported =
                     defaultSmsHelper.buildRoleRequestIntent() != null || isDefaultSms
                 val lifecycleOwner = LocalLifecycleOwner.current
+                val scope = rememberCoroutineScope()
+                val checkDefaultSmsWithRetry = remember(defaultSmsHelper) {
+                    suspend {
+                        isCheckingDefaultSms = true
+                        val latest = defaultSmsHelper.checkDefaultSmsWithRetry()
+                        isDefaultSms = latest
+                        isCheckingDefaultSms = false
+                        latest
+                    }
+                }
+                val launchDefaultSmsCheck: () -> Unit = {
+                    if (!isCheckingDefaultSms) {
+                        scope.launch { checkDefaultSmsWithRetry() }
+                    }
+                }
 
                 val defaultSmsLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
-                    scope.launch {
-                        isCheckingDefaultSms = true
-                        isDefaultSms = defaultSmsHelper.checkDefaultSmsWithRetry()
-                        isCheckingDefaultSms = false
-                    }
+                    launchDefaultSmsCheck()
                 }
 
                 // Permission handling
@@ -127,15 +150,7 @@ class BeaconInboxActivity : ComponentActivity() {
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
-                            if (!isDefaultSms && !isCheckingDefaultSms) {
-                                scope.launch {
-                                    isCheckingDefaultSms = true
-                                    isDefaultSms = defaultSmsHelper.checkDefaultSmsWithRetry()
-                                    isCheckingDefaultSms = false
-                                }
-                            } else if (!isCheckingDefaultSms) {
-                                isDefaultSms = defaultSmsHelper.isDefaultSms()
-                            }
+                            launchDefaultSmsCheck()
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
@@ -143,7 +158,7 @@ class BeaconInboxActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(isDefaultSms, hasSmsPermissions, requestedDefaultOnce) {
-                    if (!isDefaultSms && !requestedDefaultOnce) {
+                    if (!isDefaultSms && !requestedDefaultOnce && !isCheckingDefaultSms) {
                         // Attempt to request role once automatically
                         requestedDefaultOnce = true
                         defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
@@ -292,6 +307,92 @@ class BeaconInboxActivity : ComponentActivity() {
                                             viewModel.setThreadPrivacy(thread.threadId, thread.address, makePrivate)
                                         },
                                         theme = state.settings.themePreferences,
+                                        banner = {
+                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                if (!hasSmsPermissions) {
+                                                    Surface(
+                                                        tonalElevation = 2.dp,
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier.padding(12.dp),
+                                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Icon(Icons.Filled.Settings, contentDescription = null)
+                                                            Column(Modifier.weight(1f)) {
+                                                                Text(
+                                                                    text = "Permissions needed",
+                                                                    style = MaterialTheme.typography.titleSmall
+                                                                )
+                                                                Text(
+                                                                    text = "Grant SMS + notifications so Beacon can read and show messages.",
+                                                                    style = MaterialTheme.typography.bodySmall
+                                                                )
+                                                            }
+                                                            OutlinedButton(onClick = {
+                                                                permissionLauncher.launch(requiredSmsPermissions())
+                                                            }) {
+                                                                Text("Grant")
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if (!isDefaultSms || isCheckingDefaultSms) {
+                                                    Surface(
+                                                        tonalElevation = 2.dp,
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier.padding(12.dp),
+                                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Icon(Icons.Filled.Sms, contentDescription = null)
+                                                            Column(Modifier.weight(1f)) {
+                                                                Text(
+                                                                    text = if (isCheckingDefaultSms) {
+                                                                        "Checking default SMS status..."
+                                                                    } else {
+                                                                        "Set as default SMS"
+                                                                    },
+                                                                    style = MaterialTheme.typography.titleSmall
+                                                                )
+                                                                Text(
+                                                                    text = if (defaultSmsSupported) {
+                                                                        "Required for receiving texts and showing notifications."
+                                                                    } else {
+                                                                        "Default SMS role unavailable on this device."
+                                                                    },
+                                                                    style = MaterialTheme.typography.bodySmall
+                                                                )
+                                                            }
+                                                            if (isCheckingDefaultSms) {
+                                                                CircularProgressIndicator(
+                                                                    modifier = Modifier.padding(end = 8.dp),
+                                                                    strokeWidth = 2.dp
+                                                                )
+                                                            } else if (defaultSmsSupported) {
+                                                                OutlinedButton(onClick = {
+                                                                    defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
+                                                                        defaultSmsLauncher.launch(intent)
+                                                                    }
+                                                                }) {
+                                                                    Text("Set")
+                                                                }
+                                                            }
+                                                            OutlinedButton(
+                                                                onClick = launchDefaultSmsCheck,
+                                                                enabled = !isCheckingDefaultSms
+                                                            ) {
+                                                                Icon(Icons.Filled.Refresh, contentDescription = null)
+                                                                Text("Refresh", modifier = Modifier.padding(start = 6.dp))
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
                                         bottomBar = {
                                             BeaconNavBar(
                                                 currentRoute = currentRoute,
@@ -460,7 +561,6 @@ class BeaconInboxActivity : ComponentActivity() {
                 }
             }
         }
-    }
 
     private fun checkSmsPermissions(context: android.content.Context): Boolean {
         return requiredSmsPermissions().all {
