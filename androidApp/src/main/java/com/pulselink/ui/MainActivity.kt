@@ -305,7 +305,7 @@ class MainActivity : AppCompatActivity() {
                                 // User declined or canceled; keep other features, hide Beacon launcher.
                                 pendingInboxNav = false
                                 beaconFlowStage = BeaconFlowStage.Idle
-                                viewModel.setBeaconLauncherEnabled(false)
+                                // Do not disable the launcher automatically, allowing retry.
                                 if (showBeaconAssist) {
                                     beaconAssistState = beaconAssistState.copy(
                                         defaultSmsGranted = false,
