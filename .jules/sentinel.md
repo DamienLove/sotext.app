@@ -14,3 +14,8 @@
 **Vulnerability:** The `sendEmailNotification` function interpolated raw user input (`senderName`, `body`) directly into HTML email templates, allowing attackers to inject malicious scripts or phishing links.
 **Learning:** Email clients vary in sanitization, but generating HTML with untrusted string concatenation is fundamentally insecure. Always use an escaping function or a template engine.
 **Prevention:** Implemented a lightweight `escapeHtml` helper to sanitize all user-provided strings before inserting them into HTML templates. Also URL-encoded parameters in generated links.
+
+## 2025-12-21 - Device ID and Link Enumeration Fix
+**Vulnerability:** The `devices` collection was globally readable, allowing harvesting of User ID to Device ID mappings. The `links` collection allowed listing all rendezvous points. `linkChannels` allowed modification of the parent document.
+**Learning:** Firestore `allow read` implies `allow list`. Restricted collections must explicitly filter `list` operations using query constraints in the rules.
+**Prevention:** Split `read` into `get` and `list`. Use `allow write: if false` for container documents. Explicitly validate ownership on `write` to prevent resource stealing.
