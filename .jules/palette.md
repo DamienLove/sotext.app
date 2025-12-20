@@ -7,3 +7,7 @@
 ## 2024-12-19 - Empty State Patterns
 **Learning:** Empty states in Lists often default to simple text, which is easily missed.
 **Action:** Implementing a centered, visual empty state (Icon + Text) using `fillParentMaxSize()` in LazyColumn items improves discoverability and polish.
+
+## 2024-12-19 - Interactive Control Stability
+**Learning:** Hiding primary actions (like a Send button) when inactive causes jarring layout shifts and reduces discoverability.
+**Action:** Use disabled states with reduced opacity (`alpha = 0.38f` per Material spec) for controls that are temporarily invalid but relevant.
