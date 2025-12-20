@@ -45,6 +45,8 @@ import androidx.navigation.navArgument
 import com.pulselink.BuildConfig
 import com.pulselink.billing.SubscriptionManager
 import com.pulselink.ui.ads.BannerAdSlot
+import com.pulselink.ui.screens.BeaconNavBar
+import com.pulselink.ui.screens.BeaconNavRoute
 import com.pulselink.ui.screens.BeaconSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.NewMessageScreen
@@ -187,9 +189,26 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
                                     val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
                                     LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
+
+                                    var currentRoute by remember { mutableStateOf(BeaconNavRoute.Inbox) }
+
+                                    val displayedThreads = when (currentRoute) {
+                                        BeaconNavRoute.Inbox -> threads
+                                        BeaconNavRoute.Trusted -> threads.filter { it.isTrusted }
+                                        BeaconNavRoute.Favorites -> threads.filter { it.isFavorite }
+                                        BeaconNavRoute.Private -> threads
+                                    }
+
+                                    val displayedArchived = when (currentRoute) {
+                                        BeaconNavRoute.Inbox -> archivedThreads
+                                        BeaconNavRoute.Trusted -> archivedThreads.filter { it.isTrusted }
+                                        BeaconNavRoute.Favorites -> archivedThreads.filter { it.isFavorite }
+                                        BeaconNavRoute.Private -> archivedThreads
+                                    }
+
                                     SmsInboxScreen(
-                                        threads = threads,
-                                        archivedThreads = archivedThreads,
+                                        threads = displayedThreads,
+                                        archivedThreads = displayedArchived,
                                         onOpenThread = { thread ->
                                             navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
                                         },
@@ -200,78 +219,37 @@ class BeaconInboxActivity : ComponentActivity() {
                                         dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
                                         isBeaconMode = true,
                                         onOpenSettings = { navController.navigate("beacon_settings") },
-                                        onOpenPrivate = {
-                                            if (showPrivate) {
-                                                showPrivate = false
-                                                return@SmsInboxScreen
-                                            }
-                                            if (state.settings.privatePinHash.isNullOrBlank()) {
-                                                navController.navigate("private_pin")
-                                            } else {
-                                                pinInput = ""
-                                                showPinDialog = true
-                                            }
-                                        },
+                                        onOpenPrivate = {},
                                         privateThreadIds = privateThreads,
-                                        showPrivateOnly = showPrivate,
+                                        showPrivateOnly = currentRoute == BeaconNavRoute.Private,
                                         onTogglePrivate = { thread, makePrivate ->
-                                            viewModel.setThreadPrivacy(thread.threadId, makePrivate)
+                                            viewModel.setThreadPrivacy(thread.threadId, thread.address, makePrivate)
                                         },
                                         theme = state.settings.themePreferences,
-                                        onNewMessage = { navController.navigate("sms/new") }
-                                    )
-                                }
-                                composable("sms/new") {
-                                    val threads by hiltViewModel<SmsInboxViewModel>().threads.collectAsStateWithLifecycle()
-                                    NewMessageScreen(
-                                        contacts = state.contacts,
-                                        onBack = { navController.popBackStack() },
-                                        theme = state.settings.themePreferences,
-                                        onCreateConversation = { selected ->
-                                            // Helper to normalize phone numbers for comparison (keep last 10 digits)
-                                            fun normalize(s: String): String {
-                                                val digits = s.filter { it.isDigit() }
-                                                return if (digits.length > 10) digits.takeLast(10) else digits
-                                            }
-
-                                            if (selected.size == 1) {
-                                                val contact = selected.first()
-                                                val normalizedContact = normalize(contact.phoneNumber)
-
-                                                // Strict check for existing 1-1 thread
-                                                val existing = threads.find { thread ->
-                                                    // Thread address might be "Name Ł Number" or just "Number"
-                                                    val parts = thread.address.split(" Ł ")
-                                                    val threadNumber = if (parts.size > 1) parts[1] else parts[0]
-                                                    normalize(threadNumber) == normalizedContact
-                                                }
-
-                                                val threadId = existing?.threadId ?: 0L
-                                                val address = existing?.address ?: contact.phoneNumber
-                                                navController.navigate("sms/thread/$threadId/${Uri.encode(address)}") {
-                                                    popUpTo("sms/inbox")
-                                                }
-                                            } else {
-                                                // Group/Broadcast
-                                                // Attempt to find existing group thread if possible, otherwise create new.
-                                                // This implementation currently defaults to creating a new conversation context (threadId=0)
-                                                // because matching group participants against Telephony threads reliably is complex
-                                                // without expensive queries.
-                                                val address = selected.joinToString(";") { it.phoneNumber }
-                                                navController.navigate("sms/thread/0/${Uri.encode(address)}") {
-                                                    popUpTo("sms/inbox")
-                                                }
-                                            }
-                                        },
-                                        onManualInput = { number ->
-                                             val existing = threads.find { it.address.contains(number) }
-                                             val threadId = existing?.threadId ?: 0L
-                                             val address = existing?.address ?: number
-                                             navController.navigate("sms/thread/$threadId/${Uri.encode(address)}") {
-                                                 popUpTo("sms/inbox")
-                                             }
+                                        bottomBar = {
+                                            BeaconNavBar(
+                                                currentRoute = currentRoute,
+                                                onNavigate = { route ->
+                                                    if (route == BeaconNavRoute.Private && currentRoute != BeaconNavRoute.Private) {
+                                                        if (state.settings.privatePinHash.isNullOrBlank()) {
+                                                            navController.navigate("private_pin")
+                                                        } else {
+                                                            pinInput = ""
+                                                            showPinDialog = true
+                                                        }
+                                                    } else {
+                                                        currentRoute = route
+                                                    }
+                                                },
+                                                theme = state.settings.themePreferences
+                                            )
                                         }
                                     )
+
+                                    if (showPrivate && currentRoute != BeaconNavRoute.Private) {
+                                         currentRoute = BeaconNavRoute.Private
+                                         showPrivate = false
+                                    }
                                 }
                                 composable(
                                     route = "sms/thread/{threadId}/{address}",

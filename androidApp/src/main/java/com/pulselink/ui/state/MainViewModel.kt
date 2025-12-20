@@ -1074,12 +1074,22 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun setThreadPrivacy(threadId: Long, makePrivate: Boolean) {
+    fun setThreadPrivacy(threadId: Long, address: String, makePrivate: Boolean) {
         viewModelScope.launch {
             settingsRepository.update { current ->
                 val currentSet = current.privateThreadIds.toMutableSet()
                 if (makePrivate) currentSet.add(threadId) else currentSet.remove(threadId)
                 current.copy(privateThreadIds = currentSet.toList())
+            }
+
+            // Also mark the contact as private if found
+            val parts = address.split(" · ")
+            val phone = if (parts.size > 1) parts[1] else parts[0]
+            val contact = contactRepository.getByPhone(phone)
+                ?: contactRepository.getByPhone(normalizePhone(phone))
+
+            if (contact != null) {
+                saveContact(contact.copy(isPrivate = makePrivate))
             }
         }
     }

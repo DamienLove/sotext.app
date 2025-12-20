@@ -77,12 +77,12 @@ fun SmsInboxScreen(
     showPrivateOnly: Boolean = false,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
     theme: ThemePreferences = ThemePreferences(),
-    onNewMessage: () -> Unit = {}
+    bottomBar: @Composable () -> Unit = {}
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     val base = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
     val source = base.filter { thread ->
-        val isPrivate = privateThreadIds.contains(thread.threadId)
+        val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
         if (showPrivateOnly) isPrivate else !isPrivate
     }
     val filtered = source.filter { thread ->
@@ -134,15 +134,7 @@ fun SmsInboxScreen(
                 )
             )
         },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNewMessage,
-                containerColor = parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.primaryColor),
-                contentColor = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onPrimaryColor)
-            ) {
-                Icon(Icons.Filled.Edit, contentDescription = "New Message")
-            }
-        }
+        bottomBar = bottomBar
     ) { padding ->
         Column(
             modifier = modifier
@@ -205,7 +197,7 @@ fun SmsInboxScreen(
                         onDelete = { onDeleteThread(thread) },
                         dateFormatter = dateFormatter,
                         isArchiveFilter = filter == InboxFilter.ARCHIVED,
-                        isPrivate = privateThreadIds.contains(thread.threadId),
+                        isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
                         onTogglePrivate = { makePrivate -> onTogglePrivate(thread, makePrivate) },
                         theme = theme
                     )
