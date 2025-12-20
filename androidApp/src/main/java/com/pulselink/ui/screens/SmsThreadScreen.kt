@@ -195,13 +195,19 @@ private fun MessageInput(
                     imeAction = ImeAction.Send
                 ),
                 trailingIcon = {
-                    if (text.isNotBlank()) {
-                        IconButton(onClick = {
+                    val enabled = text.isNotBlank()
+                    IconButton(
+                        onClick = {
                             onSend(text)
                             text = ""
-                        }) {
-                            Icon(Icons.Filled.Send, contentDescription = "Send", tint = primary)
-                        }
+                        },
+                        enabled = enabled
+                    ) {
+                        Icon(
+                            Icons.Filled.Send,
+                            contentDescription = "Send",
+                            tint = if (enabled) primary else primary.copy(alpha = 0.38f)
+                        )
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
