@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -354,7 +356,13 @@ private fun SettingsToggleRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = checked,
+                onValueChange = onCheckedChange,
+                role = Role.Switch
+            ),
         shape = RoundedCornerShape(18.dp),
         tonalElevation = 1.dp,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -384,7 +392,10 @@ private fun SettingsToggleRow(
                     )
                 }
             }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            Switch(
+                checked = checked,
+                onCheckedChange = null // Handled by toggleable container
+            )
         }
     }
 }
@@ -399,6 +410,7 @@ private fun SettingsActionRow(
     iconTint: Color = MaterialTheme.colorScheme.primary
 ) {
     Surface(
+        onClick = onAction,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         tonalElevation = 1.dp,
@@ -435,9 +447,13 @@ private fun SettingsActionRow(
                     )
                 }
             }
-            TextButton(onClick = onAction) {
-                Text(text = actionLabel)
-            }
+            Text(
+                text = actionLabel,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
         }
     }
 }

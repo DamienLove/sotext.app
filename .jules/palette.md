@@ -11,3 +11,7 @@
 ## 2024-12-19 - Interactive Control Stability
 **Learning:** Hiding primary actions (like a Send button) when inactive causes jarring layout shifts and reduces discoverability.
 **Action:** Use disabled states with reduced opacity (`alpha = 0.38f` per Material spec) for controls that are temporarily invalid but relevant.
+
+## 2024-12-19 - Expanded Touch Targets
+**Learning:** In Settings screens, users expect the entire row to be interactive. Restricting interaction to a small Switch or Button decreases usability.
+**Action:** Use `Modifier.toggleable` or `Surface(onClick=...)` on the container row to expand the touch target, while keeping the inner controls (Switch) visually present but passive.
