@@ -20,6 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.pulselink.domain.model.ThemePreferences
@@ -150,7 +153,7 @@ fun CustomizeTab(
         }
 
         Card(
-            modifier = Modifier.fillMaxWidth().clickable { showColorPickerTarget = "bg" },
+            modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { showColorPickerTarget = "bg" },
             colors = CardDefaults.cardColors(containerColor = Color.Transparent) // Use manual background
         ) {
              Box(modifier = bgModifier.fillMaxWidth()) {
@@ -158,7 +161,7 @@ fun CustomizeTab(
                      // Top Bar Preview
                      Surface(
                          color = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor),
-                         modifier = Modifier.fillMaxWidth().clickable { showColorPickerTarget = "topbar" }
+                         modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { showColorPickerTarget = "topbar" }
                      ) {
                          Row(
                              modifier = Modifier.padding(12.dp),
@@ -178,7 +181,7 @@ fun CustomizeTab(
                      Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                          Text(
                              "Today 10:23 AM",
-                             modifier = Modifier.align(Alignment.CenterHorizontally).clickable { showColorPickerTarget = "text_bg" },
+                             modifier = Modifier.align(Alignment.CenterHorizontally).clickable(role = Role.Button) { showColorPickerTarget = "text_bg" },
                              style = MaterialTheme.typography.labelSmall,
                              color = parseColorOr(Color.Black, theme.onBackground)
                          )
@@ -261,7 +264,8 @@ fun CustomizeTab(
             value = theme.fontScale,
             onValueChange = { onUpdate(theme.copy(fontScale = it)) },
             valueRange = 0.5f..2.0f,
-            steps = 15
+            steps = 15,
+            modifier = Modifier.semantics { contentDescription = "Font scale" }
         )
 
         HorizontalDivider()
@@ -281,7 +285,8 @@ fun CustomizeTab(
                 ))
             },
             valueRange = 0f..32f,
-            steps = 32
+            steps = 32,
+            modifier = Modifier.semantics { contentDescription = "Base bubble corner radius" }
         )
 
         Text("Advanced Corners (Overrides Base)", style = MaterialTheme.typography.labelLarge)
@@ -291,7 +296,8 @@ fun CustomizeTab(
                 Slider(
                     value = (theme.bubbleCornerRadiusTopStart ?: theme.bubbleCornerRadius).toFloat(),
                     onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusTopStart = it.toInt())) },
-                    valueRange = 0f..32f
+                    valueRange = 0f..32f,
+                    modifier = Modifier.semantics { contentDescription = "Top start corner radius" }
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -299,7 +305,8 @@ fun CustomizeTab(
                 Slider(
                     value = (theme.bubbleCornerRadiusTopEnd ?: theme.bubbleCornerRadius).toFloat(),
                     onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusTopEnd = it.toInt())) },
-                    valueRange = 0f..32f
+                    valueRange = 0f..32f,
+                    modifier = Modifier.semantics { contentDescription = "Top end corner radius" }
                 )
             }
         }
@@ -309,7 +316,8 @@ fun CustomizeTab(
                  Slider(
                      value = (theme.bubbleCornerRadiusBottomStart ?: theme.bubbleCornerRadius).toFloat(),
                      onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusBottomStart = it.toInt())) },
-                     valueRange = 0f..32f
+                     valueRange = 0f..32f,
+                     modifier = Modifier.semantics { contentDescription = "Bottom start corner radius" }
                  )
              }
              Column(modifier = Modifier.weight(1f)) {
@@ -317,7 +325,8 @@ fun CustomizeTab(
                  Slider(
                      value = (theme.bubbleCornerRadiusBottomEnd ?: theme.bubbleCornerRadius).toFloat(),
                      onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusBottomEnd = it.toInt())) },
-                     valueRange = 0f..32f
+                     valueRange = 0f..32f,
+                     modifier = Modifier.semantics { contentDescription = "Bottom end corner radius" }
                  )
              }
         }
@@ -331,7 +340,8 @@ fun CustomizeTab(
             value = theme.iconSizeFactor,
             onValueChange = { onUpdate(theme.copy(iconSizeFactor = it)) },
             valueRange = 0.5f..1.5f,
-            steps = 10
+            steps = 10,
+            modifier = Modifier.semantics { contentDescription = "Icon size scaling" }
         )
 
         if (isGlobal) {
@@ -353,7 +363,12 @@ fun CustomizeTab(
 
 @Composable
 fun ColorChip(label: String, color: Color, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = onClick)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clickable(onClick = onClick, role = Role.Button)
+            .semantics { contentDescription = "Select $label color" }
+    ) {
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -600,12 +615,16 @@ private fun PreviewBubble(
         Surface(
             color = color,
             shape = shape,
-            modifier = Modifier.clickable(onClick = onBubbleClick)
+            modifier = Modifier
+                .clickable(onClick = onBubbleClick, role = Role.Button)
+                .semantics { contentDescription = "Change bubble color" }
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text,
-                    modifier = Modifier.clickable(onClick = onTextClick),
+                    modifier = Modifier
+                        .clickable(onClick = onTextClick, role = Role.Button)
+                        .semantics { contentDescription = "Change text color" },
                     fontFamily = font,
                     color = textColor,
                     fontSize = fontSize
