@@ -77,6 +77,7 @@ fun InboxScreen(
     theme: ThemePalette,
     searchState: SearchResultState,
     isDefaultSms: Boolean,
+    isCheckingDefaultSms: Boolean = false,
     missingPermissions: List<String>,
     onRequestPermissions: () -> Unit,
     onRequestDefault: () -> Unit,
@@ -229,14 +230,29 @@ fun InboxScreen(
                     ) {
                         Icon(Icons.Default.Sms, contentDescription = null)
                         Column(Modifier.weight(1f)) {
-                            Text("Set as default SMS", fontWeight = FontWeight.SemiBold)
-                            Text(
-                                "Required for receiving texts and showing notifications.",
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            if (isCheckingDefaultSms) {
+                                Text("Verifying status...", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "Please wait...",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            } else {
+                                Text("Set as default SMS", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "Required for receiving texts and showing notifications.",
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
-                        OutlinedButton(onClick = onRequestDefault) {
-                            Text("Set")
+                        if (isCheckingDefaultSms) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.width(24.dp).height(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            OutlinedButton(onClick = onRequestDefault) {
+                                Text("Set")
+                            }
                         }
                     }
                 }
