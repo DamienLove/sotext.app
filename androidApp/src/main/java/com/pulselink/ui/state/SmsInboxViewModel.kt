@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pulselink.data.sms.SmsMessageItem
 import com.pulselink.data.sms.SmsRepository
+import com.pulselink.data.sms.SmsSender
 import com.pulselink.data.sms.SmsThreadItem
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ThemePreferences
@@ -64,7 +65,8 @@ class SmsInboxViewModel @Inject constructor(
 @HiltViewModel
 class SmsThreadViewModel @Inject constructor(
     private val smsRepository: SmsRepository,
-    private val contactRepository: ContactRepository
+    private val contactRepository: ContactRepository,
+    private val smsSender: SmsSender
 ) : ViewModel() {
     private val _messages = MutableStateFlow<List<SmsMessageItem>>(emptyList())
     val messages: StateFlow<List<SmsMessageItem>> = _messages
@@ -94,6 +96,31 @@ class SmsThreadViewModel @Inject constructor(
                 val updated = currentContact.copy(themeOverride = theme)
                 contactRepository.upsert(updated)
                 _contact.value = updated
+            }
+        }
+    }
+
+    fun sendMessage(address: String, body: String) {
+        viewModelScope.launch {
+            // Handle multi-recipient (Broadcast) by splitting on semicolon
+            val destinations = address.split(";")
+
+            destinations.forEach { dest ->
+                // Clean up "Name Ł Number" format if present
+                val rawNumber = if (dest.contains(" Ł ")) {
+                    dest.split(" Ł ", limit = 2)[1]
+                } else {
+                    dest
+                }
+
+                if (rawNumber.isNotBlank()) {
+                    try {
+                        // awaitResult = false to parallelize if multiple
+                        smsSender.sendSms(rawNumber, body, awaitResult = false)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             }
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.ui.semantics.Role
@@ -32,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.SwipeToDismissBox
@@ -74,7 +76,8 @@ fun SmsInboxScreen(
     privateThreadIds: Set<Long> = emptySet(),
     showPrivateOnly: Boolean = false,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
-    theme: ThemePreferences = ThemePreferences()
+    theme: ThemePreferences = ThemePreferences(),
+    onNewMessage: () -> Unit = {}
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     val base = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
@@ -130,6 +133,15 @@ fun SmsInboxScreen(
                     containerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor)
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onNewMessage,
+                containerColor = parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.primaryColor),
+                contentColor = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onPrimaryColor)
+            ) {
+                Icon(Icons.Filled.Edit, contentDescription = "New Message")
+            }
         }
     ) { padding ->
         Column(
