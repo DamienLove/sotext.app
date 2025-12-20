@@ -1,5 +1,6 @@
 package com.pulselink.ui.state
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -40,6 +41,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.auth.FirebaseUser
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,6 +55,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val contactRepository: ContactRepository,
     private val alertRepository: AlertRepository,
     private val settingsRepository: SettingsRepository,
@@ -96,10 +99,9 @@ class MainViewModel @Inject constructor(
                 settingsRepository.settings,
                 contactRepository.observeContacts(),
                 alertRepository.observeRecent(10),
-                dispatching,
-                lastMessage,
-                alertRepository.observeUnreadCount()
-            ) { settings, contacts, events, isDispatching, message, unreadCount ->
+                alertRepository.observeUnreadCount(),
+                dispatching
+            ) { settings, contacts, events, unreadCount, isDispatching ->
                 val normalizedSettings = ensureSoundDefaults(settings)
                 val adsAvailable = BuildConfig.ADS_ENABLED
                 val showAds = adsAvailable && !normalizedSettings.proUnlocked && !normalizedSettings.premiumUnlocked
@@ -109,9 +111,9 @@ class MainViewModel @Inject constructor(
                     settings = normalizedSettings,
                     contacts = contacts,
                     recentEvents = events,
-                unreadAlertCount = unreadCount,
+                    unreadAlertCount = unreadCount,
                     isDispatching = isDispatching,
-                    lastMessagePreview = message,
+                    lastMessagePreview = null,
                     emergencySoundOptions = emergencySounds,
                     checkInSoundOptions = checkInSounds,
                     callSoundOptions = callSounds,
@@ -123,7 +125,10 @@ class MainViewModel @Inject constructor(
                     autoUpdateContactInfo = normalizedSettings.autoUpdateContactInfo
                 )
             }
-            val withProfile = combine(baseState, profileUpdate) { state, profile ->
+            val withLastMessage = combine(baseState, lastMessage) { state, message ->
+                state.copy(lastMessagePreview = message)
+            }
+            val withProfile = combine(withLastMessage, profileUpdate) { state, profile ->
                 state.copy(profileUpdate = profile)
             }
             combine(withProfile, dndStatus, emergencyActive) { state, dndStatusMessage, isEmergencyActive ->
@@ -204,6 +209,12 @@ class MainViewModel @Inject constructor(
     }
     }
 
+    fun markAlertsAsRead(alertIds: List<Long>) {
+        viewModelScope.launch {
+            alertRepository.markAsRead(alertIds)
+        }
+    }
+
     fun deleteContact(id: Long) {
         viewModelScope.launch {
             val contact = contactRepository.getContact(id)
@@ -268,6 +279,16 @@ class MainViewModel @Inject constructor(
             settingsRepository.setOwnerName(name)
             (firebaseAuthManager.currentUser()?.takeIf { user -> !user.isAnonymous })?.let { user ->
                 pushProfileToCloud(user, name)
+            }
+        }
+    }
+
+    fun setOwnerAvatarUrl(url: String?) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(ownerAvatarUrl = url) }
+            (firebaseAuthManager.currentUser()?.takeIf { user -> !user.isAnonymous })?.let { user ->
+                val currentName = settingsRepository.settings.first().ownerName
+                pushProfileToCloud(user, currentName)
             }
         }
     }
@@ -353,6 +374,15 @@ class MainViewModel @Inject constructor(
     fun updateContact(contact: Contact) {
         viewModelScope.launch {
             contactRepository.upsert(contact)
+        }
+    }
+
+    fun updateContactTheme(contactId: Long, theme: com.pulselink.domain.model.ThemePreferences?) {
+        viewModelScope.launch {
+            val contact = contactRepository.getContact(contactId)
+            if (contact != null) {
+                contactRepository.upsert(contact.copy(themeOverride = theme))
+            }
         }
     }
 
@@ -491,8 +521,14 @@ class MainViewModel @Inject constructor(
             val snapshot = profileRef.get().await()
             val remoteName = snapshot.getString("ownerName")
                 ?: user.displayName
+            val remoteAvatar = snapshot.getString("avatarUrl")
             val remoteEmail = snapshot.getString("email")
             val remoteDeviceId = snapshot.getString("deviceId")
+
+            if (!remoteAvatar.isNullOrBlank() && localSettings.ownerAvatarUrl != remoteAvatar) {
+                settingsRepository.update { it.copy(ownerAvatarUrl = remoteAvatar) }
+            }
+
             when {
                 !remoteName.isNullOrBlank() && localSettings.ownerName.isBlank() -> {
                     settingsRepository.setOwnerName(remoteName)
@@ -535,11 +571,13 @@ class MainViewModel @Inject constructor(
 
     private suspend fun pushProfileToCloud(user: FirebaseUser, ownerName: String) {
         runCatching {
+            val settings = settingsRepository.settings.first()
             val deviceId = settingsRepository.ensureDeviceId()
             val payload = mutableMapOf<String, Any>(
                 "ownerName" to ownerName,
                 "deviceId" to deviceId
             )
+            settings.ownerAvatarUrl?.let { payload["avatarUrl"] = it }
             user.email?.let { email ->
                 payload["email"] = email
                 payload["emailLowercase"] = email.lowercase()
@@ -991,7 +1029,36 @@ class MainViewModel @Inject constructor(
 
     fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences) {
         viewModelScope.launch {
+            val oldTheme = settingsRepository.settings.first().themePreferences
             settingsRepository.setThemePreferences(theme)
+            if (oldTheme.inboxIconVariant != theme.inboxIconVariant) {
+                applyInboxIconVariant(theme.inboxIconVariant)
+            }
+        }
+    }
+
+    private fun applyInboxIconVariant(variant: String) {
+        try {
+            val pm = context.packageManager
+            val pkg = context.packageName
+            val defaultComp = ComponentName(pkg, "com.pulselink.ui.InboxLauncherActivity")
+            val logoComp = ComponentName(pkg, "com.pulselink.BeaconInboxLogo")
+            val proComp = ComponentName(pkg, "com.pulselink.BeaconInboxPro")
+
+            val (toEnable, toDisable) = when (variant) {
+                "Logo" -> listOf(logoComp) to listOf(defaultComp, proComp)
+                "Pro" -> listOf(proComp) to listOf(defaultComp, logoComp)
+                else -> listOf(defaultComp) to listOf(logoComp, proComp)
+            }
+
+            toEnable.forEach {
+                pm.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+            }
+            toDisable.forEach {
+                pm.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update app icon", e)
         }
     }
 
@@ -1020,6 +1087,24 @@ class MainViewModel @Inject constructor(
     fun setBeaconLauncherEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setBeaconLauncherEnabled(enabled)
+        }
+    }
+
+    fun setBeaconHintDismissed(dismissed: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setBeaconHintDismissed(dismissed)
+        }
+    }
+
+    fun setFirebaseMessagingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setFirebaseMessagingEnabled(enabled)
+        }
+    }
+
+    fun setEmailFallbackEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setEmailFallbackEnabled(enabled)
         }
     }
 

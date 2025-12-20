@@ -16,9 +16,9 @@ class AlertRepositoryImpl @Inject constructor(
         alertEventDao.insert(event)
     }
 
-    override fun observeUnreadCount(): Flow<Int> =
-        alertEventDao.observeUnreadCount()
+    override fun observeUnreadCount(): Flow<Int> = alertEventDao.observeUnreadCount()
 
-    override suspend fun markAsRead(ids: List<Long>) =
+    override suspend fun markAsRead(ids: List<Long>) {
         alertEventDao.markAsRead(ids)
+    }
 }

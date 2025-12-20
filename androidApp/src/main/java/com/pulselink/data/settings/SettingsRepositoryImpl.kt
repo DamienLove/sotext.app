@@ -1,6 +1,9 @@
 package com.pulselink.data.settings
 
 import android.content.Context
+import android.content.ComponentName
+import android.content.pm.PackageManager
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -8,6 +11,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.pulselink.domain.model.AlertProfile
+import com.pulselink.domain.model.MessageChannel
 import com.pulselink.domain.model.PulseLinkSettings
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -51,6 +55,10 @@ private val REMOTE_WEB_ACCESS = booleanPreferencesKey("remote_web_access")
 private val PRIVATE_PIN_HASH = stringPreferencesKey("private_pin_hash")
 private val PRIVATE_THREADS = stringPreferencesKey("private_threads")
 private val BEACON_LAUNCHER_ENABLED = booleanPreferencesKey("beacon_launcher_enabled")
+private val BEACON_HINT_DISMISSED = booleanPreferencesKey("beacon_hint_dismissed")
+private val FIREBASE_MESSAGING_ENABLED = booleanPreferencesKey("firebase_messaging_enabled")
+private val EMAIL_FALLBACK_ENABLED = booleanPreferencesKey("email_fallback_enabled")
+private val MESSAGING_CHANNEL_PRIORITY = stringPreferencesKey("messaging_channel_priority")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -94,7 +102,13 @@ class SettingsRepositoryImpl @Inject constructor(
             privateThreadIds = prefs[PRIVATE_THREADS]?.let {
                 runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
             } ?: PulseLinkSettings().privateThreadIds,
-            beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled
+            beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled,
+            beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed,
+            firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
+            emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
+            messagingChannelPriority = prefs[MESSAGING_CHANNEL_PRIORITY]?.let {
+                runCatching { json.decodeFromString<List<MessageChannel>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().messagingChannelPriority
         )
     }
 
@@ -126,6 +140,10 @@ class SettingsRepositoryImpl @Inject constructor(
             updated.privatePinHash?.let { prefs[PRIVATE_PIN_HASH] = it } ?: prefs.remove(PRIVATE_PIN_HASH)
             prefs[PRIVATE_THREADS] = json.encodeToString(updated.privateThreadIds)
             prefs[BEACON_LAUNCHER_ENABLED] = updated.beaconLauncherEnabled
+            prefs[BEACON_HINT_DISMISSED] = updated.beaconHintDismissed
+            prefs[FIREBASE_MESSAGING_ENABLED] = updated.firebaseMessagingEnabled
+            prefs[EMAIL_FALLBACK_ENABLED] = updated.emailFallbackEnabled
+            prefs[MESSAGING_CHANNEL_PRIORITY] = json.encodeToString(updated.messagingChannelPriority)
         }
     }
 
@@ -268,6 +286,42 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { prefs ->
             prefs[BEACON_LAUNCHER_ENABLED] = enabled
         }
+        runCatching {
+            val component = ComponentName(context, com.pulselink.ui.InboxLauncherActivity::class.java)
+            val newState = if (enabled) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            context.packageManager.setComponentEnabledSetting(
+                component,
+                newState,
+                PackageManager.DONT_KILL_APP
+            )
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to update Beacon launcher icon enabled=$enabled", error)
+        }
+    }
+
+    override suspend fun setBeaconHintDismissed(dismissed: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[BEACON_HINT_DISMISSED] = dismissed
+        }
+    }
+
+    override suspend fun setFirebaseMessagingEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[FIREBASE_MESSAGING_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setEmailFallbackEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[EMAIL_FALLBACK_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setMessagingChannelPriority(priority: List<MessageChannel>) {
+        dataStore.edit { prefs ->
+            prefs[MESSAGING_CHANNEL_PRIORITY] = json.encodeToString(priority)
+        }
     }
 
     private fun settingsValue(prefs: Preferences): PulseLinkSettings {
@@ -304,7 +358,13 @@ class SettingsRepositoryImpl @Inject constructor(
             privateThreadIds = prefs[PRIVATE_THREADS]?.let {
                 runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
             } ?: PulseLinkSettings().privateThreadIds,
-            beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled
+            beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled,
+            beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed,
+            firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
+            emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
+            messagingChannelPriority = prefs[MESSAGING_CHANNEL_PRIORITY]?.let {
+                runCatching { json.decodeFromString<List<MessageChannel>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().messagingChannelPriority
         )
     }
 
@@ -333,6 +393,9 @@ class SettingsRepositoryImpl @Inject constructor(
 
                                                                                                                                                                                                                     override suspend fun getLastKnownEmail(): String? =
                                                                                                                                                                                                                             dataStore.data.first()[LAST_KNOWN_EMAIL]
+    companion object {
+        private const val TAG = "SettingsRepositoryImpl"
+    }
 }
 
 fun provideSettingsDataStore(@ApplicationContext context: Context): DataStore<Preferences> =

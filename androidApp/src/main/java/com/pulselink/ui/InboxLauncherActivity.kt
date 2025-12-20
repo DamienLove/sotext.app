@@ -11,11 +11,9 @@ import android.os.Bundle
 class InboxLauncherActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TASK or
-                Intent.FLAG_ACTIVITY_TASK_ON_HOME
-            putExtra("open_sms_inbox", true)
+        // Always launch the dedicated Beacon inbox task; never route through PulseLink screens.
+        val intent = Intent(this, BeaconInboxActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
         startActivity(intent)
         finish()

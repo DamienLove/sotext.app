@@ -29,7 +29,13 @@ data class Contact(
     val remoteUid: String? = null,
     val remoteLastSeen: Long? = null,
     val remotePresence: RemotePresence = RemotePresence.UNKNOWN,
-    val isPrivate: Boolean = false
+    val isPrivate: Boolean = false,
+    val fcmToken: String? = null,
+    val preferredChannel: MessageChannel? = null,
+    val lastSuccessfulChannel: MessageChannel? = null,
+    val themeOverride: ThemePreferences? = null,
+    val avatarUrl: String? = null,
+    val remoteDisplayName: String? = null
 )
 
 @Serializable

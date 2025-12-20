@@ -147,6 +147,7 @@
     <string name="settings_help_tone_body">Customize the siren that plays for emergencies, the chime for check-ins, and the ringtone override for incoming escalation calls to make sure every signal stands out.</string>
     <string name="settings_help_support_title">Support &amp; feedback</string>
     <string name="settings_help_support_body">Use Report a bug to send logs and context to the PulseLink team, or open the Beta testers panel to manage preview builds and feature flags.</string>
+    <string name="settings_help_section_heading">Help &amp; troubleshooting</string>
     <string name="settings_help_battery_title">Battery optimizations</string>
     <string name="settings_help_battery_body">Disable battery optimizations for PulseLink so alerts, SMS sync, and trusted contact checks run on time. On most devices this is under Battery &gt; Unrestricted or Don’t optimize.</string>
     <string name="settings_help_unused_title">Unused app pause</string>
@@ -170,6 +171,29 @@
     <string name="faq_answer_5">Grant battery optimization exclusions when prompted, and ensure PulseLink is allowed to run in the background so alerts and inbound links arrive reliably.</string>
     <string name="faq_question_6">Can I unlink or remove a contact later?</string>
     <string name="faq_answer_6">Yes. Open the contact, choose Unlink to stop sharing, or Delete to remove it entirely. They will no longer receive alerts from you.</string>
+    <string name="settings_help_faq_cta">Open FAQ page</string>
+    <string name="faq_title">FAQs</string>
+    <string name="faq_page_subtitle">Answers to the most common PulseLink questions.</string>
+    <string name="home_beacon_label">Beacon</string>
+    <string name="settings_beacon_icon_title">Beacon inbox icon</string>
+    <string name="settings_beacon_icon_subtitle">Show the Beacon shortcut in PulseLink and your app drawer.</string>
+    <string name="settings_default_sms_title">Default SMS app</string>
+    <string name="settings_default_sms_ready">PulseLink is set as the default SMS app.</string>
+    <string name="settings_default_sms_required">Required for Beacon messaging.</string>
+    <string name="settings_default_sms_unavailable">Default SMS role unavailable on this device.</string>
+    <string name="settings_default_sms_action_make_default">Make default</string>
+    <string name="settings_default_sms_action_change">Change</string>
+    <string name="beacon_flow_permissions_needed">Grant SMS permissions to open Beacon inbox.</string>
+    <string name="beacon_flow_default_needed">Set PulseLink as default SMS to open Beacon.</string>
+    <string name="beacon_flow_unavailable">Default SMS role unavailable on this device.</string>
+    <string name="beacon_flow_ready">Opening Beacon inbox...</string>
+    <string name="beacon_flow_enable_icon">Enabling Beacon icon...</string>
+    <string name="beacon_flow_retry">Beacon inbox not ready yet. Check default SMS and permissions.</string>
+    <string name="settings_beacon_title">Beacon inbox &amp; launcher</string>
+    <string name="settings_beacon_subtitle">Set PulseLink as your default SMS app to unlock the Beacon launcher icon and inbox.</string>
+    <string name="settings_beacon_enabled_subtitle">Beacon icon is enabled in the app drawer and SMS inbox is ready.</string>
+    <string name="settings_beacon_action_enable">Enable</string>
+    <string name="settings_beacon_action_open">Open</string>
     <string name="emergency_alert_title">%1$s triggered an emergency</string>
     <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → PulseLink → Notifications and re-enable bypass.</string>
     <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>
@@ -366,6 +390,8 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="login_email_label">Email address</string>
     <string name="login_password_label">Password</string>
     <string name="login_confirm_password_label">Confirm password</string>
+    <string name="login_show_password">Show password</string>
+    <string name="login_hide_password">Hide password</string>
     <string name="login_cta_sign_in">Continue</string>
     <string name="login_cta_create_account">Create account</string>
     <string name="login_toggle_sign_in">Already have an account? Sign in</string>
@@ -425,12 +451,12 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="assistant_urgent_message_failed">Failed to send urgent alert to %1$s.</string>
     <string name="assistant_non_urgent_sent">Non-urgent message sent to %1$s at %2$s volume.</string>
 
-    <!-- Google Assistant App Actions -->
-    <string name="app_action_emergency_label">Emergency Alert</string>
-    <string name="app_action_checkin_label">Check In</string>
-    <string name="app_action_emergency_description">Send emergency alert to contacts</string>
-    <string name="app_action_checkin_description">Perform routine safety check-in</string>
-    <string name="app_action_send_message_label">Send Message</string>
-    <string name="app_action_send_message_description">Send a message to your emergency contacts</string>
-
+    <!-- Widget Strings -->
+    <string name="widget_emergency_title">PulseLink Emergency</string>
+    <string name="widget_emergency_description">Quick access to emergency alerts and check-ins</string>
+    <string name="widget_button_emergency">Emergency Alert</string>
+    <string name="widget_button_check_in">Check In</string>
+    <string name="widget_trigger_emergency">Emergency alert sent from widget</string>
+    <string name="widget_trigger_check_in">Check-in sent from widget</string>
+    <string name="widget_error_no_contacts">Add emergency contacts before using widget</string>
 </resources>

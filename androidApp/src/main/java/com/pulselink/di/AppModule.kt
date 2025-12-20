@@ -10,6 +10,7 @@ import androidx.room.Room
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.messaging.FirebaseMessaging
 import com.pulselink.BuildConfig
 import com.pulselink.data.alert.AlertDispatcher
 import com.pulselink.data.alert.NotificationRegistrar
@@ -93,7 +94,8 @@ object DatabaseModule {
                 PulseLinkDatabase.MIGRATION_6_7,
                 PulseLinkDatabase.MIGRATION_7_8,
                 PulseLinkDatabase.MIGRATION_8_9,
-                PulseLinkDatabase.MIGRATION_9_10
+                PulseLinkDatabase.MIGRATION_9_10,
+                PulseLinkDatabase.MIGRATION_11_12
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -186,6 +188,10 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideFirebaseMessaging(): FirebaseMessaging = FirebaseMessaging.getInstance()
+
+    @Provides
+    @Singleton
     fun provideAlertRelayClient(): AlertRelayClient =
         AlertRelay.create(BuildConfig.ALERT_RELAY_BASE_URL)
 
@@ -218,4 +224,24 @@ object DatabaseModule {
     @Singleton
     @Named("IpQualityScoreApiKey")
     fun provideIpQualityScoreApiKey(): String = BuildConfig.IPQUALITYSCORE_API_KEY
+
+    @Provides
+    @Singleton
+    @Named("RapidLookupApiKeyDefault")
+    fun provideRapidLookupApiKeyDefault(): String = BuildConfig.RAPID_LOOKUP_API_KEY
+
+    @Provides
+    @Singleton
+    @Named("RapidLookupApiHost")
+    fun provideRapidLookupApiHost(): String = BuildConfig.RAPID_LOOKUP_API_HOST
+
+    @Provides
+    @Singleton
+    @Named("TwilioAccountSid")
+    fun provideTwilioAccountSid(): String = BuildConfig.TWILIO_ACCOUNT_SID
+
+    @Provides
+    @Singleton
+    @Named("TwilioAuthToken")
+    fun provideTwilioAuthToken(): String = BuildConfig.TWILIO_AUTH_TOKEN
 }

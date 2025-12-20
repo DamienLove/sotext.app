@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -53,6 +54,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -85,8 +88,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -94,7 +107,6 @@ import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
-import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.state.PulseLinkUiState
 import kotlinx.coroutines.launch
@@ -120,6 +132,13 @@ fun HomeScreen(
     isCancelingEmergency: Boolean = false,
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
+    onFaqClick: () -> Unit = {},
+    onBeaconClick: () -> Unit = {},
+    showBeaconIcon: Boolean = false,
+    showBeaconHint: Boolean = false,
+    onBeaconHintDismiss: () -> Unit = {},
+    onBeaconHintUse: () -> Unit = {},
+    onBeaconHintDisable: () -> Unit = {},
     showAddLoginPrompt: Boolean = false,
     onAddLoginClick: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
@@ -172,8 +191,18 @@ fun HomeScreen(
                 onDismissAssistantShortcuts = onDismissAssistantShortcuts,
                 onAlertsClick = onAlertsClick,
                 onSettingsClick = onSettingsClick,
-                onUpgradeClick = onUpgradeClick
+                onFaqClick = onFaqClick,
+                onBeaconClick = onBeaconClick,
+                onUpgradeClick = onUpgradeClick,
+                showBeacon = showBeaconIcon
             )
+            if (showBeaconHint) {
+                BeaconHintCard(
+                    onDismiss = onBeaconHintDismiss,
+                    onUse = onBeaconHintUse,
+                    onDisable = onBeaconHintDisable
+                )
+            }
             if (showAddLoginPrompt) {
                 AddLoginCard(
                     modifier = Modifier.fillMaxWidth(),
@@ -209,7 +238,6 @@ fun HomeScreen(
             }
             if (state.showAds) {
                 NativeAdCard(enabled = true)
-                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -254,7 +282,10 @@ private fun HeaderSection(
     onDismissAssistantShortcuts: () -> Unit,
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    onUpgradeClick: () -> Unit
+    onFaqClick: () -> Unit,
+    onBeaconClick: () -> Unit,
+    onUpgradeClick: () -> Unit,
+    showBeacon: Boolean
 ) {
     val heroShape = RoundedCornerShape(32.dp)
     val heroBrush = Brush.verticalGradient(
@@ -296,8 +327,12 @@ private fun HeaderSection(
                 NavigationRow(
                     onAlertsClick = onAlertsClick,
                     onSettingsClick = onSettingsClick,
+                    onFaqClick = onFaqClick,
+                    onBeaconClick = onBeaconClick,
                     onUpgradeClick = onUpgradeClick,
-                    isProUser = state.isProUser
+                    isProUser = state.isProUser,
+                    showBeacon = showBeacon,
+                    unreadAlertCount = state.unreadAlertCount
                 )
             }
         }
@@ -472,14 +507,27 @@ private fun VoiceTipsCard(
 private fun NavigationRow(
     onAlertsClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onFaqClick: () -> Unit,
+    onBeaconClick: () -> Unit,
     onUpgradeClick: () -> Unit,
-    isProUser: Boolean
+    isProUser: Boolean,
+    showBeacon: Boolean,
+    unreadAlertCount: Int
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        NavButton(icon = Icons.Filled.Notifications, label = "Alerts", onClick = onAlertsClick)
+        NavButton(
+            icon = Icons.Filled.Notifications,
+            label = "Alerts",
+            onClick = onAlertsClick,
+            badgeCount = unreadAlertCount
+        )
+        NavButton(icon = Icons.Filled.Help, label = stringResource(id = R.string.faq_title), onClick = onFaqClick)
+        if (showBeacon) {
+            NavButton(icon = Icons.Outlined.WifiTethering, label = stringResource(id = R.string.home_beacon_label), onClick = onBeaconClick)
+        }
         NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick)
         if (!isProUser) {
             NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick)
@@ -488,10 +536,64 @@ private fun NavigationRow(
 }
 
 @Composable
+private fun BeaconHintCard(
+    onDismiss: () -> Unit,
+    onUse: () -> Unit,
+    onDisable: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.WifiTethering,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Beacon inbox",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) {
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = "Dismiss")
+                }
+            }
+            Text(
+                text = "Use Beacon to manage SMS in PulseLink. Keep it on, or disable if you prefer another app.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onDisable, modifier = Modifier.weight(1f)) {
+                    Text("Disable")
+                }
+                Button(onClick = onUse, modifier = Modifier.weight(1f)) {
+                    Text("Use Beacon")
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun NavButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    badgeCount: Int? = null
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -508,11 +610,33 @@ private fun NavButton(
             tonalElevation = 0.dp
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    icon,
-                    contentDescription = label,
-                    tint = Color.White
-                )
+                if (badgeCount != null && badgeCount > 0) {
+                    BadgedBox(
+                        badge = {
+                            Badge(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ) {
+                                Text(
+                                    text = if (badgeCount > 99) "99+" else badgeCount.toString(),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    ) {
+                        Icon(
+                            icon,
+                            contentDescription = label,
+                            tint = Color.White
+                        )
+                    }
+                } else {
+                    Icon(
+                        icon,
+                        contentDescription = label,
+                        tint = Color.White
+                    )
+                }
             }
         }
         Text(
@@ -718,6 +842,7 @@ private fun SearchAndAddRow(
     onSearchChange: (TextFieldValue) -> Unit,
     onAddClick: () -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
         unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f),
@@ -735,8 +860,17 @@ private fun SearchAndAddRow(
             onValueChange = onSearchChange,
             modifier = Modifier.fillMaxWidth(),
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+            trailingIcon = if (searchValue.text.isNotEmpty()) {
+                {
+                    IconButton(onClick = { onSearchChange(TextFieldValue()) }) {
+                        Icon(Icons.Filled.Close, contentDescription = "Clear search")
+                    }
+                }
+            } else null,
             label = { Text("Search contacts") },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
             shape = RoundedCornerShape(18.dp),
             colors = fieldColors
         )
@@ -951,7 +1085,7 @@ private fun ContactRow(
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -959,41 +1093,46 @@ private fun ContactRow(
             ) {
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(10.dp)
+                                .size(8.dp)
                                 .clip(CircleShape)
                                 .background(presenceColor)
                         )
                         Text(
                             text = contact.displayName,
+                            style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
+                    val contactInfo = when {
+                        phone.isNotBlank() -> phone
+                        contact.email?.isNotBlank() == true -> contact.email
+                        contact.additionalEmails.firstOrNull { it.isNotBlank() } != null -> contact.additionalEmails.first { it.isNotBlank() }
+                        else -> stringResource(id = R.string.contact_no_reachability)
+                    }
                     Text(
-                        text = when {
-                            phone.isNotBlank() -> phone
-                            contact.email?.isNotBlank() == true -> contact.email
-                            contact.additionalEmails.firstOrNull { it.isNotBlank() } != null -> contact.additionalEmails.first { it.isNotBlank() }
-                            else -> stringResource(id = R.string.contact_no_reachability)
+                        text = buildAnnotatedString {
+                            append(contactInfo)
+                            append(" • ")
+                            withStyle(SpanStyle(color = statusColor)) {
+                                append(statusLabel)
+                            }
                         },
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = statusLabel,
-                        color = statusColor,
-                        style = MaterialTheme.typography.bodySmall
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
                     val callEnabled = phone.isNotBlank()
                     IconButton(onClick = onCall, enabled = callEnabled) {
                         Icon(
@@ -1300,13 +1439,26 @@ private fun AddContactDialog(
                     value = name,
                     onValueChange = onNameChange,
                     label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next
+                    )
                 )
                 OutlinedTextField(
                     value = handle,
                     onValueChange = onHandleChange,
                     label = { Text("Phone or email") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { onSave() }
+                    )
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),

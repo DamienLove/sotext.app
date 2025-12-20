@@ -31,7 +31,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -384,7 +384,7 @@ private fun PermissionCard(state: OnboardingPermissionState) {
                 )
             }
             if (!state.granted && state.actionLabel != null && state.onAction != null) {
-                Divider(color = Color.White.copy(alpha = 0.08f))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -527,7 +527,7 @@ fun BetaAgreementScreen(
                     },
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Divider(color = dividerColor)
+                HorizontalDivider(color = dividerColor)
                 TextButton(
                     onClick = onViewFullAgreement,
                     colors = ButtonDefaults.textButtonColors(contentColor = actionColor)

@@ -8,6 +8,11 @@
  */
 
 import {setGlobalOptions} from "firebase-functions/v2";
+import * as admin from "firebase-admin";
+
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
 
 // Start writing functions
 // https://firebase.google.com/docs/functions/typescript
@@ -17,4 +22,6 @@ setGlobalOptions({ maxInstances: 10 });
 export { naturalLanguageQuery } from './naturalLanguageInterface';
 export { menuSuggestion } from './genkit-sample';
 export { alertRelay, alertRelayHttp } from './alertRelay';
-export { sendEmailInvitation, checkInvitationStatus, acceptInvitation } from './emailInvitations';
+export { onMessageCreated } from './messaging';
+export { sendEmailNotification } from './email';
+export { findUser } from './users';

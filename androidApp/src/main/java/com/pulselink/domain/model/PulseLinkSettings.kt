@@ -33,13 +33,18 @@ data class PulseLinkSettings(
     val deviceId: String = "",
     val isBetaTester: Boolean = false,
     val ownerName: String = "",
+    val ownerAvatarUrl: String? = null,
     val autoUpdateContactInfo: Boolean = true,
     val timeFormat: TimeFormat = TimeFormat.AUTO,
     val themePreferences: ThemePreferences = ThemePreferences(),
     val remoteWebAccessEnabled: Boolean = false,
     val privatePinHash: String? = null,
     val privateThreadIds: List<Long> = emptyList(),
-    val beaconLauncherEnabled: Boolean = true
+    val beaconLauncherEnabled: Boolean = true,
+    val beaconHintDismissed: Boolean = false,
+    val firebaseMessagingEnabled: Boolean = true,
+    val emailFallbackEnabled: Boolean = false,
+    val messagingChannelPriority: List<MessageChannel> = listOf(MessageChannel.FIREBASE, MessageChannel.SMS, MessageChannel.EMAIL)
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }
@@ -57,5 +62,22 @@ data class ThemePreferences(
     val bubbleOutgoing: String = "#D0BCFF",
     val bubbleIncoming: String = "#E8DEF8",
     val backgroundColor: String = "#FFFFFF",
-    val iconSizeFactor: Float = 1.0f
+    val iconSizeFactor: Float = 1.0f,
+    val fontStyle: String = "Default",
+    val bubbleCornerRadius: Int = 12,
+    val inboxIconVariant: String = "Default",
+    val onBubbleOutgoing: String = "#000000",
+    val onBubbleIncoming: String = "#000000",
+    val onBackground: String = "#000000",
+    val topBarColor: String = "#FFFFFF",
+    val onTopBarColor: String = "#000000",
+    val bubbleCornerRadiusTopStart: Int? = null,
+    val bubbleCornerRadiusTopEnd: Int? = null,
+    val bubbleCornerRadiusBottomStart: Int? = null,
+    val bubbleCornerRadiusBottomEnd: Int? = null,
+    val timestampColor: String? = null,
+    val dividerColor: String? = null,
+    val appBackgroundGradientStart: String? = null,
+    val appBackgroundGradientEnd: String? = null,
+    val fontScale: Float = 1.0f
 )

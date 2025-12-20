@@ -20,6 +20,9 @@ import com.pulselink.beacon.ui.ads.BannerAd
 import com.pulselink.beacon.ui.InboxScreen
 import com.pulselink.beacon.ui.SmsViewModel
 import com.pulselink.beacon.ui.ThreadScreen
+import com.pulselink.beacon.ui.ThemeViewModel
+import com.pulselink.beacon.data.ThemeState
+import com.pulselink.beacon.ui.customize.CustomizationScreen
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -42,9 +45,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         MobileAds.initialize(this)
         setContent {
-            BeaconTheme {
-                val vm: SmsViewModel = viewModel(factory = SmsViewModel.factory(application))
-                BeaconNav(vm)
+            val vm: SmsViewModel = viewModel(factory = SmsViewModel.factory(application))
+            val themeVm: ThemeViewModel = viewModel(factory = ThemeViewModel.factory(application))
+            BeaconTheme(theme = themeVm.themeState.global) {
+                BeaconNav(vm, themeVm, themeVm.themeState)
             }
         }
     }
@@ -52,7 +56,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BeaconNav(vm: SmsViewModel) {
+private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: ThemeState) {
     val navController = rememberNavController()
     val context = LocalContext.current
     var isDefaultSms by remember {
@@ -84,6 +88,8 @@ private fun BeaconNav(vm: SmsViewModel) {
             composable("inbox") {
                 InboxScreen(
                     threads = vm.threads,
+                    theme = themeState.global,
+                    searchState = vm.searchState,
                     isDefaultSms = isDefaultSms,
                     missingPermissions = missingPerms,
                     onRequestPermissions = {
@@ -99,7 +105,10 @@ private fun BeaconNav(vm: SmsViewModel) {
                         navController.navigate("thread/$id/${Uri.encode(address)}")
                     },
                     onDeleteThread = { vm.deleteThread(it) },
-                    onRefresh = { vm.refreshThreads() }
+                    onRefresh = { vm.refreshThreads() },
+                    onSearch = { vm.search(it) },
+                    onClearSearch = { vm.clearSearch() },
+                    onCustomize = { navController.navigate("customize?address=") }
                 )
             }
             composable(
@@ -113,15 +122,44 @@ private fun BeaconNav(vm: SmsViewModel) {
                 LaunchedEffect(threadId) {
                     vm.openThread(threadId, address)
                 }
-                ThreadScreen(
-                    address = address.ifBlank { "Unknown" },
-                    messages = vm.messages,
-                    onBack = { navController.popBackStack() },
-                    onSend = { vm.sendMessage(it) },
-                    onDeleteThread = {
-                        vm.deleteThread(threadId)
-                        navController.popBackStack()
+                val contactTheme = themeState.forAddress(address)
+                BeaconTheme(theme = contactTheme) {
+                    ThreadScreen(
+                        address = address.ifBlank { "Unknown" },
+                        messages = vm.messages,
+                        theme = contactTheme,
+                        onBack = { navController.popBackStack() },
+                        onSend = { vm.sendMessage(it) },
+                        onDeleteThread = {
+                            vm.deleteThread(threadId)
+                            navController.popBackStack()
+                        },
+                        onCustomize = { navController.navigate("customize?address=${Uri.encode(address)}") }
+                    )
+                }
+            }
+            composable(
+                route = "customize?address={address}",
+                arguments = listOf(
+                    navArgument("address") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                        nullable = true
                     }
+                )
+            ) { backStackEntry ->
+                val addressArg = backStackEntry.arguments?.getString("address")?.takeIf { it.isNotBlank() }
+                    ?.let { Uri.decode(it) }
+                CustomizationScreen(
+                    address = addressArg,
+                    themeState = themeVm.themeState,
+                    onBack = { navController.popBackStack() },
+                    onColorChange = { target, color -> themeVm.applyColor(target, color, addressArg) },
+                    onFontChange = { themeVm.applyFont(it, addressArg) },
+                    onRadiusChange = { themeVm.applyRadius(it, addressArg) },
+                    onPreset = { preset -> themeVm.applyPreset(preset, addressArg) },
+                    onResetContact = { addressArg?.let { themeVm.resetContact(it) } },
+                    onIconVariant = { variant -> themeVm.updateIconVariant(variant) }
                 )
             }
         }

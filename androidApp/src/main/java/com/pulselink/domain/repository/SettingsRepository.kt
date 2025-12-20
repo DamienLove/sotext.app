@@ -1,5 +1,6 @@
 package com.pulselink.domain.repository
 
+import com.pulselink.domain.model.MessageChannel
 import com.pulselink.domain.model.PulseLinkSettings
 import kotlinx.coroutines.flow.Flow
 
@@ -36,4 +37,8 @@ interface SettingsRepository {
 
                 suspend fun setLastKnownEmail(email: String?)
                     suspend fun getLastKnownEmail(): String?
+    suspend fun setBeaconHintDismissed(dismissed: Boolean)
+    suspend fun setFirebaseMessagingEnabled(enabled: Boolean)
+    suspend fun setEmailFallbackEnabled(enabled: Boolean)
+    suspend fun setMessagingChannelPriority(priority: List<MessageChannel>)
 }

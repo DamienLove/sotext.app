@@ -23,6 +23,24 @@ PulseLink is a personal safety app that listens for discreet trigger phrases and
 - **PulseLink Pro (one-time)** – Beacon plus the full safety stack with ads removed.
 - **Beacon Premium (subscription)** – everything in Pro plus caller ID, remote SMS access, AI \"Lab\" features, trusted/private contacts, and customizable UI.
 
+## Multi-Channel Messaging
+
+PulseLink now uses a Firebase-first messaging architecture for robust app-to-app communication:
+- **Firebase Realtime/FCM**: Primary channel for instant, cost-effective alerts.
+- **SMS Fallback**: Ensures delivery when data is unavailable or Firebase fails.
+- **Email Fallback**: Tertiary backup for critical alerts.
+
+This hybrid approach ensures high reliability without strictly depending on cellular data or SMS permissions for every message.
+
+### Configuration
+
+To enable email fallback, configure the email transport credentials in Firebase Functions environment variables:
+
+```bash
+firebase functions:config:set email.user="your-email@gmail.com" email.pass="your-app-password"
+```
+(Ensure your function code retrieves these, or use `.env` files for `process.env.EMAIL_USER` / `EMAIL_PASS` access).
+
 ## iOS Roadmap
 
 PulseLink for iOS is in active planning. See the detailed milestones, dependencies, and how to contribute:

@@ -2,6 +2,8 @@ package com.pulselink.billing
 
 import android.app.Activity
 import android.content.Context
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
@@ -57,6 +59,14 @@ class SubscriptionManager @Inject constructor(
     }
 
     private fun startConnection() {
+        if (!isPlayServicesReady()) {
+            _state.value = _state.value.copy(
+                available = false,
+                loading = false,
+                statusMessage = "Google Play Services unavailable; billing disabled"
+            )
+            return
+        }
         if (billingClient.isReady) {
             queryProductsAndPurchases()
             return
@@ -64,6 +74,15 @@ class SubscriptionManager @Inject constructor(
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                    val featureResult = billingClient.isFeatureSupported(BillingClient.FeatureType.SUBSCRIPTIONS)
+                    if (featureResult.responseCode != BillingClient.BillingResponseCode.OK) {
+                        _state.value = _state.value.copy(
+                            available = false,
+                            loading = false,
+                            statusMessage = "Subscriptions not supported on this device"
+                        )
+                        return
+                    }
                     queryProductsAndPurchases()
                 } else {
                     _state.value = _state.value.copy(
@@ -81,6 +100,14 @@ class SubscriptionManager @Inject constructor(
             }
         })
         _state.value = _state.value.copy(loading = true, statusMessage = null)
+    }
+
+    private fun isPlayServicesReady(): Boolean {
+        val availability = GoogleApiAvailability.getInstance()
+        val status = availability.isGooglePlayServicesAvailable(context)
+        if (status == ConnectionResult.SUCCESS) return true
+        // Errors here are non-fatal for the app, but billing cannot proceed without Play Services/Store.
+        return false
     }
 
     private fun queryProductsAndPurchases() {
@@ -115,8 +142,19 @@ class SubscriptionManager @Inject constructor(
     }
 
     fun launchSubscribe(activity: Activity) {
-        val product = _state.value.product ?: return
-        val offerToken = product.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
+        if (!billingClient.isReady) {
+            _state.value = _state.value.copy(statusMessage = "Billing not ready; retrying connection")
+            startConnection()
+            return
+        }
+        val product = _state.value.product ?: run {
+            _state.value = _state.value.copy(statusMessage = "Subscription not available")
+            return
+        }
+        val offerToken = product.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: run {
+            _state.value = _state.value.copy(statusMessage = "No active base plan/offer configured")
+            return
+        }
         val flowParams = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(
                 listOf(
@@ -127,7 +165,12 @@ class SubscriptionManager @Inject constructor(
                 )
             )
             .build()
-        billingClient.launchBillingFlow(activity, flowParams)
+        val result = billingClient.launchBillingFlow(activity, flowParams)
+        if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+            _state.value = _state.value.copy(
+                statusMessage = "Purchase failed to start: ${result.responseCode}"
+            )
+        }
     }
 
     override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<Purchase>?) {

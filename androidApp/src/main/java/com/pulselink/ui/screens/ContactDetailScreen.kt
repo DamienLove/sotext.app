@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CheckCircle
@@ -30,7 +32,7 @@ import android.widget.Toast
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,13 +57,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
-import com.pulselink.ui.ads.BannerAdSlot
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,7 +97,7 @@ fun ContactDetailScreen(
                 title = { Text(text = contact?.displayName ?: "Contact") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -116,12 +119,6 @@ fun ContactDetailScreen(
             )
         },
         contentWindowInsets = WindowInsets.safeDrawing
-        ,
-        bottomBar = {
-            if (BuildConfig.ADS_ENABLED && showAds) {
-                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
-            }
-        }
     ) { padding ->
         if (contact == null) {
             Column(
@@ -346,7 +343,7 @@ private fun SettingsCard(
                 enabled = contact.linkStatus == LinkStatus.LINKED,
                 onCheckedChange = onToggleRemoteSound
             )
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             Button(
                 onClick = onDelete,
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer),
@@ -378,19 +375,41 @@ private fun EditContactDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Next
+                    )
                 )
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
                     label = { Text("Phone (preferred)") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Next
+                    )
                 )
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Email (optional)") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (canSave) {
+                                onSave(name.trim(), phone.trim(), email.trim().ifBlank { null })
+                            }
+                        }
+                    )
                 )
             }
         },

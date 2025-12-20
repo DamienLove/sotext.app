@@ -22,6 +22,7 @@ android {
         buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"ca-app-pub-5327057757821609/6922488144\"")
         buildConfigField("String", "AD_UNIT_NATIVE", "\"ca-app-pub-5327057757821609/7042919400\"")
         buildConfigField("String", "AD_UNIT_APP_OPEN", "\"ca-app-pub-5327057757821609/5022248965\"")
+        buildConfigField("Boolean", "PREMIUM_SEARCH", "false")
     }
 
     buildTypes {
@@ -68,6 +69,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-process:2.7.0")
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     implementation("com.google.android.gms:play-services-ads:22.6.0")
 

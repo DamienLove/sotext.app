@@ -18,6 +18,8 @@ plugins {
 fun Project.optionalProperty(name: String): String? =
     if (hasProperty(name)) property(name)?.toString()?.takeIf { it.isNotBlank() } else null
 
+fun Project.optionalIntProperty(name: String): Int? = optionalProperty(name)?.toIntOrNull()
+
 data class SigningSpec(
     val storeFile: File?,
     val storePassword: String?,
@@ -61,6 +63,47 @@ val ipqualityscoreApiKey = optionalProperty("ipqualityscoreApiKey")
     ?: System.getenv("IPQS_API_KEY")
     ?: ""
 val escapedIpqualityscoreApiKey = ipqualityscoreApiKey.replace("\"", "\\\"")
+
+// Optional Rapid Lookup API key (RapidAPI); keep secrets out of VCS.
+val rapidLookupApiKey = optionalProperty("rapidLookupApiKey")
+    ?: System.getenv("RAPID_LOOKUP_API_KEY")
+    ?: System.getenv("RAPIDAPI_KEY")
+    ?: ""
+val escapedRapidLookupApiKey = rapidLookupApiKey.replace("\"", "\\\"")
+val rapidLookupApiHost = optionalProperty("rapidLookupApiHost")
+    ?: System.getenv("RAPID_LOOKUP_API_HOST")
+    ?: "phone-number-lookup-api.p.rapidapi.com"
+val escapedRapidLookupApiHost = rapidLookupApiHost.replace("\"", "\\\"")
+val rapidLookupMonthlyCap = optionalIntProperty("rapidLookupMonthlyCap")
+    ?: System.getenv("RAPID_LOOKUP_MONTHLY_CAP")?.toIntOrNull()
+    ?: 100
+
+// Optional Twilio Lookup credentials (keep out of VCS).
+val twilioAccountSid = optionalProperty("twilioAccountSid")
+    ?: System.getenv("TWILIO_ACCOUNT_SID")
+    ?: ""
+val escapedTwilioAccountSid = twilioAccountSid.replace("\"", "\\\"")
+
+val twilioAuthToken = optionalProperty("twilioAuthToken")
+    ?: System.getenv("TWILIO_AUTH_TOKEN")
+    ?: ""
+val escapedTwilioAuthToken = twilioAuthToken.replace("\"", "\\\"")
+val twilioLookupMonthlyCap = optionalIntProperty("twilioLookupMonthlyCap")
+    ?: System.getenv("TWILIO_LOOKUP_MONTHLY_CAP")?.toIntOrNull()
+    ?: 0
+
+val numlookupMonthlyCap = optionalIntProperty("numlookupMonthlyCap")
+    ?: System.getenv("NUMLOOKUP_MONTHLY_CAP")?.toIntOrNull()
+    ?: Int.MAX_VALUE
+val numverifyMonthlyCap = optionalIntProperty("numverifyMonthlyCap")
+    ?: System.getenv("NUMVERIFY_MONTHLY_CAP")?.toIntOrNull()
+    ?: Int.MAX_VALUE
+val ipqsMonthlyCap = optionalIntProperty("ipqsMonthlyCap")
+    ?: System.getenv("IPQS_MONTHLY_CAP")?.toIntOrNull()
+    ?: Int.MAX_VALUE
+val realcallMonthlyCap = optionalIntProperty("realcallMonthlyCap")
+    ?: System.getenv("REALCALL_MONTHLY_CAP")?.toIntOrNull()
+    ?: 100
 
 fun Project.signingEnvKey(base: String, flavor: String?): String {
     val suffix = flavor?.uppercase(Locale.US)?.let { "_${it}" }.orEmpty()
@@ -150,8 +193,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 38
-        versionName = "38"
+        versionCode = 54
+        versionName = "54"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -161,6 +204,30 @@ android {
         buildConfigField("String", "IPQS_API_KEY", "\"$escapedIpqualityscoreApiKey\"")
         buildConfigField("String", "NUMVERIFY_API_KEY", "\"$escapedNumverifyApiKey\"")
         buildConfigField("String", "IPQUALITYSCORE_API_KEY", "\"$escapedIpqualityscoreApiKey\"")
+        buildConfigField("String", "RAPID_LOOKUP_BASE", "\"https://phone-number-lookup-api.p.rapidapi.com/phone-lookup\"")
+        buildConfigField("String", "RAPID_LOOKUP_API_KEY", "\"$escapedRapidLookupApiKey\"")
+        buildConfigField("String", "RAPID_LOOKUP_API_HOST", "\"$escapedRapidLookupApiHost\"")
+        buildConfigField("int", "RAPID_LOOKUP_MONTHLY_CAP", "${rapidLookupMonthlyCap}")
+        buildConfigField("String", "REALCALL_LOOKUP_BASE", "\"https://www.realcall.ai/lookup/search?k=\"")
+        buildConfigField("int", "REALCALL_MONTHLY_CAP", "${realcallMonthlyCap}")
+        buildConfigField("String", "TWILIO_LOOKUP_BASE", "\"https://lookups.twilio.com/v2/PhoneNumbers\"")
+        buildConfigField("String", "TWILIO_ACCOUNT_SID", "\"$escapedTwilioAccountSid\"")
+        buildConfigField("String", "TWILIO_AUTH_TOKEN", "\"$escapedTwilioAuthToken\"")
+        buildConfigField("int", "TWILIO_LOOKUP_MONTHLY_CAP", "${twilioLookupMonthlyCap}")
+        buildConfigField("int", "NUMLOOKUP_MONTHLY_CAP", "${numlookupMonthlyCap}")
+        buildConfigField("int", "NUMVERIFY_MONTHLY_CAP", "${numverifyMonthlyCap}")
+        buildConfigField("int", "IPQS_MONTHLY_CAP", "${ipqsMonthlyCap}")
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                // Export Room schemas for migration tracking; stays under build/ so it won't dirty git.
+                arguments += mapOf(
+                    "room.schemaLocation" to "$projectDir/build/room-schemas",
+                    "room.incremental" to "true",
+                    "room.expandProjection" to "true"
+                )
+            }
+        }
     }
 
     buildTypes {
@@ -327,6 +394,11 @@ tasks.withType(GoogleServicesTask::class.java).configureEach {
 
 kapt {
     correctErrorTypes = true
+    arguments {
+        arg("room.schemaLocation", "$projectDir/build/room-schemas")
+        arg("room.incremental", "true")
+        arg("room.expandProjection", "true")
+    }
 }
 
     dependencies {
@@ -345,7 +417,8 @@ kapt {
     implementation("com.google.guava:guava:32.1.2-android")
     implementation("androidx.concurrent:concurrent-futures:1.1.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("com.google.android.material:material:1.11.0")
+    // Update for Android 15 edge-to-edge handling (avoids deprecated status/nav bar color APIs)
+    implementation("com.google.android.material:material:1.13.0")
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -368,6 +441,8 @@ kapt {
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
+    implementation("androidx.glance:glance-appwidget:1.0.0")
+    implementation("androidx.glance:glance-material3:1.0.0")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.hilt:hilt-work:1.1.0")
     implementation("androidx.hilt:hilt-common:1.1.0")
@@ -388,10 +463,12 @@ kapt {
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-auth-ktx:23.0.0")
     implementation("com.google.firebase:firebase-functions-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
     implementation("com.google.firebase:firebase-config-ktx")
     implementation("com.google.assistant.appactions:suggestions:1.0.0")
     implementation("com.google.android.play:integrity:1.5.0")
     implementation("androidx.biometric:biometric:1.1.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 

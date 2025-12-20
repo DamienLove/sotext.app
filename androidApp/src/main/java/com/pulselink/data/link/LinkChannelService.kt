@@ -5,6 +5,7 @@ import com.google.firebase.firestore.DocumentChange
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.pulselink.auth.FirebaseAuthManager
+import com.pulselink.data.sms.PulseLinkMessage
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.repository.ContactRepository
@@ -19,7 +20,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -50,29 +50,88 @@ class LinkChannelService @Inject constructor(
         }
     }
 
-    suspend fun sendManualMessage(
-        contact: Contact,
-        body: String,
-        urgency: com.pulselink.domain.model.MessageUrgency,
-        volumeHint: com.pulselink.domain.model.VolumeHint?
-    ): Boolean {
+    suspend fun sendMessage(message: PulseLinkMessage): Boolean {
         start()
         authManager.ensureSignedIn()
-        val remoteDeviceId = contact.remoteDeviceId ?: return false
+
+        // We need to find the remote device ID. Ideally, the message should have it, or we look it up.
+        // PulseLinkMessage has senderId (which is us) and code.
+        // We need to resolve the receiver from the code.
+
+        val contact = contactRepository.getByLinkCode(message.code)
+        val remoteDeviceId = contact?.remoteDeviceId
+            ?: return false // Cannot send without remoteDeviceId
+
         val senderId = localDeviceId ?: settingsRepository.ensureDeviceId().also { localDeviceId = it }
         val channelId = channelIdFor(senderId, remoteDeviceId)
-        val payload = hashMapOf(
+
+        val payload = hashMapOf<String, Any>(
             FIELD_ID to UUID.randomUUID().toString(),
             FIELD_SENDER_ID to senderId,
             FIELD_RECEIVER_ID to remoteDeviceId,
-            FIELD_BODY to body,
-            FIELD_TIMESTAMP to System.currentTimeMillis(),
-            FIELD_TYPE to TYPE_MANUAL,
-            FIELD_URGENCY to urgency.name,
-            FIELD_VOLUME to (volumeHint?.name ?: "")
+            FIELD_TIMESTAMP to System.currentTimeMillis()
         )
-        contact.linkCode?.let { payload[FIELD_LINK_CODE] = it }
-        payload[FIELD_PHONE] = contact.phoneNumber.orEmpty()
+
+        // Add message specific fields
+        when (message) {
+            is PulseLinkMessage.LinkRequest -> {
+                payload[FIELD_TYPE] = TYPE_LINK_REQUEST
+                payload["linkCode"] = message.code
+                payload["senderName"] = message.senderName
+            }
+            is PulseLinkMessage.LinkAccept -> {
+                payload[FIELD_TYPE] = TYPE_LINK_ACCEPT
+                payload["linkCode"] = message.code
+            }
+            is PulseLinkMessage.Ping -> {
+                payload[FIELD_TYPE] = TYPE_PING
+                payload["linkCode"] = message.code
+            }
+            is PulseLinkMessage.RemoteAlert -> {
+                payload[FIELD_TYPE] = TYPE_ALERT
+                payload["linkCode"] = message.code
+                payload["tier"] = message.tier.name
+            }
+            is PulseLinkMessage.AlertPrepare -> {
+                payload[FIELD_TYPE] = TYPE_ALERT_PREPARE
+                payload["linkCode"] = message.code
+                payload["tier"] = message.tier.name
+                payload["reason"] = message.reason.name
+            }
+            is PulseLinkMessage.AlertReady -> {
+                payload[FIELD_TYPE] = TYPE_ALERT_READY
+                payload["linkCode"] = message.code
+                payload["ready"] = message.ready
+            }
+            is PulseLinkMessage.SoundOverride -> {
+                payload[FIELD_TYPE] = TYPE_SOUND_OVERRIDE
+                payload["linkCode"] = message.code
+                payload["tier"] = message.tier.name
+                payload["soundKey"] = message.soundKey.orEmpty()
+            }
+            is PulseLinkMessage.ManualMessage -> {
+                payload[FIELD_TYPE] = TYPE_MANUAL
+                payload["linkCode"] = message.code
+                payload["body"] = message.body
+                payload["urgency"] = message.urgency.name
+                payload["volumeHint"] = message.volumeHint?.name ?: ""
+            }
+            is PulseLinkMessage.ConfigUpdate -> {
+                payload[FIELD_TYPE] = TYPE_CONFIG
+                payload["linkCode"] = message.code
+                payload["key"] = message.key
+                payload["value"] = message.value
+            }
+            is PulseLinkMessage.CallEnded -> {
+                payload[FIELD_TYPE] = TYPE_CALL_ENDED
+                payload["linkCode"] = message.code
+                payload["callDuration"] = message.callDuration
+            }
+        }
+
+        // Add phone number if available for backward compatibility or extra info
+        contact.phoneNumber.takeIf { it.isNotBlank() }?.let { payload[FIELD_PHONE] = it }
+
         return runCatching {
             firestore.collection(COLLECTION_CHANNELS)
                 .document(channelId)
@@ -81,8 +140,27 @@ class LinkChannelService @Inject constructor(
                 .set(payload)
                 .await()
         }.onFailure {
-            Log.w(TAG, "Failed to send realtime message via $channelId", it)
+            Log.w(TAG, "Failed to send message via $channelId", it)
         }.isSuccess
+    }
+
+    // Deprecated: Kept for compatibility if needed, but redirects to sendMessage
+    suspend fun sendManualMessage(
+        contact: Contact,
+        body: String,
+        urgency: com.pulselink.domain.model.MessageUrgency,
+        volumeHint: com.pulselink.domain.model.VolumeHint?
+    ): Boolean {
+        val linkCode = contact.linkCode ?: return false
+        val deviceId = localDeviceId ?: settingsRepository.ensureDeviceId()
+        val message = PulseLinkMessage.ManualMessage(
+            senderId = deviceId,
+            code = linkCode,
+            body = body,
+            urgency = urgency,
+            volumeHint = volumeHint
+        )
+        return sendMessage(message)
     }
 
     private fun syncListeners(localId: String, contacts: List<Contact>) {
@@ -119,20 +197,16 @@ class LinkChannelService @Inject constructor(
                 for (change in snapshots.documentChanges) {
                     if (change.type == DocumentChange.Type.ADDED) {
                         val doc = change.document
+                        val type = doc.getString(FIELD_TYPE) ?: TYPE_MANUAL
+                        val payloadMap = doc.data
+
                         val payload = LinkChannelPayload(
                             id = doc.getString(FIELD_ID).orEmpty(),
                             senderId = doc.getString(FIELD_SENDER_ID).orEmpty(),
                             receiverId = doc.getString(FIELD_RECEIVER_ID).orEmpty(),
-                            body = doc.getString(FIELD_BODY).orEmpty(),
                             timestamp = doc.getLong(FIELD_TIMESTAMP) ?: System.currentTimeMillis(),
-                            linkCode = doc.getString(FIELD_LINK_CODE),
-                            phoneNumber = doc.getString(FIELD_PHONE)?.takeIf { it.isNotBlank() },
-                            urgency = doc.getString(FIELD_URGENCY)
-                                ?.let { runCatching { com.pulselink.domain.model.MessageUrgency.valueOf(it) }.getOrNull() }
-                                ?: com.pulselink.domain.model.MessageUrgency.STANDARD,
-                            volumeHint = doc.getString(FIELD_VOLUME)
-                                ?.takeIf { it.isNotBlank() }
-                                ?.let { runCatching { com.pulselink.domain.model.VolumeHint.valueOf(it) }.getOrNull() }
+                            type = type,
+                            payload = payloadMap
                         )
                         scope.launch {
                             _inboundMessages.emit(payload)
@@ -154,14 +228,21 @@ class LinkChannelService @Inject constructor(
         private const val FIELD_ID = "id"
         private const val FIELD_SENDER_ID = "senderId"
         private const val FIELD_RECEIVER_ID = "receiverId"
-        private const val FIELD_BODY = "body"
         private const val FIELD_TIMESTAMP = "timestamp"
         private const val FIELD_TYPE = "type"
-        private const val FIELD_LINK_CODE = "linkCode"
         private const val FIELD_PHONE = "phoneNumber"
-        private const val FIELD_URGENCY = "urgency"
-        private const val FIELD_VOLUME = "volumeHint"
+
+        // Message Types
         private const val TYPE_MANUAL = "manual"
+        private const val TYPE_LINK_REQUEST = "link_request"
+        private const val TYPE_LINK_ACCEPT = "link_accept"
+        private const val TYPE_PING = "ping"
+        private const val TYPE_ALERT = "alert"
+        private const val TYPE_ALERT_PREPARE = "alert_prepare"
+        private const val TYPE_ALERT_READY = "alert_ready"
+        private const val TYPE_SOUND_OVERRIDE = "sound_override"
+        private const val TYPE_CONFIG = "config"
+        private const val TYPE_CALL_ENDED = "call_ended"
     }
 }
 
@@ -169,10 +250,7 @@ data class LinkChannelPayload(
     val id: String,
     val senderId: String,
     val receiverId: String,
-    val body: String,
     val timestamp: Long,
-    val linkCode: String?,
-    val phoneNumber: String?,
-    val urgency: com.pulselink.domain.model.MessageUrgency,
-    val volumeHint: com.pulselink.domain.model.VolumeHint?
+    val type: String,
+    val payload: Map<String, Any?>
 )

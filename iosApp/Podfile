@@ -10,6 +10,12 @@ end
 
 # Remove KMP-generated build phase; we prebuild in CI via generateDummyFramework.
 post_install do |installer|
+  # Align all pods to iOS 16 to silence deployment target warnings on Xcode 16.
+  installer.pods_project.targets.each do |t|
+    t.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+    end
+  end
   installer.pods_project.targets.each do |t|
     next unless t.name == 'Shared'
     t.build_phases.each do |phase|

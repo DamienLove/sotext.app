@@ -32,6 +32,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
@@ -46,7 +48,10 @@ import com.pulselink.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsHelpScreen(onBack: () -> Unit) {
+fun SettingsHelpScreen(
+    onBack: () -> Unit,
+    onOpenFaq: () -> Unit = {}
+) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -68,6 +73,7 @@ fun SettingsHelpScreen(onBack: () -> Unit) {
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            SectionHeader(title = stringResource(id = R.string.settings_help_section_heading))
             HelpSection(
                 title = "How do I add contacts to PulseLink?",
                 body = "Adding contacts is simple. Select the 'add trusted contact' button and you will then be able to add a contact by name and phone/email or select the \"Import from contacts\" button below it. There is an option to allow remote alert changes just above the 'Save' button in the bottom right of the screen."
@@ -126,7 +132,36 @@ fun SettingsHelpScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             Spacer(Modifier.height(8.dp))
-            FaqList()
+            FaqList(
+                showSectionTitle = true,
+                showOpenAllAction = true,
+                onOpenAllClick = onOpenFaq
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(
+    title: String,
+    actionLabel: String? = null,
+    onActionClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (actionLabel != null && onActionClick != null) {
+            TextButton(onClick = onActionClick) {
+                Text(text = actionLabel, style = MaterialTheme.typography.labelLarge)
+            }
         }
     }
 }
@@ -162,14 +197,20 @@ private fun HelpSection(
 }
 
 @Composable
-private fun FaqList() {
-    Text(
-        text = stringResource(id = R.string.settings_faq_section_title),
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(top = 4.dp)
-    )
+fun FaqList(
+    showSectionTitle: Boolean = true,
+    showOpenAllAction: Boolean = false,
+    onOpenAllClick: (() -> Unit)? = null
+) {
+    if (showSectionTitle) {
+        SectionHeader(
+            title = stringResource(id = R.string.settings_faq_section_title),
+            actionLabel = if (showOpenAllAction && onOpenAllClick != null) {
+                stringResource(id = R.string.settings_help_faq_cta)
+            } else null,
+            onActionClick = onOpenAllClick
+        )
+    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val items = listOf(
             R.string.faq_question_1 to R.string.faq_answer_1,

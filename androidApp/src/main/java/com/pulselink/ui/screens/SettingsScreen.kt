@@ -16,13 +16,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,19 +35,17 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.PulseLinkSettings
 import com.pulselink.domain.model.TimeFormat
-import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.state.ProfileUpdateUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,12 +54,20 @@ fun SettingsScreen(
     settings: PulseLinkSettings,
     hasDndAccess: Boolean,
     showAds: Boolean,
+    isProUser: Boolean,
+    isDefaultSmsApp: Boolean,
+    defaultSmsSupported: Boolean,
+    beaconLauncherEnabled: Boolean,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onRequestDndAccess: () -> Unit,
     onRequestBatteryOpt: () -> Unit,
     onRequestUnusedApps: () -> Unit,
     onToggleAutoAllowRemoteSoundChange: (Boolean) -> Unit,
     onToggleAutoUpdateContactInfo: (Boolean) -> Unit,
+    onToggleFirebaseMessaging: (Boolean) -> Unit,
+    onToggleEmailFallback: (Boolean) -> Unit,
+    onRequestDefaultSms: () -> Unit,
+    onToggleBeaconLauncher: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
     profileUpdateState: ProfileUpdateUiState,
     onBroadcastProfileUpdate: () -> Unit,
@@ -68,6 +77,7 @@ fun SettingsScreen(
     onReportBug: () -> Unit,
     onBetaTesters: () -> Unit,
     onOpenHelp: () -> Unit,
+    onOpenBeacon: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -91,12 +101,6 @@ fun SettingsScreen(
             )
         },
         contentWindowInsets = WindowInsets.safeDrawing
-        ,
-        bottomBar = {
-            if (BuildConfig.ADS_ENABLED && showAds && !settings.proUnlocked) {
-                BannerAdSlot(enabled = true, modifier = Modifier.fillMaxWidth())
-            }
-        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -106,24 +110,49 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // General
+            SettingsSectionHeader("General")
             SettingsToggleRow(
                 title = "Share location in alerts",
                 subtitle = null,
                 checked = settings.includeLocation,
                 onCheckedChange = onToggleIncludeLocation
             )
-            val dndSubtitle = if (hasDndAccess) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                    stringResource(R.string.dnd_override_android15_note)
-                } else {
-                    stringResource(R.string.dnd_override_ready)
-                }
-            } else {
-                stringResource(R.string.dnd_override_permission_prompt)
-            }
+            SettingsToggleRow(
+                title = "Auto-allow remote sound change",
+                subtitle = null,
+                checked = settings.autoAllowRemoteSoundChange,
+                onCheckedChange = onToggleAutoAllowRemoteSoundChange
+            )
+
+            // Notifications & Tones
+            SettingsSectionHeader("Notifications & Tones")
+            SettingsActionRow(
+                title = "Emergency alert tone",
+                actionLabel = "Edit",
+                onAction = onEditEmergencyTone
+            )
+            SettingsActionRow(
+                title = "Check-in alert tone",
+                actionLabel = "Edit",
+                onAction = onEditCheckInTone
+            )
+            SettingsActionRow(
+                title = stringResource(R.string.settings_call_tone_title),
+                actionLabel = "Edit",
+                onAction = onEditCallTone
+            )
             SettingsActionRow(
                 title = stringResource(R.string.dnd_override_title),
-                subtitle = null,
+                subtitle = if (hasDndAccess) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                        stringResource(R.string.dnd_override_android15_note)
+                    } else {
+                        stringResource(R.string.dnd_override_ready)
+                    }
+                } else {
+                    stringResource(R.string.dnd_override_permission_prompt)
+                },
                 actionLabel = if (hasDndAccess) {
                     stringResource(R.string.dnd_override_action_manage)
                 } else {
@@ -132,6 +161,21 @@ fun SettingsScreen(
                 onAction = onRequestDndAccess,
                 leadingIcon = Icons.Filled.NotificationsActive
             )
+            SettingsToggleRow(
+                title = "Firebase Messaging (Faster)",
+                subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
+                checked = settings.firebaseMessagingEnabled,
+                onCheckedChange = onToggleFirebaseMessaging
+            )
+            SettingsToggleRow(
+                title = "Email Fallback",
+                subtitle = "Send email if other channels fail.",
+                checked = settings.emailFallbackEnabled,
+                onCheckedChange = onToggleEmailFallback
+            )
+
+            // Permissions & System
+            SettingsSectionHeader("Permissions & System")
             SettingsActionRow(
                 title = stringResource(R.string.permission_battery_opt_title),
                 subtitle = null,
@@ -146,12 +190,28 @@ fun SettingsScreen(
                 onAction = onRequestUnusedApps,
                 leadingIcon = Icons.Filled.Schedule
             )
-            SettingsToggleRow(
-                title = "Auto-allow remote sound change",
-                subtitle = null,
-                checked = settings.autoAllowRemoteSoundChange,
-                onCheckedChange = onToggleAutoAllowRemoteSoundChange
+            val defaultSmsSubtitle = when {
+                isDefaultSmsApp -> stringResource(id = R.string.settings_default_sms_ready)
+                defaultSmsSupported -> stringResource(id = R.string.settings_default_sms_required)
+                else -> stringResource(id = R.string.settings_default_sms_unavailable)
+            }
+            val defaultSmsActionLabel = if (isDefaultSmsApp) {
+                stringResource(id = R.string.settings_default_sms_action_change)
+            } else if (defaultSmsSupported) {
+                stringResource(id = R.string.settings_default_sms_action_make_default)
+            } else {
+                stringResource(id = R.string.settings_default_sms_action_change)
+            }
+            SettingsActionRow(
+                title = stringResource(id = R.string.settings_default_sms_title),
+                subtitle = defaultSmsSubtitle,
+                actionLabel = defaultSmsActionLabel,
+                onAction = onRequestDefaultSms,
+                leadingIcon = Icons.Filled.Message
             )
+
+            // Contacts & Sync
+            SettingsSectionHeader("Contacts & Sync")
             SettingsToggleRow(
                 title = stringResource(id = R.string.settings_auto_update_contact_title),
                 subtitle = null,
@@ -190,21 +250,33 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.error
                 )
             }
-            SettingsActionRow(
-                title = "Emergency alert tone",
-                actionLabel = "Edit",
-                onAction = onEditEmergencyTone
+
+            // Beacon Feature
+            SettingsSectionHeader("Beacon Feature")
+            SettingsToggleRow(
+                title = stringResource(id = R.string.settings_beacon_icon_title),
+                subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),
+                checked = beaconLauncherEnabled,
+                onCheckedChange = onToggleBeaconLauncher
             )
             SettingsActionRow(
-                title = "Check-in alert tone",
-                actionLabel = "Edit",
-                onAction = onEditCheckInTone
+                title = stringResource(id = R.string.settings_beacon_title),
+                subtitle = if (isDefaultSmsApp && beaconLauncherEnabled) {
+                    stringResource(id = R.string.settings_beacon_enabled_subtitle)
+                } else {
+                    stringResource(id = R.string.settings_beacon_subtitle)
+                },
+                actionLabel = if (isDefaultSmsApp && beaconLauncherEnabled) {
+                    stringResource(id = R.string.settings_beacon_action_open)
+                } else {
+                    stringResource(id = R.string.settings_beacon_action_enable)
+                },
+                onAction = onOpenBeacon,
+                leadingIcon = Icons.Outlined.WifiTethering
             )
-            SettingsActionRow(
-                title = stringResource(R.string.settings_call_tone_title),
-                actionLabel = "Edit",
-                onAction = onEditCallTone
-            )
+
+            // Support & Account
+            SettingsSectionHeader("Support & Account")
             AssistantCommandsCard(
                 proEnabled = !BuildConfig.ADS_ENABLED || settings.proUnlocked,
                 onOpenHelp = onOpenHelp
@@ -238,6 +310,18 @@ fun SettingsScreen(
             )
         }
     }
+}
+
+@Composable
+private fun SettingsSectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 8.dp, start = 4.dp)
+    )
 }
 
 @Composable
