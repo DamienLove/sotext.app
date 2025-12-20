@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -98,6 +99,7 @@ import com.pulselink.ui.state.SmsThreadViewModel
 import com.pulselink.ui.theme.PulseLinkTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
@@ -199,11 +201,22 @@ class MainActivity : AppCompatActivity() {
                 val activity = this@MainActivity
                 var isCancelingEmergency by remember { mutableStateOf(false) }
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
+                var isCheckingDefaultSms by remember { mutableStateOf(false) }
                 var pendingInboxNav by remember { mutableStateOf(false) }
                 var showBeaconAssist by remember { mutableStateOf(false) }
                 var beaconAssistState by remember { mutableStateOf(BeaconAssistState(message = "")) }
                 var beaconFlowStage by remember { mutableStateOf(BeaconFlowStage.Idle) }
                 var beaconEnableAttempted by remember { mutableStateOf(false) }
+                val scope = rememberCoroutineScope()
+                val refreshDefaultSms = remember(defaultSmsHelper) {
+                    suspend refresh@{
+                        isCheckingDefaultSms = true
+                        val latest = defaultSmsHelper.checkDefaultSmsWithRetry()
+                        isDefaultSms = latest
+                        isCheckingDefaultSms = false
+                        latest
+                    }
+                }
                 val smsPermLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestMultiplePermissions()
                 ) {
@@ -225,20 +238,28 @@ class MainActivity : AppCompatActivity() {
                 val defaultSmsLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
-                    isDefaultSms = defaultSmsHelper.isDefaultSms()
-                    missingSmsPerms = requiredSmsPermissions(context)
-                    if (showBeaconAssist) {
-                        beaconAssistState = beaconAssistState.copy(
-                            defaultSmsGranted = isDefaultSms,
-                            message = if (isDefaultSms) {
-                                context.getString(R.string.settings_default_sms_ready)
-                            } else {
-                                context.getString(R.string.settings_default_sms_required)
-                            }
-                        )
-                    }
-                    if (pendingInboxNav) {
-                        inboxShortcutFlow.tryEmit(Unit)
+                    scope.launch {
+                        if (showBeaconAssist) {
+                            beaconAssistState = beaconAssistState.copy(
+                                message = "Verifying default SMS status...",
+                                error = null
+                            )
+                        }
+                        val latest = refreshDefaultSms()
+                        missingSmsPerms = requiredSmsPermissions(context)
+                        if (showBeaconAssist) {
+                            beaconAssistState = beaconAssistState.copy(
+                                defaultSmsGranted = latest,
+                                message = if (latest) {
+                                    context.getString(R.string.settings_default_sms_ready)
+                                } else {
+                                    context.getString(R.string.settings_default_sms_required)
+                                }
+                            )
+                        }
+                        if (pendingInboxNav) {
+                            inboxShortcutFlow.tryEmit(Unit)
+                        }
                     }
                 }
                 val launchBeaconInbox: () -> Unit = {
@@ -273,7 +294,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 LaunchedEffect(Unit) {
-                    isDefaultSms = defaultSmsHelper.isDefaultSms()
+                    refreshDefaultSms()
                     missingSmsPerms = requiredSmsPermissions(context)
                     if (initialInboxShortcut) inboxShortcutFlow.tryEmit(Unit)
                 }
@@ -283,14 +304,14 @@ class MainActivity : AppCompatActivity() {
                 LaunchedEffect(navController) {
                     inboxShortcutFlow.collectLatest {
                         pendingInboxNav = true
-                        isDefaultSms = defaultSmsHelper.isDefaultSms()
+                        val isNowDefault = refreshDefaultSms()
                         val missingNow = requiredSmsPermissions(context)
                         missingSmsPerms = missingNow
                         val currentBeaconEnabled = viewModel.uiState.value.settings.beaconLauncherEnabled
                         if (showBeaconAssist) {
                             beaconAssistState = beaconAssistState.copy(
                                 iconEnabled = currentBeaconEnabled,
-                                defaultSmsGranted = isDefaultSms,
+                                defaultSmsGranted = isNowDefault,
                                 smsPermissionsGranted = missingNow.isEmpty(),
                                 message = context.getString(R.string.settings_beacon_subtitle),
                                 error = null
@@ -300,7 +321,7 @@ class MainActivity : AppCompatActivity() {
                         updateBeaconLauncher(shouldEnable)
 
                         // Policy: default-SMS prompt must precede runtime SMS permissions.
-                        if (!isDefaultSms) {
+                        if (!isNowDefault) {
                             if (beaconFlowStage == BeaconFlowStage.RequestedDefault) {
                                 // User declined or canceled; keep other features, hide Beacon launcher.
                                 pendingInboxNav = false
@@ -309,7 +330,11 @@ class MainActivity : AppCompatActivity() {
                                 if (showBeaconAssist) {
                                     beaconAssistState = beaconAssistState.copy(
                                         defaultSmsGranted = false,
-                                        message = context.getString(R.string.settings_default_sms_required),
+                                        message = if (isCheckingDefaultSms) {
+                                            "Verifying default SMS status..."
+                                        } else {
+                                            context.getString(R.string.settings_default_sms_required)
+                                        },
                                         error = context.getString(R.string.beacon_flow_retry)
                                     )
                                 }
@@ -319,7 +344,11 @@ class MainActivity : AppCompatActivity() {
                             if (showBeaconAssist) {
                                 beaconAssistState = beaconAssistState.copy(
                                     defaultSmsGranted = false,
-                                    message = context.getString(R.string.settings_default_sms_required),
+                                    message = if (isCheckingDefaultSms) {
+                                        "Verifying default SMS status..."
+                                    } else {
+                                        context.getString(R.string.settings_default_sms_required)
+                                    },
                                     error = null
                                 )
                             }
@@ -545,13 +574,13 @@ class MainActivity : AppCompatActivity() {
                             pendingUnusedRestrictionsCheck = true
                             // Refresh default-SMS status and auto-enable Beacon launcher if we just became default.
                             val wasDefault = isDefaultSms
-                            val isNowDefault = defaultSmsHelper.isDefaultSms()
-                            isDefaultSms = isNowDefault
-
-                            // Only auto-enable if we transitioned from NOT default to DEFAULT.
-                            // This respects the user's choice if they are already default but explicitly disabled the Beacon.
-                            if (!wasDefault && isNowDefault && !viewModel.uiState.value.settings.beaconLauncherEnabled) {
-                                viewModel.setBeaconLauncherEnabled(true)
+                            scope.launch {
+                                val isNowDefault = refreshDefaultSms()
+                                // Only auto-enable if we transitioned from NOT default to DEFAULT.
+                                // This respects the user's choice if they are already default but explicitly disabled the Beacon.
+                                if (!wasDefault && isNowDefault && !viewModel.uiState.value.settings.beaconLauncherEnabled) {
+                                    viewModel.setBeaconLauncherEnabled(true)
+                                }
                             }
                         }
                     }

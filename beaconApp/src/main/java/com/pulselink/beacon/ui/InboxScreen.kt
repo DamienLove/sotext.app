@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -77,9 +78,11 @@ fun InboxScreen(
     theme: ThemePalette,
     searchState: SearchResultState,
     isDefaultSms: Boolean,
+    isCheckingDefaultSms: Boolean,
     missingPermissions: List<String>,
     onRequestPermissions: () -> Unit,
     onRequestDefault: () -> Unit,
+    onRefreshDefaultStatus: () -> Unit,
     onOpenThread: (Long, String) -> Unit,
     onDeleteThread: (Long) -> Unit,
     onRefresh: () -> Unit,
@@ -215,7 +218,7 @@ fun InboxScreen(
                 }
             }
 
-            if (!isDefaultSms) {
+            if (!isDefaultSms || isCheckingDefaultSms) {
                 Surface(
                     tonalElevation = 2.dp,
                     modifier = Modifier
@@ -229,14 +232,25 @@ fun InboxScreen(
                     ) {
                         Icon(Icons.Default.Sms, contentDescription = null)
                         Column(Modifier.weight(1f)) {
-                            Text("Set as default SMS", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (isCheckingDefaultSms) "Checking default SMS status..." else "Set as default SMS",
+                                fontWeight = FontWeight.SemiBold
+                            )
                             Text(
                                 "Required for receiving texts and showing notifications.",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
-                        OutlinedButton(onClick = onRequestDefault) {
-                            Text("Set")
+                        if (isCheckingDefaultSms) {
+                            CircularProgressIndicator(strokeWidth = 2.dp)
+                        } else {
+                            OutlinedButton(onClick = onRequestDefault) {
+                                Text("Set")
+                            }
+                        }
+                        OutlinedButton(onClick = onRefreshDefaultStatus, enabled = !isCheckingDefaultSms) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Text("Refresh", modifier = Modifier.padding(start = 6.dp))
                         }
                     }
                 }
