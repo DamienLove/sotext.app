@@ -1,6 +1,7 @@
 package com.pulselink
 
 import android.app.Application
+import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.Constraints
@@ -9,6 +10,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.initialization.InitializationStatus
 import com.google.firebase.FirebaseApp
 import com.pulselink.auth.FirebaseAuthManager
 import com.pulselink.data.ads.AdConfig
@@ -45,7 +47,11 @@ class PulseLinkApp : Application(), Configuration.Provider {
         }
         AssistantShortcuts.publish(this)
         if (AdConfig.isAdsEnabled) {
-            MobileAds.initialize(this)
+            Thread {
+                MobileAds.initialize(this) { initializationStatus ->
+                    logAdapterStatus(initializationStatus)
+                }
+            }.start()
             appOpenAdController.updateAvailability(false)
         }
 
@@ -66,6 +72,16 @@ class PulseLinkApp : Application(), Configuration.Provider {
                 "SmsSync",
                 ExistingPeriodicWorkPolicy.KEEP,
                 syncRequest
+            )
+        }
+    }
+
+    private fun logAdapterStatus(initializationStatus: InitializationStatus) {
+        val statusMap = initializationStatus.adapterStatusMap
+        for ((adapterClass, status) in statusMap) {
+            Log.d(
+                "AdMob",
+                "Adapter: $adapterClass, Status: ${status.description}, Latency: ${status.latency}"
             )
         }
     }

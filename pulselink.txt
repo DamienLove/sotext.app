@@ -140,6 +140,20 @@ Current ad behavior in app:
 2025-12-20
 - Default-SMS blocker fix: added DefaultSmsHelper.checkDefaultSmsWithRetry (exponential backoff) + logging, non-blocking banner with refresh in BeaconInboxActivity, and retry-based status checks in MainActivity and beaconApp. Inbox no longer blocks when default-SMS is still propagating. Ran lintFreeDebug + testFreeDebugUnitTest (warnings only).
 
+2025-12-20
+- Rebuilt v56 AABs (free/pro/premium) and copied to disposable_aabs/pulselink-{free|pro|premium}-v56.aab.
+
 2025-12-21
 - Verified fixes for GitHub issues #168 (Beacon inbox), #149 (SMS sending), #129 (Default SMS check), #127 (iOS build), #67 (Firebase backend).
 - Fixed issue #91 (Squashed text input) by adding `android:windowSoftInputMode="adjustResize"` to `BeaconInboxActivity` in `androidApp/src/main/AndroidManifest.xml`.
+
+2025-12-20
+- Default-SMS detection hardened (deduped checks, resume refresh, retry) in PulseLink + beaconApp; Beacon default request now uses role intent launcher.
+- VersionCode/Name bumped to 57 and rebuilt AABs (free/pro/premium) copied to disposable_aabs/pulselink-{free|pro|premium}-v57.aab.
+
+2025-12-20
+- Rebuilt v57 AABs again after confirming default-SMS detection flow (role + Telephony fallback + resume refresh) and overwrote disposable_aabs/pulselink-{free|pro|premium}-v57.aab.
+
+2025-12-20
+- Added AdMob mediation adapters (AppLovin, InMobi, ironSource, Meta, Pangle, Vungle) and bumped play-services-ads to 24.9.0 in androidApp build.gradle.kts.
+- PulseLinkApp now initializes MobileAds on a background thread and logs adapter status on init.

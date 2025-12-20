@@ -97,7 +97,9 @@ import com.pulselink.ui.state.MainViewModel.CallInitiationResult
 import com.pulselink.ui.state.SmsInboxViewModel
 import com.pulselink.ui.state.SmsThreadViewModel
 import com.pulselink.ui.theme.PulseLinkTheme
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -202,19 +204,33 @@ class MainActivity : AppCompatActivity() {
                 var isCancelingEmergency by remember { mutableStateOf(false) }
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
                 var isCheckingDefaultSms by remember { mutableStateOf(false) }
+                var defaultSmsCheck by remember { mutableStateOf<Deferred<Boolean>?>(null) }
                 var pendingInboxNav by remember { mutableStateOf(false) }
                 var showBeaconAssist by remember { mutableStateOf(false) }
                 var beaconAssistState by remember { mutableStateOf(BeaconAssistState(message = "")) }
                 var beaconFlowStage by remember { mutableStateOf(BeaconFlowStage.Idle) }
                 var beaconEnableAttempted by remember { mutableStateOf(false) }
                 val scope = rememberCoroutineScope()
+                val lifecycleOwner = LocalLifecycleOwner.current
                 val refreshDefaultSms = remember(defaultSmsHelper) {
                     suspend refresh@{
-                        isCheckingDefaultSms = true
-                        val latest = defaultSmsHelper.checkDefaultSmsWithRetry()
-                        isDefaultSms = latest
-                        isCheckingDefaultSms = false
-                        latest
+                        val existing = defaultSmsCheck
+                        if (existing != null && existing.isActive) {
+                            return@refresh existing.await()
+                        }
+                        val deferred = scope.async {
+                            isCheckingDefaultSms = true
+                            try {
+                                val latest = defaultSmsHelper.checkDefaultSmsWithRetry()
+                                isDefaultSms = latest
+                                latest
+                            } finally {
+                                isCheckingDefaultSms = false
+                                defaultSmsCheck = null
+                            }
+                        }
+                        defaultSmsCheck = deferred
+                        deferred.await()
                     }
                 }
                 val smsPermLauncher = rememberLauncherForActivityResult(
@@ -235,7 +251,6 @@ class MainActivity : AppCompatActivity() {
                         inboxShortcutFlow.tryEmit(Unit)
                     }
                 }
-                val scope = androidx.compose.runtime.rememberCoroutineScope()
                 val defaultSmsLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) {
@@ -298,6 +313,20 @@ class MainActivity : AppCompatActivity() {
                     refreshDefaultSms()
                     missingSmsPerms = requiredSmsPermissions(context)
                     if (initialInboxShortcut) inboxShortcutFlow.tryEmit(Unit)
+                }
+
+                // Refresh default-SMS status when returning from system settings or role dialog.
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            scope.launch {
+                                refreshDefaultSms()
+                                missingSmsPerms = requiredSmsPermissions(context)
+                            }
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
                 LaunchedEffect(state.settings.beaconLauncherEnabled) {
                     updateBeaconLauncher(state.settings.beaconLauncherEnabled)
@@ -567,7 +596,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
