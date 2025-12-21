@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -473,6 +475,7 @@ private fun TabsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .selectableGroup()
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -497,7 +500,11 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePreferences, o
     val selectedColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(role = Role.Tab) { onClick() }
+        modifier = Modifier.selectable(
+            selected = selected,
+            role = Role.Tab,
+            onClick = onClick
+        )
     ) {
         Text(
             text = label,
