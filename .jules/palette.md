@@ -15,3 +15,7 @@
 ## 2024-12-19 - Expanded Touch Targets
 **Learning:** In Settings screens, users expect the entire row to be interactive. Restricting interaction to a small Switch or Button decreases usability.
 **Action:** Use `Modifier.toggleable` or `Surface(onClick=...)` on the container row to expand the touch target, while keeping the inner controls (Switch) visually present but passive.
+
+## 2024-12-19 - Accessible Tabs
+**Learning:** Custom tab implementations using `Modifier.clickable(role = Role.Tab)` fail to communicate the `selected` state to accessibility services, leaving blind users guessing which tab is active.
+**Action:** Use `Modifier.selectable(selected = ..., role = Role.Tab)` on individual tabs and wrap the container in `Modifier.selectableGroup()` to ensure correct semantics are exposed.
