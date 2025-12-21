@@ -15,12 +15,14 @@ import javax.inject.Singleton
 import android.database.ContentObserver
 import android.os.Handler
 import android.os.Looper
+import android.os.Build
 import kotlin.jvm.Volatile
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import android.provider.ContactsContract
 import android.net.Uri
+import android.app.role.RoleManager
 
 @Singleton
 class SmsRepository @Inject constructor(
@@ -315,7 +317,15 @@ class SmsRepository @Inject constructor(
     companion object {
         private fun hasSmsPermissions(context: Context): Boolean {
             val isDefault = runCatching {
-                Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+                val roleHeld = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    context.getSystemService(RoleManager::class.java)
+                        ?.isRoleHeld(RoleManager.ROLE_SMS) == true
+                } else {
+                    false
+                }
+                val telephonyDefault =
+                    Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+                roleHeld || telephonyDefault
             }.getOrDefault(false)
             if (isDefault) return true
             val perms = listOf(
