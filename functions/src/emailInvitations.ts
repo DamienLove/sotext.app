@@ -30,6 +30,16 @@ const createTransporter = () => {
   });
 };
 
+// Sentinel Helper: Escape HTML characters
+const escapeHtml = (unsafe: string): string => {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 // Generate HTML email template
 const generateEmailTemplate = (
   senderName: string,
@@ -38,7 +48,9 @@ const generateEmailTemplate = (
   playStoreUrl: string,
   appStoreUrl: string
 ): string => {
-  const inviteLink = `${deepLinkBase}/invite?code=${invitationCode}`;
+  const safeSenderName = escapeHtml(senderName);
+  const safeInvitationCode = escapeHtml(invitationCode);
+  const inviteLink = `${deepLinkBase}/invite?code=${encodeURIComponent(invitationCode)}`;
   
   return `
     <!DOCTYPE html>
@@ -65,7 +77,7 @@ const generateEmailTemplate = (
       </div>
       <div class="content">
         <p style="font-size: 18px; margin-top: 0;">Hi there!</p>
-        <p><strong>${senderName}</strong> wants to connect with you on <strong>PulseLink</strong>, the safety app that keeps your loved ones informed and protected.</p>
+        <p><strong>${safeSenderName}</strong> wants to connect with you on <strong>PulseLink</strong>, the safety app that keeps your loved ones informed and protected.</p>
         
         <p style="margin-top: 25px;">With PulseLink, you can:</p>
         <ul style="padding-left: 20px;">
@@ -80,7 +92,7 @@ const generateEmailTemplate = (
         </div>
 
         <p style="margin-top: 25px;">Or use this invitation code:</p>
-        <div class="code">${invitationCode}</div>
+        <div class="code">${safeInvitationCode}</div>
 
         <p style="font-size: 14px; color: #666; margin-top: 30px;">Don't have PulseLink yet? Download it now:</p>
         <div class="app-links">
