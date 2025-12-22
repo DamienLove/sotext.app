@@ -134,6 +134,9 @@ interface ArchivedThreadDao {
 
     @Query("SELECT threadId FROM archived_threads")
     fun getAllIds(): List<Long>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM archived_threads WHERE threadId = :threadId)")
+    fun isArchived(threadId: Long): Boolean
 }
 
 @Database(

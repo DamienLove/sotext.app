@@ -106,8 +106,13 @@ fun SmsInboxScreen(
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     var searchText by rememberSaveable { mutableStateOf("") }
 
+    val archivedIds = remember(archivedThreads) { archivedThreads.map { it.threadId }.toSet() }
     val filtered = remember(filter, threads, archivedThreads, privateThreadIds, showPrivateOnly) {
-        val base = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
+        val base = when (filter) {
+            InboxFilter.ARCHIVED -> archivedThreads
+            InboxFilter.ALL -> threads + archivedThreads
+            else -> threads
+        }
         val source = base.filter { thread ->
             val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
             if (showPrivateOnly) isPrivate else !isPrivate
@@ -328,7 +333,7 @@ fun SmsInboxScreen(
                         onUnarchive = { onUnarchiveThread(thread) },
                         onDelete = { onDeleteThread(thread) },
                         dateFormatter = dateFormatter,
-                        isArchiveFilter = filter == InboxFilter.ARCHIVED,
+                        isArchived = archivedIds.contains(thread.threadId),
                         isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
                         onTogglePrivate = { makePrivate -> onTogglePrivate(thread, makePrivate) },
                         theme = theme
@@ -348,7 +353,7 @@ private fun ThreadRow(
     onUnarchive: () -> Unit,
     onDelete: () -> Unit,
     dateFormatter: (Long) -> String,
-    isArchiveFilter: Boolean,
+    isArchived: Boolean,
     isPrivate: Boolean,
     onTogglePrivate: (Boolean) -> Unit,
     theme: ThemePreferences
@@ -358,7 +363,7 @@ private fun ThreadRow(
         confirmValueChange = { value ->
             when (value) {
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    if (isArchiveFilter) onUnarchive() else onArchive()
+                    if (isArchived) onUnarchive() else onArchive()
                     false
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
@@ -376,7 +381,7 @@ private fun ThreadRow(
             val direction = dismissState.dismissDirection ?: return@SwipeToDismissBox
             val isDelete = direction == SwipeToDismissBoxValue.EndToStart
             val color = if (isDelete) Color(0xFFE84A4A) else Color(0xFF5BC174)
-            val label = if (isDelete) "Delete" else if (isArchiveFilter) "Unarchive" else "Archive"
+            val label = if (isDelete) "Delete" else if (isArchived) "Unarchive" else "Archive"
             val icon = if (isDelete) Icons.Filled.Delete else Icons.Filled.Archive
             Row(
                 modifier = Modifier

@@ -348,17 +348,16 @@ fun CustomizeTab(
 
         if (isGlobal) {
             HorizontalDivider()
-            Text("App Icon", style = MaterialTheme.typography.titleMedium)
-            val iconVariants = listOf("Default", "Logo", "Pro")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                iconVariants.forEach { variant ->
-                    FilterChip(
-                        selected = theme.inboxIconVariant == variant,
-                        onClick = { onUpdate(theme.copy(inboxIconVariant = variant)) },
-                        label = { Text(variant) }
-                    )
-                }
-            }
+            Text("Beacon icon", style = MaterialTheme.typography.titleMedium)
+            val label = theme.inboxIconVariant
+                .ifBlank { "default" }
+                .replace('_', ' ')
+                .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            Text(
+                text = "Matches theme: $label",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -475,7 +474,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#6750A4",
                 secondaryColor = "#625B71",
                 dividerColor = "#E5E7EB",
-                inboxIconVariant = "Default"
+                inboxIconVariant = "default_light"
             )
         ),
         ThemePreset(
@@ -495,7 +494,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 secondaryColor = "#22D3EE",
                 timestampColor = "#94A3B8",
                 dividerColor = "#1F2937",
-                inboxIconVariant = "Logo"
+                inboxIconVariant = "midnight_oled"
             )
         ),
         ThemePreset(
@@ -514,7 +513,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#38BDF8",
                 secondaryColor = "#1D4ED8",
                 dividerColor = "#334155",
-                inboxIconVariant = "Default"
+                inboxIconVariant = "ocean_deep"
             )
         ),
         ThemePreset(
@@ -533,7 +532,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#E11D48",
                 secondaryColor = "#F43F5E",
                 dividerColor = "#FBCFE8",
-                inboxIconVariant = "Logo"
+                inboxIconVariant = "rose_petal"
             )
         ),
         ThemePreset(
@@ -553,7 +552,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#FF5F6D",
                 secondaryColor = "#F97316",
                 dividerColor = "#FED7AA",
-                inboxIconVariant = "Pro",
+                inboxIconVariant = "sunset_fade",
                 bubbleCornerRadiusTopStart = 0,
                 bubbleCornerRadiusBottomEnd = 0
             )
@@ -574,7 +573,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#65A30D",
                 secondaryColor = "#84CC16",
                 dividerColor = "#D9F99D",
-                inboxIconVariant = "Default"
+                inboxIconVariant = "citrus_pop"
             )
         ),
         ThemePreset(
@@ -593,7 +592,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#10B981",
                 secondaryColor = "#059669",
                 dividerColor = "#A7F3D0",
-                inboxIconVariant = "Logo"
+                inboxIconVariant = "forest_trail"
             )
         ),
         ThemePreset(
@@ -612,7 +611,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#7C3AED",
                 secondaryColor = "#A78BFA",
                 dividerColor = "#DDD6FE",
-                inboxIconVariant = "Pro",
+                inboxIconVariant = "lavender_haze",
                 iconSizeFactor = 1.1f
             )
         ),
@@ -632,7 +631,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#475569",
                 secondaryColor = "#94A3B8",
                 dividerColor = "#CBD5E1",
-                inboxIconVariant = "Default",
+                inboxIconVariant = "slate_mono",
                 iconSizeFactor = 0.95f
             )
         ),
@@ -653,7 +652,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#14B8A6",
                 secondaryColor = "#6366F1",
                 dividerColor = "#5EEAD4",
-                inboxIconVariant = "Logo",
+                inboxIconVariant = "aurora",
                 iconSizeFactor = 1.15f
             )
         )
