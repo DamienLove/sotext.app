@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { auth, db } from './firebase';
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
@@ -9,6 +9,11 @@ function App() {
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -89,16 +94,8 @@ function App() {
           {threads.map(thread => (
             <button
               key={thread.id}
-              role="button"
-              tabIndex={0}
               className={`thread-item ${selectedThread?.id === thread.id ? 'active' : ''}`}
               onClick={() => setSelectedThread(thread)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setSelectedThread(thread);
-                }
-              }}
               aria-current={selectedThread?.id === thread.id ? 'true' : undefined}
               aria-label={`Select conversation with ${thread.address}`}
             >
@@ -125,6 +122,7 @@ function App() {
                   </div>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
           </>
         ) : (
