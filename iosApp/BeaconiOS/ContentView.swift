@@ -3,12 +3,21 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var viewModel: BeaconViewModel
 
+    var isPro: Bool {
+        #if PRO
+        return true
+        #else
+        return false
+        #endif
+    }
+
     var body: some View {
         TabView {
             InboxTab(viewModel: viewModel)
                 .tabItem {
                     Label("Inbox", systemImage: "bubble.left.and.bubble.right.fill")
                 }
+                .badge(isPro ? "Pro" : nil)
 
             SettingsTab()
                 .tabItem {
@@ -20,6 +29,14 @@ struct ContentView: View {
 
 private struct InboxTab: View {
     @ObservedObject var viewModel: BeaconViewModel
+
+    var isPro: Bool {
+        #if PRO
+        return true
+        #else
+        return false
+        #endif
+    }
 
     var body: some View {
         NavigationStack {
@@ -52,7 +69,7 @@ private struct InboxTab: View {
                     }
                 )
             }
-            .navigationTitle("Beacon Inbox")
+            .navigationTitle(isPro ? "Beacon Inbox Pro" : "Beacon Inbox")
         }
     }
 }
