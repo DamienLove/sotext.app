@@ -224,3 +224,6 @@ Current ad behavior in app:
 
 2025-12-22
 - Release v62 (free/pro/premium): crash detection temporarily disabled (no full-screen intent; no foreground location service/permission). Rebuilt AABs and copied to disposable_aabs/pulselink-{free|pro|premium}-v62.aab; release notes saved at disposable_aabs/release-notes-v62.txt.
+
+2025-12-22
+- Release v63 (free/pro/premium): versionCode/Name bumped to 63; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v63.aab; release notes saved at disposable_aabs/release-notes-v63.txt.
