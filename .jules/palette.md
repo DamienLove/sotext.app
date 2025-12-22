@@ -15,3 +15,7 @@
 ## 2024-12-19 - Expanded Touch Targets
 **Learning:** In Settings screens, users expect the entire row to be interactive. Restricting interaction to a small Switch or Button decreases usability.
 **Action:** Use `Modifier.toggleable` or `Surface(onClick=...)` on the container row to expand the touch target, while keeping the inner controls (Switch) visually present but passive.
+
+## 2024-12-19 - Accessible List Items
+**Learning:** Converting interactive `div` lists to `<button>` requires a robust CSS reset (border, bg, align, font) to maintain visual fidelity while gaining native keyboard support.
+**Action:** Use a standardized CSS reset pattern for list items to ensure they are keyboard accessible without breaking the design.

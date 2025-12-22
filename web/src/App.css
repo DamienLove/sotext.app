@@ -37,8 +37,21 @@
 
 .thread-item {
   padding: 12px 16px;
+  border: none;
   border-bottom: 1px solid #eee;
   cursor: pointer;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.thread-item:focus-visible {
+  outline: 2px solid #1976d2;
+  position: relative;
+  z-index: 1;
 }
 
 .thread-item:hover {

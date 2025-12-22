@@ -12,6 +12,7 @@ pulselink-*.json
 **/google-services.json
 
 functions/node_modules/
+web/node_modules/
 functions/lib/
 /PulseLink/
 PulseLink/node_modules/

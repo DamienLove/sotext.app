@@ -87,14 +87,16 @@ function App() {
         </div>
         <div className="thread-list">
           {threads.map(thread => (
-            <div
+            <button
               key={thread.id}
+              type="button"
               className={`thread-item ${selectedThread?.id === thread.id ? 'active' : ''}`}
               onClick={() => setSelectedThread(thread)}
+              aria-pressed={selectedThread?.id === thread.id}
             >
               <div className="thread-name">{thread.address}</div>
               <div className="thread-snippet">{thread.snippet}</div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
