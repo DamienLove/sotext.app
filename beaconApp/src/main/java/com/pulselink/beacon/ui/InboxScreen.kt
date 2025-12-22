@@ -42,8 +42,8 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -94,6 +94,8 @@ fun InboxScreen(
     val scope = rememberCoroutineScope()
     var searchText by rememberSaveable { mutableStateOf("") }
     var navigatedFromSearch by remember { mutableStateOf(false) }
+    val iconTint = theme.accentColor
+    val mutedTint = theme.frameColor.copy(alpha = 0.7f)
 
     LaunchedEffect(searchState) {
         if (searchState is SearchResultState.Contact && !navigatedFromSearch) {
@@ -113,20 +115,29 @@ fun InboxScreen(
                         Icon(
                             imageVector = iconForVariant(theme.iconVariant),
                             contentDescription = null,
-                            tint = theme.accentColor
+                            tint = iconTint
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Beacon Inbox", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Beacon Inbox",
+                            fontWeight = FontWeight.SemiBold,
+                            color = theme.frameColor
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = onRefresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = iconTint)
                     }
                     IconButton(onClick = onCustomize) {
-                        Icon(Icons.Default.ColorLens, contentDescription = "Customize")
+                        Icon(Icons.Default.ColorLens, contentDescription = "Customize", tint = iconTint)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = theme.inboxBackgroundColor,
+                    titleContentColor = theme.frameColor,
+                    actionIconContentColor = iconTint
+                )
             )
         },
         snackbarHost = { SnackbarHost(host) }
@@ -143,13 +154,13 @@ fun InboxScreen(
                     searchText = it
                     if (it.isBlank()) onClearSearch()
                 },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = mutedTint) },
                 trailingIcon = {
                     if (searchText.isNotBlank()) {
                         IconButton(onClick = {
                             searchText = ""
                             onClearSearch()
-                        }) { Icon(Icons.Default.Clear, contentDescription = "Clear") }
+                        }) { Icon(Icons.Default.Clear, contentDescription = "Clear", tint = mutedTint) }
                     }
                 },
                 singleLine = true,
@@ -203,7 +214,7 @@ fun InboxScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Settings, contentDescription = null)
+                        Icon(Icons.Default.Settings, contentDescription = null, tint = iconTint)
                         Column(Modifier.weight(1f)) {
                             Text("Permissions needed", fontWeight = FontWeight.SemiBold)
                             Text(
@@ -230,7 +241,7 @@ fun InboxScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Sms, contentDescription = null)
+                        Icon(Icons.Default.Sms, contentDescription = null, tint = iconTint)
                         Column(Modifier.weight(1f)) {
                             Text(
                                 if (isCheckingDefaultSms) "Checking default SMS status..." else "Set as default SMS",
@@ -249,7 +260,7 @@ fun InboxScreen(
                             }
                         }
                         OutlinedButton(onClick = onRefreshDefaultStatus, enabled = !isCheckingDefaultSms) {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = iconTint)
                             Text("Refresh", modifier = Modifier.padding(start = 6.dp))
                         }
                     }
@@ -267,7 +278,7 @@ fun InboxScreen(
                         Icon(
                             imageVector = Icons.Default.Inbox,
                             contentDescription = null,
-                            tint = theme.accentColor,
+                            tint = iconTint,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         Text("No messages yet")

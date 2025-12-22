@@ -1,6 +1,9 @@
 package com.pulselink.beacon.ui
 
 import android.app.Application
+import android.content.ComponentName
+import android.content.pm.PackageManager
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,13 +23,20 @@ import kotlinx.coroutines.launch
 class ThemeViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = ThemePreferencesRepository(app.applicationContext)
+    private var lastLauncherVariant: InboxIconVariant? = null
 
     var themeState by mutableStateOf(ThemeState())
         private set
 
     init {
         viewModelScope.launch {
-            repo.flow.collect { themeState = it }
+            repo.flow.collect { state ->
+                themeState = state
+                if (lastLauncherVariant != state.global.iconVariant) {
+                    applyLauncherIconVariant(state.global.iconVariant)
+                    lastLauncherVariant = state.global.iconVariant
+                }
+            }
         }
     }
 
@@ -63,9 +73,40 @@ class ThemeViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             if (address.isNullOrBlank()) {
                 repo.saveGlobal(updated)
+                if (lastLauncherVariant != updated.iconVariant) {
+                    applyLauncherIconVariant(updated.iconVariant)
+                    lastLauncherVariant = updated.iconVariant
+                }
             } else {
                 repo.saveContact(address, updated)
             }
+        }
+    }
+
+    private fun applyLauncherIconVariant(variant: InboxIconVariant) {
+        try {
+            val pm = getApplication<Application>().packageManager
+            val pkg = getApplication<Application>().packageName
+            val beaconComp = ComponentName(pkg, "$pkg.LauncherBeacon")
+            val bubbleComp = ComponentName(pkg, "$pkg.LauncherBubble")
+            val shieldComp = ComponentName(pkg, "$pkg.LauncherShield")
+            val minimalComp = ComponentName(pkg, "$pkg.LauncherMinimal")
+
+            val (toEnable, toDisable) = when (variant) {
+                InboxIconVariant.Beacon -> listOf(beaconComp) to listOf(bubbleComp, shieldComp, minimalComp)
+                InboxIconVariant.Bubble -> listOf(bubbleComp) to listOf(beaconComp, shieldComp, minimalComp)
+                InboxIconVariant.Shield -> listOf(shieldComp) to listOf(beaconComp, bubbleComp, minimalComp)
+                InboxIconVariant.Minimal -> listOf(minimalComp) to listOf(beaconComp, bubbleComp, shieldComp)
+            }
+
+            toEnable.forEach {
+                pm.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+            }
+            toDisable.forEach {
+                pm.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+            }
+        } catch (e: Exception) {
+            Log.e("ThemeViewModel", "Failed to update launcher icon", e)
         }
     }
 

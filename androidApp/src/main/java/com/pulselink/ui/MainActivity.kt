@@ -1258,8 +1258,8 @@ class MainActivity : AppCompatActivity() {
                         val threadViewModel: SmsThreadViewModel = hiltViewModel()
                         val messages by threadViewModel.messages.collectAsStateWithLifecycle()
                         val contact by threadViewModel.contact.collectAsStateWithLifecycle()
-                        LaunchedEffect(threadId) { threadViewModel.load(threadId) }
                         val decodedAddress = Uri.decode(address)
+                        LaunchedEffect(threadId, decodedAddress) { threadViewModel.load(threadId, decodedAddress) }
                         SmsThreadScreen(
                             address = decodedAddress,
                             messages = messages,
