@@ -112,6 +112,12 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
         launchDefaultSmsCheck()
     }
 
+    LaunchedEffect(isDefaultSms, missingPerms) {
+        if (isDefaultSms && missingPerms.isEmpty()) {
+            vm.refreshThreads()
+        }
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {

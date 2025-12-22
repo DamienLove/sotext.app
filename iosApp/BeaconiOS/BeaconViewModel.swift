@@ -8,6 +8,7 @@ import FirebaseAuth
 final class BeaconViewModel: ObservableObject {
     @Published var contacts: [BeaconContactCard] = []
     @Published private(set) var conversations: [UUID: [BeaconConversationMessage]] = [:]
+    @Published var statusText: String? = nil
 
     private let provider: BeaconConversationProvider
 
@@ -34,7 +35,7 @@ final class BeaconViewModel: ObservableObject {
         do {
             let fetched = try await provider.loadConversations()
             await MainActor.run {
-                contacts = fetched.keys.sorted(by: { $0.name < $1.name })
+                contacts = fetched.keys.sorted(by: { $0.unread > $1.unread })
                 for (contact, msgs) in fetched {
                     conversations[contact.id] = msgs
                 }
@@ -56,13 +57,24 @@ final class BeaconViewModel: ObservableObject {
             isIncoming: false,
             isUrgent: false
         )
-        // Optimistic update
-        var msgs = conversations[contact.id] ?? []
-        msgs.append(message)
-        conversations[contact.id] = msgs
 
         Task {
-            try? await provider.send(message: message, to: contact)
+            do {
+                try await provider.send(message: message, to: contact)
+                // Only optimistic update if send didn't throw
+                await MainActor.run {
+                    var msgs = conversations[contact.id] ?? []
+                    msgs.append(message)
+                    conversations[contact.id] = msgs
+                    statusText = nil
+                }
+            } catch {
+                await MainActor.run {
+                    // For now we just log, or bind this to a UI alert if ContentView supports it
+                    statusText = "Error sending: \(error.localizedDescription)"
+                    print("Error sending message: \(error)")
+                }
+            }
         }
     }
 }

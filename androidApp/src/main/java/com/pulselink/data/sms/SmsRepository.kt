@@ -124,6 +124,58 @@ class SmsRepository @Inject constructor(
     suspend fun listArchivedThreads(limit: Int = 50): List<SmsThreadItem> =
         listThreads(limit = limit, includeArchived = true, onlyArchived = true)
 
+    fun searchMessages(query: String, limit: Int = 40): List<SmsMessageItem> {
+        if (!hasPerms() || query.isBlank()) return emptyList()
+        val pattern = "%${query.trim()}%"
+        val projection = arrayOf(
+            Telephony.Sms._ID,
+            Telephony.Sms.THREAD_ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE,
+            Telephony.Sms.TYPE
+        )
+        val cursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                projection,
+                "${Telephony.Sms.BODY} LIKE ?",
+                arrayOf(pattern),
+                "${Telephony.Sms.DATE} DESC"
+            )
+        }.getOrNull() ?: return emptyList()
+
+        cursor.use { c ->
+            val idIdx = c.getColumnIndexOrThrow(Telephony.Sms._ID)
+            val threadIdx = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
+            val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+            val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
+            val typeIdx = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
+            val hits = mutableListOf<SmsMessageItem>()
+            var count = 0
+            while (c.moveToNext() && count < limit) {
+                val body = c.getString(bodyIdx) ?: ""
+                if (SmsCodec.isPulseLinkPayload(body)) {
+                    count++
+                    continue
+                }
+                val outgoing = c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_SENT ||
+                    c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_OUTBOX
+                hits += SmsMessageItem(
+                    id = c.getLong(idIdx),
+                    threadId = c.getLong(threadIdx),
+                    address = resolveAddress(c.getString(addrIdx)),
+                    body = body,
+                    timestamp = c.getLong(dateIdx),
+                    outgoing = outgoing
+                )
+                count++
+            }
+            return hits
+        }
+    }
+
     fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> {
         if (!hasPerms()) return emptyList()
         ensureObserversRegistered()
@@ -177,6 +229,88 @@ class SmsRepository @Inject constructor(
             }
             return items.sortedBy { it.timestamp }
         }
+    }
+
+    fun messagesForAddress(address: String, limit: Int = 200): List<SmsMessageItem> {
+        if (!hasPerms()) return emptyList()
+        val projection = arrayOf(
+            Telephony.Sms._ID,
+            Telephony.Sms.THREAD_ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE,
+            Telephony.Sms.TYPE
+        )
+        val candidates = addressCandidates(address)
+        if (candidates.isEmpty()) return emptyList()
+        val items = mutableListOf<SmsMessageItem>()
+        candidates.forEach { candidate ->
+            val cursor = runCatching {
+                context.contentResolver.query(
+                    Telephony.Sms.CONTENT_URI,
+                    projection,
+                    "${Telephony.Sms.ADDRESS}=?",
+                    arrayOf(candidate),
+                    "${Telephony.Sms.DATE} DESC"
+                )
+            }.getOrNull() ?: return@forEach
+            cursor.use { c ->
+                val idIdx = c.getColumnIndexOrThrow(Telephony.Sms._ID)
+                val threadIdx = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
+                val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+                val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+                val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
+                val typeIdx = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
+                var count = 0
+                while (c.moveToNext() && count < limit) {
+                    val body = c.getString(bodyIdx) ?: ""
+                    if (SmsCodec.isPulseLinkPayload(body)) {
+                        count++
+                        continue
+                    }
+                    val outgoing = c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_SENT ||
+                        c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_OUTBOX
+                    items += SmsMessageItem(
+                        id = c.getLong(idIdx),
+                        threadId = c.getLong(threadIdx),
+                        address = resolveAddress(c.getString(addrIdx)),
+                        body = body,
+                        timestamp = c.getLong(dateIdx),
+                        outgoing = outgoing
+                    )
+                    count++
+                }
+            }
+        }
+        return items.distinctBy { it.id }.sortedBy { it.timestamp }.takeLast(limit)
+    }
+
+    fun resolveThreadIdForAddress(address: String): Long? {
+        if (!hasPerms()) return null
+        val projection = arrayOf(
+            Telephony.Sms.THREAD_ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.DATE
+        )
+        val candidates = addressCandidates(address)
+        candidates.forEach { candidate ->
+            val cursor = runCatching {
+                context.contentResolver.query(
+                    Telephony.Sms.CONTENT_URI,
+                    projection,
+                    "${Telephony.Sms.ADDRESS}=?",
+                    arrayOf(candidate),
+                    "${Telephony.Sms.DATE} DESC"
+                )
+            }.getOrNull() ?: return@forEach
+            cursor.use { c ->
+                if (c.moveToFirst()) {
+                    val idx = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
+                    return c.getLong(idx)
+                }
+            }
+        }
+        return null
     }
 
     fun purgeExpiredOtpMessages(expiryMillis: Long) {
@@ -248,6 +382,23 @@ class SmsRepository @Inject constructor(
             }
         }
         return number
+    }
+
+    private fun addressCandidates(raw: String): List<String> {
+        val trimmed = raw.trim()
+        if (trimmed.isBlank()) return emptyList()
+        val parsedNumber = when {
+            trimmed.contains(" ú ") -> trimmed.split(" ú ", limit = 2).getOrNull(1) ?: trimmed
+            trimmed.contains(" Ł ") -> trimmed.split(" Ł ", limit = 2).getOrNull(1) ?: trimmed
+            trimmed.contains(" L ") -> trimmed.split(" L ", limit = 2).getOrNull(1) ?: trimmed
+            else -> trimmed
+        }.trim()
+        val normalized = normalizePhone(parsedNumber)
+        val noPlus = normalized.removePrefix("+")
+        return listOf(trimmed, parsedNumber, normalized, noPlus)
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
     }
 
     private fun normalizePhone(input: String): String {

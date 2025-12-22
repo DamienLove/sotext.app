@@ -13,7 +13,6 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
     private var store: [BeaconContactCard: [BeaconConversationMessage]] = [:]
 
     init() {
-        // Seed some data for when Firebase is not configured
         let c1 = BeaconContactCard(name: "Alex Rivera", role: "Friend", presence: .online, unread: 2)
         let c2 = BeaconContactCard(name: "Morgan Lee", role: "Family", presence: .recent, unread: 0)
 
@@ -44,64 +43,64 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
         self.userId = userId
     }
 
-    private var collection: CollectionReference {
-        db.collection("beaconThreads").document(userId).collection("messages")
+    private var threadsCollection: CollectionReference {
+        db.collection("users").document(userId).collection("synced_threads")
     }
 
     func loadConversations() async throws -> [BeaconContactCard: [BeaconConversationMessage]] {
-        let snapshot = try await collection.order(by: "timestamp").getDocuments()
-        var result: [BeaconContactCard: [BeaconConversationMessage]] = [:]
+        let threadsSnapshot = try await threadsCollection.getDocuments()
 
-        // Group by contact name for now since we don't have unique contact IDs in this simple model
-        var contactMap: [String: BeaconContactCard] = [:]
+        return try await withThrowingTaskGroup(of: (BeaconContactCard, [BeaconConversationMessage]).self) { group in
+            for threadDoc in threadsSnapshot.documents {
+                group.addTask {
+                    let data = threadDoc.data()
+                    let address = data["address"] as? String ?? "Unknown"
+                    let contact = BeaconContactCard(
+                        name: address,
+                        role: "Contact",
+                        presence: .offline,
+                        unread: data["unread"] as? Int ?? 0
+                    )
 
-        for doc in snapshot.documents {
-            let data = doc.data()
-            guard let contactName = data["contactName"] as? String,
-                  let role = data["role"] as? String,
-                  let presenceRaw = data["presence"] as? String,
-                  let text = data["text"] as? String,
-                  let ts = data["timestamp"] as? Timestamp else { continue }
+                    let messagesSnapshot = try await threadDoc.reference.collection("messages")
+                        .order(by: "date", descending: false)
+                        .limit(to: 50)
+                        .getDocuments()
 
-            let presence = BeaconPresence(rawValue: presenceRaw) ?? .offline
+                    var messages: [BeaconConversationMessage] = []
+                    for msgDoc in messagesSnapshot.documents {
+                        let msgData = msgDoc.data()
+                        let type = msgData["type"] as? Int ?? 1 // 1=in, 2=out
+                        let timestamp = msgData["date"] as? Int64 ?? 0
+                        let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
 
-            let contact: BeaconContactCard
-            if let existing = contactMap[contactName] {
-                contact = existing
-            } else {
-                contact = BeaconContactCard(name: contactName, role: role, presence: presence, unread: 0)
-                contactMap[contactName] = contact
+                        let msg = BeaconConversationMessage(
+                            sender: type == 1 ? address : "You",
+                            text: msgData["body"] as? String ?? "",
+                            timestamp: date,
+                            isIncoming: type == 1,
+                            isUrgent: false
+                        )
+                        messages.append(msg)
+                    }
+                    return (contact, messages)
+                }
             }
 
-            let msg = BeaconConversationMessage(
-                sender: data["sender"] as? String ?? "Unknown",
-                text: text,
-                timestamp: ts.dateValue(),
-                isIncoming: data["incoming"] as? Bool ?? false,
-                isUrgent: data["urgent"] as? Bool ?? false
-            )
-            result[contact, default: []].append(msg)
+            var result: [BeaconContactCard: [BeaconConversationMessage]] = [:]
+            for try await (contact, messages) in group {
+                result[contact] = messages
+            }
+            return result
         }
-        return result
     }
 
     func send(message: BeaconConversationMessage, to contact: BeaconContactCard) async throws {
-        var presenceRaw = "offline"
-        switch contact.presence {
-        case .online: presenceRaw = "online"
-        case .recent: presenceRaw = "recent"
-        case .offline: presenceRaw = "offline"
-        }
-        try await collection.addDocument(data: [
-            "contactName": contact.name,
-            "role": contact.role,
-            "presence": presenceRaw,
-            "text": message.text,
-            "sender": message.sender,
-            "incoming": message.isIncoming,
-            "urgent": message.isUrgent,
-            "timestamp": Timestamp(date: message.timestamp)
-        ])
+        throw NSError(
+            domain: "com.pulselink.beacon",
+            code: 501,
+            userInfo: [NSLocalizedDescriptionKey: "Sending from iOS is not supported yet (Requires Android Relay)."]
+        )
     }
     #else
     init(userId: String) {}

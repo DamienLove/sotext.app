@@ -11,11 +11,21 @@ import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.domain.repository.ContactRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+sealed class SearchResultState {
+    object Idle : SearchResultState()
+    object Searching : SearchResultState()
+    data class Contact(val threadId: Long, val address: String) : SearchResultState()
+    data class Messages(val hits: List<SmsMessageItem>) : SearchResultState()
+    object Empty : SearchResultState()
+}
 
 @HiltViewModel
 class SmsInboxViewModel @Inject constructor(
@@ -25,12 +35,43 @@ class SmsInboxViewModel @Inject constructor(
     val threads: StateFlow<List<SmsThreadItem>> = _threads
     private val _archived = MutableStateFlow<List<SmsThreadItem>>(emptyList())
     val archived: StateFlow<List<SmsThreadItem>> = _archived
+    private val _searchState = MutableStateFlow<SearchResultState>(SearchResultState.Idle)
+    val searchState: StateFlow<SearchResultState> = _searchState
 
     fun refresh() {
         viewModelScope.launch {
             _threads.value = smsRepository.listThreads()
             _archived.value = smsRepository.listArchivedThreads()
         }
+    }
+
+    fun search(query: String) {
+        if (query.isBlank()) {
+            _searchState.value = SearchResultState.Idle
+            return
+        }
+        _searchState.value = SearchResultState.Searching
+        viewModelScope.launch(Dispatchers.IO) {
+            val direct = _threads.value.firstOrNull {
+                it.address.contains(query, ignoreCase = true) ||
+                    it.snippet.contains(query, ignoreCase = true)
+            }
+            if (direct != null) {
+                withContext(Dispatchers.Main) {
+                    _searchState.value = SearchResultState.Contact(direct.threadId, direct.address)
+                }
+                return@launch
+            }
+
+            val hits = smsRepository.searchMessages(query)
+            withContext(Dispatchers.Main) {
+                _searchState.value = if (hits.isEmpty()) SearchResultState.Empty else SearchResultState.Messages(hits)
+            }
+        }
+    }
+
+    fun clearSearch() {
+        _searchState.value = SearchResultState.Idle
     }
 
     fun archive(threadId: Long) {
@@ -72,22 +113,34 @@ class SmsThreadViewModel @Inject constructor(
     val messages: StateFlow<List<SmsMessageItem>> = _messages
     private val _contact = MutableStateFlow<Contact?>(null)
     val contact: StateFlow<Contact?> = _contact
+    private var activeThreadId: Long? = null
+    private var activeAddress: String = ""
 
-    fun load(threadId: Long) {
+    fun load(threadId: Long, address: String) {
+        activeThreadId = threadId.takeIf { it > 0 }
+        activeAddress = address
         viewModelScope.launch {
-            val msgs = smsRepository.messagesForThread(threadId)
-            _messages.value = msgs
-            if (msgs.isNotEmpty()) {
-                val address = msgs.first().address
-                _contact.value = contactRepository.getByPhone(address)
-            }
+            refreshMessages()
         }
         smsRepository.changes()
-            .onEach {
-                val msgs = smsRepository.messagesForThread(threadId)
-                _messages.value = msgs
-            }
+            .onEach { refreshMessages() }
             .launchIn(viewModelScope)
+    }
+
+    private suspend fun refreshMessages() {
+        if (activeThreadId == null && activeAddress.isNotBlank()) {
+            activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
+        }
+        val msgs = when {
+            activeThreadId != null -> smsRepository.messagesForThread(activeThreadId!!)
+            activeAddress.isNotBlank() -> smsRepository.messagesForAddress(activeAddress)
+            else -> emptyList()
+        }
+        _messages.value = msgs
+        if (msgs.isNotEmpty()) {
+            val address = msgs.first().address
+            _contact.value = contactRepository.getByPhone(address)
+        }
     }
 
     fun setContactTheme(theme: ThemePreferences?) {
@@ -103,14 +156,17 @@ class SmsThreadViewModel @Inject constructor(
     fun sendMessage(address: String, body: String) {
         viewModelScope.launch {
             // Handle multi-recipient (Broadcast) by splitting on semicolon
-            val destinations = address.split(";")
+            val targetAddress = address.ifBlank { activeAddress }
+            if (targetAddress.isBlank()) return@launch
+            activeAddress = targetAddress
+            val destinations = targetAddress.split(";")
 
             destinations.forEach { dest ->
-                // Clean up "Name Ł Number" format if present
-                val rawNumber = if (dest.contains(" Ł ")) {
-                    dest.split(" Ł ", limit = 2)[1]
-                } else {
-                    dest
+                // Clean up "Name Ł Number" or "Name ú Number" formats if present
+                val rawNumber = when {
+                    dest.contains(" Ł ") -> dest.split(" Ł ", limit = 2)[1]
+                    dest.contains(" ú ") -> dest.split(" ú ", limit = 2)[1]
+                    else -> dest
                 }
 
                 if (rawNumber.isNotBlank()) {
@@ -122,6 +178,7 @@ class SmsThreadViewModel @Inject constructor(
                     }
                 }
             }
+            refreshMessages()
         }
     }
 }
