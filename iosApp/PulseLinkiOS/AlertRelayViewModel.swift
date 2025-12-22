@@ -45,9 +45,9 @@ final class AlertRelayViewModel: ObservableObject {
     @Published var emergencyState: EmergencyState = .idle
     @Published var contacts: [ContactCard] = []
     @Published private(set) var conversations: [UUID: [ConversationMessage]] = [:]
-@Published var overrideDND: Bool = true
-@Published var maxVolumeOnUrgent: Bool = true
-@Published var baseUrl: String
+    @Published var overrideDND: Bool = true
+    @Published var maxVolumeOnUrgent: Bool = true
+    @Published var baseUrl: String
 
     private let client: AlertRelayClient
     private let conversationProvider: ConversationProvider
@@ -71,7 +71,7 @@ final class AlertRelayViewModel: ObservableObject {
         } else {
             conversationProvider = InMemoryConversationProvider()
         }
-        seedSampleData()
+
         Task { await loadConversations() }
     }
 
@@ -154,48 +154,44 @@ final class AlertRelayViewModel: ObservableObject {
             isUrgent: urgent
         )
         Task {
-            try? await conversationProvider.send(message: message, to: contact)
-            await MainActor.run {
-                var msgs = conversations[contact.id] ?? []
-                msgs.append(message)
-                conversations[contact.id] = msgs
-                statusText = urgent ? "Urgent message sent (ringer boost, DND override)" : "Message sent"
-                if urgent {
-                    NotificationManager.shared.playAlertToneIfNeeded(volumeBoost: maxVolumeOnUrgent)
-                    NotificationManager.shared.postCriticalLocal(
-                        title: "Urgent to \(contact.name)",
-                        body: text,
-                        volumeBoost: maxVolumeOnUrgent
-                    )
+            do {
+                try await conversationProvider.send(message: message, to: contact)
+                // Only update UI if send succeeded (which it won't for Firestore provider yet)
+                await MainActor.run {
+                    var msgs = conversations[contact.id] ?? []
+                    msgs.append(message)
+                    conversations[contact.id] = msgs
+                    statusText = urgent ? "Urgent message sent (ringer boost, DND override)" : "Message sent"
+                    if urgent {
+                        NotificationManager.shared.playAlertToneIfNeeded(volumeBoost: maxVolumeOnUrgent)
+                        NotificationManager.shared.postCriticalLocal(
+                            title: "Urgent to \(contact.name)",
+                            body: text,
+                            volumeBoost: maxVolumeOnUrgent
+                        )
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    statusText = "Send failed: \(error.localizedDescription)"
                 }
             }
         }
     }
 
-    private func seedSampleData() {
-        let c1 = ContactCard(name: "Alex Rivera", role: "Emergency", presence: .online, unread: 2)
-        let c2 = ContactCard(name: "Morgan Lee", role: "Check-in", presence: .recent, unread: 0)
-        let c3 = ContactCard(name: "Jamie Patel", role: "Backup", presence: .offline, unread: 0)
-        contacts = [c1, c2, c3]
-
-        conversations[c1.id] = [
-            ConversationMessage(sender: "Alex", text: "Are you safe?", timestamp: Date().addingTimeInterval(-3600), isIncoming: true, isUrgent: true),
-            ConversationMessage(sender: "You", text: "Yes, testing alert.", timestamp: Date().addingTimeInterval(-3500), isIncoming: false, isUrgent: false)
-        ]
-        conversations[c2.id] = [
-            ConversationMessage(sender: "Morgan", text: "Check-in please", timestamp: Date().addingTimeInterval(-1800), isIncoming: true, isUrgent: false)
-        ]
-    }
-
     private func loadConversations() async {
         if let fetched = try? await conversationProvider.loadConversations() {
             await MainActor.run {
+                var newConversations: [UUID: [ConversationMessage]] = [:]
+                var newContacts: [ContactCard] = []
+
                 for (contact, msgs) in fetched {
-                    conversations[contact.id] = msgs
-                    if !contacts.contains(where: { $0.id == contact.id }) {
-                        contacts.append(contact)
-                    }
+                    newContacts.append(contact)
+                    newConversations[contact.id] = msgs
                 }
+
+                self.contacts = newContacts.sorted(by: { $0.unread > $1.unread })
+                self.conversations = newConversations
             }
         }
     }
