@@ -6,6 +6,7 @@ import './App.css';
 
 function App() {
   const [user, setUser] = useState(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -13,6 +14,7 @@ function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setIsLoggingIn(false);
     });
     return () => unsubscribe();
   }, []);
@@ -55,11 +57,13 @@ function App() {
   }, [user, selectedThread]);
 
   const handleLogin = async () => {
+    setIsLoggingIn(true);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Login failed", error);
+      setIsLoggingIn(false);
     }
   };
 
@@ -73,7 +77,14 @@ function App() {
       <div className="container login-container">
         <h1>PulseLink Web</h1>
         <p>Login to access your messages</p>
-        <button onClick={handleLogin}>Sign in with Google</button>
+        <button
+          onClick={handleLogin}
+          disabled={isLoggingIn}
+          aria-busy={isLoggingIn}
+          style={isLoggingIn ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
+        >
+          {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
+        </button>
       </div>
     );
   }
