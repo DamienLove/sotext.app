@@ -5,6 +5,8 @@ import android.database.ContentObserver
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.os.Build
+import android.app.role.RoleManager
 import android.provider.ContactsContract
 import android.provider.Telephony
 import androidx.core.content.ContextCompat
@@ -411,6 +413,18 @@ class SmsRepository(private val context: Context) {
 
     companion object {
         private fun hasSmsPermissions(context: Context): Boolean {
+            val isDefault = runCatching {
+                val roleHeld = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    context.getSystemService(RoleManager::class.java)
+                        ?.isRoleHeld(RoleManager.ROLE_SMS) == true
+                } else {
+                    false
+                }
+                val telephonyDefault =
+                    Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+                roleHeld || telephonyDefault
+            }.getOrDefault(false)
+            if (isDefault) return true
             val perms = listOf(
                 android.Manifest.permission.READ_SMS,
                 android.Manifest.permission.RECEIVE_SMS,

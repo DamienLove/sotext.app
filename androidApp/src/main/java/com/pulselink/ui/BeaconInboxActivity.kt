@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sms
@@ -27,25 +28,18 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Surface
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -58,7 +52,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import kotlinx.coroutines.launch
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -83,7 +76,9 @@ import com.pulselink.ui.theme.PulseLinkTheme
 import com.pulselink.util.DefaultSmsHelper
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.hashPin
+import com.pulselink.util.parseColorOr
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -113,19 +108,18 @@ class BeaconInboxActivity : ComponentActivity() {
                 val defaultSmsSupported =
                     defaultSmsHelper.buildRoleRequestIntent() != null || isDefaultSms
                 val lifecycleOwner = LocalLifecycleOwner.current
-                val scope = rememberCoroutineScope()
-                val checkDefaultSmsWithRetry = remember(defaultSmsHelper) {
-                    suspend {
-                        isCheckingDefaultSms = true
-                        val latest = defaultSmsHelper.checkDefaultSmsWithRetry()
-                        isDefaultSms = latest
-                        isCheckingDefaultSms = false
-                        latest
-                    }
-                }
-                val launchDefaultSmsCheck: () -> Unit = {
-                    if (!isCheckingDefaultSms) {
-                        scope.launch { checkDefaultSmsWithRetry() }
+                var defaultSmsCheckJob by remember { mutableStateOf<Job?>(null) }
+                val launchDefaultSmsCheck: () -> Unit = launchDefaultSmsCheck@{
+                    if (defaultSmsCheckJob?.isActive == true) return@launchDefaultSmsCheck
+                    isCheckingDefaultSms = true
+                    defaultSmsCheckJob = scope.launch {
+                        try {
+                            val latest = defaultSmsHelper.checkDefaultSmsWithRetry()
+                            isDefaultSms = latest
+                        } finally {
+                            isCheckingDefaultSms = false
+                            defaultSmsCheckJob = null
+                        }
                     }
                 }
 
@@ -171,92 +165,6 @@ class BeaconInboxActivity : ComponentActivity() {
                 }
 
                 Column(modifier = Modifier.fillMaxSize()) {
-                    if (!isDefaultSms) {
-                        Surface(
-                            tonalElevation = 2.dp,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    if (isCheckingDefaultSms) {
-                                        Text(
-                                            "Verifying default SMS status...",
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    } else {
-                                        Text(
-                                            "Beacon is not your default SMS app",
-                                            style = MaterialTheme.typography.titleSmall
-                                        )
-                                        Text(
-                                            "Set as default to send/receive messages",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                }
-                                if (isCheckingDefaultSms) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                } else {
-                                    Row {
-                                        IconButton(onClick = {
-                                            scope.launch {
-                                                isCheckingDefaultSms = true
-                                                isDefaultSms = defaultSmsHelper.checkDefaultSmsWithRetry()
-                                                isCheckingDefaultSms = false
-                                            }
-                                        }) {
-                                            Icon(
-                                                Icons.Default.Refresh,
-                                                contentDescription = "Refresh Status"
-                                            )
-                                        }
-                                        Button(onClick = {
-                                            defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
-                                                defaultSmsLauncher.launch(intent)
-                                            }
-                                        }) {
-                                            Text("Set Default")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (!hasSmsPermissions) {
-                        Surface(
-                            tonalElevation = 2.dp,
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "SMS permissions missing",
-                                    modifier = Modifier.weight(1f),
-                                    color = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                                Button(onClick = { permissionLauncher.launch(requiredSmsPermissions()) }) {
-                                    Text("Grant")
-                                }
-                            }
-                        }
-                    }
-
                     val bannerHeight = 50.dp
                     Box(modifier = Modifier.weight(1f)) {
                         Box(
@@ -269,12 +177,19 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
                                     val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
                                     val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
+                                    val searchState by smsInboxViewModel.searchState.collectAsStateWithLifecycle()
                                     LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
+                                    LaunchedEffect(isDefaultSms, hasSmsPermissions) {
+                                        if (isDefaultSms || hasSmsPermissions) {
+                                            smsInboxViewModel.refresh()
+                                        }
+                                    }
 
                                     var currentRoute by remember { mutableStateOf(BeaconNavRoute.Inbox) }
 
                                     val displayedThreads = when (currentRoute) {
                                         BeaconNavRoute.Inbox -> threads
+                                        BeaconNavRoute.Otp -> threads.filter { it.isOtp }
                                         BeaconNavRoute.Trusted -> threads.filter { it.isTrusted }
                                         BeaconNavRoute.Favorites -> threads.filter { it.isFavorite }
                                         BeaconNavRoute.Private -> threads
@@ -282,6 +197,7 @@ class BeaconInboxActivity : ComponentActivity() {
 
                                     val displayedArchived = when (currentRoute) {
                                         BeaconNavRoute.Inbox -> archivedThreads
+                                        BeaconNavRoute.Otp -> archivedThreads.filter { it.isOtp }
                                         BeaconNavRoute.Trusted -> archivedThreads.filter { it.isTrusted }
                                         BeaconNavRoute.Favorites -> archivedThreads.filter { it.isFavorite }
                                         BeaconNavRoute.Private -> archivedThreads
@@ -292,6 +208,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                         archivedThreads = displayedArchived,
                                         onOpenThread = { thread ->
                                             navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
+                                        },
+                                        onOpenThreadById = { threadId, address ->
+                                            navController.navigate("sms/thread/$threadId/${Uri.encode(address)}")
                                         },
                                         onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
                                         onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
@@ -307,6 +226,18 @@ class BeaconInboxActivity : ComponentActivity() {
                                             viewModel.setThreadPrivacy(thread.threadId, thread.address, makePrivate)
                                         },
                                         theme = state.settings.themePreferences,
+                                        sectionTitle = when (currentRoute) {
+                                            BeaconNavRoute.Inbox -> "All messages"
+                                            BeaconNavRoute.Otp -> "2-step codes"
+                                            BeaconNavRoute.Trusted -> "Trusted contacts"
+                                            BeaconNavRoute.Favorites -> "Favorites"
+                                            BeaconNavRoute.Private -> "Private"
+                                        },
+                                        showFilterTabs = currentRoute == BeaconNavRoute.Inbox,
+                                        showSearchBar = currentRoute == BeaconNavRoute.Inbox,
+                                        searchState = searchState,
+                                        onSearch = { smsInboxViewModel.search(it) },
+                                        onClearSearch = { smsInboxViewModel.clearSearch() },
                                         banner = {
                                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 if (!hasSmsPermissions) {
@@ -393,6 +324,23 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 }
                                             }
                                         },
+                                        floatingActionButton = {
+                                            if (currentRoute == BeaconNavRoute.Inbox) {
+                                                FloatingActionButton(
+                                                    onClick = { navController.navigate("sms/new") },
+                                                    containerColor = parseColorOr(
+                                                        MaterialTheme.colorScheme.primary,
+                                                        state.settings.themePreferences.primaryColor
+                                                    ),
+                                                    contentColor = parseColorOr(
+                                                        MaterialTheme.colorScheme.onPrimary,
+                                                        state.settings.themePreferences.onBubbleOutgoing
+                                                    )
+                                                ) {
+                                                    Icon(Icons.Filled.Edit, contentDescription = "New message")
+                                                }
+                                            }
+                                        },
                                         bottomBar = {
                                             BeaconNavBar(
                                                 currentRoute = currentRoute,
@@ -405,6 +353,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                                             showPinDialog = true
                                                         }
                                                     } else {
+                                                        if (route != BeaconNavRoute.Inbox) {
+                                                            smsInboxViewModel.clearSearch()
+                                                        }
                                                         currentRoute = route
                                                     }
                                                 },
@@ -418,6 +369,28 @@ class BeaconInboxActivity : ComponentActivity() {
                                          showPrivate = false
                                     }
                                 }
+                                composable("sms/new") {
+                                    NewMessageScreen(
+                                        contacts = state.contacts,
+                                        onBack = { navController.popBackStack() },
+                                        onCreateConversation = { selected ->
+                                            val numbers = selected.mapNotNull { it.phoneNumber }
+                                                .map { it.trim() }
+                                                .filter { it.isNotBlank() }
+                                            if (numbers.isNotEmpty()) {
+                                                val address = numbers.joinToString(";")
+                                                navController.navigate("sms/thread/0/${Uri.encode(address)}")
+                                            }
+                                        },
+                                        onManualInput = { raw ->
+                                            val address = raw.trim()
+                                            if (address.isNotBlank()) {
+                                                navController.navigate("sms/thread/0/${Uri.encode(address)}")
+                                            }
+                                        },
+                                        theme = state.settings.themePreferences
+                                    )
+                                }
                                 composable(
                                     route = "sms/thread/{threadId}/{address}",
                                     arguments = listOf(
@@ -430,9 +403,10 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val threadViewModel: SmsThreadViewModel = hiltViewModel()
                                     val messages by threadViewModel.messages.collectAsStateWithLifecycle()
                                     val contact by threadViewModel.contact.collectAsStateWithLifecycle()
-                                    LaunchedEffect(threadId) { threadViewModel.load(threadId) }
+                                    val decodedAddress = Uri.decode(address)
+                                    LaunchedEffect(threadId, decodedAddress) { threadViewModel.load(threadId, decodedAddress) }
                                     SmsThreadScreen(
-                                        address = Uri.decode(address),
+                                        address = decodedAddress,
                                         messages = messages,
                                         contact = contact,
                                         onBack = { navController.popBackStack() },
@@ -445,7 +419,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 navController.navigate("visual_settings?contactId=$contactId")
                                             }
                                         },
-                                        onSendMessage = { body -> threadViewModel.sendMessage(address, body) }
+                                        onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) }
                                     )
                                 }
                                 composable("beacon_settings") {
@@ -466,6 +440,10 @@ class BeaconInboxActivity : ComponentActivity() {
                                         remoteWebAccessEnabled = state.settings.remoteWebAccessEnabled,
                                         isPremiumActive = subscriptionUiState.isPremiumActive || state.settings.premiumUnlocked,
                                         onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
+                                        otpCleanupEnabled = state.settings.otpCleanupEnabled,
+                                        otpCleanupDays = state.settings.otpCleanupDays,
+                                        onToggleOtpCleanup = { enabled -> viewModel.setOtpCleanupEnabled(enabled) },
+                                        onChangeOtpCleanupDays = { days -> viewModel.setOtpCleanupDays(days) },
                                         onSetPrivatePin = { navController.navigate("private_pin") },
                                         onPurchasePremium = { subscriptionManager.launchSubscribe(this@BeaconInboxActivity) },
                                         beaconLauncherEnabled = state.settings.beaconLauncherEnabled,
@@ -561,6 +539,7 @@ class BeaconInboxActivity : ComponentActivity() {
                 }
             }
         }
+    }
 
     private fun checkSmsPermissions(context: android.content.Context): Boolean {
         return requiredSmsPermissions().all {

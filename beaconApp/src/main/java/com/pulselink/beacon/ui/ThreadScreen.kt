@@ -29,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,24 +58,31 @@ fun ThreadScreen(
     onCustomize: () -> Unit,
 ) {
     var draft by remember { mutableStateOf("") }
+    val iconTint = theme.accentColor
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(address, maxLines = 1) },
+                title = { Text(address, maxLines = 1, color = theme.frameColor) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = iconTint)
                     }
                 },
                 actions = {
                     IconButton(onClick = onCustomize) {
-                        Icon(Icons.Default.Palette, contentDescription = "Customize theme")
+                        Icon(Icons.Default.Palette, contentDescription = "Customize theme", tint = iconTint)
                     }
                     IconButton(onClick = onDeleteThread) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete thread")
+                        Icon(Icons.Default.Delete, contentDescription = "Delete thread", tint = iconTint)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = theme.threadBackgroundColor,
+                    titleContentColor = theme.frameColor,
+                    navigationIconContentColor = iconTint,
+                    actionIconContentColor = iconTint
+                )
             )
         }
     ) { padding ->
@@ -131,7 +139,7 @@ fun ThreadScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "Send")
+                        Icon(Icons.Default.Send, contentDescription = "Send", tint = iconTint)
                     }
                 }
             }

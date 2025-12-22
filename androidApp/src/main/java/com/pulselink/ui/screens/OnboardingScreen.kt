@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -65,6 +66,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
+import androidx.compose.material.icons.filled.VpnKey
 
 data class OnboardingPermissionState(
     val icon: ImageVector,
@@ -203,7 +205,8 @@ fun OnboardingScreen(
     isReadyToFinish: Boolean,
     onGrantPermissions: () -> Unit,
     onOpenAppSettings: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    extraSection: @Composable (() -> Unit)? = null
 ) {
     val gradient = Brush.verticalGradient(
         colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16))
@@ -299,6 +302,7 @@ fun OnboardingScreen(
                     }
                 }
             }
+            extraSection?.invoke()
             if (!manualHelp.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -400,6 +404,89 @@ private fun PermissionCard(state: OnboardingPermissionState) {
                         Text(text = state.actionLabel)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun OtpCleanupOnboardingCard(
+    enabled: Boolean,
+    days: Int,
+    onToggle: (Boolean) -> Unit,
+    onChangeDays: (Int) -> Unit
+) {
+    val retentionLabel = when (days) {
+        1 -> "1 day"
+        3 -> "3 days"
+        7 -> "7 days"
+        30 -> "30 days"
+        else -> "$days days"
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp),
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.VpnKey,
+                        contentDescription = "2-step cleanup",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "2-step code cleanup",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = if (enabled) {
+                            "Auto-delete 2-step messages after $retentionLabel."
+                        } else {
+                            "Keep 2-step messages unless you delete them."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFCBD5F5)
+                    )
+                }
+                Switch(checked = enabled, onCheckedChange = onToggle)
+            }
+            TextButton(
+                onClick = {
+                    val next = when (days) {
+                        1 -> 3
+                        3 -> 7
+                        7 -> 30
+                        30 -> 1
+                        else -> 1
+                    }
+                    onChangeDays(next)
+                },
+                enabled = enabled
+            ) {
+                Text(text = "Change window")
             }
         }
     }

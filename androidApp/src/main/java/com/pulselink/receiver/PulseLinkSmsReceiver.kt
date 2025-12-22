@@ -13,9 +13,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import com.pulselink.data.link.ContactLinkManager
+import com.pulselink.data.link.RemoteActionHandler
+import com.pulselink.data.sms.OtpHelper
+import com.pulselink.data.sms.OtpNotifier
 import com.pulselink.data.sms.SmsCodec
 import com.pulselink.data.sms.SmsStore
 import com.pulselink.service.AlertRouter
+import com.pulselink.domain.repository.ContactRepository
+import com.pulselink.domain.model.EscalationTier
+import com.pulselink.domain.model.MessageUrgency
+import com.pulselink.domain.model.VolumeHint
+import android.telephony.PhoneNumberUtils
 
 @AndroidEntryPoint
 class PulseLinkSmsReceiver : BroadcastReceiver() {
@@ -23,6 +31,8 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
     @Inject lateinit var alertRouter: AlertRouter
     @Inject lateinit var contactLinkManager: ContactLinkManager
     @Inject lateinit var smsStore: SmsStore
+    @Inject lateinit var contactRepository: ContactRepository
+    @Inject lateinit var remoteActionHandler: RemoteActionHandler
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
@@ -44,8 +54,21 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                         contactLinkManager.handleInbound(parsed, origin)
                     } else {
                         alertRouter.onInboundMessage(body)
+                        val otpCode = if (OtpHelper.isOtpMessage(origin, body)) {
+                            OtpHelper.extractCode(body)
+                        } else {
+                            null
+                        }
+                        if (otpCode != null) {
+                            OtpNotifier.notify(context, origin, otpCode)
+                        }
+                        try {
+                            smsStore.insertIncoming(origin, body, System.currentTimeMillis())
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to insert incoming SMS from $origin", e)
+                        }
+                        handleTrustedSms(origin, body)
                     }
-                    smsStore.insertIncoming(origin, body, System.currentTimeMillis())
                 }
                 if (completed == null) {
                     Log.w(TAG, "SMS processing timed out for sender: $origin")
@@ -60,5 +83,35 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "PulseLinkSmsReceiver"
+    }
+
+    private suspend fun handleTrustedSms(origin: String, body: String) {
+        val normalized = PhoneNumberUtils.normalizeNumber(origin)
+        val contact = contactRepository.getByPhone(origin)
+            ?: contactRepository.getByPhone(normalized)
+        if (contact == null) return
+
+        val urgency = when {
+            OtpHelper.isUrgentBody(body) -> MessageUrgency.URGENT
+            contact.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
+            else -> MessageUrgency.STANDARD
+        }
+        val tier = if (urgency == MessageUrgency.STANDARD) EscalationTier.CHECK_IN else EscalationTier.EMERGENCY
+        val volumeHint = when (urgency) {
+            MessageUrgency.EMERGENCY -> VolumeHint.MAX
+            MessageUrgency.URGENT -> VolumeHint.HIGH
+            MessageUrgency.STANDARD -> VolumeHint.MEDIUM
+        }
+        val title = "Message from ${contact.displayName}"
+        val preview = body.take(160).ifBlank { "New message received." }
+        remoteActionHandler.playAttentionTone(
+            contact = contact,
+            tier = tier,
+            title = title,
+            body = preview,
+            notificationId = (contact.id.hashCode() and 0xFFFF) + 7000,
+            forceBypass = true,
+            volumeHint = volumeHint
+        )
     }
 }

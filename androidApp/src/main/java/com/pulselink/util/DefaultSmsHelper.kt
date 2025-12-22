@@ -16,27 +16,23 @@ class DefaultSmsHelper @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     fun isDefaultSms(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val packageName = context.packageName
+        val roleHeld = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val roleManager = context.getSystemService(RoleManager::class.java)
-            if (roleManager?.isRoleHeld(RoleManager.ROLE_SMS) == true) {
-                return true
-            }
+            runCatching { roleManager?.isRoleHeld(RoleManager.ROLE_SMS) == true }.getOrDefault(false)
+        } else {
+            false
         }
-        val current = Telephony.Sms.getDefaultSmsPackage(context)
-        return current == context.packageName
-    }
-
-    suspend fun checkDefaultSmsWithRetry(maxAttempts: Int = 5, initialDelayMs: Long = 300): Boolean {
-        var currentDelay = initialDelayMs
-        repeat(maxAttempts) { attempt ->
-            if (isDefaultSms()) {
-                return true
-            }
-            android.util.Log.d("DefaultSmsHelper", "Default SMS check attempt ${attempt + 1} failed. Retrying in ${currentDelay}ms...")
-            kotlinx.coroutines.delay(currentDelay)
-            currentDelay *= 2
+        val defaultPackage = runCatching { Telephony.Sms.getDefaultSmsPackage(context) }.getOrNull()
+        val telephonyMatch = defaultPackage == packageName
+        val isDefault = roleHeld || telephonyMatch
+        if (!isDefault) {
+            Log.d(
+                TAG,
+                "isDefaultSms=false package=$packageName roleHeld=$roleHeld telephonyDefault=$defaultPackage"
+            )
         }
-        return isDefaultSms()
+        return isDefault
     }
 
     fun buildRoleRequestIntent(): Intent? {
@@ -55,7 +51,7 @@ class DefaultSmsHelper @Inject constructor(
     }
 
     suspend fun checkDefaultSmsWithRetry(
-        maxAttempts: Int = 5,
+        maxAttempts: Int = 7,
         initialDelayMs: Long = 300
     ): Boolean {
         var delayMs = initialDelayMs

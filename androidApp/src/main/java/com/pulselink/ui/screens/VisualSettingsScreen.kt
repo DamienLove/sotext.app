@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,11 +59,16 @@ fun VisualSettingsScreen(
                 .padding(padding)
         ) {
             TabRow(selectedTabIndex = activeTab) {
-                Tab(selected = activeTab == 0, onClick = { activeTab = 0 }, text = { Text("Customize") })
-                Tab(selected = activeTab == 1, onClick = { activeTab = 1 }, text = { Text("Presets") })
+                Tab(selected = activeTab == 0, onClick = { activeTab = 0 }, text = { Text("Themes") })
+                Tab(selected = activeTab == 1, onClick = { activeTab = 1 }, text = { Text("Customize") })
             }
 
             if (activeTab == 0) {
+                ThemesTab(onSelect = {
+                    tempTheme = it
+                    onSelectTheme(it)
+                })
+            } else {
                 CustomizeTab(
                     theme = tempTheme,
                     onUpdate = {
@@ -70,11 +77,6 @@ fun VisualSettingsScreen(
                     },
                     isGlobal = isGlobal
                 )
-            } else {
-                PresetsTab(onSelect = {
-                    tempTheme = it
-                    onSelectTheme(it)
-                })
             }
         }
     }
@@ -449,78 +451,211 @@ fun ColorPickerDialog(
     )
 }
 
+private data class ThemePreset(
+    val name: String,
+    val theme: ThemePreferences
+)
+
 @Composable
-fun PresetsTab(onSelect: (ThemePreferences) -> Unit) {
-    val presets = listOf(
-        // Default Light
-        ThemePreferences(
-            fontStyle = "Default",
-            bubbleCornerRadius = 12,
-            backgroundColor = "#FFFFFF",
-            onBackground = "#000000",
-            topBarColor = "#F3F3F3",
-            onTopBarColor = "#000000",
-            bubbleOutgoing = "#D0BCFF",
-            onBubbleOutgoing = "#000000",
-            bubbleIncoming = "#E8DEF8",
-            onBubbleIncoming = "#000000"
+fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
+    val themes = listOf(
+        ThemePreset(
+            name = "Default Light",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 12,
+                backgroundColor = "#FFFFFF",
+                onBackground = "#111827",
+                topBarColor = "#F3F4F6",
+                onTopBarColor = "#111827",
+                bubbleOutgoing = "#D0BCFF",
+                onBubbleOutgoing = "#111827",
+                bubbleIncoming = "#E8DEF8",
+                onBubbleIncoming = "#111827",
+                primaryColor = "#6750A4",
+                secondaryColor = "#625B71",
+                dividerColor = "#E5E7EB",
+                inboxIconVariant = "Default"
+            )
         ),
-        // Dark Mode
-        ThemePreferences(
-            fontStyle = "Default",
-            bubbleCornerRadius = 12,
-            backgroundColor = "#121212",
-            onBackground = "#FFFFFF",
-            topBarColor = "#1E1E1E",
-            onTopBarColor = "#FFFFFF",
-            bubbleOutgoing = "#BB86FC",
-            onBubbleOutgoing = "#000000",
-            bubbleIncoming = "#333333",
-            onBubbleIncoming = "#FFFFFF"
+        ThemePreset(
+            name = "Midnight OLED",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 14,
+                backgroundColor = "#0B0B0F",
+                onBackground = "#F1F5F9",
+                topBarColor = "#111827",
+                onTopBarColor = "#F8FAFC",
+                bubbleOutgoing = "#1F2937",
+                onBubbleOutgoing = "#F8FAFC",
+                bubbleIncoming = "#0F172A",
+                onBubbleIncoming = "#E2E8F0",
+                primaryColor = "#38BDF8",
+                secondaryColor = "#22D3EE",
+                timestampColor = "#94A3B8",
+                dividerColor = "#1F2937",
+                inboxIconVariant = "Logo"
+            )
         ),
-        // Ocean (High Contrast Blue)
-        ThemePreferences(
-            fontStyle = "Serif",
-            bubbleCornerRadius = 4,
-            backgroundColor = "#0F172A", // Slate 900
-            onBackground = "#F8FAFC",
-            topBarColor = "#1E293B", // Slate 800
-            onTopBarColor = "#F8FAFC",
-            bubbleOutgoing = "#3B82F6", // Blue 500
-            onBubbleOutgoing = "#FFFFFF",
-            bubbleIncoming = "#334155", // Slate 700
-            onBubbleIncoming = "#FFFFFF",
-            primaryColor = "#3B82F6"
+        ThemePreset(
+            name = "Ocean Deep",
+            theme = ThemePreferences(
+                fontStyle = "Serif",
+                bubbleCornerRadius = 8,
+                backgroundColor = "#0F172A",
+                onBackground = "#E2E8F0",
+                topBarColor = "#1E293B",
+                onTopBarColor = "#E2E8F0",
+                bubbleOutgoing = "#2563EB",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#334155",
+                onBubbleIncoming = "#E2E8F0",
+                primaryColor = "#38BDF8",
+                secondaryColor = "#1D4ED8",
+                dividerColor = "#334155",
+                inboxIconVariant = "Default"
+            )
         ),
-        // Rose (Warm)
-        ThemePreferences(
-            fontStyle = "Cursive",
-            bubbleCornerRadius = 16,
-            backgroundColor = "#FFF1F2", // Rose 50
-            onBackground = "#881337", // Rose 900
-            topBarColor = "#FFE4E6", // Rose 100
-            onTopBarColor = "#881337",
-            bubbleOutgoing = "#FB7185", // Rose 400
-            onBubbleOutgoing = "#FFFFFF",
-            bubbleIncoming = "#FECDD3", // Rose 200
-            onBubbleIncoming = "#881337",
-            primaryColor = "#E11D48"
+        ThemePreset(
+            name = "Rose Petal",
+            theme = ThemePreferences(
+                fontStyle = "Cursive",
+                bubbleCornerRadius = 18,
+                backgroundColor = "#FFF1F2",
+                onBackground = "#881337",
+                topBarColor = "#FFE4E6",
+                onTopBarColor = "#881337",
+                bubbleOutgoing = "#FB7185",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#FECACA",
+                onBubbleIncoming = "#7F1D1D",
+                primaryColor = "#E11D48",
+                secondaryColor = "#F43F5E",
+                dividerColor = "#FBCFE8",
+                inboxIconVariant = "Logo"
+            )
         ),
-        // Gradient Sunset
-        ThemePreferences(
-            fontStyle = "Default",
-            bubbleCornerRadius = 24,
-            appBackgroundGradientStart = "#FF5F6D",
-            appBackgroundGradientEnd = "#FFC371",
-            onBackground = "#FFFFFF",
-            topBarColor = "#FF5F6D",
-            onTopBarColor = "#FFFFFF",
-            bubbleOutgoing = "#FFFFFF",
-            onBubbleOutgoing = "#FF5F6D",
-            bubbleIncoming = "#FFFFFF",
-            onBubbleIncoming = "#FF5F6D",
-            bubbleCornerRadiusTopStart = 0,
-            bubbleCornerRadiusBottomEnd = 0
+        ThemePreset(
+            name = "Sunset Fade",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 24,
+                appBackgroundGradientStart = "#FF5F6D",
+                appBackgroundGradientEnd = "#FFC371",
+                onBackground = "#FFFFFF",
+                topBarColor = "#FF5F6D",
+                onTopBarColor = "#FFFFFF",
+                bubbleOutgoing = "#FFFFFF",
+                onBubbleOutgoing = "#FF5F6D",
+                bubbleIncoming = "#FFF7ED",
+                onBubbleIncoming = "#C2410C",
+                primaryColor = "#FF5F6D",
+                secondaryColor = "#F97316",
+                dividerColor = "#FED7AA",
+                inboxIconVariant = "Pro",
+                bubbleCornerRadiusTopStart = 0,
+                bubbleCornerRadiusBottomEnd = 0
+            )
+        ),
+        ThemePreset(
+            name = "Citrus Pop",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 10,
+                backgroundColor = "#F7FEE7",
+                onBackground = "#365314",
+                topBarColor = "#ECFCCB",
+                onTopBarColor = "#365314",
+                bubbleOutgoing = "#84CC16",
+                onBubbleOutgoing = "#1A2E05",
+                bubbleIncoming = "#DCFCE7",
+                onBubbleIncoming = "#14532D",
+                primaryColor = "#65A30D",
+                secondaryColor = "#84CC16",
+                dividerColor = "#D9F99D",
+                inboxIconVariant = "Default"
+            )
+        ),
+        ThemePreset(
+            name = "Forest Trail",
+            theme = ThemePreferences(
+                fontStyle = "Serif",
+                bubbleCornerRadius = 14,
+                backgroundColor = "#ECFDF5",
+                onBackground = "#064E3B",
+                topBarColor = "#D1FAE5",
+                onTopBarColor = "#064E3B",
+                bubbleOutgoing = "#059669",
+                onBubbleOutgoing = "#ECFDF5",
+                bubbleIncoming = "#A7F3D0",
+                onBubbleIncoming = "#064E3B",
+                primaryColor = "#10B981",
+                secondaryColor = "#059669",
+                dividerColor = "#A7F3D0",
+                inboxIconVariant = "Logo"
+            )
+        ),
+        ThemePreset(
+            name = "Lavender Haze",
+            theme = ThemePreferences(
+                fontStyle = "Cursive",
+                bubbleCornerRadius = 16,
+                backgroundColor = "#F5F3FF",
+                onBackground = "#4C1D95",
+                topBarColor = "#EDE9FE",
+                onTopBarColor = "#4C1D95",
+                bubbleOutgoing = "#C4B5FD",
+                onBubbleOutgoing = "#312E81",
+                bubbleIncoming = "#EDE9FE",
+                onBubbleIncoming = "#4C1D95",
+                primaryColor = "#7C3AED",
+                secondaryColor = "#A78BFA",
+                dividerColor = "#DDD6FE",
+                inboxIconVariant = "Pro",
+                iconSizeFactor = 1.1f
+            )
+        ),
+        ThemePreset(
+            name = "Slate Mono",
+            theme = ThemePreferences(
+                fontStyle = "Monospace",
+                bubbleCornerRadius = 6,
+                backgroundColor = "#F8FAFC",
+                onBackground = "#0F172A",
+                topBarColor = "#E2E8F0",
+                onTopBarColor = "#0F172A",
+                bubbleOutgoing = "#CBD5E1",
+                onBubbleOutgoing = "#0F172A",
+                bubbleIncoming = "#F1F5F9",
+                onBubbleIncoming = "#0F172A",
+                primaryColor = "#475569",
+                secondaryColor = "#94A3B8",
+                dividerColor = "#CBD5E1",
+                inboxIconVariant = "Default",
+                iconSizeFactor = 0.95f
+            )
+        ),
+        ThemePreset(
+            name = "Aurora",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 20,
+                appBackgroundGradientStart = "#0F766E",
+                appBackgroundGradientEnd = "#6366F1",
+                onBackground = "#F8FAFC",
+                topBarColor = "#0F766E",
+                onTopBarColor = "#F8FAFC",
+                bubbleOutgoing = "#6366F1",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#14B8A6",
+                onBubbleIncoming = "#FFFFFF",
+                primaryColor = "#14B8A6",
+                secondaryColor = "#6366F1",
+                dividerColor = "#5EEAD4",
+                inboxIconVariant = "Logo",
+                iconSizeFactor = 1.15f
+            )
         )
     )
 
@@ -530,43 +665,116 @@ fun PresetsTab(onSelect: (ThemePreferences) -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(presets) { preset ->
-            Card(
-                onClick = { onSelect(preset) },
-                elevation = CardDefaults.cardElevation(4.dp)
+        items(themes) { preset ->
+            ThemePreviewCard(
+                preset = preset,
+                onSelect = { onSelect(preset.theme) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ThemePreviewCard(
+    preset: ThemePreset,
+    onSelect: () -> Unit
+) {
+    val theme = preset.theme
+    val topBarColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor)
+    val onTopBar = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
+    val iconTint = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val timestamp = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground)
+    val divider = parseColorOr(MaterialTheme.colorScheme.outlineVariant, theme.dividerColor ?: theme.onBackground).copy(alpha = 0.2f)
+    val bgModifier = if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
+        Modifier.background(
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    parseColorOr(Color.White, theme.appBackgroundGradientStart!!),
+                    parseColorOr(Color.White, theme.appBackgroundGradientEnd!!)
+                )
+            )
+        )
+    } else {
+        Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor))
+    }
+    val iconSize = (18f * theme.iconSizeFactor).coerceIn(14f, 24f).dp
+
+    Card(
+        onClick = onSelect,
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .then(bgModifier)
+                    .border(1.dp, divider, RoundedCornerShape(14.dp))
             ) {
-                 Column(modifier = Modifier.padding(12.dp)) {
-                     Box(
-                         modifier = Modifier
-                             .fillMaxWidth()
-                             .height(80.dp)
-                             .then(
-                                 if (preset.appBackgroundGradientStart != null) {
-                                     Modifier.background(
-                                         brush = Brush.verticalGradient(
-                                             colors = listOf(
-                                                 parseColorOr(Color.White, preset.appBackgroundGradientStart),
-                                                 parseColorOr(Color.White, preset.appBackgroundGradientEnd ?: preset.appBackgroundGradientStart)
-                                             )
-                                         )
-                                     )
-                                 } else {
-                                     Modifier.background(parseColorOr(Color.White, preset.backgroundColor))
-                                 }
-                             )
-                             .border(1.dp, Color.LightGray)
-                     ) {
-                         Box(modifier = Modifier.size(30.dp).align(Alignment.Center).background(parseColorOr(Color.Blue, preset.bubbleOutgoing), CircleShape))
-                     }
-                     val name = when(preset.backgroundColor) {
-                         "#121212" -> "Dark Mode"
-                         "#0F172A" -> "Ocean"
-                         "#FFF1F2" -> "Rose"
-                         else -> if (preset.appBackgroundGradientStart != null) "Sunset" else "Default Light"
-                     }
-                     Text(name, modifier = Modifier.padding(top = 8.dp))
-                 }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(color = topBarColor, modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null,
+                                tint = iconTint,
+                                modifier = Modifier.size(iconSize)
+                            )
+                            Text(
+                                "Beacon Inbox",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = onTopBar
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(
+                                    Icons.Filled.Lock,
+                                    contentDescription = null,
+                                    tint = iconTint,
+                                    modifier = Modifier.size(iconSize)
+                                )
+                                Icon(
+                                    Icons.Filled.Settings,
+                                    contentDescription = null,
+                                    tint = iconTint,
+                                    modifier = Modifier.size(iconSize)
+                                )
+                            }
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.padding(horizontal = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            "Today 9:12 AM",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = timestamp
+                        )
+                        PreviewBubble(
+                            text = "See you soon!",
+                            color = parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing),
+                            textColor = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
+                            timestampColor = timestamp,
+                            align = Alignment.End,
+                            theme = theme
+                        )
+                        PreviewBubble(
+                            text = "On my way.",
+                            color = parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming),
+                            textColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming),
+                            timestampColor = timestamp,
+                            align = Alignment.Start,
+                            theme = theme
+                        )
+                    }
+                }
             }
+            Text(preset.name, style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -579,8 +787,8 @@ private fun PreviewBubble(
     timestampColor: Color,
     align: Alignment.Horizontal,
     theme: ThemePreferences,
-    onBubbleClick: () -> Unit,
-    onTextClick: () -> Unit
+    onBubbleClick: (() -> Unit)? = null,
+    onTextClick: (() -> Unit)? = null
 ) {
     val radius = theme.bubbleCornerRadius
     val shape = if (align == Alignment.End) {
@@ -612,19 +820,28 @@ private fun PreviewBubble(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = if (align == Alignment.End) Alignment.CenterEnd else Alignment.CenterStart
     ) {
+        val bubbleModifier = if (onBubbleClick != null) {
+            Modifier
+                .clickable(onClick = onBubbleClick, role = Role.Button)
+                .semantics { contentDescription = "Change bubble color" }
+        } else {
+            Modifier
+        }
         Surface(
             color = color,
             shape = shape,
-            modifier = Modifier
-                .clickable(onClick = onBubbleClick, role = Role.Button)
-                .semantics { contentDescription = "Change bubble color" }
+            modifier = bubbleModifier
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text,
-                    modifier = Modifier
-                        .clickable(onClick = onTextClick, role = Role.Button)
-                        .semantics { contentDescription = "Change text color" },
+                    modifier = if (onTextClick != null) {
+                        Modifier
+                            .clickable(onClick = onTextClick, role = Role.Button)
+                            .semantics { contentDescription = "Change text color" }
+                    } else {
+                        Modifier
+                    },
                     fontFamily = font,
                     color = textColor,
                     fontSize = fontSize

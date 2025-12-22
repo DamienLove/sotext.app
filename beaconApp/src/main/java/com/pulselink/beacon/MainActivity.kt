@@ -9,14 +9,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.google.android.gms.ads.MobileAds
 import com.pulselink.beacon.ui.ads.BannerAd
 import com.pulselink.beacon.ui.InboxScreen
@@ -26,6 +27,8 @@ import com.pulselink.beacon.ui.ThemeViewModel
 import com.pulselink.beacon.data.ThemeState
 import com.pulselink.beacon.ui.customize.CustomizationScreen
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -41,6 +44,7 @@ import android.provider.Telephony
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -64,26 +68,30 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
     val navController = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
     var isDefaultSms by remember {
         mutableStateOf(isDefaultSmsRoleHeld(context))
     }
     var isCheckingDefaultSms by remember { mutableStateOf(false) }
+    var defaultSmsCheckJob by remember { mutableStateOf<Job?>(null) }
     var missingPerms by remember { mutableStateOf(requiredPermissions(context)) }
-    val scope = rememberCoroutineScope()
     val refreshDefaultSms = remember {
         suspend {
-            isCheckingDefaultSms = true
             val latest = checkDefaultSmsWithRetry(context)
             isDefaultSms = latest
-            isCheckingDefaultSms = false
             latest
         }
     }
     val launchDefaultSmsCheck: () -> Unit = {
-        if (!isCheckingDefaultSms) {
-            scope.launch {
+        if (defaultSmsCheckJob?.isActive == true) return@launchDefaultSmsCheck
+        isCheckingDefaultSms = true
+        defaultSmsCheckJob = scope.launch {
+            try {
                 refreshDefaultSms()
                 missingPerms = requiredPermissions(context)
+            } finally {
+                isCheckingDefaultSms = false
+                defaultSmsCheckJob = null
             }
         }
     }
@@ -94,9 +102,30 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
         missingPerms = requiredPermissions(context)
     }
 
+    val defaultSmsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        launchDefaultSmsCheck()
+    }
+
     LaunchedEffect(Unit) {
-        refreshDefaultSms()
-        missingPerms = requiredPermissions(context)
+        launchDefaultSmsCheck()
+    }
+
+    LaunchedEffect(isDefaultSms, missingPerms) {
+        if (isDefaultSms && missingPerms.isEmpty()) {
+            vm.refreshThreads()
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                launchDefaultSmsCheck()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Scaffold(
@@ -121,8 +150,9 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
                         permissionLauncher.launch(missingPerms.toTypedArray())
                     },
                     onRequestDefault = {
-                        requestDefaultSms(context)
-                        launchDefaultSmsCheck()
+                        buildDefaultSmsRequestIntent(context)?.let { intent ->
+                            defaultSmsLauncher.launch(intent)
+                        } ?: launchDefaultSmsCheck()
                     },
                     onRefreshDefaultStatus = launchDefaultSmsCheck,
                     onOpenThread = { id, address ->
@@ -191,50 +221,27 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
     }
 }
 
-private fun requestDefaultSms(context: android.content.Context) {
+private fun buildDefaultSmsRequestIntent(context: android.content.Context): Intent? {
     val packageName = context.packageName
-    if (isDefaultSmsRoleHeld(context)) return
+    if (isDefaultSmsRoleHeld(context)) return null
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         val roleManager = context.getSystemService(RoleManager::class.java)
-        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+        if (roleManager?.isRoleAvailable(RoleManager.ROLE_SMS) == true) {
+            roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
+        } else {
+            null
+        }
     } else {
-        val intent = Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT).apply {
+        Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT).apply {
             putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, packageName)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-    }
-}
-
-private suspend fun checkDefaultSmsWithRetry(context: android.content.Context, maxAttempts: Int = 5, initialDelayMs: Long = 300): Boolean {
-    var currentDelay = initialDelayMs
-    repeat(maxAttempts) { attempt ->
-        if (isDefaultSmsRoleHeld(context)) {
-            return true
-        }
-        android.util.Log.d("DefaultSmsHelper", "Default SMS check attempt ${attempt + 1} failed. Retrying in ${currentDelay}ms...")
-        delay(currentDelay)
-        currentDelay *= 2
-    }
-    return isDefaultSmsRoleHeld(context)
-}
-
-private fun isDefaultSmsRoleHeld(context: android.content.Context): Boolean {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        val roleManager = context.getSystemService(RoleManager::class.java)
-        if (roleManager?.isRoleHeld(RoleManager.ROLE_SMS) == true) {
-            return true
         }
     }
-    return Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
 }
 
 private suspend fun checkDefaultSmsWithRetry(
     context: android.content.Context,
-    maxAttempts: Int = 5,
+    maxAttempts: Int = 7,
     initialDelayMs: Long = 300
 ): Boolean {
     var delayMs = initialDelayMs
@@ -248,6 +255,23 @@ private suspend fun checkDefaultSmsWithRetry(
         }
     }
     return latest
+}
+
+private fun isDefaultSmsRoleHeld(context: android.content.Context): Boolean {
+    val packageName = context.packageName
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val roleManager = context.getSystemService(RoleManager::class.java)
+        if (roleManager?.isRoleAvailable(RoleManager.ROLE_SMS) == true) {
+            val holders = runCatching { roleManager.getRoleHolders(RoleManager.ROLE_SMS) }
+                .getOrDefault(emptyList())
+            if (holders.contains(packageName) ||
+                runCatching { roleManager.isRoleHeld(RoleManager.ROLE_SMS) }.getOrDefault(false)
+            ) {
+                return true
+            }
+        }
+    }
+    return Telephony.Sms.getDefaultSmsPackage(context) == packageName
 }
 
 private fun requiredPermissions(context: android.content.Context): List<String> {

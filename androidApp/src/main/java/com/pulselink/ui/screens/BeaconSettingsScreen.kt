@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -49,6 +50,10 @@ fun BeaconSettingsScreen(
     remoteWebAccessEnabled: Boolean,
     isPremiumActive: Boolean,
     onToggleRemoteWebAccess: (Boolean) -> Unit,
+    otpCleanupEnabled: Boolean,
+    otpCleanupDays: Int,
+    onToggleOtpCleanup: (Boolean) -> Unit,
+    onChangeOtpCleanupDays: (Int) -> Unit,
     onSetPrivatePin: () -> Unit,
     onPurchasePremium: () -> Unit,
     beaconLauncherEnabled: Boolean,
@@ -100,6 +105,40 @@ fun BeaconSettingsScreen(
                         TimeFormat.TWENTY_FOUR_HOUR -> TimeFormat.AUTO
                     }
                     onTimeFormatChange(next)
+                },
+                leadingIcon = Icons.Filled.AccessTime
+            )
+            val retentionLabel = when (otpCleanupDays) {
+                1 -> "1 day"
+                3 -> "3 days"
+                7 -> "7 days"
+                30 -> "30 days"
+                else -> "$otpCleanupDays days"
+            }
+            BeaconSettingsToggleRow(
+                title = "2-step code cleanup",
+                subtitle = if (otpCleanupEnabled) {
+                    "Auto-delete after $retentionLabel"
+                } else {
+                    "Off (2-step messages stay forever)"
+                },
+                checked = otpCleanupEnabled,
+                onCheckedChange = onToggleOtpCleanup,
+                leadingIcon = Icons.Filled.VpnKey
+            )
+            BeaconSettingsActionRow(
+                title = "2-step cleanup window",
+                subtitle = "Delete 2-step messages after $retentionLabel",
+                actionLabel = "Change",
+                onAction = {
+                    val next = when (otpCleanupDays) {
+                        1 -> 3
+                        3 -> 7
+                        7 -> 30
+                        30 -> 1
+                        else -> 1
+                    }
+                    onChangeOtpCleanupDays(next)
                 },
                 leadingIcon = Icons.Filled.AccessTime
             )

@@ -71,6 +71,7 @@ fun SmsThreadScreen(
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
+    val iconSize = (24f * effectiveTheme.iconSizeFactor).coerceIn(18f, 34f).dp
 
     val bgModifier = if (effectiveTheme.appBackgroundGradientStart != null && effectiveTheme.appBackgroundGradientEnd != null) {
         Modifier.background(
@@ -90,7 +91,8 @@ fun SmsThreadScreen(
         bottomBar = {
             MessageInput(
                 onSend = onSendMessage,
-                theme = effectiveTheme
+                theme = effectiveTheme,
+                iconSize = iconSize
             )
         },
         topBar = {
@@ -112,12 +114,22 @@ fun SmsThreadScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor))
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
+                            modifier = Modifier.size(iconSize)
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = { showThemeMenu = true }) {
-                        Icon(Icons.Filled.Palette, contentDescription = "Theme", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor))
+                        Icon(
+                            Icons.Filled.Palette,
+                            contentDescription = "Theme",
+                            tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
+                            modifier = Modifier.size(iconSize)
+                        )
                     }
                     DropdownMenu(
                         expanded = showThemeMenu,
@@ -165,7 +177,8 @@ fun SmsThreadScreen(
 @Composable
 private fun MessageInput(
     onSend: (String) -> Unit,
-    theme: ThemePreferences
+    theme: ThemePreferences,
+    iconSize: androidx.compose.ui.unit.Dp
 ) {
     var text by remember { mutableStateOf("") }
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
@@ -206,7 +219,8 @@ private fun MessageInput(
                         Icon(
                             Icons.Filled.Send,
                             contentDescription = "Send",
-                            tint = if (enabled) primary else primary.copy(alpha = 0.38f)
+                            tint = if (enabled) primary else primary.copy(alpha = 0.38f),
+                            modifier = Modifier.size(iconSize)
                         )
                     }
                 },

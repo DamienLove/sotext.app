@@ -8,6 +8,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.pulselink.domain.model.AlertProfile
@@ -52,6 +53,8 @@ private val AUTO_UPDATE_CONTACT_INFO = booleanPreferencesKey("auto_update_contac
 private val TIME_FORMAT = stringPreferencesKey("time_format")
 private val THEME_PREFERENCES = stringPreferencesKey("theme_preferences")
 private val REMOTE_WEB_ACCESS = booleanPreferencesKey("remote_web_access")
+private val OTP_CLEANUP_ENABLED = booleanPreferencesKey("otp_cleanup_enabled")
+private val OTP_CLEANUP_DAYS = intPreferencesKey("otp_cleanup_days")
 private val PRIVATE_PIN_HASH = stringPreferencesKey("private_pin_hash")
 private val PRIVATE_THREADS = stringPreferencesKey("private_threads")
 private val BEACON_LAUNCHER_ENABLED = booleanPreferencesKey("beacon_launcher_enabled")
@@ -99,6 +102,8 @@ class SettingsRepositoryImpl @Inject constructor(
                 runCatching { json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it) }.getOrNull()
             } ?: PulseLinkSettings().themePreferences,
             remoteWebAccessEnabled = prefs[REMOTE_WEB_ACCESS] ?: PulseLinkSettings().remoteWebAccessEnabled,
+            otpCleanupEnabled = prefs[OTP_CLEANUP_ENABLED] ?: PulseLinkSettings().otpCleanupEnabled,
+            otpCleanupDays = prefs[OTP_CLEANUP_DAYS] ?: PulseLinkSettings().otpCleanupDays,
             privatePinHash = prefs[PRIVATE_PIN_HASH],
             privateThreadIds = prefs[PRIVATE_THREADS]?.let {
                 runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
@@ -139,6 +144,8 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[TIME_FORMAT] = updated.timeFormat.name
             prefs[THEME_PREFERENCES] = json.encodeToString(com.pulselink.domain.model.ThemePreferences.serializer(), updated.themePreferences)
             prefs[REMOTE_WEB_ACCESS] = updated.remoteWebAccessEnabled
+            prefs[OTP_CLEANUP_ENABLED] = updated.otpCleanupEnabled
+            prefs[OTP_CLEANUP_DAYS] = updated.otpCleanupDays
             updated.privatePinHash?.let { prefs[PRIVATE_PIN_HASH] = it } ?: prefs.remove(PRIVATE_PIN_HASH)
             prefs[PRIVATE_THREADS] = json.encodeToString(updated.privateThreadIds)
             prefs[BEACON_LAUNCHER_ENABLED] = updated.beaconLauncherEnabled
@@ -279,6 +286,18 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setOtpCleanupEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[OTP_CLEANUP_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setOtpCleanupDays(days: Int) {
+        dataStore.edit { prefs ->
+            prefs[OTP_CLEANUP_DAYS] = days.coerceAtLeast(1)
+        }
+    }
+
     override suspend fun setPrivatePinHash(hash: String?) {
         dataStore.edit { prefs ->
             hash?.let { prefs[PRIVATE_PIN_HASH] = it } ?: prefs.remove(PRIVATE_PIN_HASH)
@@ -363,6 +382,8 @@ class SettingsRepositoryImpl @Inject constructor(
                 runCatching { json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it) }.getOrNull()
             } ?: PulseLinkSettings().themePreferences,
             remoteWebAccessEnabled = prefs[REMOTE_WEB_ACCESS] ?: PulseLinkSettings().remoteWebAccessEnabled,
+            otpCleanupEnabled = prefs[OTP_CLEANUP_ENABLED] ?: PulseLinkSettings().otpCleanupEnabled,
+            otpCleanupDays = prefs[OTP_CLEANUP_DAYS] ?: PulseLinkSettings().otpCleanupDays,
             privatePinHash = prefs[PRIVATE_PIN_HASH],
             privateThreadIds = prefs[PRIVATE_THREADS]?.let {
                 runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()

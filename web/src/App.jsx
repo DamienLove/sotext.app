@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { collection, query, orderBy, onSnapshot, doc } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import './App.css';
 
 function App() {
@@ -89,8 +89,18 @@ function App() {
           {threads.map(thread => (
             <div
               key={thread.id}
+              role="button"
+              tabIndex={0}
               className={`thread-item ${selectedThread?.id === thread.id ? 'active' : ''}`}
               onClick={() => setSelectedThread(thread)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedThread(thread);
+                }
+              }}
+              aria-current={selectedThread?.id === thread.id ? 'true' : undefined}
+              aria-label={`Select conversation with ${thread.address}`}
             >
               <div className="thread-name">{thread.address}</div>
               <div className="thread-snippet">{thread.snippet}</div>

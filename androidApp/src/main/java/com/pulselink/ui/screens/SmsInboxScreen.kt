@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -25,6 +27,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.ui.semantics.Role
@@ -36,6 +40,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -54,10 +61,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import android.text.format.DateUtils
 import com.pulselink.R
 import com.pulselink.data.sms.SmsThreadItem
+import com.pulselink.domain.model.MessageUrgency
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.util.parseColorOr
+import com.pulselink.ui.state.SearchResultState
+import com.pulselink.data.sms.SmsMessageItem
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -78,10 +92,19 @@ fun SmsInboxScreen(
     showPrivateOnly: Boolean = false,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
     theme: ThemePreferences = ThemePreferences(),
+    sectionTitle: String? = null,
+    showFilterTabs: Boolean = true,
     banner: @Composable () -> Unit = {},
-    bottomBar: @Composable () -> Unit = {}
+    bottomBar: @Composable () -> Unit = {},
+    showSearchBar: Boolean = false,
+    searchState: SearchResultState = SearchResultState.Idle,
+    onSearch: (String) -> Unit = {},
+    onClearSearch: () -> Unit = {},
+    onOpenThreadById: (Long, String) -> Unit = { _, _ -> },
+    floatingActionButton: @Composable () -> Unit = {}
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
+    var searchText by rememberSaveable { mutableStateOf("") }
 
     val filtered = remember(filter, threads, archivedThreads, privateThreadIds, showPrivateOnly) {
         val base = if (filter == InboxFilter.ARCHIVED) archivedThreads else threads
@@ -100,6 +123,8 @@ fun SmsInboxScreen(
     }
 
     val colorScheme = MaterialTheme.colorScheme
+    val iconSize = (24f * theme.iconSizeFactor).coerceIn(18f, 34f).dp
+    val largeIconSize = (64f * theme.iconSizeFactor).coerceIn(48f, 86f).dp
     val bgModifier = remember(theme, colorScheme) {
         if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
             Modifier.background(
@@ -123,17 +148,32 @@ fun SmsInboxScreen(
                 navigationIcon = {
                     if (!isBeaconMode) {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor))
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
+                                modifier = Modifier.size(iconSize)
+                            )
                         }
                     }
                 },
                 actions = {
                     if (isBeaconMode) {
                         IconButton(onClick = onOpenPrivate) {
-                            Icon(Icons.Filled.Lock, contentDescription = "Private inbox", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor))
+                            Icon(
+                                Icons.Filled.Lock,
+                                contentDescription = "Private inbox",
+                                tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
+                                modifier = Modifier.size(iconSize)
+                            )
                         }
                         IconButton(onClick = onOpenSettings) {
-                            Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor))
+                            Icon(
+                                Icons.Filled.Settings,
+                                contentDescription = "Settings",
+                                tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
+                                modifier = Modifier.size(iconSize)
+                            )
                         }
                     }
                 },
@@ -142,7 +182,9 @@ fun SmsInboxScreen(
                 )
             )
         },
-        bottomBar = bottomBar
+        bottomBar = bottomBar,
+        floatingActionButton = floatingActionButton,
+        floatingActionButtonPosition = FabPosition.End
     ) { padding ->
         Column(
             modifier = modifier
@@ -152,14 +194,94 @@ fun SmsInboxScreen(
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            if (showSearchBar) {
+                OutlinedTextField(
+                    value = searchText,
+                    onValueChange = {
+                        searchText = it
+                        if (it.isBlank()) {
+                            onClearSearch()
+                        } else {
+                            onSearch(it)
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    placeholder = { Text("Search all messages") },
+                    leadingIcon = {
+                        Icon(Icons.Filled.Search, contentDescription = null)
+                    },
+                    trailingIcon = {
+                        if (searchText.isNotBlank()) {
+                            IconButton(onClick = {
+                                searchText = ""
+                                onClearSearch()
+                            }) {
+                                Icon(Icons.Filled.Close, contentDescription = "Clear")
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(
+                        onSearch = { onSearch(searchText) }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor),
+                        unfocusedBorderColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.4f),
+                        focusedContainerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor),
+                        unfocusedContainerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor),
+                        focusedTextColor = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
+                        unfocusedTextColor = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
+                        cursorColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+                    ),
+                    shape = RoundedCornerShape(18.dp)
+                )
+            }
             banner()
+            if (showSearchBar) {
+                when (searchState) {
+                    is SearchResultState.Searching -> Text(
+                        "Searching.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
+                    )
+                    is SearchResultState.Empty -> Text(
+                        "No matches. Try a contact name or phrase.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
+                    )
+                    is SearchResultState.Contact -> SearchContactResult(
+                        result = searchState,
+                        theme = theme,
+                        onOpen = onOpenThreadById
+                    )
+                    is SearchResultState.Messages -> SearchResults(
+                        hits = searchState.hits,
+                        theme = theme,
+                        onOpen = onOpenThreadById
+                    )
+                    else -> Unit
+                }
+            }
+            if (sectionTitle != null) {
+                Text(
+                    text = sectionTitle,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                )
+            }
             val unreadCount = remember(threads) { threads.count { it.unread } }
-            TabsRow(
-                filter = filter,
-                unreadCount = unreadCount,
-                onFilterChange = { filter = it },
-                theme = theme
-            )
+            if (showFilterTabs) {
+                TabsRow(
+                    filter = filter,
+                    unreadCount = unreadCount,
+                    onFilterChange = { filter = it },
+                    theme = theme
+                )
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -180,7 +302,7 @@ fun SmsInboxScreen(
                                 Icon(
                                     imageVector = Icons.Filled.Inbox,
                                     contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
+                                    modifier = Modifier.size(largeIconSize),
                                     tint = parseColorOr(
                                         MaterialTheme.colorScheme.onSurfaceVariant,
                                         theme.onBackground
@@ -246,6 +368,7 @@ private fun ThreadRow(
             }
         }
     )
+    val actionIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 28f).dp
 
     SwipeToDismissBox(
         state = dismissState,
@@ -265,7 +388,7 @@ private fun ThreadRow(
                 horizontalArrangement = if (isDelete) Arrangement.End else Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(icon, contentDescription = label, tint = Color.White)
+                Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(actionIconSize))
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(label, color = Color.White, fontWeight = FontWeight.SemiBold)
             }
@@ -338,6 +461,14 @@ private fun ThreadRow(
                             Spacer(modifier = Modifier.height(4.dp))
                             UnreadPill()
                         }
+                        if (thread.isTrusted && thread.trustedUrgency != null) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            TrustedPill(thread.trustedUrgency)
+                        }
+                        if (thread.isOtp) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            OtpPill()
+                        }
                         if (isPrivate) {
                             Spacer(modifier = Modifier.height(4.dp))
                             PrivatePill()
@@ -384,6 +515,42 @@ private fun UnreadPill() {
 }
 
 @Composable
+private fun TrustedPill(urgency: MessageUrgency) {
+    val (label, color) = when (urgency) {
+        MessageUrgency.EMERGENCY -> "Emergency" to Color(0xFFB91C1C)
+        MessageUrgency.URGENT -> "Urgent" to Color(0xFFF59E0B)
+        MessageUrgency.STANDARD -> "Check-in" to Color(0xFF059669)
+    }
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun OtpPill() {
+    val color = Color(0xFF2563EB)
+    Surface(
+        color = color.copy(alpha = 0.12f),
+        shape = CircleShape
+    ) {
+        Text(
+            text = "2-step",
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
 private fun PrivatePill() {
     Surface(
         color = Color(0xFF2C2C2E).copy(alpha = 0.12f),
@@ -398,8 +565,102 @@ private fun PrivatePill() {
     }
 }
 
+@Composable
+private fun SearchContactResult(
+    result: SearchResultState.Contact,
+    theme: ThemePreferences,
+    onOpen: (Long, String) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        tonalElevation = 1.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onOpen(result.threadId, result.address) }
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Inbox,
+                contentDescription = null,
+                tint = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+            )
+            Column {
+                Text(
+                    text = result.address.ifBlank { "Open conversation" },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                )
+                Text(
+                    text = "Open conversation",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchResults(
+    hits: List<SmsMessageItem>,
+    theme: ThemePreferences,
+    onOpen: (Long, String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        hits.take(5).forEach { msg ->
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                tonalElevation = 1.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpen(msg.threadId, msg.address) }
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(
+                        text = msg.address.ifBlank { "Unknown sender" },
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+                    )
+                    Text(
+                        text = msg.body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                    )
+                    Text(
+                        text = DateUtils.getRelativeTimeSpanString(
+                            msg.timestamp,
+                            System.currentTimeMillis(),
+                            DateUtils.MINUTE_IN_MILLIS
+                        ).toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+}
+
 private fun splitDisplay(address: String): Pair<String, String?> {
-    val parts = address.split(" Ł ", limit = 2)
+    val parts = when {
+        address.contains(" ú ") -> address.split(" ú ", limit = 2)
+        address.contains(" Ł ") -> address.split(" Ł ", limit = 2)
+        address.contains(" L ") -> address.split(" L ", limit = 2)
+        else -> listOf(address)
+    }
     return when (parts.size) {
         2 -> parts[0] to parts[1]
         else -> address to null
@@ -416,6 +677,7 @@ private fun TabsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .selectableGroup()
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -440,7 +702,11 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePreferences, o
     val selectedColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(role = Role.Tab) { onClick() }
+        modifier = Modifier.selectable(
+            selected = selected,
+            role = Role.Tab,
+            onClick = onClick
+        )
     ) {
         Text(
             text = label,

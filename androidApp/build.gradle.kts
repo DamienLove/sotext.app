@@ -193,8 +193,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 56
-        versionName = "56"
+        versionCode = 59
+        versionName = "59"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -455,7 +455,14 @@ kapt {
 
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
-    implementation("com.google.android.gms:play-services-ads:22.6.0")
+    // AdMob + mediation adapters
+    implementation("com.google.android.gms:play-services-ads:24.9.0")
+    implementation("com.google.ads.mediation:applovin:13.5.1.0")
+    implementation("com.google.ads.mediation:inmobi:10.8.5.0")
+    implementation("com.google.ads.mediation:ironsource:8.5.0.0")
+    implementation("com.google.ads.mediation:facebook:6.18.0.0")
+    implementation("com.google.ads.mediation:pangle:6.3.0.9.0")
+    implementation("com.google.ads.mediation:vungle:7.5.0.0")
     implementation("com.google.android.gms:play-services-auth:21.1.0")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("com.android.billingclient:billing-ktx:7.1.1")

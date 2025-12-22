@@ -19,3 +19,8 @@
 **Vulnerability:** The `devices` collection was globally readable, allowing harvesting of User ID to Device ID mappings. The `links` collection allowed listing all rendezvous points. `linkChannels` allowed modification of the parent document.
 **Learning:** Firestore `allow read` implies `allow list`. Restricted collections must explicitly filter `list` operations using query constraints in the rules.
 **Prevention:** Split `read` into `get` and `list`. Use `allow write: if false` for container documents. Explicitly validate ownership on `write` to prevent resource stealing.
+
+## 2025-12-24 - Inconsistent Output Encoding
+**Vulnerability:** Found `senderName` and `invitationCode` being interpolated into HTML email templates in `emailInvitations.ts` without sanitization, despite a similar fix existing in `email.ts`.
+**Learning:** Security helpers (like `escapeHtml`) defined in one module (`email.ts`) are not automatically available or applied in others. Code duplication led to security regression/omission.
+**Prevention:** Centralize security helpers in a shared `utils` module and mandate their usage in all HTML generation logic during code review.
