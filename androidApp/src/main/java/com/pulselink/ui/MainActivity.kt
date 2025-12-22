@@ -1433,13 +1433,11 @@ private fun BeaconStepRow(label: String, done: Boolean) {
 
 private fun requiredSmsPermissions(context: android.content.Context): List<String> =
     buildList {
-        if (BuildConfig.PRO_FEATURES) {
-            add(Manifest.permission.SEND_SMS)
-            add(Manifest.permission.RECEIVE_SMS)
-            add(Manifest.permission.READ_SMS)
-            add(Manifest.permission.RECEIVE_MMS)
-            add(Manifest.permission.RECEIVE_WAP_PUSH)
-        }
+        add(Manifest.permission.SEND_SMS)
+        add(Manifest.permission.RECEIVE_SMS)
+        add(Manifest.permission.READ_SMS)
+        add(Manifest.permission.RECEIVE_MMS)
+        add(Manifest.permission.RECEIVE_WAP_PUSH)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             add(Manifest.permission.POST_NOTIFICATIONS)
         }

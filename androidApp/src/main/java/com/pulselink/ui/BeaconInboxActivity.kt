@@ -57,7 +57,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.pulselink.BuildConfig
 import com.pulselink.billing.SubscriptionManager
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BeaconNavBar
@@ -69,6 +68,8 @@ import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
+import com.pulselink.ui.model.MessageRecipient
+import com.pulselink.ui.state.DeviceContactsViewModel
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.SmsInboxViewModel
 import com.pulselink.ui.state.SmsThreadViewModel
@@ -370,11 +371,63 @@ class BeaconInboxActivity : ComponentActivity() {
                                     }
                                 }
                                 composable("sms/new") {
+                                    val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
+                                    val deviceContacts by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
+                                    var hasContactsPermission by remember {
+                                        mutableStateOf(checkContactsPermission(context))
+                                    }
+                                    val contactsPermissionLauncher = rememberLauncherForActivityResult(
+                                        contract = ActivityResultContracts.RequestPermission()
+                                    ) { granted ->
+                                        hasContactsPermission = granted
+                                        if (granted) {
+                                            deviceContactsViewModel.refresh()
+                                        }
+                                    }
+                                    LaunchedEffect(hasContactsPermission) {
+                                        if (hasContactsPermission) {
+                                            deviceContactsViewModel.refresh()
+                                        }
+                                    }
+                                    val recipients = remember(state.contacts, deviceContacts) {
+                                        val trustedRecipients = state.contacts.flatMap { contact ->
+                                            val phones = (listOf(contact.phoneNumber) + contact.additionalPhones)
+                                                .map { it.trim() }
+                                                .filter { it.isNotBlank() }
+                                            phones.mapIndexed { index, phone ->
+                                                MessageRecipient(
+                                                    id = (contact.id * 10_000L) + index,
+                                                    displayName = contact.displayName,
+                                                    phoneNumber = phone,
+                                                    isTrusted = true
+                                                )
+                                            }
+                                        }
+                                        val trustedNumbers = trustedRecipients
+                                            .map { normalizePhone(it.phoneNumber) }
+                                            .toSet()
+                                        val deviceRecipients = deviceContacts.map { device ->
+                                            MessageRecipient(
+                                                id = -device.id,
+                                                displayName = device.displayName.ifBlank { device.phoneNumber },
+                                                phoneNumber = device.phoneNumber,
+                                                isTrusted = false
+                                            )
+                                        }.filter { candidate ->
+                                            normalizePhone(candidate.phoneNumber) !in trustedNumbers
+                                        }
+                                        (trustedRecipients + deviceRecipients)
+                                            .distinctBy { normalizePhone(it.phoneNumber) }
+                                            .sortedWith(
+                                                compareByDescending<MessageRecipient> { it.isTrusted }
+                                                    .thenBy { it.displayName.lowercase() }
+                                            )
+                                    }
                                     NewMessageScreen(
-                                        contacts = state.contacts,
+                                        contacts = recipients,
                                         onBack = { navController.popBackStack() },
-                                        onCreateConversation = { selected ->
-                                            val numbers = selected.mapNotNull { it.phoneNumber }
+                                        onCreateConversation = { selectedNumbers ->
+                                            val numbers = selectedNumbers
                                                 .map { it.trim() }
                                                 .filter { it.isNotBlank() }
                                             if (numbers.isNotEmpty()) {
@@ -387,6 +440,10 @@ class BeaconInboxActivity : ComponentActivity() {
                                             if (address.isNotBlank()) {
                                                 navController.navigate("sms/thread/0/${Uri.encode(address)}")
                                             }
+                                        },
+                                        hasContactsPermission = hasContactsPermission,
+                                        onRequestContactsPermission = {
+                                            contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
                                         },
                                         theme = state.settings.themePreferences
                                     )
@@ -547,31 +604,33 @@ class BeaconInboxActivity : ComponentActivity() {
         }
     }
 
-    private fun requiredSmsPermissions(): Array<String> =
-        if (BuildConfig.PRO_FEATURES) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                arrayOf(
-                    Manifest.permission.READ_SMS,
-                    Manifest.permission.SEND_SMS,
-                    Manifest.permission.RECEIVE_SMS,
-                    Manifest.permission.RECEIVE_MMS,
-                    Manifest.permission.RECEIVE_WAP_PUSH,
-                    Manifest.permission.POST_NOTIFICATIONS
-                )
-            } else {
-                arrayOf(
-                    Manifest.permission.READ_SMS,
-                    Manifest.permission.SEND_SMS,
-                    Manifest.permission.RECEIVE_SMS,
-                    Manifest.permission.RECEIVE_MMS,
-                    Manifest.permission.RECEIVE_WAP_PUSH
-                )
-            }
-        } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS)
-            } else {
-                emptyArray()
+    private fun requiredSmsPermissions(): Array<String> {
+        val perms = mutableListOf(
+            Manifest.permission.READ_SMS,
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.RECEIVE_MMS,
+            Manifest.permission.RECEIVE_WAP_PUSH
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            perms.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        return perms.toTypedArray()
+    }
+
+    private fun checkContactsPermission(context: android.content.Context): Boolean =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+
+    private fun normalizePhone(input: String): String {
+        if (input.isBlank()) return ""
+        val digits = buildString {
+            input.forEach { ch ->
+                if (ch.isDigit()) append(ch)
             }
         }
+        return if (input.trim().startsWith("+")) "+$digits" else digits
+    }
 }
