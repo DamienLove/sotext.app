@@ -37,52 +37,68 @@ final class FirestoreConversationProvider: ConversationProvider {
         self.userId = userId
     }
 
-    private var collection: CollectionReference {
-        db.collection("relayThreads").document(userId).collection("messages")
+    // Android Path: users/{uid}/synced_threads
+    private var threadsCollection: CollectionReference {
+        db.collection("users").document(userId).collection("synced_threads")
     }
 
     func loadConversations() async throws -> [ContactCard: [ConversationMessage]] {
-        let snapshot = try await collection.order(by: "timestamp").getDocuments()
-        var result: [ContactCard: [ConversationMessage]] = [:]
-        for doc in snapshot.documents {
-            let data = doc.data()
-            guard let contactName = data["contactName"] as? String,
-                  let role = data["role"] as? String,
-                  let presenceRaw = data["presence"] as? String,
-                  let text = data["text"] as? String,
-                  let ts = data["timestamp"] as? Timestamp else { continue }
+        // 1. Fetch threads
+        let threadsSnapshot = try await threadsCollection.getDocuments()
 
-            let presence: Presence = Presence(rawValue: presenceRaw) ?? .offline
-            let contact = ContactCard(name: contactName, role: role, presence: presence, unread: 0)
-            let msg = ConversationMessage(
-                sender: data["sender"] as? String ?? "Unknown",
-                text: text,
-                timestamp: ts.dateValue(),
-                isIncoming: data["incoming"] as? Bool ?? false,
-                isUrgent: data["urgent"] as? Bool ?? false
-            )
-            result[contact, default: []].append(msg)
+        // 2. Fetch messages in parallel using TaskGroup
+        return try await withThrowingTaskGroup(of: (ContactCard, [ConversationMessage]).self) { group in
+            for threadDoc in threadsSnapshot.documents {
+                group.addTask {
+                    let data = threadDoc.data()
+                    let address = data["address"] as? String ?? "Unknown"
+                    let contact = ContactCard(
+                        name: address,
+                        role: "Contact",
+                        presence: .offline,
+                        unread: data["unread"] as? Int ?? 0
+                    )
+
+                    let messagesSnapshot = try await threadDoc.reference.collection("messages")
+                        .order(by: "date", descending: false)
+                        .limit(to: 50)
+                        .getDocuments()
+
+                    var messages: [ConversationMessage] = []
+                    for msgDoc in messagesSnapshot.documents {
+                        let msgData = msgDoc.data()
+                        let type = msgData["type"] as? Int ?? 1 // 1=in, 2=out
+                        let timestamp = msgData["date"] as? Int64 ?? 0
+                        let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
+
+                        let msg = ConversationMessage(
+                            sender: type == 1 ? address : "You",
+                            text: msgData["body"] as? String ?? "",
+                            timestamp: date,
+                            isIncoming: type == 1,
+                            isUrgent: false
+                        )
+                        messages.append(msg)
+                    }
+                    return (contact, messages)
+                }
+            }
+
+            var result: [ContactCard: [ConversationMessage]] = [:]
+            for try await (contact, messages) in group {
+                result[contact] = messages
+            }
+            return result
         }
-        return result
     }
 
     func send(message: ConversationMessage, to contact: ContactCard) async throws {
-        var presenceRaw = "offline"
-        switch contact.presence {
-        case .online: presenceRaw = "online"
-        case .recent: presenceRaw = "recent"
-        case .offline: presenceRaw = "offline"
-        }
-        try await collection.addDocument(data: [
-            "contactName": contact.name,
-            "role": contact.role,
-            "presence": presenceRaw,
-            "text": message.text,
-            "sender": message.sender,
-            "incoming": message.isIncoming,
-            "urgent": message.isUrgent,
-            "timestamp": Timestamp(date: message.timestamp)
-        ])
+        // Throw error to indicate sending is not supported yet
+        throw NSError(
+            domain: "com.pulselink",
+            code: 501,
+            userInfo: [NSLocalizedDescriptionKey: "Sending from iOS is not supported yet (Requires Android Relay)."]
+        )
     }
     #else
     init(userId: String) {}
