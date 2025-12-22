@@ -89,16 +89,8 @@ function App() {
           {threads.map(thread => (
             <button
               key={thread.id}
-              role="button"
-              tabIndex={0}
               className={`thread-item ${selectedThread?.id === thread.id ? 'active' : ''}`}
               onClick={() => setSelectedThread(thread)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setSelectedThread(thread);
-                }
-              }}
               aria-current={selectedThread?.id === thread.id ? 'true' : undefined}
               aria-label={`Select conversation with ${thread.address}`}
             >
