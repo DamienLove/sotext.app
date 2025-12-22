@@ -40,8 +40,12 @@ class SmsRepository @Inject constructor(
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
 
-    suspend fun listThreads(limit: Int = 50, includeArchived: Boolean = false, onlyArchived: Boolean = false): List<SmsThreadItem> {
-        if (!hasPerms()) return emptyList()
+    suspend fun listThreads(
+        limit: Int = 50,
+        includeArchived: Boolean = false,
+        onlyArchived: Boolean = false
+    ): List<SmsThreadItem> {
+        if (!hasReadPerms()) return emptyList()
         ensureObserversRegistered()
         val archivedIds = runCatching { archivedThreadDao.getAllIds() }.getOrDefault(emptyList())
         val projection = arrayOf(
@@ -117,15 +121,18 @@ class SmsRepository @Inject constructor(
                 }
                 count++
             }
-            return items
+            if (items.isNotEmpty()) {
+                return items
+            }
         }
+        return listThreadsFromSms(limit, archivedIds, includeArchived, onlyArchived)
     }
 
     suspend fun listArchivedThreads(limit: Int = 50): List<SmsThreadItem> =
         listThreads(limit = limit, includeArchived = true, onlyArchived = true)
 
     fun searchMessages(query: String, limit: Int = 40): List<SmsMessageItem> {
-        if (!hasPerms() || query.isBlank()) return emptyList()
+        if (!hasReadPerms() || query.isBlank()) return emptyList()
         val pattern = "%${query.trim()}%"
         val projection = arrayOf(
             Telephony.Sms._ID,
@@ -177,7 +184,7 @@ class SmsRepository @Inject constructor(
     }
 
     fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> {
-        if (!hasPerms()) return emptyList()
+        if (!hasReadPerms()) return emptyList()
         ensureObserversRegistered()
         val projection = arrayOf(
             Telephony.Sms._ID,
@@ -232,7 +239,7 @@ class SmsRepository @Inject constructor(
     }
 
     fun messagesForAddress(address: String, limit: Int = 200): List<SmsMessageItem> {
-        if (!hasPerms()) return emptyList()
+        if (!hasReadPerms()) return emptyList()
         val projection = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.THREAD_ID,
@@ -286,7 +293,7 @@ class SmsRepository @Inject constructor(
     }
 
     fun resolveThreadIdForAddress(address: String): Long? {
-        if (!hasPerms()) return null
+        if (!hasReadPerms()) return null
         val projection = arrayOf(
             Telephony.Sms.THREAD_ID,
             Telephony.Sms.ADDRESS,
@@ -314,7 +321,7 @@ class SmsRepository @Inject constructor(
     }
 
     fun purgeExpiredOtpMessages(expiryMillis: Long) {
-        if (!hasPerms()) return
+        if (!hasWritePerms()) return
         val cutoff = System.currentTimeMillis() - expiryMillis
         val projection = arrayOf(
             Telephony.Sms._ID,
@@ -359,7 +366,7 @@ class SmsRepository @Inject constructor(
     }
 
     private fun resolveAddress(raw: String?): String {
-        if (!hasPerms()) return raw.orEmpty()
+        if (!hasReadPerms()) return raw.orEmpty()
         val number = raw?.trim().orEmpty()
         if (number.isBlank()) return ""
         val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
@@ -412,7 +419,7 @@ class SmsRepository @Inject constructor(
     }
 
     fun markThreadRead(threadId: Long): Boolean {
-        if (!hasPerms()) return false
+        if (!hasWritePerms()) return false
         val values = android.content.ContentValues().apply {
             put(Telephony.Sms.READ, 1)
             put(Telephony.Sms.SEEN, 1)
@@ -452,7 +459,7 @@ class SmsRepository @Inject constructor(
     }
 
     fun deleteThread(threadId: Long): Boolean {
-        if (!hasPerms()) return false
+        if (!hasWritePerms()) return false
         return runCatching {
             context.contentResolver.delete(
                 Telephony.Sms.CONTENT_URI,
@@ -466,8 +473,8 @@ class SmsRepository @Inject constructor(
     }
 
     companion object {
-        private fun hasSmsPermissions(context: Context): Boolean {
-            val isDefault = runCatching {
+        private fun isDefaultSmsApp(context: Context): Boolean {
+            return runCatching {
                 val roleHeld = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     context.getSystemService(RoleManager::class.java)
                         ?.isRoleHeld(RoleManager.ROLE_SMS) == true
@@ -478,24 +485,25 @@ class SmsRepository @Inject constructor(
                     Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
                 roleHeld || telephonyDefault
             }.getOrDefault(false)
-            if (isDefault) return true
-            val perms = listOf(
-                android.Manifest.permission.READ_SMS,
-                android.Manifest.permission.RECEIVE_SMS,
-                android.Manifest.permission.SEND_SMS,
-                android.Manifest.permission.RECEIVE_MMS,
-                android.Manifest.permission.RECEIVE_WAP_PUSH
-            )
-            return perms.all {
-                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-            }
+        }
+
+        private fun hasReadSmsPermission(context: Context): Boolean {
+            return ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_SMS
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        private fun hasWriteSmsPermission(context: Context): Boolean {
+            return isDefaultSmsApp(context)
         }
     }
 
-    private fun hasPerms(): Boolean = hasSmsPermissions(context)
+    private fun hasReadPerms(): Boolean = isDefaultSmsApp(context) || hasReadSmsPermission(context)
+    private fun hasWritePerms(): Boolean = hasWriteSmsPermission(context)
 
     private fun ensureObserversRegistered() {
-        if (observersRegistered || !hasPerms()) return
+        if (observersRegistered || !hasReadPerms()) return
         val handler = Handler(Looper.getMainLooper())
         val observer = object : ContentObserver(handler) {
             override fun onChange(selfChange: Boolean) {
@@ -516,5 +524,89 @@ class SmsRepository @Inject constructor(
             true
         }.getOrDefault(false)
         observersRegistered = registered
+    }
+
+    private fun listThreadsFromSms(
+        limit: Int,
+        archivedIds: List<Long>,
+        includeArchived: Boolean,
+        onlyArchived: Boolean
+    ): List<SmsThreadItem> {
+        if (!hasReadPerms()) return emptyList()
+        val projection = arrayOf(
+            Telephony.Sms._ID,
+            Telephony.Sms.THREAD_ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE,
+            Telephony.Sms.READ
+        )
+        val cursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                projection,
+                null,
+                null,
+                "${Telephony.Sms.DATE} DESC"
+            )
+        }.getOrNull() ?: return emptyList()
+
+        val archivedSet = archivedIds.toSet()
+        cursor.use { c ->
+            val threadIdx = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
+            val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+            val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
+            val readIdx = c.getColumnIndexOrThrow(Telephony.Sms.READ)
+            val seenThreads = HashSet<Long>()
+            val items = mutableListOf<SmsThreadItem>()
+            var count = 0
+            while (c.moveToNext() && count < limit) {
+                val threadId = c.getLong(threadIdx)
+                if (!seenThreads.add(threadId)) continue
+                val body = c.getString(bodyIdx) ?: ""
+                if (SmsCodec.isPulseLinkPayload(body)) {
+                    count++
+                    continue
+                }
+                val ts = c.getLong(dateIdx)
+                val unread = c.getInt(readIdx) == 0
+                val address = resolveAddress(c.getString(addrIdx))
+                val isArchived = archivedSet.contains(threadId)
+
+                if (onlyArchived && !isArchived) {
+                    // skip
+                } else if (!includeArchived && isArchived) {
+                    // skip
+                } else {
+                    val parts = address.split(" ú ")
+                    val phone = if (parts.size > 1) parts[1] else parts[0]
+                    val normalized = normalizePhone(phone)
+                    val contact = contactDao.getByPhone(phone)
+                        ?: contactDao.getByPhone(normalized)
+                    val trustedUrgency = contact?.let {
+                        when {
+                            OtpHelper.isUrgentBody(body) -> MessageUrgency.URGENT
+                            it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
+                            else -> MessageUrgency.STANDARD
+                        }
+                    }
+                    items += SmsThreadItem(
+                        threadId = threadId,
+                        address = address,
+                        snippet = body,
+                        timestamp = ts,
+                        unread = unread,
+                        isPrivate = contact?.isPrivate == true,
+                        isFavorite = contact?.isFavorite == true,
+                        isTrusted = contact != null,
+                        trustedUrgency = trustedUrgency,
+                        isOtp = OtpHelper.isOtpMessage(phone, body)
+                    )
+                }
+                count++
+            }
+            return items
+        }
     }
 }

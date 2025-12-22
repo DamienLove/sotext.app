@@ -5,7 +5,6 @@ import android.app.Activity
 import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
-import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -64,7 +63,6 @@ import androidx.navigation.navArgument
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.pulselink.ui.InboxLauncherActivity
 import com.pulselink.auth.AuthState
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.domain.model.Contact
@@ -136,6 +134,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import com.pulselink.BuildConfig
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.DefaultSmsHelper
+import com.pulselink.util.BeaconIconManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 
@@ -161,15 +160,8 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var callStateMonitor: CallStateMonitor
     @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
     private val inboxShortcutFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    private fun updateBeaconLauncher(enable: Boolean) {
-        val component = ComponentName(this, InboxLauncherActivity::class.java)
-        val newState = if (enable) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-        else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-        packageManager.setComponentEnabledSetting(
-            component,
-            newState,
-            PackageManager.DONT_KILL_APP
-        )
+    private fun updateBeaconLauncher(enable: Boolean, variant: String) {
+        BeaconIconManager.apply(this, variant, enable)
     }
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
@@ -329,8 +321,11 @@ class MainActivity : AppCompatActivity() {
                     lifecycleOwner.lifecycle.addObserver(observer)
                     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
-                LaunchedEffect(state.settings.beaconLauncherEnabled) {
-                    updateBeaconLauncher(state.settings.beaconLauncherEnabled)
+                LaunchedEffect(state.settings.beaconLauncherEnabled, state.settings.themePreferences.inboxIconVariant) {
+                    updateBeaconLauncher(
+                        state.settings.beaconLauncherEnabled,
+                        state.settings.themePreferences.inboxIconVariant
+                    )
                 }
                 LaunchedEffect(navController) {
                     inboxShortcutFlow.collectLatest {
@@ -349,7 +344,8 @@ class MainActivity : AppCompatActivity() {
                             )
                         }
                         val shouldEnable = currentBeaconEnabled
-                        updateBeaconLauncher(shouldEnable)
+                        val iconVariant = viewModel.uiState.value.settings.themePreferences.inboxIconVariant
+                        updateBeaconLauncher(shouldEnable, iconVariant)
 
                         // Policy: default-SMS prompt must precede runtime SMS permissions.
                         if (!isNowDefault) {
@@ -679,18 +675,8 @@ class MainActivity : AppCompatActivity() {
 
                 LaunchedEffect(state.settings.crashDetectionEnabled) {
                     val intent = Intent(context, com.pulselink.service.CrashDetectionService::class.java)
-                    if (state.settings.crashDetectionEnabled) {
-                        val hasLocation = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                        if (hasLocation) {
-                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                 context.startForegroundService(intent)
-                             } else {
-                                 context.startService(intent)
-                             }
-                        }
-                    } else {
-                        context.stopService(intent)
-                    }
+                    // Crash detection is temporarily disabled pending foreground service/location policy work.
+                    context.stopService(intent)
                 }
 
                 val sendMessageHandler: suspend (Long, String) -> ManualMessageResult = { contactId, body ->
@@ -1258,6 +1244,7 @@ class MainActivity : AppCompatActivity() {
                         val threadViewModel: SmsThreadViewModel = hiltViewModel()
                         val messages by threadViewModel.messages.collectAsStateWithLifecycle()
                         val contact by threadViewModel.contact.collectAsStateWithLifecycle()
+                        val isArchived by threadViewModel.isArchived.collectAsStateWithLifecycle()
                         val decodedAddress = Uri.decode(address)
                         LaunchedEffect(threadId, decodedAddress) { threadViewModel.load(threadId, decodedAddress) }
                         SmsThreadScreen(
@@ -1269,7 +1256,9 @@ class MainActivity : AppCompatActivity() {
                             globalTheme = state.settings.themePreferences,
                             onUpdateContactTheme = { /* no-op for SMS inbox contacts */ },
                             onCustomizeTheme = { navController.navigate("visual_settings") },
-                            onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) }
+                            onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) },
+                            isArchived = isArchived,
+                            onToggleArchive = { threadViewModel.toggleArchive() }
                         )
                     }
                     composable("settings_help") {
@@ -1433,13 +1422,11 @@ private fun BeaconStepRow(label: String, done: Boolean) {
 
 private fun requiredSmsPermissions(context: android.content.Context): List<String> =
     buildList {
-        if (BuildConfig.PRO_FEATURES) {
-            add(Manifest.permission.SEND_SMS)
-            add(Manifest.permission.RECEIVE_SMS)
-            add(Manifest.permission.READ_SMS)
-            add(Manifest.permission.RECEIVE_MMS)
-            add(Manifest.permission.RECEIVE_WAP_PUSH)
-        }
+        add(Manifest.permission.SEND_SMS)
+        add(Manifest.permission.RECEIVE_SMS)
+        add(Manifest.permission.READ_SMS)
+        add(Manifest.permission.RECEIVE_MMS)
+        add(Manifest.permission.RECEIVE_WAP_PUSH)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             add(Manifest.permission.POST_NOTIFICATIONS)
         }

@@ -59,7 +59,6 @@ class AppOpenAdController @Inject constructor(
             context,
             AdConfig.appOpenUnitId,
             request,
-            AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT,
             object : AppOpenAd.AppOpenAdLoadCallback() {
                 override fun onAdLoaded(ad: AppOpenAd) {
                     isLoading = false

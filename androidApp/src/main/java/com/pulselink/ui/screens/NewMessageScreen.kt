@@ -14,12 +14,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -31,42 +27,43 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ThemePreferences
+import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.util.parseColorOr
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun NewMessageScreen(
-    contacts: List<Contact>,
+    contacts: List<MessageRecipient>,
     onBack: () -> Unit,
-    onCreateConversation: (List<Contact>) -> Unit,
+    onCreateConversation: (List<String>) -> Unit,
     onManualInput: (String) -> Unit,
+    hasContactsPermission: Boolean,
+    onRequestContactsPermission: () -> Unit,
     theme: ThemePreferences
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    var selectedContacts by remember { mutableStateOf(emptyList<Contact>()) }
+    var selectedContacts by remember { mutableStateOf(emptyList<MessageRecipient>()) }
 
     val filteredContacts = remember(searchQuery, contacts, selectedContacts) {
         val candidates = if (searchQuery.isBlank()) contacts else contacts.filter {
             it.displayName.contains(searchQuery, ignoreCase = true) ||
             it.phoneNumber.contains(searchQuery)
         }
-        candidates.filter { c -> selectedContacts.none { it.id == c.id } }
+        candidates.filter { c -> selectedContacts.none { it.phoneNumber == c.phoneNumber } }
     }
 
     val primaryColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
@@ -90,7 +87,7 @@ fun NewMessageScreen(
         floatingActionButton = {
             if (selectedContacts.isNotEmpty()) {
                 FloatingActionButton(
-                    onClick = { onCreateConversation(selectedContacts) },
+                    onClick = { onCreateConversation(selectedContacts.map { it.phoneNumber }) },
                     containerColor = primaryColor,
                     contentColor = onPrimaryColor
                 ) {
@@ -127,6 +124,30 @@ fun NewMessageScreen(
                                 selectedLabelColor = primaryColor
                             )
                         )
+                    }
+                }
+            }
+
+            if (!hasContactsPermission) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Allow contacts for full search",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            text = "Grant access to show all phone contacts here.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    OutlinedButton(onClick = onRequestContactsPermission) {
+                        Text("Allow")
                     }
                 }
             }
@@ -186,7 +207,7 @@ fun NewMessageScreen(
 }
 
 @Composable
-private fun ContactRow(contact: Contact, theme: ThemePreferences, onClick: () -> Unit) {
+private fun ContactRow(contact: MessageRecipient, theme: ThemePreferences, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -219,6 +240,13 @@ private fun ContactRow(contact: Contact, theme: ThemePreferences, onClick: () ->
                     text = contact.phoneNumber,
                     style = MaterialTheme.typography.bodyMedium,
                     color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
+                )
+            }
+            if (contact.isTrusted) {
+                Text(
+                    text = "Trusted",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
                 )
             }
         }

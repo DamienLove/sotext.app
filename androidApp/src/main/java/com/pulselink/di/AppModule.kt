@@ -16,6 +16,7 @@ import com.pulselink.data.alert.AlertDispatcher
 import com.pulselink.data.alert.NotificationRegistrar
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.beta.BetaAgreementRepositoryImpl
+import com.pulselink.data.contacts.DeviceContactsRepository
 import com.pulselink.data.db.AlertEventDao
 import com.pulselink.data.db.AlertRepositoryImpl
 import com.pulselink.data.db.BlockedContactDao
@@ -129,6 +130,11 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideSmsStore(@ApplicationContext context: Context): SmsStore = SmsStore(context)
+
+    @Provides
+    @Singleton
+    fun provideDeviceContactsRepository(@ApplicationContext context: Context): DeviceContactsRepository =
+        DeviceContactsRepository(context)
 
     @Provides
     @Singleton

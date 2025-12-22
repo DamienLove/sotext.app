@@ -146,10 +146,20 @@ Current ad behavior in app:
 2025-12-21
 - Verified fixes for GitHub issues #168 (Beacon inbox), #149 (SMS sending), #129 (Default SMS check), #127 (iOS build), #67 (Firebase backend).
 - Fixed issue #91 (Squashed text input) by adding `android:windowSoftInputMode="adjustResize"` to `BeaconInboxActivity` in `androidApp/src/main/AndroidManifest.xml`.
-- Beacon inbox usability: added All-messages search (Telephony body search) + live results in PulseLink Beacon inbox, plus “New message” FAB that opens a compose picker. New thread loads by address even if no existing thread id.
+- Beacon inbox usability: added All-messages search (Telephony body search) + live results in PulseLink Beacon inbox, plus "New message" FAB that opens a compose picker. New thread loads by address even if no existing thread id.
 - Default-SMS switch now triggers thread refresh in PulseLink Beacon inbox and beaconApp so existing threads appear immediately after role/permission change.
 - Release v59 (free/pro/premium): versionCode/Name bumped to 59; rebuilt AABs and copied to `disposable_aabs/pulselink-{free|pro|premium}-v59.aab`; release notes saved at `disposable_aabs/release-notes-v59.txt`.
 - Build used temporary ads dependency downgrade + mediation adapter disable (play-services-ads 22.6.0) due to InMobi repo DNS/Kotlin metadata; restored build.gradle.kts after bundle output.
+
+2025-12-22
+- Beacon inbox fixes: SMS permissions now requested for all tiers (MainActivity + BeaconInboxActivity), SmsRepository read/write gating split so READ_SMS or default role shows history, and Telephony.Threads empty fallback now builds threads from Telephony.Sms.
+- New message compose: added device contacts loader + viewmodel, contacts permission banner, and merged trusted + device contacts into a unified recipient list (trusted first) for full phone book search.
+- Beacon theme icons: added per-theme launcher icons from branding and wired Beacon icon switching to follow selected theme (new activity aliases + BeaconIconManager).
+- Release v60 (free/pro/premium): versionCode/Name bumped to 60; rebuilt AABs and copied to `disposable_aabs/pulselink-{free|pro|premium}-v60.aab`.
+- Build used temporary ads dependency downgrade + mediation adapter disable (play-services-ads 22.6.0) due to InMobi repo DNS/Kotlin metadata; restored build.gradle.kts after bundle output.
+- Release notes saved to `disposable_aabs/release-notes-v60.txt`.
+- Beacon inbox follow-ups: message input now respects navigation bar/IME insets; All messages tab now includes archived threads and inbox refresh no longer caps thread count.
+- Archive UX: added Archived tab in Beacon bottom nav, swipe left/right now unarchives vs archives based on state, and thread screen top bar includes archive/unarchive action.
 
 2025-12-20
 - Default-SMS detection hardened (deduped checks, resume refresh, retry) in PulseLink + beaconApp; Beacon default request now uses role intent launcher.
@@ -192,3 +202,25 @@ Current ad behavior in app:
 
 2025-12-20
 - Fixed SMS inbox visibility when default SMS is set by using RoleManager (Android Q+) fallback in SmsRepository for both androidApp and beaconApp.
+
+2025-12-22
+- Release v61 (free/pro/premium): versionCode/Name bumped to 61; rebuilt AABs and copied to disposable_aabs/pulselink-{free|pro|premium}-v61.aab; release notes saved at disposable_aabs/release-notes-v61.txt.
+- Build required temporary ads dependency downgrade + mediation adapter disable (play-services-ads 22.6.0) due to InMobi repo DNS; restored build.gradle.kts after bundle output.
+2025-12-22
+- Ads resolution fix: removed InMobi repo (SDK resolves from mavenCentral), added exclusiveContent filters for Pangle and ironSource repos, and bumped adapters (Meta 6.21.0.0, InMobi 11.1.0.0, Pangle 7.8.0.8.0, ironSource 9.2.0.0). Verified Gradle resolution via :androidApp:mapFreeReleaseSourceSetPaths.
+
+2025-12-22
+- Attempted ./gradlew bundleFreeRelease bundleProRelease bundlePremiumRelease to regenerate v61 AABs; build failed at kaptProReleaseKotlin/kaptPremiumReleaseKotlin with Room metadata mismatch (Kotlin 2.2.10 metadata 2.2.0 vs Room 2.6.1 max 2.0.0). Existing v61 AABs remain in disposable_aabs (timestamps 2025-12-21).
+
+2025-12-22
+- Bumped Room to 2.7.0 and Hilt/Dagger to 2.57.2 (plugin + runtime/compiler/testing) to support Kotlin 2.2 metadata; updated AppOpenAd.load call for play-services-ads 24.9.0 API (removed orientation arg).
+- Rebuilt release bundles; refreshed v61 AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v61.aab (timestamps ~01:50).
+
+2025-12-22
+- Built debug APKs (free/pro/premium) via ./gradlew assembleFreeDebug assembleProDebug assemblePremiumDebug; outputs under androidApp/build/outputs/apk/{free,pro,premium}/debug/.
+
+2025-12-22
+- Temporarily disabled crash detection startup; removed FOREGROUND_SERVICE_LOCATION and USE_FULL_SCREEN_INTENT permissions, removed crash service foregroundServiceType=location, dropped location updates and full-screen intent (now regular notification).
+
+2025-12-22
+- Release v62 (free/pro/premium): crash detection temporarily disabled (no full-screen intent; no foreground location service/permission). Rebuilt AABs and copied to disposable_aabs/pulselink-{free|pro|premium}-v62.aab; release notes saved at disposable_aabs/release-notes-v62.txt.
