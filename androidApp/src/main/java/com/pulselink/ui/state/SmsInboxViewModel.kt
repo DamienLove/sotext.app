@@ -112,6 +112,9 @@ class SmsThreadViewModel @Inject constructor(
     private val contactRepository: ContactRepository,
     private val smsSender: SmsSender
 ) : ViewModel() {
+    private companion object {
+        const val MESSAGE_LIMIT = Int.MAX_VALUE
+    }
     private val _messages = MutableStateFlow<List<SmsMessageItem>>(emptyList())
     val messages: StateFlow<List<SmsMessageItem>> = _messages
     private val _contact = MutableStateFlow<Contact?>(null)
@@ -137,8 +140,8 @@ class SmsThreadViewModel @Inject constructor(
             activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
         }
         val msgs = when {
-            activeThreadId != null -> smsRepository.messagesForThread(activeThreadId!!)
-            activeAddress.isNotBlank() -> smsRepository.messagesForAddress(activeAddress)
+            activeThreadId != null -> smsRepository.messagesForThread(activeThreadId!!, limit = MESSAGE_LIMIT)
+            activeAddress.isNotBlank() -> smsRepository.messagesForAddress(activeAddress, limit = MESSAGE_LIMIT)
             else -> emptyList()
         }
         _messages.value = msgs

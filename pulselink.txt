@@ -251,3 +251,6 @@ Current ad behavior in app:
 
 2025-12-23
 - Release v65 (free/pro/premium): versionCode/Name bumped to 65; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v65.aab; release notes saved at disposable_aabs/release-notes-v65.txt.
+
+2025-12-23
+- Beacon inbox loads full device history (removed thread/message caps). Release v66: versionCode/Name 66; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v66.aab; release notes saved at disposable_aabs/release-notes-v66.txt.
