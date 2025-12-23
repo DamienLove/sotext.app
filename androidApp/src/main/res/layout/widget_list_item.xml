@@ -15,6 +15,15 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
+        <!-- Unread Indicator (Dot) -->
+        <ImageView
+            android:id="@+id/widget_unread_indicator"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="6dp"
+            android:src="@drawable/widget_status_dot_blue"
+            android:visibility="gone" />
+
         <!-- Avatar/Initials -->
         <ImageView
             android:id="@+id/widget_item_avatar"

@@ -448,6 +448,7 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="widget_role_emergency">Emergency contact</string>
     <string name="widget_role_checkin">Check-in contact</string>
     <string name="widget_role_unknown">Contact</string>
+    <string name="action_new_message">New Message</string>
 
     <!-- Assistant Strings -->
     <string name="assistant_shortcut_emergency_short">PulseLink emergency</string>
