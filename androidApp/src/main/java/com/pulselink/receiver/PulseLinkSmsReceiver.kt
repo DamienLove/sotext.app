@@ -48,6 +48,11 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
+                try {
+                    smsStore.insertIncoming(origin, body, System.currentTimeMillis())
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to insert incoming SMS from $origin", e)
+                }
                 val completed = withTimeoutOrNull(8_000L) {
                     val parsed = SmsCodec.parse(body)
                     if (parsed != null) {
@@ -61,11 +66,6 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                         }
                         if (otpCode != null) {
                             OtpNotifier.notify(context, origin, otpCode)
-                        }
-                        try {
-                            smsStore.insertIncoming(origin, body, System.currentTimeMillis())
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to insert incoming SMS from $origin", e)
                         }
                         handleTrustedSms(origin, body)
                     }
