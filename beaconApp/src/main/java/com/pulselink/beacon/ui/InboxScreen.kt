@@ -64,6 +64,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.Role
 import com.pulselink.beacon.data.InboxIconVariant
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsThreadItem
@@ -92,9 +95,22 @@ fun InboxScreen(
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     var searchText by rememberSaveable { mutableStateOf("") }
     var navigatedFromSearch by remember { mutableStateOf(false) }
     val iconTint = theme.accentColor
+
+    val filtered = remember(filter, threads) {
+        threads.filter { thread ->
+            when (filter) {
+                InboxFilter.ALL -> true
+                InboxFilter.READ -> !thread.unread
+                InboxFilter.UNREAD -> thread.unread
+                InboxFilter.ARCHIVED -> false // Beacon doesn't support archived yet
+            }
+        }
+    }
+    val unreadCount = remember(threads) { threads.count { it.unread } }
     val mutedTint = theme.frameColor.copy(alpha = 0.7f)
 
     LaunchedEffect(searchState) {
@@ -183,6 +199,13 @@ fun InboxScreen(
                 )
             )
 
+            TabsRow(
+                filter = filter,
+                unreadCount = unreadCount,
+                onFilterChange = { filter = it },
+                theme = theme
+            )
+
             when (searchState) {
                 is SearchResultState.Messages -> SearchResults(
                     hits = searchState.hits,
@@ -267,7 +290,7 @@ fun InboxScreen(
                 }
             }
 
-            if (threads.isEmpty()) {
+            if (filtered.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -283,7 +306,11 @@ fun InboxScreen(
                         )
                         Text("No messages yet")
                         Text(
-                            "New texts will appear here once Beacon is the default SMS app.",
+                            when (filter) {
+                                InboxFilter.UNREAD -> "No unread messages."
+                                InboxFilter.READ -> "No read messages."
+                                else -> "New texts will appear here once Beacon is the default SMS app."
+                            },
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -295,7 +322,7 @@ fun InboxScreen(
                         .padding(horizontal = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(threads, key = { _, item -> item.threadId }) { index, item ->
+                    itemsIndexed(filtered, key = { _, item -> item.threadId }) { index, item ->
                         if (index == 3) {
                             NativeAdCard(
                                 modifier = Modifier
@@ -451,3 +478,62 @@ private fun iconForVariant(variant: InboxIconVariant) = when (variant) {
     InboxIconVariant.Shield -> Icons.Default.Shield
     InboxIconVariant.Minimal -> Icons.Default.Inbox
 }
+
+@Composable
+private fun TabsRow(
+    filter: InboxFilter,
+    unreadCount: Int,
+    onFilterChange: (InboxFilter) -> Unit,
+    theme: ThemePalette
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectableGroup()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
+            onFilterChange(InboxFilter.ALL)
+        }
+        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
+            onFilterChange(InboxFilter.READ)
+        }
+        TabText(
+            label = "Unread${if (unreadCount > 0) " ($unreadCount)" else ""}",
+            selected = filter == InboxFilter.UNREAD,
+            theme = theme
+        ) {
+            onFilterChange(InboxFilter.UNREAD)
+        }
+    }
+}
+
+@Composable
+private fun TabText(label: String, selected: Boolean, theme: ThemePalette, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.selectable(
+            selected = selected,
+            role = Role.Tab,
+            onClick = onClick
+        )
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) theme.frameColor else theme.frameColor.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .height(2.dp)
+                .fillMaxWidth(0.8f)
+                .background(if (selected) theme.accentColor else Color.Transparent)
+        )
+    }
+}
+
+private enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED }
