@@ -50,9 +50,7 @@ class SmsRepository @Inject constructor(
         val archivedIds = runCatching { archivedThreadDao.getAllIds() }.getOrDefault(emptyList())
         val projection = arrayOf(
             Telephony.Threads._ID,
-            Telephony.Threads.SNIPPET,
             Telephony.Threads.DATE,
-            Telephony.Threads.RECIPIENT_IDS,
             Telephony.Threads.MESSAGE_COUNT,
             Telephony.Threads.READ
         )
@@ -69,30 +67,21 @@ class SmsRepository @Inject constructor(
         cursor ?: return emptyList()
         cursor.use { c ->
             val idIdx = c.getColumnIndexOrThrow(Telephony.Threads._ID)
-            val snippetIdx = c.getColumnIndexOrThrow(Telephony.Threads.SNIPPET)
-            val dateIdx = c.getColumnIndexOrThrow(Telephony.Threads.DATE)
             val readIdx = c.getColumnIndexOrThrow(Telephony.Threads.READ)
-            val addressIdx = c.getColumnIndexOrThrow(Telephony.Threads.RECIPIENT_IDS)
             val items = mutableListOf<SmsThreadItem>()
             var count = 0
             while (c.moveToNext() && count < limit) {
                 val threadId = c.getLong(idIdx)
-                var snippet = c.getString(snippetIdx) ?: ""
-                var ts = c.getLong(dateIdx)
-                if (SmsCodec.isPulseLinkPayload(snippet)) {
-                    // Try to fetch the latest valid message for this thread
-                    val fallback = getLastValidMessageForThread(threadId)
-                    if (fallback != null) {
-                        snippet = fallback.body
-                        ts = fallback.timestamp
-                    } else {
-                        // If no valid message found, skip this thread
-                        continue
-                    }
-                }
+
+                // Always fetch the latest valid message for this thread to ensure we get
+                // the correct address (Telephony.Threads does not provide it directly)
+                // and to filter out internal PulseLink payloads.
+                val lastMsg = getLastValidMessageForThread(threadId) ?: continue
+
+                val snippet = lastMsg.body
+                val ts = lastMsg.timestamp
                 val unread = c.getInt(readIdx) == 0
-                val rawAddress = c.getString(addressIdx)
-                val address = resolveAddress(rawAddress)
+                val address = resolveAddress(lastMsg.address)
                 val isArchived = archivedIds.contains(threadId)
 
                 val parts = address.split(" · ")
@@ -515,6 +504,7 @@ class SmsRepository @Inject constructor(
 
     private fun getLastValidMessageForThread(threadId: Long): SmsMessageItem? {
         val projection = arrayOf(
+            Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
             Telephony.Sms.DATE,
             Telephony.Sms.TYPE
@@ -530,19 +520,21 @@ class SmsRepository @Inject constructor(
         }.getOrNull() ?: return null
 
         cursor.use { c ->
+            val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
             val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
             val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
             val typeIdx = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
             while (c.moveToNext()) {
                 val body = c.getString(bodyIdx) ?: ""
                 if (!SmsCodec.isPulseLinkPayload(body)) {
+                    val address = c.getString(addrIdx) ?: ""
                     val ts = c.getLong(dateIdx)
                     val type = c.getInt(typeIdx)
                     val outgoing = type == Telephony.Sms.MESSAGE_TYPE_SENT || type == Telephony.Sms.MESSAGE_TYPE_OUTBOX
                     return SmsMessageItem(
                         id = -1, // Not needed for snippet
                         threadId = threadId,
-                        address = "", // Not needed for snippet
+                        address = address,
                         body = body,
                         timestamp = ts,
                         outgoing = outgoing

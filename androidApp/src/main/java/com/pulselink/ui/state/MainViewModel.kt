@@ -68,8 +68,12 @@ class MainViewModel @Inject constructor(
     private val naturalLanguageCommandProcessor: NaturalLanguageCommandProcessor,
     private val firebaseAuthManager: FirebaseAuthManager,
     private val firestore: FirebaseFirestore,
+    private val functions: com.google.firebase.functions.FirebaseFunctions,
     private val widgetStateManager: WidgetStateManager
 ) : ViewModel() {
+
+    private val _deleteAccountState = MutableStateFlow<DeleteAccountState>(DeleteAccountState.Idle)
+    val deleteAccountState: StateFlow<DeleteAccountState> = _deleteAccountState
 
     private val dispatching = MutableStateFlow(false)
     private val lastMessage = MutableStateFlow<String?>(null)
@@ -232,6 +236,24 @@ class MainViewModel @Inject constructor(
             contactRepository.delete(id)
             messageRepository.clear(id)
         }
+    }
+
+    fun deleteAccount() {
+        viewModelScope.launch {
+            _deleteAccountState.value = DeleteAccountState.Loading
+            try {
+                functions.getHttpsCallable("deleteAccount").call().await()
+                _deleteAccountState.value = DeleteAccountState.Success
+                firebaseAuthManager.signOut()
+            } catch (e: Exception) {
+                Log.e(TAG, "Account deletion failed", e)
+                _deleteAccountState.value = DeleteAccountState.Error(e.message ?: "Unknown error")
+            }
+        }
+    }
+
+    fun resetDeleteAccountState() {
+        _deleteAccountState.value = DeleteAccountState.Idle
     }
 
     fun triggerEmergency() {
@@ -1015,6 +1037,13 @@ class MainViewModel @Inject constructor(
         object Ready : CallInitiationResult()
         object Timeout : CallInitiationResult()
         object Failure : CallInitiationResult()
+    }
+
+    sealed interface DeleteAccountState {
+        object Idle : DeleteAccountState
+        object Loading : DeleteAccountState
+        object Success : DeleteAccountState
+        data class Error(val message: String) : DeleteAccountState
     }
 
     fun clearDndStatusMessage() {

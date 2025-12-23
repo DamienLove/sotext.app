@@ -22,9 +22,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -36,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,21 +52,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.pulselink.domain.model.PulseLinkSettings
+import com.pulselink.ui.state.MainViewModel.DeleteAccountState
 import kotlin.random.Random
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileSettingsScreen(
     settings: PulseLinkSettings,
+    deleteAccountState: DeleteAccountState,
     onSaveName: (String) -> Unit,
     onSaveAvatar: (String?) -> Unit,
+    onDeleteAccount: () -> Unit,
+    onResetDeleteAccountState: () -> Unit,
     onBack: () -> Unit
 ) {
     var name by remember { mutableStateOf(settings.ownerName) }
     var avatarUrl by remember { mutableStateOf(settings.ownerAvatarUrl ?: "") }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showErrorDialog by remember { mutableStateOf<String?>(null) }
 
     val initialPresets = remember {
         listOf(
@@ -282,6 +292,87 @@ fun ProfileSettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            TextButton(
+                onClick = { showDeleteConfirm = true }
+            ) {
+                Text(
+                    text = "Delete Account",
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Account?") },
+            text = { Text("This action cannot be undone. All your data will be permanently deleted.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirm = false
+                        onDeleteAccount()
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (deleteAccountState is DeleteAccountState.Loading) {
+        Dialog(onDismissRequest = { /* Prevent dismissal */ }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator()
+                    Text("Deleting account...")
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(deleteAccountState) {
+        if (deleteAccountState is DeleteAccountState.Error) {
+            showErrorDialog = deleteAccountState.message
+        }
+    }
+
+    if (showErrorDialog != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showErrorDialog = null
+                onResetDeleteAccountState()
+            },
+            title = { Text("Error") },
+            text = { Text(showErrorDialog ?: "Unknown error") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showErrorDialog = null
+                        onResetDeleteAccountState()
+                    }
+                ) {
+                    Text("OK")
+                }
+            }
+        )
     }
 }

@@ -101,6 +101,7 @@ class BeaconInboxActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
+                val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
                 var isCheckingDefaultSms by remember { mutableStateOf(false) }
                 val privateThreads = state.settings.privateThreadIds.toSet()
@@ -545,8 +546,11 @@ class BeaconInboxActivity : ComponentActivity() {
                                 composable("profile_settings") {
                                     ProfileSettingsScreen(
                                         settings = state.settings,
+                                        deleteAccountState = deleteAccountState,
                                         onSaveName = { viewModel.setOwnerName(it) },
                                         onSaveAvatar = { viewModel.setOwnerAvatarUrl(it) },
+                                        onDeleteAccount = { viewModel.deleteAccount() },
+                                        onResetDeleteAccountState = { viewModel.resetDeleteAccountState() },
                                         onBack = { navController.popBackStack() }
                                     )
                                 }
