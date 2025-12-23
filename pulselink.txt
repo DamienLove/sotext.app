@@ -254,3 +254,6 @@ Current ad behavior in app:
 
 2025-12-23
 - Beacon inbox loads full device history (removed thread/message caps). Release v66: versionCode/Name 66; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v66.aab; release notes saved at disposable_aabs/release-notes-v66.txt.
+
+2025-12-23
+- Beacon inbox read fix: allow READ_SMS-only access + fallback to Telephony.Sms when Threads is empty; refreshes after default-SMS changes. Release v67 (free/pro/premium): versionCode/Name 67; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v67.aab; release notes saved at disposable_aabs/release-notes-v67.txt.

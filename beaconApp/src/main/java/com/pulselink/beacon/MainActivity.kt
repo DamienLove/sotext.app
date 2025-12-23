@@ -75,6 +75,7 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
     var isCheckingDefaultSms by remember { mutableStateOf(false) }
     var defaultSmsCheckJob by remember { mutableStateOf<Job?>(null) }
     var missingPerms by remember { mutableStateOf(requiredPermissions(context)) }
+    var missingReadPerms by remember { mutableStateOf(requiredReadPermissions(context)) }
     val refreshDefaultSms = remember {
         suspend {
             val latest = checkDefaultSmsWithRetry(context)
@@ -89,6 +90,7 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
             try {
                 refreshDefaultSms()
                 missingPerms = requiredPermissions(context)
+                missingReadPerms = requiredReadPermissions(context)
             } finally {
                 isCheckingDefaultSms = false
                 defaultSmsCheckJob = null
@@ -100,6 +102,7 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) {
         missingPerms = requiredPermissions(context)
+        missingReadPerms = requiredReadPermissions(context)
     }
 
     val defaultSmsLauncher = rememberLauncherForActivityResult(
@@ -112,8 +115,8 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
         launchDefaultSmsCheck()
     }
 
-    LaunchedEffect(isDefaultSms, missingPerms) {
-        if (isDefaultSms && missingPerms.isEmpty()) {
+    LaunchedEffect(isDefaultSms, missingReadPerms) {
+        if (isDefaultSms || missingReadPerms.isEmpty()) {
             vm.refreshThreads()
         }
     }
@@ -286,6 +289,13 @@ private fun requiredPermissions(context: android.content.Context): List<String> 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) listOf(android.Manifest.permission.POST_NOTIFICATIONS) else emptyList()
     val all = basePerms + notif
     return all.filter {
+        ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+    }
+}
+
+private fun requiredReadPermissions(context: android.content.Context): List<String> {
+    val readPerms = listOf(android.Manifest.permission.READ_SMS)
+    return readPerms.filter {
         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
     }
 }
