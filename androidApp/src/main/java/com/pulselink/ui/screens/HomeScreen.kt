@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
@@ -561,27 +562,32 @@ private fun BeaconHintCard(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
+                Icon(
+                    imageVector = Icons.Filled.Apps,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
                 Text(
-                    text = "Beacon inbox",
+                    text = stringResource(R.string.beacon_hint_title),
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 IconButton(onClick = onDismiss) {
-                    Icon(imageVector = Icons.Filled.Close, contentDescription = "Dismiss")
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = stringResource(R.string.beacon_hint_dismiss_content_description))
                 }
             }
             Text(
-                text = "Use Beacon to manage SMS in PulseLink. Keep it on, or disable if you prefer another app.",
+                text = stringResource(R.string.beacon_hint_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onDisable, modifier = Modifier.weight(1f)) {
-                    Text("Disable")
+                    Text(stringResource(R.string.beacon_hint_action_disable))
                 }
                 Button(onClick = onUse, modifier = Modifier.weight(1f)) {
-                    Text("Use Beacon")
+                    Text(stringResource(R.string.beacon_hint_action_use))
                 }
             }
         }
