@@ -46,6 +46,7 @@
   font-family: inherit;
   font-size: inherit;
   color: inherit;
+  transition: background-color 0.2s ease;
 }
 
 .thread-item:focus-visible {
