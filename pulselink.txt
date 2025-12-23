@@ -264,3 +264,13 @@ Current ad behavior in app:
 2025-12-23
 - Web portal restyled to Pro/Premium palette with logo on login/home, sidebar navigation, and a settings screen with account info + web preferences.
 - Beacon inbox header now shows a beacon icon that fades as you scroll (PulseLink SmsInboxScreen + beaconApp InboxScreen).
+
+2025-12-23
+- Web portal expanded with PulseLink + Beacon home tiles, trusted contacts CRUD, public profile editor, theme presets/editor, and remote settings toggles (web access + auto-update + time format).
+- Theme + settings now sync via Firestore to PulseLink (MainViewModel listens + pushes theme/remote settings).
+
+2025-12-23
+- Deployed Firebase Hosting for web portal (public web/dist) to pulselink-24899; Hosting URL now live. Configure custom subdomain via Firebase Hosting custom domain settings.
+
+2025-12-23
+- Release v68 (free/pro/premium): versionCode/Name bumped to 68; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v68.aab; release notes saved at disposable_aabs/release-notes-v68.txt.
