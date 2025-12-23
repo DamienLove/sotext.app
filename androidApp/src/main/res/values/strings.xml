@@ -199,6 +199,11 @@
     <string name="settings_beacon_enabled_subtitle">Beacon icon is enabled in the app drawer and SMS inbox is ready.</string>
     <string name="settings_beacon_action_enable">Enable</string>
     <string name="settings_beacon_action_open">Open</string>
+    <string name="beacon_hint_title">Beacon inbox in app drawer</string>
+    <string name="beacon_hint_description">A Beacon inbox icon has been added to your app drawer. Tap it anytime to access your SMS messages directly. You can disable this icon if you prefer.</string>
+    <string name="beacon_hint_action_use">Use Beacon</string>
+    <string name="beacon_hint_action_disable">Disable</string>
+    <string name="beacon_hint_dismiss_content_description">Dismiss</string>
     <string name="emergency_alert_title">%1$s triggered an emergency</string>
     <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → PulseLink → Notifications and re-enable bypass.</string>
     <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>
