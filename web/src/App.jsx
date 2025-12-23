@@ -1,8 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { auth, db } from './firebase';
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import './App.css';
+
+// ⚡ Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
+// when only the selection state changes.
+const ThreadItem = memo(({ thread, isActive, onSelect }) => (
+  <button
+    role="button"
+    tabIndex={0}
+    className={`thread-item ${isActive ? 'active' : ''}`}
+    onClick={() => onSelect(thread)}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelect(thread);
+      }
+    }}
+    aria-current={isActive ? 'true' : undefined}
+    aria-label={`Select conversation with ${thread.address}`}
+  >
+    <div className="thread-name">{thread.address}</div>
+    <div className="thread-snippet">{thread.snippet}</div>
+  </button>
+));
+
+ThreadItem.displayName = 'ThreadItem';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -98,24 +122,12 @@ function App() {
         </div>
         <div className="thread-list">
           {threads.map(thread => (
-            <button
+            <ThreadItem
               key={thread.id}
-              role="button"
-              tabIndex={0}
-              className={`thread-item ${selectedThread?.id === thread.id ? 'active' : ''}`}
-              onClick={() => setSelectedThread(thread)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setSelectedThread(thread);
-                }
-              }}
-              aria-current={selectedThread?.id === thread.id ? 'true' : undefined}
-              aria-label={`Select conversation with ${thread.address}`}
-            >
-              <div className="thread-name">{thread.address}</div>
-              <div className="thread-snippet">{thread.snippet}</div>
-            </button>
+              thread={thread}
+              isActive={selectedThread?.id === thread.id}
+              onSelect={setSelectedThread}
+            />
           ))}
         </div>
       </div>
