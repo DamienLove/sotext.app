@@ -141,7 +141,7 @@ interface ArchivedThreadDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -231,6 +231,12 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("UPDATE contacts SET allowRemoteOverride = 1 WHERE allowRemoteOverride = 0")
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_3_4,
             MIGRATION_4_5,
@@ -241,7 +247,8 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             MIGRATION_9_10,
             MIGRATION_10_11,
             MIGRATION_11_12,
-            MIGRATION_12_13
+            MIGRATION_12_13,
+            MIGRATION_13_14
         )
 
         private fun addColumnIfMissing(
