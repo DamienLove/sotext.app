@@ -49,6 +49,24 @@ final class BeaconViewModel: ObservableObject {
         conversations[contact.id] ?? []
     }
 
+    // MARK: - Filters
+
+    var inboxContacts: [BeaconContactCard] {
+        contacts.filter { !$0.isPrivate }
+    }
+
+    var trustedContacts: [BeaconContactCard] {
+        contacts.filter { $0.isTrusted && !$0.isPrivate }
+    }
+
+    var favoriteContacts: [BeaconContactCard] {
+        contacts.filter { $0.isFavorite && !$0.isPrivate }
+    }
+
+    var privateContacts: [BeaconContactCard] {
+        contacts.filter { $0.isPrivate }
+    }
+
     func sendMessage(to contact: BeaconContactCard, text: String) {
         let message = BeaconConversationMessage(
             sender: "You",

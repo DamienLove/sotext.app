@@ -13,11 +13,26 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            InboxTab(viewModel: viewModel)
+            BeaconTab(viewModel: viewModel, filter: .inbox)
                 .tabItem {
                     Label("Inbox", systemImage: "bubble.left.and.bubble.right.fill")
                 }
                 .badge(isPro ? "Pro" : nil)
+
+            BeaconTab(viewModel: viewModel, filter: .trusted)
+                .tabItem {
+                    Label("Trusted", systemImage: "shield.fill")
+                }
+
+            BeaconTab(viewModel: viewModel, filter: .favorites)
+                .tabItem {
+                    Label("Favorites", systemImage: "star.fill")
+                }
+
+            BeaconTab(viewModel: viewModel, filter: .private)
+                .tabItem {
+                    Label("Private", systemImage: "lock.fill")
+                }
 
             SettingsTab()
                 .tabItem {
@@ -27,8 +42,27 @@ struct ContentView: View {
     }
 }
 
-private struct InboxTab: View {
+enum BeaconTabFilter {
+    case inbox, trusted, favorites, `private`
+
+    var title: String {
+        switch self {
+        case .inbox: return "Beacon Inbox"
+        case .trusted: return "Trusted"
+        case .favorites: return "Favorites"
+        case .private: return "Private Safe"
+        }
+    }
+}
+
+private struct BeaconTab: View {
     @ObservedObject var viewModel: BeaconViewModel
+    let filter: BeaconTabFilter
+    @State private var searchText = ""
+    @State private var pinInput = ""
+    @State private var isUnlocked = false
+    @State private var showPinSheet = false
+    @AppStorage("privateSafePin") private var storedPin: String = ""
 
     var isPro: Bool {
         #if PRO
@@ -38,24 +72,66 @@ private struct InboxTab: View {
         #endif
     }
 
+    var filteredContacts: [BeaconContactCard] {
+        let base: [BeaconContactCard]
+        switch filter {
+        case .inbox: base = viewModel.inboxContacts
+        case .trusted: base = viewModel.trustedContacts
+        case .favorites: base = viewModel.favoriteContacts
+        case .private: base = viewModel.privateContacts
+        }
+
+        if searchText.isEmpty {
+            return base
+        } else {
+            return base.filter { $0.name.localizedCaseInsensitiveContains(searchText) || $0.address.contains(searchText) }
+        }
+    }
+
     var body: some View {
         NavigationStack {
-            List(viewModel.contacts) { contact in
-                NavigationLink(value: contact) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(contact.name).font(.headline)
-                            Text(contact.role).font(.caption).foregroundStyle(.secondary)
+            Group {
+                if filter == .private && !isUnlocked {
+                    VStack(spacing: 20) {
+                        Image(systemName: "lock.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundStyle(.secondary)
+                        Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
+                            .font(.title2.bold())
+                        Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
+                            showPinSheet = true
                         }
-                        Spacer()
-                        if contact.unread > 0 {
-                            Text("\(contact.unread)")
-                                .font(.caption.bold())
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.blue)
-                                .clipShape(Capsule())
+                        .buttonStyle(.borderedProminent)
+                    }
+                } else {
+                    List(filteredContacts) { contact in
+                        NavigationLink(value: contact) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(contact.name).font(.headline)
+                                    Text(contact.role).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if contact.unread > 0 {
+                                    Text("\(contact.unread)")
+                                        .font(.caption.bold())
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.blue)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                        }
+                    }
+                    .searchable(text: $searchText)
+                    .overlay {
+                        if filteredContacts.isEmpty {
+                            ContentUnavailableView(
+                                "No conversations",
+                                systemImage: "bubble.left.and.bubble.right",
+                                description: Text("Start a new chat on your Android device.")
+                            )
                         }
                     }
                 }
@@ -69,7 +145,45 @@ private struct InboxTab: View {
                     }
                 )
             }
-            .navigationTitle(isPro ? "Beacon Inbox Pro" : "Beacon Inbox")
+            .navigationTitle(isPro && filter == .inbox ? "\(filter.title) Pro" : filter.title)
+            .sheet(isPresented: $showPinSheet) {
+                NavigationStack {
+                    VStack(spacing: 20) {
+                        Text(storedPin.isEmpty ? "Create a PIN" : "Enter PIN")
+                            .font(.headline)
+                        SecureField("PIN", text: $pinInput)
+                            .keyboardType(.numberPad)
+                            .padding()
+                            .background(Color(.secondarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding(.horizontal)
+
+                        Button(storedPin.isEmpty ? "Save PIN" : "Unlock") {
+                            if storedPin.isEmpty {
+                                if pinInput.count >= 4 {
+                                    storedPin = pinInput
+                                    isUnlocked = true
+                                    showPinSheet = false
+                                    pinInput = ""
+                                }
+                            } else {
+                                if pinInput == storedPin {
+                                    isUnlocked = true
+                                    showPinSheet = false
+                                    pinInput = ""
+                                } else {
+                                    // Shake animation or error feedback could go here
+                                    pinInput = ""
+                                }
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(pinInput.count < 4)
+                    }
+                    .padding()
+                    .presentationDetents([.height(300)])
+                }
+            }
         }
     }
 }
