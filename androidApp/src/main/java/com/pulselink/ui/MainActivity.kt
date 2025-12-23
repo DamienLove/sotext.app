@@ -1217,10 +1217,14 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("profile_settings") {
+                        val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
                         ProfileSettingsScreen(
                             settings = state.settings,
+                            deleteAccountState = deleteAccountState,
                             onSaveName = viewModel::setOwnerName,
                             onSaveAvatar = viewModel::setOwnerAvatarUrl,
+                            onDeleteAccount = viewModel::deleteAccount,
+                            onResetDeleteAccountState = viewModel::resetDeleteAccountState,
                             onBack = { navController.popBackStack() }
                         )
                     }
