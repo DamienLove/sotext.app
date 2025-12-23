@@ -58,6 +58,17 @@ class PulseLinkWidgetProvider : AppWidgetProvider() {
         views.setOnClickPendingIntent(R.id.widget_settings_button, settingsPendingIntent)
         views.setOnClickPendingIntent(R.id.widget_app_icon, settingsPendingIntent)
 
+        // Compose Action
+        val composeIntent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_SENDTO
+            data = Uri.parse("sms:")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val composePendingIntent = PendingIntent.getActivity(
+            context, 4, composeIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        views.setOnClickPendingIntent(R.id.widget_compose_button, composePendingIntent)
+
         // Actions
         val emergencyIntent = Intent(context, PulseLinkWidgetActionReceiver::class.java).apply {
             action = PulseLinkWidgetActionReceiver.ACTION_EMERGENCY
