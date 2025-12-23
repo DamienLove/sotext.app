@@ -31,6 +31,7 @@ class PulseLinkApp : Application(), Configuration.Provider {
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var firebaseAuthManager: FirebaseAuthManager
     @Inject lateinit var remoteConfigService: RemoteConfigService
+    @Inject lateinit var smsRelayService: com.pulselink.data.sms.SmsRelayService
 
     override val workManagerConfiguration: Configuration by lazy {
         Configuration.Builder()
@@ -43,6 +44,7 @@ class PulseLinkApp : Application(), Configuration.Provider {
         FirebaseApp.initializeApp(this)
         // Touch auth early so listeners register before any UI state checks
         firebaseAuthManager.currentUser()
+        smsRelayService.start()
         CoroutineScope(Dispatchers.IO).launch {
             remoteConfigService.fetchAndActivate()
         }

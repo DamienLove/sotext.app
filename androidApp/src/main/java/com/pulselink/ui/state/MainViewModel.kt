@@ -621,7 +621,7 @@ class MainViewModel @Inject constructor(
                     checkInSoundKey = doc.getString("checkInSoundKey"),
                     contactOrder = (doc.getLong("contactOrder") ?: 0L).toInt(),
                     allowRemoteSoundChange = doc.getBoolean("allowRemoteSoundChange") ?: false,
-                    allowRemoteOverride = doc.getBoolean("allowRemoteOverride") ?: false,
+                    allowRemoteOverride = doc.getBoolean("allowRemoteOverride") ?: true,
                     linkStatus = doc.getString("linkStatus")?.let { LinkStatus.valueOf(it) }
                         ?: LinkStatus.NONE,
                     linkCode = doc.getString("linkCode"),

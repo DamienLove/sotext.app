@@ -130,29 +130,26 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // General
-            CollapsibleSettingsSection(
-                title = "General",
-                initiallyExpanded = true
-            ) {
-                SettingsToggleRow(
-                    title = "Share location in alerts",
-                    subtitle = null,
-                    checked = settings.includeLocation,
-                    onCheckedChange = onToggleIncludeLocation
-                )
-                SettingsToggleRow(
-                    title = "Crash Detection",
-                    subtitle = "Alert trusted contacts if a vehicle crash is detected.",
-                    checked = settings.crashDetectionEnabled,
-                    onCheckedChange = onToggleCrashDetection
-                )
-                SettingsToggleRow(
-                    title = "Auto-allow remote sound change",
-                    subtitle = null,
-                    checked = settings.autoAllowRemoteSoundChange,
-                    onCheckedChange = onToggleAutoAllowRemoteSoundChange
-                )
-            }
+            SettingsSectionHeader("General")
+            SettingsToggleRow(
+                title = "Share location in alerts",
+                subtitle = null,
+                checked = settings.includeLocation,
+                onCheckedChange = onToggleIncludeLocation
+            )
+            SettingsToggleRow(
+                title = "Crash Detection",
+                subtitle = "Alert trusted contacts if a vehicle crash is detected. (Temporarily unavailable)",
+                checked = settings.crashDetectionEnabled,
+                enabled = false,
+                onCheckedChange = onToggleCrashDetection
+            )
+            SettingsToggleRow(
+                title = "Auto-allow remote sound change",
+                subtitle = null,
+                checked = settings.autoAllowRemoteSoundChange,
+                onCheckedChange = onToggleAutoAllowRemoteSoundChange
+            )
 
             // Notifications & Tones
             CollapsibleSettingsSection(
@@ -442,6 +439,7 @@ private fun SettingsToggleRow(
     title: String,
     subtitle: String?,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Surface(
@@ -449,12 +447,13 @@ private fun SettingsToggleRow(
             .fillMaxWidth()
             .toggleable(
                 value = checked,
+                enabled = enabled,
                 onValueChange = onCheckedChange,
                 role = Role.Switch
             ),
         shape = RoundedCornerShape(18.dp),
         tonalElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (enabled) 0.6f else 0.38f)
     ) {
         Row(
             modifier = Modifier
@@ -471,18 +470,19 @@ private fun SettingsToggleRow(
                     text = title,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.38f)
                 )
                 subtitle?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.38f)
                     )
                 }
             }
             Switch(
                 checked = checked,
+                enabled = enabled,
                 onCheckedChange = null // Handled by toggleable container
             )
         }

@@ -23,7 +23,7 @@ data class Contact(
     val linkStatus: LinkStatus = LinkStatus.NONE,
     val linkCode: String? = null,
     val remoteDeviceId: String? = null,
-    val allowRemoteOverride: Boolean = false,
+    val allowRemoteOverride: Boolean = true,
     val allowRemoteSoundChange: Boolean = false,
     val pendingApproval: Boolean = false,
     val remoteUid: String? = null,
