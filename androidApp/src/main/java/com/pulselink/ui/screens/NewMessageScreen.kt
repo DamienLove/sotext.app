@@ -29,6 +29,7 @@ import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -139,11 +140,13 @@ fun NewMessageScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Allow contacts for full search",
-                            style = MaterialTheme.typography.titleSmall
+                            style = MaterialTheme.typography.titleSmall,
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
                         )
                         Text(
                             text = "Grant access to show all phone contacts here.",
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f)
                         )
                     }
                     OutlinedButton(onClick = onRequestContactsPermission) {
@@ -153,13 +156,16 @@ fun NewMessageScreen(
             }
 
             // Search Input
+            val textColor = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+            val placeholderColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.6f)
+
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("To: Name or number") },
+                placeholder = { Text("To: Name or number", color = placeholderColor) },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -168,7 +174,20 @@ fun NewMessageScreen(
                         }
                     }
                 },
-                singleLine = true
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor,
+                    cursorColor = primaryColor,
+                    focusedLabelColor = primaryColor,
+                    unfocusedLabelColor = placeholderColor,
+                    focusedBorderColor = primaryColor,
+                    unfocusedBorderColor = placeholderColor,
+                    focusedLeadingIconColor = primaryColor,
+                    unfocusedLeadingIconColor = placeholderColor,
+                    focusedTrailingIconColor = primaryColor,
+                    unfocusedTrailingIconColor = placeholderColor,
+                )
             )
 
             // Manual Entry Option if search is numeric
@@ -185,8 +204,17 @@ fun NewMessageScreen(
                          .padding(16.dp),
                      verticalAlignment = Alignment.CenterVertically
                  ) {
-                     Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.padding(end = 16.dp))
-                     Text("Send to $searchQuery", style = MaterialTheme.typography.bodyLarge)
+                     Icon(
+                         Icons.Filled.Search,
+                         contentDescription = null,
+                         modifier = Modifier.padding(end = 16.dp),
+                         tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                     )
+                     Text(
+                         "Send to $searchQuery",
+                         style = MaterialTheme.typography.bodyLarge,
+                         color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                     )
                  }
             }
 
