@@ -13,8 +13,8 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
     private var store: [BeaconContactCard: [BeaconConversationMessage]] = [:]
 
     init() {
-        let c1 = BeaconContactCard(name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2)
-        let c2 = BeaconContactCard(name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0)
+        let c1 = BeaconContactCard(name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false)
+        let c2 = BeaconContactCard(name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
 
         store[c1] = [
             BeaconConversationMessage(sender: "Alex", text: "Hey, how are you?", timestamp: Date().addingTimeInterval(-3600), isIncoming: true, isUrgent: false),
@@ -60,7 +60,10 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
                         address: address,
                         role: "Contact",
                         presence: .offline,
-                        unread: data["unread"] as? Int ?? 0
+                        unread: data["unread"] as? Int ?? 0,
+                        isFavorite: data["isFavorite"] as? Bool ?? false,
+                        isPrivate: data["isPrivate"] as? Bool ?? false,
+                        isTrusted: data["isTrusted"] as? Bool ?? false
                     )
 
                     let messagesSnapshot = try await threadDoc.reference.collection("messages")
