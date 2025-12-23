@@ -6,6 +6,14 @@ struct ContentView: View {
     @State private var pinInput = ""
     @State private var selectedContact: ContactCard?
 
+    var isPro: Bool {
+        #if PRO
+        return true
+        #else
+        return false
+        #endif
+    }
+
     var body: some View {
         TabView {
             HomeTab(viewModel: viewModel,
@@ -14,6 +22,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("Home", systemImage: "shield.lefthalf.filled")
                 }
+                .badge(isPro ? "Pro" : nil)
 
             ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
                 .tabItem {
@@ -60,11 +69,21 @@ private struct HomeTab: View {
                                endPoint: .bottomTrailing)
                     .ignoresSafeArea()
             )
-            .navigationTitle("PulseLink")
+            .navigationTitle(isPro ? "PulseLink Pro" : "PulseLink")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Image(systemName: "antenna.radiowaves.left.and.right")
-                        .foregroundStyle(RelayColors.primary)
+                    HStack {
+                        if isPro {
+                            Text("PRO")
+                                .font(.caption2.bold())
+                                .padding(4)
+                                .background(RelayColors.accent)
+                                .foregroundColor(.white)
+                                .cornerRadius(4)
+                        }
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .foregroundStyle(RelayColors.primary)
+                    }
                 }
             }
         }

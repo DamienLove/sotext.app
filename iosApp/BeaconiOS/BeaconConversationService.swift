@@ -13,8 +13,8 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
     private var store: [BeaconContactCard: [BeaconConversationMessage]] = [:]
 
     init() {
-        let c1 = BeaconContactCard(name: "Alex Rivera", role: "Friend", presence: .online, unread: 2)
-        let c2 = BeaconContactCard(name: "Morgan Lee", role: "Family", presence: .recent, unread: 0)
+        let c1 = BeaconContactCard(name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2)
+        let c2 = BeaconContactCard(name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0)
 
         store[c1] = [
             BeaconConversationMessage(sender: "Alex", text: "Hey, how are you?", timestamp: Date().addingTimeInterval(-3600), isIncoming: true, isUrgent: false),
@@ -57,6 +57,7 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
                     let address = data["address"] as? String ?? "Unknown"
                     let contact = BeaconContactCard(
                         name: address,
+                        address: address,
                         role: "Contact",
                         presence: .offline,
                         unread: data["unread"] as? Int ?? 0
@@ -96,11 +97,15 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
     }
 
     func send(message: BeaconConversationMessage, to contact: BeaconContactCard) async throws {
-        throw NSError(
-            domain: "com.pulselink.beacon",
-            code: 501,
-            userInfo: [NSLocalizedDescriptionKey: "Sending from iOS is not supported yet (Requires Android Relay)."]
-        )
+        let docData: [String: Any] = [
+            "address": contact.address,
+            "body": message.text,
+            "date": Int64(message.timestamp.timeIntervalSince1970 * 1000),
+            "sender": "iOS"
+        ]
+
+        try await db.collection("users").document(userId)
+            .collection("outbox").addDocument(data: docData)
     }
     #else
     init(userId: String) {}

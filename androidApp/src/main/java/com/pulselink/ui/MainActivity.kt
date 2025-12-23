@@ -79,17 +79,18 @@ import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.ContactConversationScreen
 import com.pulselink.ui.screens.LoginScreen
 import com.pulselink.ui.screens.OnboardingScreen
+import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.screens.OtpCleanupOnboardingCard
 import com.pulselink.ui.screens.OnboardingIntroScreen
 import com.pulselink.ui.screens.FaqScreen
 import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
+import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
-import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.state.LoginViewModel
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.MainViewModel.CallInitiationResult
@@ -1208,9 +1209,18 @@ class MainActivity : AppCompatActivity() {
                             onBetaTesters = { navController.navigate("beta_testers") },
                             onOpenHelp = { navController.navigate("settings_help") },
                             onOpenBeacon = launchBeaconInbox,
+                            onEditProfile = { navController.navigate("profile_settings") },
                             onSignOut = {
                                 viewModel.signOut()
                             },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("profile_settings") {
+                        ProfileSettingsScreen(
+                            settings = state.settings,
+                            onSaveName = viewModel::setOwnerName,
+                            onSaveAvatar = viewModel::setOwnerAvatarUrl,
                             onBack = { navController.popBackStack() }
                         )
                     }

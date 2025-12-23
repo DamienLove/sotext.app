@@ -52,7 +52,7 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
     override fun onDataSetChanged() {
         val identityToken = android.os.Binder.clearCallingIdentity()
         try {
-            items = runBlocking { smsRepository.listThreads(limit = 20) }
+            items = runBlocking { smsRepository.listThreads(limit = 50) }
         } catch (e: Exception) {
             e.printStackTrace()
             items = emptyList()
@@ -86,6 +86,13 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
                 ContextCompat.getColor(context, R.color.widget_text_secondary)
             }
             views.setTextColor(R.id.widget_item_title, titleColor)
+
+            // Unread indicator
+            if (item.unread) {
+                views.setViewVisibility(R.id.widget_unread_indicator, android.view.View.VISIBLE)
+            } else {
+                views.setViewVisibility(R.id.widget_unread_indicator, android.view.View.GONE)
+            }
 
             views.setTextViewText(R.id.widget_item_snippet, item.snippet)
 

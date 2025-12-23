@@ -54,6 +54,7 @@ final class FirestoreConversationProvider: ConversationProvider {
                     let address = data["address"] as? String ?? "Unknown"
                     let contact = ContactCard(
                         name: address,
+                        address: address,
                         role: "Contact",
                         presence: .offline,
                         unread: data["unread"] as? Int ?? 0
@@ -93,12 +94,16 @@ final class FirestoreConversationProvider: ConversationProvider {
     }
 
     func send(message: ConversationMessage, to contact: ContactCard) async throws {
-        // Throw error to indicate sending is not supported yet
-        throw NSError(
-            domain: "com.pulselink",
-            code: 501,
-            userInfo: [NSLocalizedDescriptionKey: "Sending from iOS is not supported yet (Requires Android Relay)."]
-        )
+        // Use contact.address (phone number) instead of contact.name (display name)
+        let docData: [String: Any] = [
+            "address": contact.address,
+            "body": message.text,
+            "date": Int64(message.timestamp.timeIntervalSince1970 * 1000),
+            "sender": "iOS"
+        ]
+
+        try await db.collection("users").document(userId)
+            .collection("outbox").addDocument(data: docData)
     }
     #else
     init(userId: String) {}

@@ -20,6 +20,10 @@ service cloud.firestore {
           allow read, write: if request.auth != null && request.auth.uid == userId;
         }
       }
+
+      match /outbox/{messageId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     match /devices/{deviceId} {
@@ -62,11 +66,26 @@ service cloud.firestore {
     }
 
     match /linkEmailInvites/{inviteId} {
-      allow read, write: if request.auth != null;
+      // Security: Sender creates invites.
+      allow create: if request.auth != null && request.resource.data.senderUid == request.auth.uid;
+
+      // Security: Sender or intended Recipient (by email) can read.
+      // Note: Recipient query must filter by 'targetEmailLowercase'.
+      allow read: if request.auth != null && (
+        resource.data.senderUid == request.auth.uid ||
+        (request.auth.token.email != null && resource.data.targetEmailLowercase == request.auth.token.email)
+      );
+
+      // Security: Cleanup after acceptance.
+      allow delete: if request.auth != null && (
+        resource.data.senderUid == request.auth.uid ||
+        (request.auth.token.email != null && resource.data.targetEmailLowercase == request.auth.token.email)
+      );
     }
 
     match /relayAlerts/{alertId} {
-      allow create: if request.auth != null;
+      // Security: Force usage of 'alertRelay' Cloud Function for validation.
+      allow read, write: if false;
     }
   }
 }

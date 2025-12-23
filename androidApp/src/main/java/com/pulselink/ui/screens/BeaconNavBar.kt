@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.VpnKey
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +70,13 @@ fun BeaconNavBar(
             colors = itemColors
         )
         NavigationBarItem(
+            selected = currentRoute == BeaconNavRoute.Archived,
+            onClick = { onNavigate(BeaconNavRoute.Archived) },
+            icon = { Icon(Icons.Filled.Archive, contentDescription = "Archived", modifier = Modifier.size(iconSize)) },
+            label = { Text("Archived") },
+            colors = itemColors
+        )
+        NavigationBarItem(
             selected = currentRoute == BeaconNavRoute.Private,
             onClick = { onNavigate(BeaconNavRoute.Private) },
             icon = { Icon(Icons.Filled.Lock, contentDescription = "Private", modifier = Modifier.size(iconSize)) },
@@ -83,5 +91,6 @@ enum class BeaconNavRoute {
     Otp,
     Trusted,
     Favorites,
+    Archived,
     Private
 }

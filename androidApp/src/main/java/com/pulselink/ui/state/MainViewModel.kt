@@ -1,6 +1,5 @@
 package com.pulselink.ui.state
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -36,6 +35,7 @@ import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.state.DndStatusMessage
 import com.pulselink.util.AudioOverrideManager
 import com.pulselink.widget.WidgetStateManager
+import com.pulselink.util.BeaconIconManager
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.FieldValue
@@ -621,7 +621,7 @@ class MainViewModel @Inject constructor(
                     checkInSoundKey = doc.getString("checkInSoundKey"),
                     contactOrder = (doc.getLong("contactOrder") ?: 0L).toInt(),
                     allowRemoteSoundChange = doc.getBoolean("allowRemoteSoundChange") ?: false,
-                    allowRemoteOverride = doc.getBoolean("allowRemoteOverride") ?: false,
+                    allowRemoteOverride = doc.getBoolean("allowRemoteOverride") ?: true,
                     linkStatus = doc.getString("linkStatus")?.let { LinkStatus.valueOf(it) }
                         ?: LinkStatus.NONE,
                     linkCode = doc.getString("linkCode"),
@@ -1029,34 +1029,18 @@ class MainViewModel @Inject constructor(
 
     fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences) {
         viewModelScope.launch {
-            val oldTheme = settingsRepository.settings.first().themePreferences
+            val currentSettings = settingsRepository.settings.first()
+            val oldTheme = currentSettings.themePreferences
             settingsRepository.setThemePreferences(theme)
-            if (oldTheme.inboxIconVariant != theme.inboxIconVariant) {
-                applyInboxIconVariant(theme.inboxIconVariant)
+            if (currentSettings.beaconLauncherEnabled && oldTheme.inboxIconVariant != theme.inboxIconVariant) {
+                applyInboxIconVariant(theme.inboxIconVariant, enabled = true)
             }
         }
     }
 
-    private fun applyInboxIconVariant(variant: String) {
+    private fun applyInboxIconVariant(variant: String, enabled: Boolean) {
         try {
-            val pm = context.packageManager
-            val pkg = context.packageName
-            val defaultComp = ComponentName(pkg, "com.pulselink.ui.InboxLauncherActivity")
-            val logoComp = ComponentName(pkg, "com.pulselink.BeaconInboxLogo")
-            val proComp = ComponentName(pkg, "com.pulselink.BeaconInboxPro")
-
-            val (toEnable, toDisable) = when (variant) {
-                "Logo" -> listOf(logoComp) to listOf(defaultComp, proComp)
-                "Pro" -> listOf(proComp) to listOf(defaultComp, logoComp)
-                else -> listOf(defaultComp) to listOf(logoComp, proComp)
-            }
-
-            toEnable.forEach {
-                pm.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-            }
-            toDisable.forEach {
-                pm.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-            }
+            BeaconIconManager.apply(context, variant, enabled)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update app icon", e)
         }
@@ -1109,6 +1093,8 @@ class MainViewModel @Inject constructor(
     fun setBeaconLauncherEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setBeaconLauncherEnabled(enabled)
+            val variant = settingsRepository.settings.first().themePreferences.inboxIconVariant
+            applyInboxIconVariant(variant, enabled)
         }
     }
 
