@@ -284,3 +284,6 @@ Current ad behavior in app:
 
 2025-12-23
 - Added Firebase AI Logic SDK (firebase-ai) to androidApp and bumped Firebase BoM to 34.7.0; removed Firebase KTX artifacts in androidApp dependencies.
+
+2025-12-23
+- Synced Suite-Beta with Ds-work-suite-beta (fast-forwarded Suite-Beta to Ds-work commit dc436f1d and pushed).
