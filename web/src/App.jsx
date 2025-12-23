@@ -875,6 +875,7 @@ function App() {
                     setSendStatus('');
                   }}
                   className="secondary-btn"
+                  aria-label="Start new conversation"
                 >
                   New
                 </button>
@@ -886,24 +887,28 @@ function App() {
             <button
               className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
               onClick={() => setActivePanel('home')}
+              aria-current={activePanel === 'home' ? 'page' : undefined}
             >
               Home
             </button>
             <button
               className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
               onClick={() => setActivePanel('beacon')}
+              aria-current={activePanel === 'beacon' ? 'page' : undefined}
             >
               Beacon Inbox
             </button>
             <button
               className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
               onClick={() => setActivePanel('pulselink')}
+              aria-current={activePanel === 'pulselink' ? 'page' : undefined}
             >
               PulseLink
             </button>
             <button
               className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
               onClick={() => setActivePanel('settings')}
+              aria-current={activePanel === 'settings' ? 'page' : undefined}
             >
               Settings
             </button>
@@ -1011,8 +1016,20 @@ function App() {
                           </div>
                         </div>
                         <div className="contact-actions">
-                          <button className="secondary-btn" onClick={() => handleEditContact(contact)}>Edit</button>
-                          <button className="ghost-btn" onClick={() => handleDeleteContact(contact.id)}>Remove</button>
+                          <button
+                            className="secondary-btn"
+                            onClick={() => handleEditContact(contact)}
+                            aria-label={`Edit ${contact.displayName}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="ghost-btn"
+                            onClick={() => handleDeleteContact(contact.id)}
+                            aria-label={`Remove ${contact.displayName}`}
+                          >
+                            Remove
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -1340,7 +1357,7 @@ function App() {
                 </div>
                 {sendStatus && <div className="compose-status">{sendStatus}</div>}
                 <div className="compose-hint">
-                  Messages are sent from your phone when it's online and signed in.
+                  Messages are sent from your phone when it&apos;s online and signed in.
                 </div>
               </div>
             </>
