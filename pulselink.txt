@@ -274,3 +274,7 @@ Current ad behavior in app:
 
 2025-12-23
 - Release v68 (free/pro/premium): versionCode/Name bumped to 68; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v68.aab; release notes saved at disposable_aabs/release-notes-v68.txt.
+
+2025-12-23
+- Pulled latest Suite-Beta (merged PRs #211-#214); upstream removed .Jules/.jules directories.
+- Pre-update stashes now only reference removed palette notes or already-merged changes; not reapplied yet.
