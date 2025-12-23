@@ -328,14 +328,14 @@ fun SmsInboxScreen(
                 items(filtered, key = { it.threadId }) { thread ->
                     ThreadRow(
                         thread = thread,
-                        onClick = { onOpenThread(thread) },
-                        onArchive = { onArchiveThread(thread) },
-                        onUnarchive = { onUnarchiveThread(thread) },
-                        onDelete = { onDeleteThread(thread) },
+                        onOpen = onOpenThread,
+                        onArchive = onArchiveThread,
+                        onUnarchive = onUnarchiveThread,
+                        onDelete = onDeleteThread,
                         dateFormatter = dateFormatter,
                         isArchived = archivedIds.contains(thread.threadId),
                         isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
-                        onTogglePrivate = { makePrivate -> onTogglePrivate(thread, makePrivate) },
+                        onTogglePrivate = onTogglePrivate,
                         theme = theme
                     )
                 }
@@ -344,18 +344,25 @@ fun SmsInboxScreen(
     }
 }
 
+/**
+ * Row component for an SMS thread.
+ *
+ * Optimization Note: Action callbacks (onOpen, onArchive, etc.) are passed as stable function references
+ * taking [SmsThreadItem] as a parameter. This avoids creating unstable lambdas in the parent loop
+ * (e.g., `{ onOpen(thread) }`), allowing Compose to skip recomposition of this row when parent state changes.
+ */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun ThreadRow(
     thread: SmsThreadItem,
-    onClick: () -> Unit,
-    onArchive: () -> Unit,
-    onUnarchive: () -> Unit,
-    onDelete: () -> Unit,
+    onOpen: (SmsThreadItem) -> Unit,
+    onArchive: (SmsThreadItem) -> Unit,
+    onUnarchive: (SmsThreadItem) -> Unit,
+    onDelete: (SmsThreadItem) -> Unit,
     dateFormatter: (Long) -> String,
     isArchived: Boolean,
     isPrivate: Boolean,
-    onTogglePrivate: (Boolean) -> Unit,
+    onTogglePrivate: (SmsThreadItem, Boolean) -> Unit,
     theme: ThemePreferences
 ) {
     val (displayName, number) = splitDisplay(thread.address)
@@ -363,11 +370,11 @@ private fun ThreadRow(
         confirmValueChange = { value ->
             when (value) {
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    if (isArchived) onUnarchive() else onArchive()
+                    if (isArchived) onUnarchive(thread) else onArchive(thread)
                     false
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
-                    onDelete(); false
+                    onDelete(thread); false
                 }
                 SwipeToDismissBoxValue.Settled -> false
             }
@@ -403,8 +410,8 @@ private fun ThreadRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .combinedClickable(
-                        onClick = onClick,
-                        onLongClick = { onTogglePrivate(!isPrivate) }
+                        onClick = { onOpen(thread) },
+                        onLongClick = { onTogglePrivate(thread, !isPrivate) }
                     ),
                 tonalElevation = 1.dp,
                 shape = RoundedCornerShape(14.dp),

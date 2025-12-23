@@ -28,6 +28,10 @@ sealed class SearchResultState {
 class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = SmsRepository(app.applicationContext)
+    private companion object {
+        const val THREAD_LIMIT = Int.MAX_VALUE
+        const val MESSAGE_LIMIT = Int.MAX_VALUE
+    }
 
     var threads by mutableStateOf<List<SmsThreadItem>>(emptyList())
         private set
@@ -51,7 +55,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshThreads() {
-        threads = runCatching { repo.listThreads() }.getOrElse { emptyList() }
+        threads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
     }
 
     fun openThread(threadId: Long, address: String) {
@@ -61,7 +65,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun refreshThread(threadId: Long, refreshRead: Boolean) {
-        messages = runCatching { repo.messagesForThread(threadId) }.getOrElse { emptyList() }
+        messages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
+            .getOrElse { emptyList() }
         if (refreshRead) runCatching { repo.markThreadRead(threadId) }
     }
 

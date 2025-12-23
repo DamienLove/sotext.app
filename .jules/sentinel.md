@@ -31,3 +31,8 @@
 **Prevention:**
 1. `linkEmailInvites`: Restricted access to Sender (create/read/delete) and Recipient (read/delete) using `senderUid` and `targetEmailLowercase`.
 2. `relayAlerts`: Denied all client access (`read, write: if false`) to enforce usage of the validation logic in the `alertRelay` Cloud Function.
+
+## 2025-12-25 - PII Leak in User Lookup
+**Vulnerability:** The `findUser` cloud function returned both email and phone number regardless of which identifier was used for the search, allowing an attacker to harvest private contact details by knowing only one.
+**Learning:** Functions used for contact discovery should only return the minimum necessary data (e.g., UID, Display Name) and avoid confirming private identifiers that weren't provided by the caller.
+**Prevention:** Modified `findUser` to exclude `email` and `phoneNumber` from the response payload to prevent enumeration leaks.
