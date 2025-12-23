@@ -16,16 +16,8 @@ import './App.css';
 // when only the selection state changes.
 const ThreadItem = memo(({ thread, isActive, onSelect }) => (
   <button
-    role="button"
-    tabIndex={0}
     className={`thread-item ${isActive ? 'active' : ''}`}
     onClick={() => onSelect(thread)}
-    onKeyDown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onSelect(thread);
-      }
-    }}
     aria-current={isActive ? 'true' : undefined}
     aria-label={`Select conversation with ${thread.address}`}
   >
