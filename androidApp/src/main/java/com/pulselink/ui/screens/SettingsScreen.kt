@@ -97,6 +97,7 @@ fun SettingsScreen(
     onBetaTesters: () -> Unit,
     onOpenHelp: () -> Unit,
     onOpenBeacon: () -> Unit,
+    onEditProfile: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -129,6 +130,16 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Profile
+            SettingsSectionHeader("Profile")
+            SettingsActionRow(
+                title = "My Profile",
+                subtitle = "Edit name and avatar seen by contacts",
+                actionLabel = "Edit",
+                onAction = onEditProfile,
+                leadingIcon = Icons.Filled.Person // Or AccountCircle if available
+            )
+
             // General
             SettingsSectionHeader("General")
             SettingsToggleRow(
