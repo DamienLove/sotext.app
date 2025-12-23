@@ -1,0 +1,12 @@
+[
+  {
+    "moduleId": "org.jetbrains.kotlinx:atomicfu:0.21.0",
+    "file": "C:\\Projects\\pulselink\\.kotlin\\metadata\\kotlinTransformedCInteropMetadataLibraries\\org.jetbrains.kotlinx-atomicfu-0.21.0-nativeMain-cinterop\\org.jetbrains.kotlinx_atomicfu-cinterop-interop-Uv6OuA.klib",
+    "sourceSetName": "nativeMain"
+  },
+  {
+    "moduleId": "io.ktor:ktor-utils:2.3.10",
+    "file": "C:\\Projects\\pulselink\\.kotlin\\metadata\\kotlinTransformedCInteropMetadataLibraries\\io.ktor-ktor-utils-2.3.10-iosMain-cinterop\\io.ktor_ktor-utils-cinterop-threadUtils-TE4abA.klib",
+    "sourceSetName": "iosMain"
+  }
+]

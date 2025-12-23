@@ -7,19 +7,13 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.os.Build
-import android.os.Bundle
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import com.pulselink.R
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.ui.EmergencyPopupActivity
@@ -28,36 +22,21 @@ import javax.inject.Inject
 import kotlin.math.sqrt
 
 @AndroidEntryPoint
-class CrashDetectionService : Service(), SensorEventListener, LocationListener {
+class CrashDetectionService : Service(), SensorEventListener {
 
     @Inject
     lateinit var sensorManager: SensorManager
 
-    private lateinit var locationManager: LocationManager
     private var accelerometer: Sensor? = null
     private var lastCrashTimestamp = 0L
 
     override fun onCreate() {
         super.onCreate()
-        locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         startForeground(NOTIFICATION_ID, createNotification())
 
         accelerometer?.let {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
-        }
-
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            try {
-                // Request location to justify foreground service type "location" and context
-                locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 1000L, 10f, this)
-                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                     locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2000L, 20f, this)
-                }
-            } catch (e: SecurityException) {
-                // Ignore
-            }
         }
     }
 
@@ -69,7 +48,6 @@ class CrashDetectionService : Service(), SensorEventListener, LocationListener {
     override fun onDestroy() {
         super.onDestroy()
         sensorManager.unregisterListener(this)
-        locationManager.removeUpdates(this)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -92,12 +70,6 @@ class CrashDetectionService : Service(), SensorEventListener, LocationListener {
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-
-    // LocationListener methods
-    override fun onLocationChanged(location: Location) {}
-    override fun onProviderEnabled(provider: String) {}
-    override fun onProviderDisabled(provider: String) {}
-    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
 
     private fun triggerCrashAlert() {
         val intent = EmergencyPopupActivity.newIntent(
@@ -130,7 +102,7 @@ class CrashDetectionService : Service(), SensorEventListener, LocationListener {
             .setContentText("Tap to cancel alert")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_CALL)
-            .setFullScreenIntent(pendingIntent, true)
+            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()
 

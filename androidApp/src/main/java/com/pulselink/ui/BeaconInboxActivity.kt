@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sms
+import androidx.compose.runtime.key
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -194,6 +195,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         BeaconNavRoute.Trusted -> threads.filter { it.isTrusted }
                                         BeaconNavRoute.Favorites -> threads.filter { it.isFavorite }
                                         BeaconNavRoute.Private -> threads
+                                        BeaconNavRoute.Archived -> emptyList()
                                     }
 
                                     val displayedArchived = when (currentRoute) {
@@ -202,168 +204,172 @@ class BeaconInboxActivity : ComponentActivity() {
                                         BeaconNavRoute.Trusted -> archivedThreads.filter { it.isTrusted }
                                         BeaconNavRoute.Favorites -> archivedThreads.filter { it.isFavorite }
                                         BeaconNavRoute.Private -> archivedThreads
+                                        BeaconNavRoute.Archived -> archivedThreads
                                     }
 
-                                    SmsInboxScreen(
-                                        threads = displayedThreads,
-                                        archivedThreads = displayedArchived,
-                                        onOpenThread = { thread ->
-                                            navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
-                                        },
-                                        onOpenThreadById = { threadId, address ->
-                                            navController.navigate("sms/thread/$threadId/${Uri.encode(address)}")
-                                        },
-                                        onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
-                                        onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
-                                        onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
-                                        onBack = { finish() },
-                                        dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
-                                        isBeaconMode = true,
-                                        onOpenSettings = { navController.navigate("beacon_settings") },
-                                        onOpenPrivate = {},
-                                        privateThreadIds = privateThreads,
-                                        showPrivateOnly = currentRoute == BeaconNavRoute.Private,
-                                        onTogglePrivate = { thread, makePrivate ->
-                                            viewModel.setThreadPrivacy(thread.threadId, thread.address, makePrivate)
-                                        },
-                                        theme = state.settings.themePreferences,
-                                        sectionTitle = when (currentRoute) {
-                                            BeaconNavRoute.Inbox -> "All messages"
-                                            BeaconNavRoute.Otp -> "2-step codes"
-                                            BeaconNavRoute.Trusted -> "Trusted contacts"
-                                            BeaconNavRoute.Favorites -> "Favorites"
-                                            BeaconNavRoute.Private -> "Private"
-                                        },
-                                        showFilterTabs = currentRoute == BeaconNavRoute.Inbox,
-                                        showSearchBar = currentRoute == BeaconNavRoute.Inbox,
-                                        searchState = searchState,
-                                        onSearch = { smsInboxViewModel.search(it) },
-                                        onClearSearch = { smsInboxViewModel.clearSearch() },
-                                        banner = {
-                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                if (!hasSmsPermissions) {
-                                                    Surface(
-                                                        tonalElevation = 2.dp,
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    ) {
-                                                        Row(
-                                                            modifier = Modifier.padding(12.dp),
-                                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                                            verticalAlignment = Alignment.CenterVertically
+                                    key(currentRoute) {
+                                        SmsInboxScreen(
+                                            threads = displayedThreads,
+                                            archivedThreads = displayedArchived,
+                                            onOpenThread = { thread ->
+                                                navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
+                                            },
+                                            onOpenThreadById = { threadId, address ->
+                                                navController.navigate("sms/thread/$threadId/${Uri.encode(address)}")
+                                            },
+                                            onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
+                                            onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
+                                            onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
+                                            onBack = { finish() },
+                                            dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                                            isBeaconMode = true,
+                                            onOpenSettings = { navController.navigate("beacon_settings") },
+                                            onOpenPrivate = {},
+                                            privateThreadIds = privateThreads,
+                                            showPrivateOnly = currentRoute == BeaconNavRoute.Private,
+                                            onTogglePrivate = { thread, makePrivate ->
+                                                viewModel.setThreadPrivacy(thread.threadId, thread.address, makePrivate)
+                                            },
+                                            theme = state.settings.themePreferences,
+                                            sectionTitle = when (currentRoute) {
+                                                BeaconNavRoute.Inbox -> "All messages"
+                                                BeaconNavRoute.Otp -> "2-step codes"
+                                                BeaconNavRoute.Trusted -> "Trusted contacts"
+                                                BeaconNavRoute.Favorites -> "Favorites"
+                                                BeaconNavRoute.Private -> "Private"
+                                                BeaconNavRoute.Archived -> "Archived"
+                                            },
+                                            showFilterTabs = currentRoute == BeaconNavRoute.Inbox,
+                                            showSearchBar = currentRoute == BeaconNavRoute.Inbox,
+                                            searchState = searchState,
+                                            onSearch = { smsInboxViewModel.search(it) },
+                                            onClearSearch = { smsInboxViewModel.clearSearch() },
+                                            banner = {
+                                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    if (!hasSmsPermissions) {
+                                                        Surface(
+                                                            tonalElevation = 2.dp,
+                                                            modifier = Modifier.fillMaxWidth()
                                                         ) {
-                                                            Icon(Icons.Filled.Settings, contentDescription = null)
-                                                            Column(Modifier.weight(1f)) {
-                                                                Text(
-                                                                    text = "Permissions needed",
-                                                                    style = MaterialTheme.typography.titleSmall
-                                                                )
-                                                                Text(
-                                                                    text = "Grant SMS + notifications so Beacon can read and show messages.",
-                                                                    style = MaterialTheme.typography.bodySmall
-                                                                )
-                                                            }
-                                                            OutlinedButton(onClick = {
-                                                                permissionLauncher.launch(requiredSmsPermissions())
-                                                            }) {
-                                                                Text("Grant")
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                if (!isDefaultSms || isCheckingDefaultSms) {
-                                                    Surface(
-                                                        tonalElevation = 2.dp,
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    ) {
-                                                        Row(
-                                                            modifier = Modifier.padding(12.dp),
-                                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                                            verticalAlignment = Alignment.CenterVertically
-                                                        ) {
-                                                            Icon(Icons.Filled.Sms, contentDescription = null)
-                                                            Column(Modifier.weight(1f)) {
-                                                                Text(
-                                                                    text = if (isCheckingDefaultSms) {
-                                                                        "Checking default SMS status..."
-                                                                    } else {
-                                                                        "Set as default SMS"
-                                                                    },
-                                                                    style = MaterialTheme.typography.titleSmall
-                                                                )
-                                                                Text(
-                                                                    text = if (defaultSmsSupported) {
-                                                                        "Required for receiving texts and showing notifications."
-                                                                    } else {
-                                                                        "Default SMS role unavailable on this device."
-                                                                    },
-                                                                    style = MaterialTheme.typography.bodySmall
-                                                                )
-                                                            }
-                                                            if (isCheckingDefaultSms) {
-                                                                CircularProgressIndicator(
-                                                                    modifier = Modifier.padding(end = 8.dp),
-                                                                    strokeWidth = 2.dp
-                                                                )
-                                                            } else if (defaultSmsSupported) {
+                                                            Row(
+                                                                modifier = Modifier.padding(12.dp),
+                                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Icon(Icons.Filled.Settings, contentDescription = null)
+                                                                Column(Modifier.weight(1f)) {
+                                                                    Text(
+                                                                        text = "Permissions needed",
+                                                                        style = MaterialTheme.typography.titleSmall
+                                                                    )
+                                                                    Text(
+                                                                        text = "Grant SMS + notifications so Beacon can read and show messages.",
+                                                                        style = MaterialTheme.typography.bodySmall
+                                                                    )
+                                                                }
                                                                 OutlinedButton(onClick = {
-                                                                    defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
-                                                                        defaultSmsLauncher.launch(intent)
-                                                                    }
+                                                                    permissionLauncher.launch(requiredSmsPermissions())
                                                                 }) {
-                                                                    Text("Set")
+                                                                    Text("Grant")
                                                                 }
                                                             }
-                                                            OutlinedButton(
-                                                                onClick = launchDefaultSmsCheck,
-                                                                enabled = !isCheckingDefaultSms
+                                                        }
+                                                    }
+                                                    if (!isDefaultSms || isCheckingDefaultSms) {
+                                                        Surface(
+                                                            tonalElevation = 2.dp,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(12.dp),
+                                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
                                                             ) {
-                                                                Icon(Icons.Filled.Refresh, contentDescription = null)
-                                                                Text("Refresh", modifier = Modifier.padding(start = 6.dp))
+                                                                Icon(Icons.Filled.Sms, contentDescription = null)
+                                                                Column(Modifier.weight(1f)) {
+                                                                    Text(
+                                                                        text = if (isCheckingDefaultSms) {
+                                                                            "Checking default SMS status..."
+                                                                        } else {
+                                                                            "Set as default SMS"
+                                                                        },
+                                                                        style = MaterialTheme.typography.titleSmall
+                                                                    )
+                                                                    Text(
+                                                                        text = if (defaultSmsSupported) {
+                                                                            "Required for receiving texts and showing notifications."
+                                                                        } else {
+                                                                            "Default SMS role unavailable on this device."
+                                                                        },
+                                                                        style = MaterialTheme.typography.bodySmall
+                                                                    )
+                                                                }
+                                                                if (isCheckingDefaultSms) {
+                                                                    CircularProgressIndicator(
+                                                                        modifier = Modifier.padding(end = 8.dp),
+                                                                        strokeWidth = 2.dp
+                                                                    )
+                                                                } else if (defaultSmsSupported) {
+                                                                    OutlinedButton(onClick = {
+                                                                        defaultSmsHelper.buildRoleRequestIntent()?.let { intent ->
+                                                                            defaultSmsLauncher.launch(intent)
+                                                                        }
+                                                                    }) {
+                                                                        Text("Set")
+                                                                    }
+                                                                }
+                                                                OutlinedButton(
+                                                                    onClick = launchDefaultSmsCheck,
+                                                                    enabled = !isCheckingDefaultSms
+                                                                ) {
+                                                                    Icon(Icons.Filled.Refresh, contentDescription = null)
+                                                                    Text("Refresh", modifier = Modifier.padding(start = 6.dp))
+                                                                }
                                                             }
                                                         }
                                                     }
                                                 }
-                                            }
-                                        },
-                                        floatingActionButton = {
-                                            if (currentRoute == BeaconNavRoute.Inbox) {
-                                                FloatingActionButton(
-                                                    onClick = { navController.navigate("sms/new") },
-                                                    containerColor = parseColorOr(
-                                                        MaterialTheme.colorScheme.primary,
-                                                        state.settings.themePreferences.primaryColor
-                                                    ),
-                                                    contentColor = parseColorOr(
-                                                        MaterialTheme.colorScheme.onPrimary,
-                                                        state.settings.themePreferences.onBubbleOutgoing
-                                                    )
-                                                ) {
-                                                    Icon(Icons.Filled.Edit, contentDescription = "New message")
-                                                }
-                                            }
-                                        },
-                                        bottomBar = {
-                                            BeaconNavBar(
-                                                currentRoute = currentRoute,
-                                                onNavigate = { route ->
-                                                    if (route == BeaconNavRoute.Private && currentRoute != BeaconNavRoute.Private) {
-                                                        if (state.settings.privatePinHash.isNullOrBlank()) {
-                                                            navController.navigate("private_pin")
-                                                        } else {
-                                                            pinInput = ""
-                                                            showPinDialog = true
-                                                        }
-                                                    } else {
-                                                        if (route != BeaconNavRoute.Inbox) {
-                                                            smsInboxViewModel.clearSearch()
-                                                        }
-                                                        currentRoute = route
+                                            },
+                                            floatingActionButton = {
+                                                if (currentRoute == BeaconNavRoute.Inbox) {
+                                                    FloatingActionButton(
+                                                        onClick = { navController.navigate("sms/new") },
+                                                        containerColor = parseColorOr(
+                                                            MaterialTheme.colorScheme.primary,
+                                                            state.settings.themePreferences.primaryColor
+                                                        ),
+                                                        contentColor = parseColorOr(
+                                                            MaterialTheme.colorScheme.onPrimary,
+                                                            state.settings.themePreferences.onBubbleOutgoing
+                                                        )
+                                                    ) {
+                                                        Icon(Icons.Filled.Edit, contentDescription = "New message")
                                                     }
-                                                },
-                                                theme = state.settings.themePreferences
-                                            )
-                                        }
-                                    )
+                                                }
+                                            },
+                                            bottomBar = {
+                                                BeaconNavBar(
+                                                    currentRoute = currentRoute,
+                                                    onNavigate = { route ->
+                                                        if (route == BeaconNavRoute.Private && currentRoute != BeaconNavRoute.Private) {
+                                                            if (state.settings.privatePinHash.isNullOrBlank()) {
+                                                                navController.navigate("private_pin")
+                                                            } else {
+                                                                pinInput = ""
+                                                                showPinDialog = true
+                                                            }
+                                                        } else {
+                                                            if (route != BeaconNavRoute.Inbox) {
+                                                                smsInboxViewModel.clearSearch()
+                                                            }
+                                                            currentRoute = route
+                                                        }
+                                                    },
+                                                    theme = state.settings.themePreferences
+                                                )
+                                            }
+                                        )
+                                    }
 
                                     if (showPrivate && currentRoute != BeaconNavRoute.Private) {
                                          currentRoute = BeaconNavRoute.Private
@@ -460,6 +466,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val threadViewModel: SmsThreadViewModel = hiltViewModel()
                                     val messages by threadViewModel.messages.collectAsStateWithLifecycle()
                                     val contact by threadViewModel.contact.collectAsStateWithLifecycle()
+                                    val isArchived by threadViewModel.isArchived.collectAsStateWithLifecycle()
                                     val decodedAddress = Uri.decode(address)
                                     LaunchedEffect(threadId, decodedAddress) { threadViewModel.load(threadId, decodedAddress) }
                                     SmsThreadScreen(
@@ -476,7 +483,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 navController.navigate("visual_settings?contactId=$contactId")
                                             }
                                         },
-                                        onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) }
+                                        onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) },
+                                        isArchived = isArchived,
+                                        onToggleArchive = { threadViewModel.toggleArchive() }
                                     )
                                 }
                                 composable("beacon_settings") {

@@ -11,3 +11,7 @@
 ## 2024-05-24 - Memoization of List Filtering in Compose
 **Learning:** In Jetpack Compose, filtering or sorting lists directly in the Composable function body (outside `remember` or `derivedStateOf`) causes O(N) operations on every recomposition. For large lists like SMS threads, this is a significant bottleneck.
 **Action:** Always wrap list transformations (filter, sort, map) in `remember` keyed by the input list and filter parameters.
+
+## 2024-05-25 - Frontend Verification requires Dummy Env
+**Learning:** The web client's `firebase.js` throws an error (`auth/invalid-api-key`) immediately on load if `VITE_FIREBASE_API_KEY` is missing, causing the app to crash before rendering.
+**Action:** When running verification scripts for the web client, always create a temporary `.env` file with dummy `VITE_FIREBASE_*` values to ensure the app handles the "Not Logged In" state correctly.

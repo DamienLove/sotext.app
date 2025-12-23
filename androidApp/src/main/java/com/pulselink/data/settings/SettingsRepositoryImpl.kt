@@ -1,8 +1,6 @@
 package com.pulselink.data.settings
 
 import android.content.Context
-import android.content.ComponentName
-import android.content.pm.PackageManager
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -25,6 +23,7 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 import java.util.UUID
+import com.pulselink.util.BeaconIconManager
 
 private const val DATA_STORE_NAME = "pulselink_settings"
 
@@ -315,14 +314,8 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[BEACON_LAUNCHER_ENABLED] = enabled
         }
         runCatching {
-            val component = ComponentName(context, com.pulselink.ui.InboxLauncherActivity::class.java)
-            val newState = if (enabled) PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-            else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            context.packageManager.setComponentEnabledSetting(
-                component,
-                newState,
-                PackageManager.DONT_KILL_APP
-            )
+            val variant = settings.first().themePreferences.inboxIconVariant
+            BeaconIconManager.apply(context, variant, enabled)
         }.onFailure { error ->
             Log.w(TAG, "Unable to update Beacon launcher icon enabled=$enabled", error)
         }
