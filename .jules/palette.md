@@ -19,3 +19,7 @@
 ## 2024-12-19 - Accessible Tabs
 **Learning:** Custom tab implementations using `Modifier.clickable(role = Role.Tab)` fail to communicate the `selected` state to accessibility services, leaving blind users guessing which tab is active.
 **Action:** Use `Modifier.selectable(selected = ..., role = Role.Tab)` on individual tabs and wrap the container in `Modifier.selectableGroup()` to ensure correct semantics are exposed.
+
+## 2024-12-20 - Redundant Semantics & Chat UX
+**Learning:** Manually adding `role="button"` and keyboard handlers to native `<button>` elements creates noise and potential duplicate event firing.
+**Action:** Trust native elements first. Also, chat interfaces *must* auto-scroll to the bottom; without it, the "newest message" affordance is completely broken, forcing manual interaction for every update.

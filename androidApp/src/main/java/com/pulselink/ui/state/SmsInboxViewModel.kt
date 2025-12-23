@@ -31,6 +31,9 @@ sealed class SearchResultState {
 class SmsInboxViewModel @Inject constructor(
     private val smsRepository: SmsRepository
 ) : ViewModel() {
+    private companion object {
+        const val THREAD_LIMIT = Int.MAX_VALUE
+    }
     private val _threads = MutableStateFlow<List<SmsThreadItem>>(emptyList())
     val threads: StateFlow<List<SmsThreadItem>> = _threads
     private val _archived = MutableStateFlow<List<SmsThreadItem>>(emptyList())
@@ -40,8 +43,8 @@ class SmsInboxViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            _threads.value = smsRepository.listThreads()
-            _archived.value = smsRepository.listArchivedThreads()
+            _threads.value = smsRepository.listThreads(limit = THREAD_LIMIT)
+            _archived.value = smsRepository.listArchivedThreads(limit = THREAD_LIMIT)
         }
     }
 
@@ -113,6 +116,8 @@ class SmsThreadViewModel @Inject constructor(
     val messages: StateFlow<List<SmsMessageItem>> = _messages
     private val _contact = MutableStateFlow<Contact?>(null)
     val contact: StateFlow<Contact?> = _contact
+    private val _isArchived = MutableStateFlow(false)
+    val isArchived: StateFlow<Boolean> = _isArchived
     private var activeThreadId: Long? = null
     private var activeAddress: String = ""
 
@@ -140,6 +145,24 @@ class SmsThreadViewModel @Inject constructor(
         if (msgs.isNotEmpty()) {
             val address = msgs.first().address
             _contact.value = contactRepository.getByPhone(address)
+        }
+        activeThreadId?.let { threadId ->
+            _isArchived.value = smsRepository.isThreadArchived(threadId)
+        }
+    }
+
+    fun toggleArchive() {
+        viewModelScope.launch {
+            if (activeThreadId == null && activeAddress.isNotBlank()) {
+                activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
+            }
+            val threadId = activeThreadId ?: return@launch
+            if (_isArchived.value) {
+                smsRepository.unarchiveThread(threadId)
+            } else {
+                smsRepository.archiveThread(threadId)
+            }
+            _isArchived.value = !_isArchived.value
         }
     }
 

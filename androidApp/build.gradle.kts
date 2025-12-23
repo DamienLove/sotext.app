@@ -4,11 +4,13 @@ import java.util.Properties
 import org.gradle.api.Project
 import org.gradle.api.tasks.Copy
 import com.google.gms.googleservices.GoogleServicesTask
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
     kotlin("android")
     kotlin("kapt")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.google.gms.google-services")
@@ -193,8 +195,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 59
-        versionName = "59"
+        versionCode = 63
+        versionName = "63"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -346,18 +348,11 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
     packaging {
         resources {
@@ -367,6 +362,12 @@ android {
 
     buildTypes.forEach {
         it.manifestPlaceholders["googleServices"] = "true"
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
@@ -437,9 +438,9 @@ kapt {
     implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-runtime:2.7.0")
+    implementation("androidx.room:room-ktx:2.7.0")
+    kapt("androidx.room:room-compiler:2.7.0")
 
     implementation("androidx.glance:glance-appwidget:1.0.0")
     implementation("androidx.glance:glance-material3:1.0.0")
@@ -458,10 +459,10 @@ kapt {
     // AdMob + mediation adapters
     implementation("com.google.android.gms:play-services-ads:24.9.0")
     implementation("com.google.ads.mediation:applovin:13.5.1.0")
-    implementation("com.google.ads.mediation:inmobi:10.8.5.0")
-    implementation("com.google.ads.mediation:ironsource:8.5.0.0")
-    implementation("com.google.ads.mediation:facebook:6.18.0.0")
-    implementation("com.google.ads.mediation:pangle:6.3.0.9.0")
+    implementation("com.google.ads.mediation:inmobi:11.1.0.0")
+    implementation("com.google.ads.mediation:ironsource:9.2.0.0")
+    implementation("com.google.ads.mediation:facebook:6.21.0.0")
+    implementation("com.google.ads.mediation:pangle:7.8.0.8.0")
     implementation("com.google.ads.mediation:vungle:7.5.0.0")
     implementation("com.google.android.gms:play-services-auth:21.1.0")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
@@ -479,8 +480,8 @@ kapt {
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    implementation("com.google.dagger:hilt-android:2.51.1")
-    kapt("com.google.dagger:hilt-compiler:2.51.1")
+    implementation("com.google.dagger:hilt-android:2.57.2")
+    kapt("com.google.dagger:hilt-compiler:2.57.2")
     kapt("androidx.hilt:hilt-compiler:1.1.0")
 
     testImplementation("junit:junit:4.13.2")
@@ -489,6 +490,6 @@ kapt {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.51.1")
-    kaptAndroidTest("com.google.dagger:hilt-compiler:2.51.1")
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.57.2")
+    kaptAndroidTest("com.google.dagger:hilt-compiler:2.57.2")
 }

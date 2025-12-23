@@ -24,3 +24,10 @@
 **Vulnerability:** Found `senderName` and `invitationCode` being interpolated into HTML email templates in `emailInvitations.ts` without sanitization, despite a similar fix existing in `email.ts`.
 **Learning:** Security helpers (like `escapeHtml`) defined in one module (`email.ts`) are not automatically available or applied in others. Code duplication led to security regression/omission.
 **Prevention:** Centralize security helpers in a shared `utils` module and mandate their usage in all HTML generation logic during code review.
+
+## 2025-12-22 - Firestore Collection Lockdown
+**Vulnerability:** The `linkEmailInvites` collection was readable by any authenticated user (PII leak), and `relayAlerts` allowed public writes (spam risk).
+**Learning:** Broad `allow read/write: if request.auth != null` rules are dangerous. Collections intended for Cloud Function processing should deny client writes.
+**Prevention:**
+1. `linkEmailInvites`: Restricted access to Sender (create/read/delete) and Recipient (read/delete) using `senderUid` and `targetEmailLowercase`.
+2. `relayAlerts`: Denied all client access (`read, write: if false`) to enforce usage of the validation logic in the `alertRelay` Cloud Function.
