@@ -1,11 +1,36 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { auth, db } from './firebase';
 import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
 import './App.css';
 
+// ⚡ Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
+// when only the selection state changes.
+const ThreadItem = memo(({ thread, isActive, onSelect }) => (
+  <button
+    role="button"
+    tabIndex={0}
+    className={`thread-item ${isActive ? 'active' : ''}`}
+    onClick={() => onSelect(thread)}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelect(thread);
+      }
+    }}
+    aria-current={isActive ? 'true' : undefined}
+    aria-label={`Select conversation with ${thread.address}`}
+  >
+    <div className="thread-name">{thread.address}</div>
+    <div className="thread-snippet">{thread.snippet}</div>
+  </button>
+));
+
+ThreadItem.displayName = 'ThreadItem';
+
 function App() {
   const [user, setUser] = useState(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -14,6 +39,7 @@ function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setIsLoggingIn(false);
     });
     return () => unsubscribe();
   }, []);
@@ -61,11 +87,13 @@ function App() {
   }, [messages]);
 
   const handleLogin = async () => {
+    setIsLoggingIn(true);
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
       console.error("Login failed", error);
+      setIsLoggingIn(false);
     }
   };
 
@@ -79,7 +107,14 @@ function App() {
       <div className="container login-container">
         <h1>PulseLink Web</h1>
         <p>Login to access your messages</p>
-        <button onClick={handleLogin}>Sign in with Google</button>
+        <button
+          onClick={handleLogin}
+          disabled={isLoggingIn}
+          aria-busy={isLoggingIn}
+          style={isLoggingIn ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
+        >
+          {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
+        </button>
       </div>
     );
   }
@@ -93,16 +128,12 @@ function App() {
         </div>
         <div className="thread-list">
           {threads.map(thread => (
-            <button
+            <ThreadItem
               key={thread.id}
-              className={`thread-item ${selectedThread?.id === thread.id ? 'active' : ''}`}
-              onClick={() => setSelectedThread(thread)}
-              aria-current={selectedThread?.id === thread.id ? 'true' : undefined}
-              aria-label={`Select conversation with ${thread.address}`}
-            >
-              <div className="thread-name">{thread.address}</div>
-              <div className="thread-snippet">{thread.snippet}</div>
-            </button>
+              thread={thread}
+              isActive={selectedThread?.id === thread.id}
+              onSelect={setSelectedThread}
+            />
           ))}
         </div>
       </div>

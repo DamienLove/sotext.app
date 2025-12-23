@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -37,6 +39,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.OutlinedTextField
@@ -67,7 +71,9 @@ fun SmsThreadScreen(
     globalTheme: ThemePreferences,
     onUpdateContactTheme: (ThemePreferences?) -> Unit,
     onCustomizeTheme: () -> Unit,
-    onSendMessage: (String) -> Unit
+    onSendMessage: (String) -> Unit,
+    isArchived: Boolean,
+    onToggleArchive: () -> Unit
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -123,6 +129,16 @@ fun SmsThreadScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onToggleArchive) {
+                        val icon = if (isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
+                        val desc = if (isArchived) "Unarchive" else "Archive"
+                        Icon(
+                            icon,
+                            contentDescription = desc,
+                            tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
+                            modifier = Modifier.size(iconSize)
+                        )
+                    }
                     IconButton(onClick = { showThemeMenu = true }) {
                         Icon(
                             Icons.Filled.Palette,
@@ -187,7 +203,10 @@ private fun MessageInput(
     Surface(
         color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor), // Or distinct input BG
         tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding()
     ) {
         Row(
             modifier = Modifier

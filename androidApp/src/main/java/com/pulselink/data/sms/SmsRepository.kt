@@ -458,6 +458,10 @@ class SmsRepository @Inject constructor(
         }.getOrDefault(false)
     }
 
+    fun isThreadArchived(threadId: Long): Boolean {
+        return runCatching { archivedThreadDao.isArchived(threadId) }.getOrDefault(false)
+    }
+
     fun deleteThread(threadId: Long): Boolean {
         if (!hasWritePerms()) return false
         return runCatching {
@@ -526,7 +530,7 @@ class SmsRepository @Inject constructor(
         observersRegistered = registered
     }
 
-    private fun listThreadsFromSms(
+    private suspend fun listThreadsFromSms(
         limit: Int,
         archivedIds: List<Long>,
         includeArchived: Boolean,
