@@ -281,3 +281,6 @@ Current ad behavior in app:
 
 2025-12-23
 - Synced Ds-work-suite-beta with Suite-Beta (merged origin/Suite-Beta into Ds-work-suite-beta and pushed).
+
+2025-12-23
+- Added Firebase AI Logic SDK (firebase-ai) to androidApp and bumped Firebase BoM to 34.7.0; removed Firebase KTX artifacts in androidApp dependencies.
