@@ -77,12 +77,19 @@ class SmsRepository @Inject constructor(
             var count = 0
             while (c.moveToNext() && count < limit) {
                 val threadId = c.getLong(idIdx)
-                val snippet = c.getString(snippetIdx) ?: ""
+                var snippet = c.getString(snippetIdx) ?: ""
+                var ts = c.getLong(dateIdx)
                 if (SmsCodec.isPulseLinkPayload(snippet)) {
-                    count++
-                    continue
+                    // Try to fetch the latest valid message for this thread
+                    val fallback = getLastValidMessageForThread(threadId)
+                    if (fallback != null) {
+                        snippet = fallback.body
+                        ts = fallback.timestamp
+                    } else {
+                        // If no valid message found, skip this thread
+                        continue
+                    }
                 }
-                val ts = c.getLong(dateIdx)
                 val unread = c.getInt(readIdx) == 0
                 val rawAddress = c.getString(addressIdx)
                 val address = resolveAddress(rawAddress)
@@ -506,6 +513,46 @@ class SmsRepository @Inject constructor(
     private fun hasReadPerms(): Boolean = isDefaultSmsApp(context) || hasReadSmsPermission(context)
     private fun hasWritePerms(): Boolean = hasWriteSmsPermission(context)
 
+    private fun getLastValidMessageForThread(threadId: Long): SmsMessageItem? {
+        val projection = arrayOf(
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE,
+            Telephony.Sms.TYPE
+        )
+        val cursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                projection,
+                "${Telephony.Sms.THREAD_ID}=?",
+                arrayOf(threadId.toString()),
+                "${Telephony.Sms.DATE} DESC"
+            )
+        }.getOrNull() ?: return null
+
+        cursor.use { c ->
+            val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
+            val typeIdx = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
+            while (c.moveToNext()) {
+                val body = c.getString(bodyIdx) ?: ""
+                if (!SmsCodec.isPulseLinkPayload(body)) {
+                    val ts = c.getLong(dateIdx)
+                    val type = c.getInt(typeIdx)
+                    val outgoing = type == Telephony.Sms.MESSAGE_TYPE_SENT || type == Telephony.Sms.MESSAGE_TYPE_OUTBOX
+                    return SmsMessageItem(
+                        id = -1, // Not needed for snippet
+                        threadId = threadId,
+                        address = "", // Not needed for snippet
+                        body = body,
+                        timestamp = ts,
+                        outgoing = outgoing
+                    )
+                }
+            }
+        }
+        return null
+    }
+
     private fun ensureObserversRegistered() {
         if (observersRegistered || !hasReadPerms()) return
         val handler = Handler(Looper.getMainLooper())
@@ -567,12 +614,11 @@ class SmsRepository @Inject constructor(
             var count = 0
             while (c.moveToNext() && count < limit) {
                 val threadId = c.getLong(threadIdx)
-                if (!seenThreads.add(threadId)) continue
                 val body = c.getString(bodyIdx) ?: ""
                 if (SmsCodec.isPulseLinkPayload(body)) {
-                    count++
                     continue
                 }
+                if (!seenThreads.add(threadId)) continue
                 val ts = c.getLong(dateIdx)
                 val unread = c.getInt(readIdx) == 0
                 val address = resolveAddress(c.getString(addrIdx))
