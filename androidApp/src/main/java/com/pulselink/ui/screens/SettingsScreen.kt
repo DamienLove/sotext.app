@@ -1,6 +1,13 @@
 package com.pulselink.ui.screens
 
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,8 +16,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -18,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -26,6 +34,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.outlined.WifiTethering
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -39,18 +48,22 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.BuildConfig
 import com.pulselink.R
 import com.pulselink.domain.model.PulseLinkSettings
-import com.pulselink.domain.model.TimeFormat
 import com.pulselink.ui.state.ProfileUpdateUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -117,235 +130,311 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // General
-            SettingsSectionHeader("General")
-            SettingsToggleRow(
-                title = "Share location in alerts",
-                subtitle = null,
-                checked = settings.includeLocation,
-                onCheckedChange = onToggleIncludeLocation
-            )
-            SettingsToggleRow(
-                title = "Crash Detection",
-                subtitle = "Alert trusted contacts if a vehicle crash is detected.",
-                checked = settings.crashDetectionEnabled,
-                onCheckedChange = onToggleCrashDetection
-            )
-            SettingsToggleRow(
-                title = "Auto-allow remote sound change",
-                subtitle = null,
-                checked = settings.autoAllowRemoteSoundChange,
-                onCheckedChange = onToggleAutoAllowRemoteSoundChange
-            )
+            CollapsibleSettingsSection(
+                title = "General",
+                initiallyExpanded = true
+            ) {
+                SettingsToggleRow(
+                    title = "Share location in alerts",
+                    subtitle = null,
+                    checked = settings.includeLocation,
+                    onCheckedChange = onToggleIncludeLocation
+                )
+                SettingsToggleRow(
+                    title = "Crash Detection",
+                    subtitle = "Alert trusted contacts if a vehicle crash is detected.",
+                    checked = settings.crashDetectionEnabled,
+                    onCheckedChange = onToggleCrashDetection
+                )
+                SettingsToggleRow(
+                    title = "Auto-allow remote sound change",
+                    subtitle = null,
+                    checked = settings.autoAllowRemoteSoundChange,
+                    onCheckedChange = onToggleAutoAllowRemoteSoundChange
+                )
+            }
 
             // Notifications & Tones
-            SettingsSectionHeader("Notifications & Tones")
-            SettingsActionRow(
-                title = "Emergency alert tone",
-                actionLabel = "Edit",
-                onAction = onEditEmergencyTone
-            )
-            SettingsActionRow(
-                title = "Check-in alert tone",
-                actionLabel = "Edit",
-                onAction = onEditCheckInTone
-            )
-            SettingsActionRow(
-                title = stringResource(R.string.settings_call_tone_title),
-                actionLabel = "Edit",
-                onAction = onEditCallTone
-            )
-            SettingsActionRow(
-                title = stringResource(R.string.dnd_override_title),
-                subtitle = if (hasDndAccess) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                        stringResource(R.string.dnd_override_android15_note)
+            CollapsibleSettingsSection(
+                title = "Notifications & Tones",
+                initiallyExpanded = true
+            ) {
+                SettingsActionRow(
+                    title = "Emergency alert tone",
+                    actionLabel = "Edit",
+                    onAction = onEditEmergencyTone
+                )
+                SettingsActionRow(
+                    title = "Check-in alert tone",
+                    actionLabel = "Edit",
+                    onAction = onEditCheckInTone
+                )
+                SettingsActionRow(
+                    title = stringResource(R.string.settings_call_tone_title),
+                    actionLabel = "Edit",
+                    onAction = onEditCallTone
+                )
+                SettingsActionRow(
+                    title = stringResource(R.string.dnd_override_title),
+                    subtitle = if (hasDndAccess) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                            stringResource(R.string.dnd_override_android15_note)
+                        } else {
+                            stringResource(R.string.dnd_override_ready)
+                        }
                     } else {
-                        stringResource(R.string.dnd_override_ready)
-                    }
-                } else {
-                    stringResource(R.string.dnd_override_permission_prompt)
-                },
-                actionLabel = if (hasDndAccess) {
-                    stringResource(R.string.dnd_override_action_manage)
-                } else {
-                    stringResource(R.string.dnd_override_action_allow)
-                },
-                onAction = onRequestDndAccess,
-                leadingIcon = Icons.Filled.NotificationsActive
-            )
-            SettingsToggleRow(
-                title = "Firebase Messaging (Faster)",
-                subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
-                checked = settings.firebaseMessagingEnabled,
-                onCheckedChange = onToggleFirebaseMessaging
-            )
-            SettingsToggleRow(
-                title = "Email Fallback",
-                subtitle = "Send email if other channels fail.",
-                checked = settings.emailFallbackEnabled,
-                onCheckedChange = onToggleEmailFallback
-            )
+                        stringResource(R.string.dnd_override_permission_prompt)
+                    },
+                    actionLabel = if (hasDndAccess) {
+                        stringResource(R.string.dnd_override_action_manage)
+                    } else {
+                        stringResource(R.string.dnd_override_action_allow)
+                    },
+                    onAction = onRequestDndAccess,
+                    leadingIcon = Icons.Filled.NotificationsActive
+                )
+                SettingsToggleRow(
+                    title = "Firebase Messaging (Faster)",
+                    subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
+                    checked = settings.firebaseMessagingEnabled,
+                    onCheckedChange = onToggleFirebaseMessaging
+                )
+                SettingsToggleRow(
+                    title = "Email Fallback",
+                    subtitle = "Send email if other channels fail.",
+                    checked = settings.emailFallbackEnabled,
+                    onCheckedChange = onToggleEmailFallback
+                )
+            }
 
             // Permissions & System
-            SettingsSectionHeader("Permissions & System")
-            SettingsActionRow(
-                title = stringResource(R.string.permission_battery_opt_title),
-                subtitle = null,
-                actionLabel = stringResource(R.string.permission_battery_opt_action),
-                onAction = onRequestBatteryOpt,
-                leadingIcon = Icons.Filled.PowerSettingsNew
-            )
-            SettingsActionRow(
-                title = stringResource(R.string.permission_unused_apps_title),
-                subtitle = null,
-                actionLabel = stringResource(R.string.permission_unused_apps_action),
-                onAction = onRequestUnusedApps,
-                leadingIcon = Icons.Filled.Schedule
-            )
-            val defaultSmsSubtitle = when {
-                isDefaultSmsApp -> stringResource(id = R.string.settings_default_sms_ready)
-                defaultSmsSupported -> stringResource(id = R.string.settings_default_sms_required)
-                else -> stringResource(id = R.string.settings_default_sms_unavailable)
+            CollapsibleSettingsSection(
+                title = "Permissions & System",
+                initiallyExpanded = false
+            ) {
+                SettingsActionRow(
+                    title = stringResource(R.string.permission_battery_opt_title),
+                    subtitle = null,
+                    actionLabel = stringResource(R.string.permission_battery_opt_action),
+                    onAction = onRequestBatteryOpt,
+                    leadingIcon = Icons.Filled.PowerSettingsNew
+                )
+                SettingsActionRow(
+                    title = stringResource(R.string.permission_unused_apps_title),
+                    subtitle = null,
+                    actionLabel = stringResource(R.string.permission_unused_apps_action),
+                    onAction = onRequestUnusedApps,
+                    leadingIcon = Icons.Filled.Schedule
+                )
+                val defaultSmsSubtitle = when {
+                    isDefaultSmsApp -> stringResource(id = R.string.settings_default_sms_ready)
+                    defaultSmsSupported -> stringResource(id = R.string.settings_default_sms_required)
+                    else -> stringResource(id = R.string.settings_default_sms_unavailable)
+                }
+                val defaultSmsActionLabel = if (isDefaultSmsApp) {
+                    stringResource(id = R.string.settings_default_sms_action_change)
+                } else if (defaultSmsSupported) {
+                    stringResource(id = R.string.settings_default_sms_action_make_default)
+                } else {
+                    stringResource(id = R.string.settings_default_sms_action_change)
+                }
+                SettingsActionRow(
+                    title = stringResource(id = R.string.settings_default_sms_title),
+                    subtitle = defaultSmsSubtitle,
+                    actionLabel = defaultSmsActionLabel,
+                    onAction = onRequestDefaultSms,
+                    leadingIcon = Icons.Filled.Message
+                )
             }
-            val defaultSmsActionLabel = if (isDefaultSmsApp) {
-                stringResource(id = R.string.settings_default_sms_action_change)
-            } else if (defaultSmsSupported) {
-                stringResource(id = R.string.settings_default_sms_action_make_default)
-            } else {
-                stringResource(id = R.string.settings_default_sms_action_change)
-            }
-            SettingsActionRow(
-                title = stringResource(id = R.string.settings_default_sms_title),
-                subtitle = defaultSmsSubtitle,
-                actionLabel = defaultSmsActionLabel,
-                onAction = onRequestDefaultSms,
-                leadingIcon = Icons.Filled.Message
-            )
 
             // Contacts & Sync
-            SettingsSectionHeader("Contacts & Sync")
-            SettingsToggleRow(
-                title = stringResource(id = R.string.settings_auto_update_contact_title),
-                subtitle = null,
-                checked = settings.autoUpdateContactInfo,
-                onCheckedChange = onToggleAutoUpdateContactInfo
-            )
-            SettingsActionRow(
-                title = stringResource(id = R.string.settings_sync_contacts_title),
-                subtitle = null,
-                actionLabel = stringResource(id = R.string.settings_sync_action),
-                onAction = onSyncNow,
-                leadingIcon = Icons.Filled.Sync
-            )
-            SettingsActionRow(
-                title = stringResource(id = R.string.profile_update_button),
-                subtitle = null,
-                actionLabel = if (profileUpdateState.inProgress) {
-                    stringResource(id = R.string.profile_update_sending)
-                } else {
-                    stringResource(id = R.string.profile_update_button)
-                },
-                onAction = onBroadcastProfileUpdate,
-                leadingIcon = Icons.Filled.Sync
-            )
-            profileUpdateState.resultCount?.let { count ->
-                Text(
-                    text = stringResource(id = R.string.profile_update_success, count),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+            CollapsibleSettingsSection(
+                title = "Contacts & Sync",
+                initiallyExpanded = false
+            ) {
+                SettingsToggleRow(
+                    title = stringResource(id = R.string.settings_auto_update_contact_title),
+                    subtitle = null,
+                    checked = settings.autoUpdateContactInfo,
+                    onCheckedChange = onToggleAutoUpdateContactInfo
                 )
-            }
-            profileUpdateState.error?.let { error ->
-                Text(
-                    text = error,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                SettingsActionRow(
+                    title = stringResource(id = R.string.settings_sync_contacts_title),
+                    subtitle = null,
+                    actionLabel = stringResource(id = R.string.settings_sync_action),
+                    onAction = onSyncNow,
+                    leadingIcon = Icons.Filled.Sync
                 )
+                SettingsActionRow(
+                    title = stringResource(id = R.string.profile_update_button),
+                    subtitle = null,
+                    actionLabel = if (profileUpdateState.inProgress) {
+                        stringResource(id = R.string.profile_update_sending)
+                    } else {
+                        stringResource(id = R.string.profile_update_button)
+                    },
+                    onAction = onBroadcastProfileUpdate,
+                    leadingIcon = Icons.Filled.Sync
+                )
+                profileUpdateState.resultCount?.let { count ->
+                    Text(
+                        text = stringResource(id = R.string.profile_update_success, count),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                profileUpdateState.error?.let { error ->
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
 
             // Beacon Feature
-            SettingsSectionHeader("Beacon Feature")
+            CollapsibleSettingsSection(
+                title = "Beacon Feature",
+                initiallyExpanded = false
+            ) {
+                val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
+                val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                SettingsActionRow(
+                    title = "Default SMS Check",
+                    subtitle = if (isDefaultSmsApp) "PulseLink is your default SMS app" else "PulseLink is NOT set as default",
+                    actionLabel = "Check",
+                    onAction = onRequestDefaultSms,
+                    leadingIcon = smsStatusIcon,
+                    iconTint = smsStatusColor
+                )
 
-            val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
-            val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-            SettingsActionRow(
-                title = "Default SMS Check",
-                subtitle = if (isDefaultSmsApp) "PulseLink is your default SMS app" else "PulseLink is NOT set as default",
-                actionLabel = "Check",
-                onAction = onRequestDefaultSms,
-                leadingIcon = smsStatusIcon,
-                iconTint = smsStatusColor
-            )
-
-            SettingsToggleRow(
-                title = stringResource(id = R.string.settings_beacon_icon_title),
-                subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),
-                checked = beaconLauncherEnabled,
-                onCheckedChange = onToggleBeaconLauncher
-            )
-            SettingsActionRow(
-                title = stringResource(id = R.string.settings_beacon_title),
-                subtitle = if (isDefaultSmsApp && beaconLauncherEnabled) {
-                    stringResource(id = R.string.settings_beacon_enabled_subtitle)
-                } else {
-                    stringResource(id = R.string.settings_beacon_subtitle)
-                },
-                actionLabel = if (isDefaultSmsApp && beaconLauncherEnabled) {
-                    stringResource(id = R.string.settings_beacon_action_open)
-                } else {
-                    stringResource(id = R.string.settings_beacon_action_enable)
-                },
-                onAction = onOpenBeacon,
-                leadingIcon = Icons.Outlined.WifiTethering
-            )
+                SettingsToggleRow(
+                    title = stringResource(id = R.string.settings_beacon_icon_title),
+                    subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),
+                    checked = beaconLauncherEnabled,
+                    onCheckedChange = onToggleBeaconLauncher
+                )
+                SettingsActionRow(
+                    title = stringResource(id = R.string.settings_beacon_title),
+                    subtitle = if (isDefaultSmsApp && beaconLauncherEnabled) {
+                        stringResource(id = R.string.settings_beacon_enabled_subtitle)
+                    } else {
+                        stringResource(id = R.string.settings_beacon_subtitle)
+                    },
+                    actionLabel = if (isDefaultSmsApp && beaconLauncherEnabled) {
+                        stringResource(id = R.string.settings_beacon_action_open)
+                    } else {
+                        stringResource(id = R.string.settings_beacon_action_enable)
+                    },
+                    onAction = onOpenBeacon,
+                    leadingIcon = Icons.Outlined.WifiTethering
+                )
+            }
 
             // Support & Account
-            SettingsSectionHeader("Support & Account")
-            AssistantCommandsCard(
-                proEnabled = !BuildConfig.ADS_ENABLED || settings.proUnlocked,
-                onOpenHelp = onOpenHelp
-            )
-            SettingsActionRow(
-                title = stringResource(id = R.string.settings_report_bug),
-                actionLabel = "Report",
-                onAction = onReportBug,
-                leadingIcon = Icons.Filled.BugReport
-            )
-            SettingsActionRow(
-                title = stringResource(id = R.string.settings_beta_testers),
-                actionLabel = "Manage",
-                onAction = onBetaTesters,
-                leadingIcon = Icons.Filled.Science
-            )
-            SettingsActionRow(
-                title = stringResource(id = R.string.settings_sign_out_title),
-                subtitle = stringResource(id = R.string.settings_sign_out_subtitle),
-                actionLabel = stringResource(id = R.string.settings_sign_out_action),
-                onAction = onSignOut,
-                leadingIcon = Icons.Filled.PowerSettingsNew
-            )
-            Text(
-                text = "Link ID: ${settings.deviceId}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
-            )
+            CollapsibleSettingsSection(
+                title = "Support & Account",
+                initiallyExpanded = false
+            ) {
+                AssistantCommandsCard(
+                    proEnabled = !BuildConfig.ADS_ENABLED || settings.proUnlocked,
+                    onOpenHelp = onOpenHelp
+                )
+                SettingsActionRow(
+                    title = stringResource(id = R.string.settings_report_bug),
+                    actionLabel = "Report",
+                    onAction = onReportBug,
+                    leadingIcon = Icons.Filled.BugReport
+                )
+                SettingsActionRow(
+                    title = stringResource(id = R.string.settings_beta_testers),
+                    actionLabel = "Manage",
+                    onAction = onBetaTesters,
+                    leadingIcon = Icons.Filled.Science
+                )
+                SettingsActionRow(
+                    title = stringResource(id = R.string.settings_sign_out_title),
+                    subtitle = stringResource(id = R.string.settings_sign_out_subtitle),
+                    actionLabel = stringResource(id = R.string.settings_sign_out_action),
+                    onAction = onSignOut,
+                    leadingIcon = Icons.Filled.PowerSettingsNew
+                )
+                Text(
+                    text = "Link ID: ${settings.deviceId}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, start = 4.dp, end = 4.dp, bottom = 4.dp)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun SettingsSectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
+private fun CollapsibleSettingsSection(
+    title: String,
+    initiallyExpanded: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    var expanded by remember { mutableStateOf(initiallyExpanded) }
+    val rotation by animateFloatAsState(targetValue = if (expanded) 180f else 0f, label = "expandIconRotation")
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 16.dp, bottom = 8.dp, start = 4.dp)
-    )
+            .animateContentSize()
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp) // Little vertical spacing for the header itself
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = rememberRipple()
+                ) { expanded = !expanded },
+            shape = RoundedCornerShape(18.dp),
+            tonalElevation = 1.dp,
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Icon(
+                    imageVector = Icons.Filled.ExpandMore,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    modifier = Modifier.rotate(rotation),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = expanded,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp), // Spacing between header and content
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                content()
+            }
+        }
+    }
 }
 
 @Composable
