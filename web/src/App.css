@@ -33,7 +33,55 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #fff, var(--surface-alt));
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(94, 111, 255, 0.18), rgba(18, 24, 39, 0.2));
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-title {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.brand-subtitle {
+  font-size: 0.78em;
+  color: var(--muted);
+}
+
+.sidebar-nav {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(15, 20, 34, 0.65);
+}
+
+.nav-item {
+  flex: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  color: var(--ink);
+  border-color: rgba(94, 111, 255, 0.35);
+}
+
+.nav-item.active {
+  color: var(--ink);
+  border-color: rgba(94, 111, 255, 0.6);
+  background: rgba(94, 111, 255, 0.15);
 }
 
 .sidebar-actions {
@@ -74,7 +122,7 @@
 }
 
 .thread-item.active {
-  background-color: rgba(210, 75, 47, 0.12);
+  background-color: rgba(94, 111, 255, 0.18);
   border-left: 3px solid var(--accent);
 }
 
@@ -106,7 +154,7 @@
 .chat-header {
   padding: 18px 20px;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(135deg, #fff, var(--surface-alt));
+  background: linear-gradient(135deg, rgba(94, 111, 255, 0.16), rgba(18, 24, 39, 0.8));
 }
 
 .messages-list {
@@ -116,7 +164,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(246, 242, 236, 0.6));
+  background: linear-gradient(180deg, rgba(15, 20, 34, 0.95), rgba(8, 11, 20, 0.98));
 }
 
 .message {
@@ -161,6 +209,8 @@
   color: var(--muted);
   padding: 24px;
   text-align: center;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .login-card {
@@ -189,7 +239,8 @@
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
+  background: rgba(12, 16, 28, 0.9);
+  color: var(--ink);
 }
 
 .login-actions {
@@ -205,7 +256,7 @@
 }
 
 .auth-error {
-  color: #b00020;
+  color: #ffb4ab;
   font-size: 0.9em;
 }
 
@@ -246,13 +297,14 @@
   font-size: 0.9em;
 }
 
-.logout-btn {
-  background-color: var(--surface-alt);
-  color: var(--ink);
+.ghost-btn {
+  background-color: transparent;
+  color: var(--muted);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 0.45em 0.9em;
   font-size: 0.9em;
+  cursor: pointer;
 }
 
 .composer {
@@ -280,7 +332,8 @@
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
+  background: rgba(12, 16, 28, 0.9);
+  color: var(--ink);
 }
 
 .composer-textarea {
@@ -290,7 +343,8 @@
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
+  background: rgba(12, 16, 28, 0.9);
+  color: var(--ink);
 }
 
 .composer-actions {
@@ -304,6 +358,101 @@
 
 .compose-hint {
   font-size: 0.75em;
+  color: var(--muted);
+}
+
+.login-input::placeholder,
+.composer-input::placeholder,
+.composer-textarea::placeholder {
+  color: rgba(154, 164, 178, 0.7);
+}
+
+.brand-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+.brand-logo.small {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0;
+}
+
+.empty-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  opacity: 0.85;
+}
+
+.settings-panel {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-header h3 {
+  margin: 0 0 6px 0;
+}
+
+.settings-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.settings-card {
+  background: rgba(14, 19, 32, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-card h4 {
+  margin: 0;
+}
+
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-label {
+  font-size: 0.78em;
+  color: var(--muted);
+}
+
+.settings-value {
+  font-size: 0.95em;
+}
+
+.settings-value.mono {
+  font-family: "DM Sans", "Segoe UI", sans-serif;
+  font-size: 0.82em;
+  word-break: break-all;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.92em;
+}
+
+.settings-note {
+  font-size: 0.8em;
+  color: var(--muted);
+}
+
+.settings-status {
+  font-size: 0.85em;
   color: var(--muted);
 }
 

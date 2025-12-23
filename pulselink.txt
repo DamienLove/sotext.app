@@ -260,3 +260,7 @@ Current ad behavior in app:
 
 2025-12-23
 - Rebuilt v67 AABs after pulling latest fixes (no version bump). Updated BeaconInboxActivity to pass delete-account handlers; refreshed disposable_aabs with new v67 bundles and notes.
+
+2025-12-23
+- Web portal restyled to Pro/Premium palette with logo on login/home, sidebar navigation, and a settings screen with account info + web preferences.
+- Beacon inbox header now shows a beacon icon that fades as you scroll (PulseLink SmsInboxScreen + beaconApp InboxScreen).

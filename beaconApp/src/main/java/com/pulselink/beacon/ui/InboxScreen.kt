@@ -13,25 +13,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Sms
-import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -42,12 +40,12 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,7 +56,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
@@ -67,11 +68,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.semantics.Role
-import com.pulselink.beacon.data.InboxIconVariant
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
+import com.pulselink.beacon.R
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,6 +113,9 @@ fun InboxScreen(
     }
     val unreadCount = remember(threads) { threads.count { it.unread } }
     val mutedTint = theme.frameColor.copy(alpha = 0.7f)
+    val topAppBarState = rememberTopAppBarState()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
+    val beaconIconAlpha = (1f - scrollBehavior.state.collapsedFraction).coerceIn(0f, 1f)
 
     LaunchedEffect(searchState) {
         if (searchState is SearchResultState.Contact && !navigatedFromSearch) {
@@ -124,22 +128,26 @@ fun InboxScreen(
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = iconForVariant(theme.iconVariant),
-                            contentDescription = null,
-                            tint = iconTint
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Beacon Inbox",
-                            fontWeight = FontWeight.SemiBold,
-                            color = theme.frameColor
-                        )
-                    }
+                    Text(
+                        "Beacon Inbox",
+                        fontWeight = FontWeight.SemiBold,
+                        color = theme.frameColor
+                    )
+                },
+                navigationIcon = {
+                    Icon(
+                        painter = painterResource(id = R.drawable.beacon_logo),
+                        contentDescription = "Beacon",
+                        tint = Color.Unspecified,
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .size(32.dp)
+                            .alpha(beaconIconAlpha)
+                    )
                 },
                 actions = {
                     IconButton(onClick = onRefresh) {
@@ -149,11 +157,12 @@ fun InboxScreen(
                         Icon(Icons.Default.ColorLens, contentDescription = "Customize", tint = iconTint)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = theme.inboxBackgroundColor,
                     titleContentColor = theme.frameColor,
                     actionIconContentColor = iconTint
-                )
+                ),
+                scrollBehavior = scrollBehavior
             )
         },
         snackbarHost = { SnackbarHost(host) }
@@ -469,14 +478,6 @@ private fun ThreadRow(thread: SmsThreadItem, theme: ThemePalette, onClick: () ->
             )
         }
     }
-}
-
-@Composable
-private fun iconForVariant(variant: InboxIconVariant) = when (variant) {
-    InboxIconVariant.Beacon -> Icons.Default.WaterDrop
-    InboxIconVariant.Bubble -> Icons.Default.Chat
-    InboxIconVariant.Shield -> Icons.Default.Shield
-    InboxIconVariant.Minimal -> Icons.Default.Inbox
 }
 
 @Composable
