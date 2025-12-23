@@ -1,17 +1,17 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap");
 
 :root {
-  --bg: #f4efe9;
-  --bg-accent: #f7dcc6;
-  --surface: #ffffff;
-  --surface-alt: #f6f2ec;
-  --ink: #1d1a16;
-  --muted: #6a625a;
-  --accent: #d24b2f;
-  --accent-strong: #9f2f18;
-  --border: #e5d7cc;
-  --shadow: 0 20px 45px rgba(24, 18, 12, 0.15);
-  --shadow-soft: 0 8px 20px rgba(24, 18, 12, 0.12);
+  --bg: #0b0e16;
+  --bg-accent: #171f34;
+  --surface: #121827;
+  --surface-alt: #1b2336;
+  --ink: #f5f7ff;
+  --muted: #9aa4b2;
+  --accent: #5e6fff;
+  --accent-strong: #1a237e;
+  --border: #25304a;
+  --shadow: 0 24px 60px rgba(3, 6, 20, 0.55);
+  --shadow-soft: 0 12px 30px rgba(5, 8, 20, 0.35);
 
   font-family: "Space Grotesk", "DM Sans", "Segoe UI", sans-serif;
   line-height: 1.5;
@@ -40,7 +40,7 @@ a:hover {
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top left, var(--bg-accent), var(--bg) 45%, #efe7dd 100%);
+  background: radial-gradient(circle at top right, #1c2a5c 0%, var(--bg) 45%, #070a12 100%);
 }
 
 button,

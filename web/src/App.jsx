@@ -11,10 +11,11 @@ import {
 } from "firebase/auth";
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
 import './App.css';
+import logo from './assets/pulselink-pro-logo.png';
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes.
-const ThreadItem = memo(({ thread, isActive, onSelect }) => (
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
   <button
     className={`thread-item ${isActive ? 'active' : ''}`}
     onClick={() => onSelect(thread)}
@@ -22,7 +23,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect }) => (
     aria-label={`Select conversation with ${thread.address}`}
   >
     <div className="thread-name">{thread.address}</div>
-    <div className="thread-snippet">{thread.snippet}</div>
+    <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
   </button>
 ));
 
@@ -41,6 +42,10 @@ function App() {
   const [composeBody, setComposeBody] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [activePanel, setActivePanel] = useState('inbox');
+  const [settingsStatus, setSettingsStatus] = useState('');
+  const [showPreviews, setShowPreviews] = useState(true);
+  const [autoScroll, setAutoScroll] = useState(true);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -98,8 +103,10 @@ function App() {
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (autoScroll) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, autoScroll]);
 
   const handleLogin = async () => {
     setIsLoggingIn(true);
@@ -154,12 +161,28 @@ function App() {
     }
   };
 
+  const handlePasswordResetForUser = async () => {
+    if (!user?.email) {
+      setSettingsStatus("No email address on file.");
+      return;
+    }
+    setSettingsStatus("Sending password reset email...");
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+      setSettingsStatus(`Password reset sent to ${user.email}.`);
+    } catch (error) {
+      console.error("Password reset failed", error);
+      setSettingsStatus(error?.message ?? "Password reset failed.");
+    }
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     setSelectedThread(null);
     setComposeAddress('');
     setComposeBody('');
     setSendStatus('');
+    setActivePanel('inbox');
   };
 
   const handleSendMessage = async () => {
@@ -193,6 +216,7 @@ function App() {
     return (
       <div className="container login-container">
         <div className="login-card">
+          <img src={logo} alt="PulseLink Pro" className="brand-logo" />
           <h1>PulseLink Web</h1>
           <p>Login to access your messages</p>
           <div className="login-form">
@@ -263,21 +287,43 @@ function App() {
     <div className="app-container">
       <div className="sidebar">
         <div className="sidebar-header">
-          <h2>Messages</h2>
-          <div className="sidebar-actions">
-            <button
-              onClick={() => {
-                setSelectedThread(null);
-                setComposeAddress('');
-                setComposeBody('');
-                setSendStatus('');
-              }}
-              className="secondary-btn"
-            >
-              New
-            </button>
-            <button onClick={handleLogout} className="logout-btn">Logout</button>
+          <div className="sidebar-brand">
+            <img src={logo} alt="PulseLink Pro" className="brand-logo small" />
+            <div>
+              <div className="brand-title">PulseLink Pro</div>
+              <div className="brand-subtitle">Web access</div>
+            </div>
           </div>
+          <div className="sidebar-actions">
+            {activePanel === 'inbox' && (
+              <button
+                onClick={() => {
+                  setSelectedThread(null);
+                  setComposeAddress('');
+                  setComposeBody('');
+                  setSendStatus('');
+                }}
+                className="secondary-btn"
+              >
+                New
+              </button>
+            )}
+            <button onClick={handleLogout} className="ghost-btn">Logout</button>
+          </div>
+        </div>
+        <div className="sidebar-nav">
+          <button
+            className={`nav-item ${activePanel === 'inbox' ? 'active' : ''}`}
+            onClick={() => setActivePanel('inbox')}
+          >
+            Inbox
+          </button>
+          <button
+            className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
+            onClick={() => setActivePanel('settings')}
+          >
+            Settings
+          </button>
         </div>
         <div className="thread-list">
           {threads.map(thread => (
@@ -286,65 +332,129 @@ function App() {
               thread={thread}
               isActive={selectedThread?.id === thread.id}
               onSelect={setSelectedThread}
+              showPreviews={showPreviews}
             />
           ))}
         </div>
       </div>
       <div className="main-content">
-        {selectedThread ? (
-          <>
-            <div className="chat-header">
-              <h3>{selectedThread.address}</h3>
+        {activePanel === 'settings' ? (
+          <div className="settings-panel">
+            <div className="settings-header">
+              <h3>Settings</h3>
+              <p>Manage your account and web access preferences.</p>
             </div>
-            <div className="messages-list">
-              {messages.map(msg => (
-                <div key={msg.id} className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
-                  <div className="message-bubble">
-                    {msg.body}
-                  </div>
-                  <div className="message-time">
-                    {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
+            <div className="settings-grid">
+              <div className="settings-card">
+                <h4>Account</h4>
+                <div className="settings-row">
+                  <span className="settings-label">Signed in as</span>
+                  <span className="settings-value">{user.email || 'Unknown'}</span>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
+                <div className="settings-row">
+                  <span className="settings-label">User ID</span>
+                  <span className="settings-value mono">{user.uid}</span>
+                </div>
+                <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
+                  Send password reset email
+                </button>
+                {settingsStatus && <div className="settings-status">{settingsStatus}</div>}
+              </div>
+              <div className="settings-card">
+                <h4>Web preferences</h4>
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={showPreviews}
+                    onChange={(e) => setShowPreviews(e.target.checked)}
+                  />
+                  Show message previews
+                </label>
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={autoScroll}
+                    onChange={(e) => setAutoScroll(e.target.checked)}
+                  />
+                  Auto-scroll to latest message
+                </label>
+                <p className="settings-note">
+                  Preferences apply to this browser only.
+                </p>
+              </div>
+              <div className="settings-card">
+                <h4>Device sync</h4>
+                <p className="settings-note">
+                  Messages arrive from your phone when it’s online and signed in.
+                  Keep PulseLink running on your device for the fastest sync.
+                </p>
+                <button className="primary-btn" type="button" onClick={() => setActivePanel('inbox')}>
+                  Back to inbox
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {selectedThread ? (
+              <>
+                <div className="chat-header">
+                  <h3>{selectedThread.address}</h3>
+                </div>
+                <div className="messages-list">
+                  {messages.map(msg => (
+                    <div key={msg.id} className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
+                      <div className="message-bubble">
+                        {showPreviews ? msg.body : '••••••'}
+                      </div>
+                      <div className="message-time">
+                        {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              </>
+            ) : (
+              <div className="empty-state">
+                <img src={logo} alt="PulseLink Pro" className="empty-logo" />
+                <div>Select a thread or start a new message</div>
+              </div>
+            )}
+            <div className="composer">
+              <div className="composer-row">
+                <label className="composer-label" htmlFor="compose-address">To</label>
+                <input
+                  id="compose-address"
+                  className="composer-input"
+                  type="tel"
+                  placeholder="Phone number"
+                  value={composeAddress}
+                  onChange={(e) => setComposeAddress(e.target.value)}
+                />
+              </div>
+              <div className="composer-row composer-actions">
+                <textarea
+                  className="composer-textarea"
+                  placeholder="Type a message..."
+                  value={composeBody}
+                  onChange={(e) => setComposeBody(e.target.value)}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={isSending || isLoggingIn}
+                  className="primary-btn"
+                >
+                  {isSending ? "Sending..." : "Send"}
+                </button>
+              </div>
+              {sendStatus && <div className="compose-status">{sendStatus}</div>}
+              <div className="compose-hint">
+                Messages are sent from your phone when it's online and signed in.
+              </div>
             </div>
           </>
-        ) : (
-          <div className="empty-state">Select a thread or start a new message</div>
         )}
-        <div className="composer">
-          <div className="composer-row">
-            <label className="composer-label" htmlFor="compose-address">To</label>
-            <input
-              id="compose-address"
-              className="composer-input"
-              type="tel"
-              placeholder="Phone number"
-              value={composeAddress}
-              onChange={(e) => setComposeAddress(e.target.value)}
-            />
-          </div>
-          <div className="composer-row composer-actions">
-            <textarea
-              className="composer-textarea"
-              placeholder="Type a message..."
-              value={composeBody}
-              onChange={(e) => setComposeBody(e.target.value)}
-            />
-            <button
-              onClick={handleSendMessage}
-              disabled={isSending || isLoggingIn}
-              className="primary-btn"
-            >
-              {isSending ? "Sending..." : "Send"}
-            </button>
-          </div>
-          {sendStatus && <div className="compose-status">{sendStatus}</div>}
-          <div className="compose-hint">
-            Messages are sent from your phone when it's online and signed in.
-          </div>
-        </div>
       </div>
     </div>
   );

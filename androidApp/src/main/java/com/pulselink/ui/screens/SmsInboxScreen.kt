@@ -35,6 +35,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FloatingActionButton
@@ -46,6 +47,8 @@ import androidx.compose.material3.FabPosition
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +67,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.painterResource
 import android.text.format.DateUtils
 import com.pulselink.R
 import com.pulselink.data.sms.SmsThreadItem
@@ -130,6 +135,7 @@ fun SmsInboxScreen(
     val colorScheme = MaterialTheme.colorScheme
     val iconSize = (24f * theme.iconSizeFactor).coerceIn(18f, 34f).dp
     val largeIconSize = (64f * theme.iconSizeFactor).coerceIn(48f, 86f).dp
+    val beaconHeaderIconSize = (28f * theme.iconSizeFactor).coerceIn(22f, 38f).dp
     val bgModifier = remember(theme, colorScheme) {
         if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
             Modifier.background(
@@ -144,26 +150,37 @@ fun SmsInboxScreen(
             Modifier.background(parseColorOr(colorScheme.background, theme.backgroundColor))
         }
     }
+    val topAppBarState = rememberTopAppBarState()
+    val scrollBehavior = if (isBeaconMode) {
+        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
+    } else {
+        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
+    }
+    val beaconIconAlpha = (1f - scrollBehavior.state.collapsedFraction).coerceIn(0f, 1f)
 
     Scaffold(
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = if (theme.appBackgroundGradientStart != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor),
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(if (isBeaconMode) "Beacon Inbox" else "Messages", color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)) },
-                navigationIcon = {
-                    if (!isBeaconMode) {
-                        IconButton(onClick = onBack) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
-                                modifier = Modifier.size(iconSize)
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    if (isBeaconMode) {
+            if (isBeaconMode) {
+                LargeTopAppBar(
+                    title = {
+                        Text(
+                            "Beacon Inbox",
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
+                        )
+                    },
+                    navigationIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_beacon_inbox),
+                            contentDescription = "Beacon",
+                            tint = Color.Unspecified,
+                            modifier = Modifier
+                                .size(beaconHeaderIconSize)
+                                .alpha(beaconIconAlpha)
+                        )
+                    },
+                    actions = {
                         IconButton(onClick = onOpenPrivate) {
                             Icon(
                                 Icons.Filled.Lock,
@@ -180,19 +197,38 @@ fun SmsInboxScreen(
                                 modifier = Modifier.size(iconSize)
                             )
                         }
-                    }
-                },
-                colors = androidx.compose.material3.TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor)
+                    },
+                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                        containerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor)
+                    ),
+                    scrollBehavior = scrollBehavior
                 )
-            )
+            } else {
+                CenterAlignedTopAppBar(
+                    title = { Text("Messages", color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
+                                modifier = Modifier.size(iconSize)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor)
+                    ),
+                    scrollBehavior = scrollBehavior
+                )
+            }
         },
         bottomBar = bottomBar,
         floatingActionButton = floatingActionButton,
         floatingActionButtonPosition = FabPosition.End
     ) { padding ->
         Column(
-            modifier = modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .then(bgModifier) // Apply gradient here to fill size
                 .padding(padding)
