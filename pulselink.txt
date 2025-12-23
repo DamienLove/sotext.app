@@ -227,3 +227,27 @@ Current ad behavior in app:
 
 2025-12-22
 - Release v63 (free/pro/premium): versionCode/Name bumped to 63; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v63.aab; release notes saved at disposable_aabs/release-notes-v63.txt.
+
+2025-12-22
+- Release v64 (free/pro/premium): versionCode/Name bumped to 64 after pull; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v64.aab; release notes saved at disposable_aabs/release-notes-v64.txt.
+
+2025-12-22
+- Release v64 (free/pro/premium): versionCode/Name set to 64 after pull; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v64.aab; release notes saved at disposable_aabs/release-notes-v64.txt.
+
+2025-12-22
+- Added self-serve account deletion: Firebase callable function deleteAccount (functions/src/users.ts) and static delete page template at account-delete-site/index.html for remove.damiennichols.com (email/password + Google). Update Firebase Auth authorized domains and deploy functions before upload.
+
+2025-12-23
+- Functions deploy fix: regenerated functions/package-lock.json via npm update/ci to resolve npm ci missing ws@8.18.3; npm ci now succeeds locally. Pending firebase deploy; confirm whether to delete sendDataMessage (us-central1).
+
+2025-12-23
+- Web portal (web/) updated: added email/password auth + password reset, fixed missing useRef import, and added Firestore outbox send composer (queues SMS via SmsRelayService). Added login/composer styles in App.css.
+
+2025-12-23
+- Built web portal (web/dist) for pulselink.damiennichols.com after adding email/password auth + outbox send composer; ready to upload dist folder to host.
+
+2025-12-23
+- Added web/.env with Firebase web app config and rebuilt web/dist for pulselink.damiennichols.com hosting.
+
+2025-12-23
+- Release v65 (free/pro/premium): versionCode/Name bumped to 65; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v65.aab; release notes saved at disposable_aabs/release-notes-v65.txt.

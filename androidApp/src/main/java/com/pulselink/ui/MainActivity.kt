@@ -79,6 +79,7 @@ import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.ContactConversationScreen
 import com.pulselink.ui.screens.LoginScreen
 import com.pulselink.ui.screens.OnboardingScreen
+import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.screens.OtpCleanupOnboardingCard
 import com.pulselink.ui.screens.OnboardingIntroScreen
 import com.pulselink.ui.screens.FaqScreen
