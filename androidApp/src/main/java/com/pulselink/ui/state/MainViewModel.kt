@@ -24,6 +24,8 @@ import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.RemotePresence
 import com.pulselink.domain.model.SoundCategory
+import com.pulselink.domain.model.ThemePreferences
+import com.pulselink.domain.model.TimeFormat
 import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.BetaAgreementRepository
 import com.pulselink.domain.repository.BlockedContactRepository
@@ -37,6 +39,7 @@ import com.pulselink.util.AudioOverrideManager
 import com.pulselink.widget.WidgetStateManager
 import com.pulselink.util.BeaconIconManager
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.auth.FirebaseUser
@@ -85,6 +88,9 @@ class MainViewModel @Inject constructor(
     private val profileUpdate = MutableStateFlow(ProfileUpdateUiState())
     private var lastKnownPhone: String? = null
     private var lastKnownEmail: String? = null
+    private var remoteSettingsListener: ListenerRegistration? = null
+    private var remoteSettingsUserId: String? = null
+    private var pushedThemeFromDevice = false
 
     private val _uiState = MutableStateFlow(PulseLinkUiState())
     val uiState: StateFlow<PulseLinkUiState> = _uiState
@@ -150,6 +156,7 @@ class MainViewModel @Inject constructor(
                     syncProfileFromCloud(user)
                     syncContactsFromCloud(user)
                     linkManager.syncLinksOnLogin()
+                    startRemoteSettingsListener(user)
                     val currentPhone = user.phoneNumber
                     val currentEmail = user.email
                     if (currentPhone != lastKnownPhone || currentEmail != lastKnownEmail) {
@@ -159,6 +166,11 @@ class MainViewModel @Inject constructor(
                         settingsRepository.setLastKnownPhone(currentPhone)
                         settingsRepository.setLastKnownEmail(currentEmail)
                     }
+                } else {
+                    remoteSettingsListener?.remove()
+                    remoteSettingsListener = null
+                    remoteSettingsUserId = null
+                    pushedThemeFromDevice = false
                 }
             }
         }
@@ -324,6 +336,9 @@ class MainViewModel @Inject constructor(
     fun setAutoUpdateContactInfo(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAutoUpdateContactInfo(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("autoUpdateContactInfo" to enabled))
+            }
         }
     }
 
@@ -591,6 +606,54 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private fun startRemoteSettingsListener(user: FirebaseUser) {
+        if (remoteSettingsUserId == user.uid && remoteSettingsListener != null) return
+        remoteSettingsListener?.remove()
+        remoteSettingsUserId = user.uid
+        remoteSettingsListener = firestore.collection(COLLECTION_USERS).document(user.uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null || !snapshot.exists()) {
+                    return@addSnapshotListener
+                }
+                val themeMap = snapshot.get("themePreferences") as? Map<*, *>
+                val remoteWebAccess = snapshot.getBoolean("remoteWebAccessEnabled")
+                val autoUpdate = snapshot.getBoolean("autoUpdateContactInfo")
+                val timeFormatRaw = snapshot.getString("timeFormat")
+                viewModelScope.launch {
+                    val current = settingsRepository.settings.first()
+                    if (themeMap != null) {
+                        val remoteTheme = themeFromMap(themeMap)
+                        if (remoteTheme != current.themePreferences) {
+                            settingsRepository.setThemePreferences(remoteTheme)
+                            if (current.beaconLauncherEnabled && current.themePreferences.inboxIconVariant != remoteTheme.inboxIconVariant) {
+                                applyInboxIconVariant(remoteTheme.inboxIconVariant, enabled = true)
+                            }
+                        }
+                    } else if (!pushedThemeFromDevice) {
+                        pushThemeToCloud(user, current.themePreferences)
+                        pushedThemeFromDevice = true
+                    }
+                    remoteWebAccess?.let {
+                        if (it != current.remoteWebAccessEnabled) {
+                            settingsRepository.setRemoteWebAccessEnabled(it)
+                        }
+                    }
+                    autoUpdate?.let {
+                        if (it != current.autoUpdateContactInfo) {
+                            settingsRepository.setAutoUpdateContactInfo(it)
+                        }
+                    }
+                    timeFormatRaw?.let { raw ->
+                        runCatching { TimeFormat.valueOf(raw) }.getOrNull()?.let { format ->
+                            if (format != current.timeFormat) {
+                                settingsRepository.setTimeFormat(format)
+                            }
+                        }
+                    }
+                }
+            }
+    }
+
     private suspend fun pushProfileToCloud(user: FirebaseUser, ownerName: String) {
         runCatching {
             val settings = settingsRepository.settings.first()
@@ -609,6 +672,30 @@ class MainViewModel @Inject constructor(
                 .await()
         }.onFailure { error ->
             Log.w(TAG, "Unable to push profile name", error)
+        }
+    }
+
+    private suspend fun pushThemeToCloud(user: FirebaseUser, theme: ThemePreferences) {
+        runCatching {
+            val payload = mapOf(
+                "themePreferences" to themeToMap(theme),
+                "themeUpdatedAt" to FieldValue.serverTimestamp()
+            )
+            firestore.collection(COLLECTION_USERS).document(user.uid)
+                .set(payload, SetOptions.merge())
+                .await()
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to push theme to cloud", error)
+        }
+    }
+
+    private suspend fun pushSettingsToCloud(user: FirebaseUser, payload: Map<String, Any>) {
+        runCatching {
+            firestore.collection(COLLECTION_USERS).document(user.uid)
+                .set(payload + mapOf("settingsUpdatedAt" to FieldValue.serverTimestamp()), SetOptions.merge())
+                .await()
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to push settings to cloud", error)
         }
     }
 
@@ -813,6 +900,64 @@ class MainViewModel @Inject constructor(
                 else -> RemotePresence.STALE
             }
         } ?: RemotePresence.STALE
+    }
+
+    private fun themeFromMap(map: Map<*, *>): ThemePreferences {
+        val defaults = ThemePreferences()
+        return ThemePreferences(
+            primaryColor = map["primaryColor"] as? String ?: defaults.primaryColor,
+            secondaryColor = map["secondaryColor"] as? String ?: defaults.secondaryColor,
+            bubbleOutgoing = map["bubbleOutgoing"] as? String ?: defaults.bubbleOutgoing,
+            bubbleIncoming = map["bubbleIncoming"] as? String ?: defaults.bubbleIncoming,
+            backgroundColor = map["backgroundColor"] as? String ?: defaults.backgroundColor,
+            iconSizeFactor = (map["iconSizeFactor"] as? Number)?.toFloat() ?: defaults.iconSizeFactor,
+            fontStyle = map["fontStyle"] as? String ?: defaults.fontStyle,
+            bubbleCornerRadius = (map["bubbleCornerRadius"] as? Number)?.toInt() ?: defaults.bubbleCornerRadius,
+            inboxIconVariant = map["inboxIconVariant"] as? String ?: defaults.inboxIconVariant,
+            onBubbleOutgoing = map["onBubbleOutgoing"] as? String ?: defaults.onBubbleOutgoing,
+            onBubbleIncoming = map["onBubbleIncoming"] as? String ?: defaults.onBubbleIncoming,
+            onBackground = map["onBackground"] as? String ?: defaults.onBackground,
+            topBarColor = map["topBarColor"] as? String ?: defaults.topBarColor,
+            onTopBarColor = map["onTopBarColor"] as? String ?: defaults.onTopBarColor,
+            bubbleCornerRadiusTopStart = (map["bubbleCornerRadiusTopStart"] as? Number)?.toInt(),
+            bubbleCornerRadiusTopEnd = (map["bubbleCornerRadiusTopEnd"] as? Number)?.toInt(),
+            bubbleCornerRadiusBottomStart = (map["bubbleCornerRadiusBottomStart"] as? Number)?.toInt(),
+            bubbleCornerRadiusBottomEnd = (map["bubbleCornerRadiusBottomEnd"] as? Number)?.toInt(),
+            timestampColor = map["timestampColor"] as? String,
+            dividerColor = map["dividerColor"] as? String,
+            appBackgroundGradientStart = map["appBackgroundGradientStart"] as? String,
+            appBackgroundGradientEnd = map["appBackgroundGradientEnd"] as? String,
+            fontScale = (map["fontScale"] as? Number)?.toFloat() ?: defaults.fontScale
+        )
+    }
+
+    private fun themeToMap(theme: ThemePreferences): Map<String, Any> {
+        val payload = mutableMapOf<String, Any>(
+            "primaryColor" to theme.primaryColor,
+            "secondaryColor" to theme.secondaryColor,
+            "bubbleOutgoing" to theme.bubbleOutgoing,
+            "bubbleIncoming" to theme.bubbleIncoming,
+            "backgroundColor" to theme.backgroundColor,
+            "iconSizeFactor" to theme.iconSizeFactor,
+            "fontStyle" to theme.fontStyle,
+            "bubbleCornerRadius" to theme.bubbleCornerRadius,
+            "inboxIconVariant" to theme.inboxIconVariant,
+            "onBubbleOutgoing" to theme.onBubbleOutgoing,
+            "onBubbleIncoming" to theme.onBubbleIncoming,
+            "onBackground" to theme.onBackground,
+            "topBarColor" to theme.topBarColor,
+            "onTopBarColor" to theme.onTopBarColor,
+            "fontScale" to theme.fontScale
+        )
+        theme.bubbleCornerRadiusTopStart?.let { payload["bubbleCornerRadiusTopStart"] = it }
+        theme.bubbleCornerRadiusTopEnd?.let { payload["bubbleCornerRadiusTopEnd"] = it }
+        theme.bubbleCornerRadiusBottomStart?.let { payload["bubbleCornerRadiusBottomStart"] = it }
+        theme.bubbleCornerRadiusBottomEnd?.let { payload["bubbleCornerRadiusBottomEnd"] = it }
+        theme.timestampColor?.let { payload["timestampColor"] = it }
+        theme.dividerColor?.let { payload["dividerColor"] = it }
+        theme.appBackgroundGradientStart?.let { payload["appBackgroundGradientStart"] = it }
+        theme.appBackgroundGradientEnd?.let { payload["appBackgroundGradientEnd"] = it }
+        return payload
     }
 
     private suspend fun resolveLinkFromDoc(contact: Contact, code: String, uid: String): Contact {
@@ -1053,6 +1198,9 @@ class MainViewModel @Inject constructor(
     fun setTimeFormat(format: com.pulselink.domain.model.TimeFormat) {
         viewModelScope.launch {
             settingsRepository.setTimeFormat(format)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("timeFormat" to format.name))
+            }
         }
     }
 
@@ -1063,6 +1211,9 @@ class MainViewModel @Inject constructor(
             settingsRepository.setThemePreferences(theme)
             if (currentSettings.beaconLauncherEnabled && oldTheme.inboxIconVariant != theme.inboxIconVariant) {
                 applyInboxIconVariant(theme.inboxIconVariant, enabled = true)
+            }
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushThemeToCloud(user, theme)
             }
         }
     }
@@ -1078,6 +1229,9 @@ class MainViewModel @Inject constructor(
     fun setRemoteWebAccess(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setRemoteWebAccessEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("remoteWebAccessEnabled" to enabled))
+            }
         }
     }
 

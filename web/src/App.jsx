@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, memo } from 'react';
-import { auth, db } from './firebase';
+import { useState, useEffect, useMemo, useRef, memo } from 'react';
+import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -9,9 +9,23 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail
 } from "firebase/auth";
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  serverTimestamp,
+  doc,
+  setDoc,
+  deleteDoc,
+  getDocs,
+  writeBatch
+} from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
 import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
+import beaconLogo from './assets/beacon-logo.png';
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes.
@@ -29,12 +43,319 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
 
 ThreadItem.displayName = 'ThreadItem';
 
+const defaultTheme = {
+  primaryColor: "#6750A4",
+  secondaryColor: "#625B71",
+  bubbleOutgoing: "#D0BCFF",
+  bubbleIncoming: "#E8DEF8",
+  backgroundColor: "#FFFFFF",
+  iconSizeFactor: 1.0,
+  fontStyle: "Default",
+  bubbleCornerRadius: 12,
+  inboxIconVariant: "Default",
+  onBubbleOutgoing: "#000000",
+  onBubbleIncoming: "#000000",
+  onBackground: "#000000",
+  topBarColor: "#FFFFFF",
+  onTopBarColor: "#000000",
+  bubbleCornerRadiusTopStart: null,
+  bubbleCornerRadiusTopEnd: null,
+  bubbleCornerRadiusBottomStart: null,
+  bubbleCornerRadiusBottomEnd: null,
+  timestampColor: null,
+  dividerColor: null,
+  appBackgroundGradientStart: null,
+  appBackgroundGradientEnd: null,
+  fontScale: 1.0
+};
+
+const themePresets = [
+  {
+    name: "Default Light",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 12,
+      backgroundColor: "#FFFFFF",
+      onBackground: "#111827",
+      topBarColor: "#F3F4F6",
+      onTopBarColor: "#111827",
+      bubbleOutgoing: "#D0BCFF",
+      onBubbleOutgoing: "#111827",
+      bubbleIncoming: "#E8DEF8",
+      onBubbleIncoming: "#111827",
+      primaryColor: "#6750A4",
+      secondaryColor: "#625B71",
+      dividerColor: "#E5E7EB",
+      inboxIconVariant: "default_light"
+    }
+  },
+  {
+    name: "Midnight OLED",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 14,
+      backgroundColor: "#0B0B0F",
+      onBackground: "#F1F5F9",
+      topBarColor: "#111827",
+      onTopBarColor: "#F8FAFC",
+      bubbleOutgoing: "#1F2937",
+      onBubbleOutgoing: "#F8FAFC",
+      bubbleIncoming: "#0F172A",
+      onBubbleIncoming: "#E2E8F0",
+      primaryColor: "#38BDF8",
+      secondaryColor: "#22D3EE",
+      timestampColor: "#94A3B8",
+      dividerColor: "#1F2937",
+      inboxIconVariant: "midnight_oled"
+    }
+  },
+  {
+    name: "Ocean Deep",
+    theme: {
+      fontStyle: "Serif",
+      bubbleCornerRadius: 8,
+      backgroundColor: "#0F172A",
+      onBackground: "#E2E8F0",
+      topBarColor: "#1E293B",
+      onTopBarColor: "#E2E8F0",
+      bubbleOutgoing: "#2563EB",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#334155",
+      onBubbleIncoming: "#E2E8F0",
+      primaryColor: "#38BDF8",
+      secondaryColor: "#1D4ED8",
+      dividerColor: "#334155",
+      inboxIconVariant: "ocean_deep"
+    }
+  },
+  {
+    name: "Rose Petal",
+    theme: {
+      fontStyle: "Cursive",
+      bubbleCornerRadius: 18,
+      backgroundColor: "#FFF1F2",
+      onBackground: "#881337",
+      topBarColor: "#FFE4E6",
+      onTopBarColor: "#881337",
+      bubbleOutgoing: "#FB7185",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#FECACA",
+      onBubbleIncoming: "#7F1D1D",
+      primaryColor: "#E11D48",
+      secondaryColor: "#F43F5E",
+      dividerColor: "#FBCFE8",
+      inboxIconVariant: "rose_petal"
+    }
+  },
+  {
+    name: "Sunset Fade",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 24,
+      appBackgroundGradientStart: "#FF5F6D",
+      appBackgroundGradientEnd: "#FFC371",
+      onBackground: "#FFFFFF",
+      topBarColor: "#FF5F6D",
+      onTopBarColor: "#FFFFFF",
+      bubbleOutgoing: "#FFFFFF",
+      onBubbleOutgoing: "#FF5F6D",
+      bubbleIncoming: "#FFF7ED",
+      onBubbleIncoming: "#C2410C",
+      primaryColor: "#FF5F6D",
+      secondaryColor: "#F97316",
+      dividerColor: "#FED7AA",
+      inboxIconVariant: "sunset_fade",
+      bubbleCornerRadiusTopStart: 0,
+      bubbleCornerRadiusBottomEnd: 0
+    }
+  },
+  {
+    name: "Citrus Pop",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 10,
+      backgroundColor: "#F7FEE7",
+      onBackground: "#365314",
+      topBarColor: "#ECFCCB",
+      onTopBarColor: "#365314",
+      bubbleOutgoing: "#84CC16",
+      onBubbleOutgoing: "#1A2E05",
+      bubbleIncoming: "#DCFCE7",
+      onBubbleIncoming: "#14532D",
+      primaryColor: "#65A30D",
+      secondaryColor: "#84CC16",
+      dividerColor: "#D9F99D",
+      inboxIconVariant: "citrus_pop"
+    }
+  },
+  {
+    name: "Forest Trail",
+    theme: {
+      fontStyle: "Serif",
+      bubbleCornerRadius: 14,
+      backgroundColor: "#ECFDF5",
+      onBackground: "#064E3B",
+      topBarColor: "#D1FAE5",
+      onTopBarColor: "#064E3B",
+      bubbleOutgoing: "#059669",
+      onBubbleOutgoing: "#ECFDF5",
+      bubbleIncoming: "#A7F3D0",
+      onBubbleIncoming: "#064E3B",
+      primaryColor: "#10B981",
+      secondaryColor: "#059669",
+      dividerColor: "#A7F3D0",
+      inboxIconVariant: "forest_trail"
+    }
+  },
+  {
+    name: "Lavender Haze",
+    theme: {
+      fontStyle: "Cursive",
+      bubbleCornerRadius: 16,
+      backgroundColor: "#F5F3FF",
+      onBackground: "#4C1D95",
+      topBarColor: "#EDE9FE",
+      onTopBarColor: "#4C1D95",
+      bubbleOutgoing: "#C4B5FD",
+      onBubbleOutgoing: "#312E81",
+      bubbleIncoming: "#EDE9FE",
+      onBubbleIncoming: "#4C1D95",
+      primaryColor: "#7C3AED",
+      secondaryColor: "#A78BFA",
+      dividerColor: "#DDD6FE",
+      inboxIconVariant: "lavender_haze",
+      iconSizeFactor: 1.1
+    }
+  },
+  {
+    name: "Slate Mono",
+    theme: {
+      fontStyle: "Monospace",
+      bubbleCornerRadius: 6,
+      backgroundColor: "#F8FAFC",
+      onBackground: "#0F172A",
+      topBarColor: "#E2E8F0",
+      onTopBarColor: "#0F172A",
+      bubbleOutgoing: "#CBD5E1",
+      onBubbleOutgoing: "#0F172A",
+      bubbleIncoming: "#F1F5F9",
+      onBubbleIncoming: "#0F172A",
+      primaryColor: "#475569",
+      secondaryColor: "#94A3B8",
+      dividerColor: "#CBD5E1",
+      inboxIconVariant: "slate_mono",
+      iconSizeFactor: 0.95
+    }
+  },
+  {
+    name: "Aurora",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 20,
+      appBackgroundGradientStart: "#0F766E",
+      appBackgroundGradientEnd: "#6366F1",
+      onBackground: "#F8FAFC",
+      topBarColor: "#0F766E",
+      onTopBarColor: "#F8FAFC",
+      bubbleOutgoing: "#6366F1",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#14B8A6",
+      onBubbleIncoming: "#FFFFFF",
+      primaryColor: "#14B8A6",
+      secondaryColor: "#6366F1",
+      dividerColor: "#5EEAD4",
+      inboxIconVariant: "aurora",
+      iconSizeFactor: 1.15
+    }
+  }
+];
+
+const normalizeTheme = (input = {}) => ({
+  ...defaultTheme,
+  ...input,
+  iconSizeFactor: Number(input.iconSizeFactor ?? defaultTheme.iconSizeFactor),
+  bubbleCornerRadius: Number(input.bubbleCornerRadius ?? defaultTheme.bubbleCornerRadius),
+  fontScale: Number(input.fontScale ?? defaultTheme.fontScale),
+  bubbleCornerRadiusTopStart: input.bubbleCornerRadiusTopStart ?? defaultTheme.bubbleCornerRadiusTopStart,
+  bubbleCornerRadiusTopEnd: input.bubbleCornerRadiusTopEnd ?? defaultTheme.bubbleCornerRadiusTopEnd,
+  bubbleCornerRadiusBottomStart: input.bubbleCornerRadiusBottomStart ?? defaultTheme.bubbleCornerRadiusBottomStart,
+  bubbleCornerRadiusBottomEnd: input.bubbleCornerRadiusBottomEnd ?? defaultTheme.bubbleCornerRadiusBottomEnd,
+  timestampColor: input.timestampColor ?? defaultTheme.timestampColor,
+  dividerColor: input.dividerColor ?? defaultTheme.dividerColor,
+  appBackgroundGradientStart: input.appBackgroundGradientStart ?? defaultTheme.appBackgroundGradientStart,
+  appBackgroundGradientEnd: input.appBackgroundGradientEnd ?? defaultTheme.appBackgroundGradientEnd
+});
+
+const buildThemeVars = (theme) => {
+  const active = normalizeTheme(theme);
+  return {
+    "--accent": active.primaryColor,
+    "--accent-strong": active.secondaryColor,
+    "--bg": active.appBackgroundGradientEnd ?? active.backgroundColor,
+    "--bg-accent": active.appBackgroundGradientStart ?? active.backgroundColor,
+    "--surface": active.topBarColor ?? active.backgroundColor,
+    "--surface-alt": active.bubbleIncoming ?? active.backgroundColor,
+    "--ink": active.onBackground,
+    "--muted": active.timestampColor ?? "#9aa4b2",
+    "--border": active.dividerColor ?? "#25304a",
+    "--bubble-outgoing": active.bubbleOutgoing,
+    "--bubble-incoming": active.bubbleIncoming,
+    "--on-bubble-outgoing": active.onBubbleOutgoing,
+    "--on-bubble-incoming": active.onBubbleIncoming,
+    "--app-gradient-start": active.appBackgroundGradientStart ?? active.backgroundColor,
+    "--app-gradient-end": active.appBackgroundGradientEnd ?? active.backgroundColor
+  };
+};
+
+const parseList = (raw) =>
+  raw
+    .split(',')
+    .map(item => item.trim())
+    .filter(item => item.length > 0);
+
+const buildContactDocId = (contact) => {
+  const phone = contact.phoneNumber?.trim();
+  const email = contact.email?.trim().toLowerCase();
+  if (phone) return phone;
+  if (email) return `email_${email}`;
+  return contact.displayName.trim().toLowerCase().replace(/\s+/g, '_') || `contact_${Date.now()}`;
+};
+
 function App() {
   const [user, setUser] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [profile, setProfile] = useState({
+    ownerName: '',
+    avatarUrl: '',
+    email: '',
+    phoneNumber: ''
+  });
+  const [contacts, setContacts] = useState([]);
+  const [contactForm, setContactForm] = useState({
+    displayName: '',
+    phoneNumber: '',
+    email: '',
+    additionalPhones: '',
+    additionalEmails: '',
+    escalationTier: 'EMERGENCY',
+    includeLocation: true,
+    autoCall: false,
+    allowRemoteOverride: true,
+    allowRemoteSoundChange: false
+  });
+  const [editingContactId, setEditingContactId] = useState(null);
+  const [contactStatus, setContactStatus] = useState('');
+  const [profileStatus, setProfileStatus] = useState('');
+  const [themePrefs, setThemePrefs] = useState(defaultTheme);
+  const [themeStatus, setThemeStatus] = useState('');
+  const [remoteSettings, setRemoteSettings] = useState({
+    remoteWebAccessEnabled: false,
+    autoUpdateContactInfo: true,
+    timeFormat: 'AUTO'
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
@@ -42,19 +363,73 @@ function App() {
   const [composeBody, setComposeBody] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [activePanel, setActivePanel] = useState('inbox');
+  const [activePanel, setActivePanel] = useState('home');
   const [settingsStatus, setSettingsStatus] = useState('');
+  const [deleteStatus, setDeleteStatus] = useState('');
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const messagesEndRef = useRef(null);
+  const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsLoggingIn(false);
+      setActivePanel(currentUser ? 'home' : 'home');
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setProfile({ ownerName: '', avatarUrl: '', email: '', phoneNumber: '' });
+      setThemePrefs(defaultTheme);
+      setRemoteSettings({
+        remoteWebAccessEnabled: false,
+        autoUpdateContactInfo: true,
+        timeFormat: 'AUTO'
+      });
+      return;
+    }
+    const userRef = doc(db, "users", user.uid);
+    const unsubscribe = onSnapshot(userRef, (snapshot) => {
+      const data = snapshot.data() || {};
+      setProfile({
+        ownerName: data.ownerName ?? user.displayName ?? '',
+        avatarUrl: data.avatarUrl ?? '',
+        email: data.email ?? user.email ?? '',
+        phoneNumber: data.phoneNumber ?? ''
+      });
+      if (data.themePreferences) {
+        setThemePrefs(normalizeTheme(data.themePreferences));
+      } else {
+        setThemePrefs(defaultTheme);
+      }
+      setRemoteSettings({
+        remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? false,
+        autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
+        timeFormat: data.timeFormat ?? 'AUTO'
+      });
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setContacts([]);
+      return;
+    }
+    const contactsRef = collection(db, "users", user.uid, "trustedContacts");
+    const unsubscribe = onSnapshot(contactsRef, (snapshot) => {
+      const items = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+      items.sort((a, b) => (a.contactOrder ?? 0) - (b.contactOrder ?? 0));
+      setContacts(items);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (user) {
@@ -176,13 +551,205 @@ function App() {
     }
   };
 
+  const handleProfileSave = async () => {
+    if (!user) return;
+    setProfileStatus("Saving profile...");
+    try {
+      const payload = {
+        ownerName: profile.ownerName || '',
+        avatarUrl: profile.avatarUrl || '',
+        phoneNumber: profile.phoneNumber || '',
+        email: profile.email || user.email || ''
+      };
+      if (payload.email) {
+        payload.emailLowercase = payload.email.toLowerCase();
+      }
+      await setDoc(doc(db, "users", user.uid), payload, { merge: true });
+      setProfileStatus("Profile updated.");
+    } catch (error) {
+      console.error("Profile update failed", error);
+      setProfileStatus(error?.message ?? "Profile update failed.");
+    }
+  };
+
+  const resetContactForm = () => {
+    setContactForm({
+      displayName: '',
+      phoneNumber: '',
+      email: '',
+      additionalPhones: '',
+      additionalEmails: '',
+      escalationTier: 'EMERGENCY',
+      includeLocation: true,
+      autoCall: false,
+      allowRemoteOverride: true,
+      allowRemoteSoundChange: false
+    });
+    setEditingContactId(null);
+    setContactStatus('');
+  };
+
+  const handleEditContact = (contact) => {
+    setContactForm({
+      displayName: contact.displayName ?? '',
+      phoneNumber: contact.phoneNumber ?? '',
+      email: contact.email ?? '',
+      additionalPhones: (contact.additionalPhones || []).join(', '),
+      additionalEmails: (contact.additionalEmails || []).join(', '),
+      escalationTier: contact.escalationTier ?? 'EMERGENCY',
+      includeLocation: contact.includeLocation ?? true,
+      autoCall: contact.autoCall ?? false,
+      allowRemoteOverride: contact.allowRemoteOverride ?? true,
+      allowRemoteSoundChange: contact.allowRemoteSoundChange ?? false
+    });
+    setEditingContactId(contact.id);
+    setContactStatus('');
+    setActivePanel('pulselink');
+  };
+
+  const handleSaveContact = async () => {
+    if (!user) return;
+    if (!contactForm.displayName.trim()) {
+      setContactStatus("Display name is required.");
+      return;
+    }
+    setContactStatus("Saving contact...");
+    try {
+      const payload = {
+        displayName: contactForm.displayName.trim(),
+        phoneNumber: contactForm.phoneNumber.trim(),
+        email: contactForm.email.trim() || null,
+        additionalPhones: parseList(contactForm.additionalPhones),
+        additionalEmails: parseList(contactForm.additionalEmails),
+        escalationTier: contactForm.escalationTier,
+        includeLocation: contactForm.includeLocation,
+        autoCall: contactForm.autoCall,
+        allowRemoteOverride: contactForm.allowRemoteOverride,
+        allowRemoteSoundChange: contactForm.allowRemoteSoundChange,
+        contactOrder: editingContactId
+          ? contacts.find(c => c.id === editingContactId)?.contactOrder ?? contacts.length
+          : contacts.length,
+        updatedAt: serverTimestamp()
+      };
+
+      const newDocId = buildContactDocId(payload);
+      if (editingContactId && editingContactId !== newDocId) {
+        await deleteDoc(doc(db, "users", user.uid, "trustedContacts", editingContactId));
+      }
+      await setDoc(doc(db, "users", user.uid, "trustedContacts", editingContactId || newDocId), payload, { merge: true });
+      setContactStatus("Contact saved.");
+      resetContactForm();
+    } catch (error) {
+      console.error("Contact save failed", error);
+      setContactStatus(error?.message ?? "Contact save failed.");
+    }
+  };
+
+  const handleDeleteContact = async (contactId) => {
+    if (!user) return;
+    setContactStatus("Removing contact...");
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "trustedContacts", contactId));
+      setContactStatus("Contact removed.");
+    } catch (error) {
+      console.error("Delete contact failed", error);
+      setContactStatus(error?.message ?? "Delete failed.");
+    }
+  };
+
+  const handleApplyPreset = async (presetTheme) => {
+    if (!user) return;
+    const normalized = normalizeTheme(presetTheme);
+    setThemeStatus("Updating theme...");
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        { themePreferences: normalized, themeUpdatedAt: serverTimestamp() },
+        { merge: true }
+      );
+      setThemePrefs(normalized);
+      setThemeStatus("Theme synced.");
+    } catch (error) {
+      console.error("Theme update failed", error);
+      setThemeStatus(error?.message ?? "Theme update failed.");
+    }
+  };
+
+  const handleRemoteSettingsSave = async () => {
+    if (!user) return;
+    setSettingsStatus("Saving settings...");
+    try {
+      await setDoc(doc(db, "users", user.uid), {
+        remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
+        autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
+        timeFormat: remoteSettings.timeFormat,
+        settingsUpdatedAt: serverTimestamp()
+      }, { merge: true });
+      setSettingsStatus("Settings updated.");
+    } catch (error) {
+      console.error("Settings update failed", error);
+      setSettingsStatus(error?.message ?? "Settings update failed.");
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    if (!window.confirm("Delete your account and all cloud data? This cannot be undone.")) {
+      return;
+    }
+    setDeleteStatus("Requesting account deletion...");
+    try {
+      const callable = httpsCallable(functions, "deleteAccount");
+      await callable();
+      setDeleteStatus("Account deletion requested.");
+      await signOut(auth);
+    } catch (error) {
+      console.error("Delete account failed", error);
+      setDeleteStatus(error?.message ?? "Delete account failed.");
+    }
+  };
+
+  const handleDeleteAccountData = async () => {
+    if (!user) return;
+    if (!window.confirm("Clear synced messages and trusted contacts from the cloud?")) {
+      return;
+    }
+    setDeleteStatus("Deleting account data...");
+    try {
+      const batch = writeBatch(db);
+      const contactsSnap = await getDocs(collection(db, "users", user.uid, "trustedContacts"));
+      contactsSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
+
+      const outboxSnap = await getDocs(collection(db, "users", user.uid, "outbox"));
+      outboxSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
+
+      const threadsSnap = await getDocs(collection(db, "users", user.uid, "synced_threads"));
+      threadsSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
+
+      await batch.commit();
+
+      for (const thread of threadsSnap.docs) {
+        const messagesSnap = await getDocs(collection(db, "users", user.uid, "synced_threads", thread.id, "messages"));
+        if (messagesSnap.empty) continue;
+        const messageBatch = writeBatch(db);
+        messagesSnap.docs.forEach(messageDoc => messageBatch.delete(messageDoc.ref));
+        await messageBatch.commit();
+      }
+
+      setDeleteStatus("Cloud data cleared.");
+    } catch (error) {
+      console.error("Delete data failed", error);
+      setDeleteStatus(error?.message ?? "Delete data failed.");
+    }
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     setSelectedThread(null);
     setComposeAddress('');
     setComposeBody('');
     setSendStatus('');
-    setActivePanel('inbox');
+    setActivePanel('home');
   };
 
   const handleSendMessage = async () => {
@@ -214,69 +781,71 @@ function App() {
 
   if (!user) {
     return (
-      <div className="container login-container">
-        <div className="login-card">
-          <img src={logo} alt="PulseLink Pro" className="brand-logo" />
-          <h1>PulseLink Web</h1>
-          <p>Login to access your messages</p>
-          <div className="login-form">
-            <label className="login-field">
-              Email
-              <input
-                className="login-input"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-            </label>
-            <label className="login-field">
-              Password
-              <input
-                className="login-input"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="password"
-                autoComplete="current-password"
-              />
-            </label>
-            {authError && <div className="auth-error">{authError}</div>}
-            <div className="login-actions">
+      <div className="app-shell" style={themeVars}>
+        <div className="container login-container">
+          <div className="login-card">
+            <img src={logo} alt="PulseLink Pro" className="brand-logo" />
+            <h1>PulseLink Web</h1>
+            <p>Login to access your messages</p>
+            <div className="login-form">
+              <label className="login-field">
+                Email
+                <input
+                  className="login-input"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+              </label>
+              <label className="login-field">
+                Password
+                <input
+                  className="login-input"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="password"
+                  autoComplete="current-password"
+                />
+              </label>
+              {authError && <div className="auth-error">{authError}</div>}
+              <div className="login-actions">
+                <button
+                  onClick={() => handleEmailAuth('signin')}
+                  disabled={isLoggingIn}
+                  aria-busy={isLoggingIn}
+                  className="primary-btn"
+                >
+                  {isLoggingIn ? 'Signing in...' : 'Sign in'}
+                </button>
+                <button
+                  onClick={() => handleEmailAuth('signup')}
+                  disabled={isLoggingIn}
+                  className="secondary-btn"
+                >
+                  Create account
+                </button>
+              </div>
               <button
-                onClick={() => handleEmailAuth('signin')}
+                type="button"
+                className="link-button"
+                onClick={handlePasswordReset}
+                disabled={isLoggingIn}
+              >
+                Forgot password?
+              </button>
+              <div className="login-divider">or</div>
+              <button
+                onClick={handleLogin}
                 disabled={isLoggingIn}
                 aria-busy={isLoggingIn}
                 className="primary-btn"
               >
-                {isLoggingIn ? 'Signing in...' : 'Sign in'}
-              </button>
-              <button
-                onClick={() => handleEmailAuth('signup')}
-                disabled={isLoggingIn}
-                className="secondary-btn"
-              >
-                Create account
+                {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
               </button>
             </div>
-            <button
-              type="button"
-              className="link-button"
-              onClick={handlePasswordReset}
-              disabled={isLoggingIn}
-            >
-              Forgot password?
-            </button>
-            <div className="login-divider">or</div>
-            <button
-              onClick={handleLogin}
-              disabled={isLoggingIn}
-              aria-busy={isLoggingIn}
-              className="primary-btn"
-            >
-              {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
-            </button>
           </div>
         </div>
       </div>
@@ -284,177 +853,499 @@ function App() {
   }
 
   return (
-    <div className="app-container">
-      <div className="sidebar">
-        <div className="sidebar-header">
-          <div className="sidebar-brand">
-            <img src={logo} alt="PulseLink Pro" className="brand-logo small" />
-            <div>
-              <div className="brand-title">PulseLink Pro</div>
-              <div className="brand-subtitle">Web access</div>
-            </div>
-          </div>
-          <div className="sidebar-actions">
-            {activePanel === 'inbox' && (
-              <button
-                onClick={() => {
-                  setSelectedThread(null);
-                  setComposeAddress('');
-                  setComposeBody('');
-                  setSendStatus('');
-                }}
-                className="secondary-btn"
-              >
-                New
-              </button>
-            )}
-            <button onClick={handleLogout} className="ghost-btn">Logout</button>
-          </div>
-        </div>
-        <div className="sidebar-nav">
-          <button
-            className={`nav-item ${activePanel === 'inbox' ? 'active' : ''}`}
-            onClick={() => setActivePanel('inbox')}
-          >
-            Inbox
-          </button>
-          <button
-            className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
-            onClick={() => setActivePanel('settings')}
-          >
-            Settings
-          </button>
-        </div>
-        <div className="thread-list">
-          {threads.map(thread => (
-            <ThreadItem
-              key={thread.id}
-              thread={thread}
-              isActive={selectedThread?.id === thread.id}
-              onSelect={setSelectedThread}
-              showPreviews={showPreviews}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="main-content">
-        {activePanel === 'settings' ? (
-          <div className="settings-panel">
-            <div className="settings-header">
-              <h3>Settings</h3>
-              <p>Manage your account and web access preferences.</p>
-            </div>
-            <div className="settings-grid">
-              <div className="settings-card">
-                <h4>Account</h4>
-                <div className="settings-row">
-                  <span className="settings-label">Signed in as</span>
-                  <span className="settings-value">{user.email || 'Unknown'}</span>
-                </div>
-                <div className="settings-row">
-                  <span className="settings-label">User ID</span>
-                  <span className="settings-value mono">{user.uid}</span>
-                </div>
-                <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
-                  Send password reset email
-                </button>
-                {settingsStatus && <div className="settings-status">{settingsStatus}</div>}
-              </div>
-              <div className="settings-card">
-                <h4>Web preferences</h4>
-                <label className="settings-toggle">
-                  <input
-                    type="checkbox"
-                    checked={showPreviews}
-                    onChange={(e) => setShowPreviews(e.target.checked)}
-                  />
-                  Show message previews
-                </label>
-                <label className="settings-toggle">
-                  <input
-                    type="checkbox"
-                    checked={autoScroll}
-                    onChange={(e) => setAutoScroll(e.target.checked)}
-                  />
-                  Auto-scroll to latest message
-                </label>
-                <p className="settings-note">
-                  Preferences apply to this browser only.
-                </p>
-              </div>
-              <div className="settings-card">
-                <h4>Device sync</h4>
-                <p className="settings-note">
-                  Messages arrive from your phone when it’s online and signed in.
-                  Keep PulseLink running on your device for the fastest sync.
-                </p>
-                <button className="primary-btn" type="button" onClick={() => setActivePanel('inbox')}>
-                  Back to inbox
-                </button>
+    <div className="app-shell" style={themeVars}>
+      <div className="app-container">
+        <div className="sidebar">
+          <div className="sidebar-header">
+            <div className="sidebar-brand">
+              <img src={logo} alt="PulseLink Pro" className="brand-logo small" />
+              <div>
+                <div className="brand-title">PulseLink Pro</div>
+                <div className="brand-subtitle">Web Command Center</div>
               </div>
             </div>
-          </div>
-        ) : (
-          <>
-            {selectedThread ? (
-              <>
-                <div className="chat-header">
-                  <h3>{selectedThread.address}</h3>
-                </div>
-                <div className="messages-list">
-                  {messages.map(msg => (
-                    <div key={msg.id} className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
-                      <div className="message-bubble">
-                        {showPreviews ? msg.body : '••••••'}
-                      </div>
-                      <div className="message-time">
-                        {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-              </>
-            ) : (
-              <div className="empty-state">
-                <img src={logo} alt="PulseLink Pro" className="empty-logo" />
-                <div>Select a thread or start a new message</div>
-              </div>
-            )}
-            <div className="composer">
-              <div className="composer-row">
-                <label className="composer-label" htmlFor="compose-address">To</label>
-                <input
-                  id="compose-address"
-                  className="composer-input"
-                  type="tel"
-                  placeholder="Phone number"
-                  value={composeAddress}
-                  onChange={(e) => setComposeAddress(e.target.value)}
-                />
-              </div>
-              <div className="composer-row composer-actions">
-                <textarea
-                  className="composer-textarea"
-                  placeholder="Type a message..."
-                  value={composeBody}
-                  onChange={(e) => setComposeBody(e.target.value)}
-                />
+            <div className="sidebar-actions">
+              {activePanel === 'beacon' && (
                 <button
-                  onClick={handleSendMessage}
-                  disabled={isSending || isLoggingIn}
-                  className="primary-btn"
+                  onClick={() => {
+                    setActivePanel('beacon');
+                    setSelectedThread(null);
+                    setComposeAddress('');
+                    setComposeBody('');
+                    setSendStatus('');
+                  }}
+                  className="secondary-btn"
                 >
-                  {isSending ? "Sending..." : "Send"}
+                  New
+                </button>
+              )}
+              <button onClick={handleLogout} className="ghost-btn">Logout</button>
+            </div>
+          </div>
+          <div className="sidebar-nav">
+            <button
+              className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
+              onClick={() => setActivePanel('home')}
+            >
+              Home
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+              onClick={() => setActivePanel('beacon')}
+            >
+              Beacon Inbox
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
+              onClick={() => setActivePanel('pulselink')}
+            >
+              PulseLink
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
+              onClick={() => setActivePanel('settings')}
+            >
+              Settings
+            </button>
+          </div>
+          {activePanel === 'beacon' ? (
+            <div className="thread-list">
+              {threads.map(thread => (
+                <ThreadItem
+                  key={thread.id}
+                  thread={thread}
+                  isActive={selectedThread?.id === thread.id}
+                  onSelect={setSelectedThread}
+                  showPreviews={showPreviews}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="sidebar-placeholder">
+              <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
+              <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
+            </div>
+          )}
+        </div>
+        <div className="main-content">
+          {activePanel === 'home' && (
+            <div className="home-panel">
+              <div className="home-hero">
+                <h2>Welcome back</h2>
+                <p>Choose what you want to manage on PulseLink Web.</p>
+              </div>
+              <div className="home-grid">
+                <button className="home-card" onClick={() => setActivePanel('pulselink')}>
+                  <div className="home-icon pulselink">
+                    <img src={logo} alt="PulseLink" />
+                  </div>
+                  <h3>PulseLink</h3>
+                  <p>Update your profile and trusted contacts.</p>
+                </button>
+                <button className="home-card" onClick={() => setActivePanel('beacon')}>
+                  <div className="home-icon beacon">
+                    <img src={beaconLogo} alt="Beacon" />
+                  </div>
+                  <h3>Beacon Inbox</h3>
+                  <p>View SMS synced from your phone.</p>
                 </button>
               </div>
-              {sendStatus && <div className="compose-status">{sendStatus}</div>}
-              <div className="compose-hint">
-                Messages are sent from your phone when it's online and signed in.
+            </div>
+          )}
+
+          {activePanel === 'pulselink' && (
+            <div className="pulselink-panel">
+              <div className="panel-header">
+                <h3>PulseLink</h3>
+                <p>Manage trusted contacts and your public profile.</p>
+              </div>
+              <div className="pulselink-grid">
+                <div className="settings-card">
+                  <h4>Public profile</h4>
+                  <label className="login-field">
+                    Display name
+                    <input
+                      className="login-input"
+                      value={profile.ownerName}
+                      onChange={(e) => setProfile((prev) => ({ ...prev, ownerName: e.target.value }))}
+                    />
+                  </label>
+                  <label className="login-field">
+                    Email (profile)
+                    <input
+                      className="login-input"
+                      value={profile.email}
+                      onChange={(e) => setProfile((prev) => ({ ...prev, email: e.target.value }))}
+                    />
+                  </label>
+                  <label className="login-field">
+                    Phone
+                    <input
+                      className="login-input"
+                      value={profile.phoneNumber}
+                      onChange={(e) => setProfile((prev) => ({ ...prev, phoneNumber: e.target.value }))}
+                    />
+                  </label>
+                  <label className="login-field">
+                    Avatar URL
+                    <input
+                      className="login-input"
+                      value={profile.avatarUrl}
+                      onChange={(e) => setProfile((prev) => ({ ...prev, avatarUrl: e.target.value }))}
+                    />
+                  </label>
+                  <button className="primary-btn" type="button" onClick={handleProfileSave}>
+                    Save profile
+                  </button>
+                  {profileStatus && <div className="settings-status">{profileStatus}</div>}
+                </div>
+                <div className="settings-card">
+                  <h4>Trusted contacts</h4>
+                  <div className="contact-list">
+                    {contacts.map((contact) => (
+                      <div key={contact.id} className="contact-row">
+                        <div className="contact-main">
+                          <div className="contact-name">{contact.displayName}</div>
+                          <div className="contact-meta">
+                            {contact.phoneNumber || contact.email || 'No phone or email'}
+                          </div>
+                        </div>
+                        <div className="contact-actions">
+                          <button className="secondary-btn" onClick={() => handleEditContact(contact)}>Edit</button>
+                          <button className="ghost-btn" onClick={() => handleDeleteContact(contact.id)}>Remove</button>
+                        </div>
+                      </div>
+                    ))}
+                    {contacts.length === 0 && (
+                      <div className="settings-note">No trusted contacts yet.</div>
+                    )}
+                  </div>
+                  {contactStatus && <div className="settings-status">{contactStatus}</div>}
+                </div>
+                <div className="settings-card">
+                  <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
+                  <label className="login-field">
+                    Name
+                    <input
+                      className="login-input"
+                      value={contactForm.displayName}
+                      onChange={(e) => setContactForm((prev) => ({ ...prev, displayName: e.target.value }))}
+                    />
+                  </label>
+                  <label className="login-field">
+                    Phone
+                    <input
+                      className="login-input"
+                      value={contactForm.phoneNumber}
+                      onChange={(e) => setContactForm((prev) => ({ ...prev, phoneNumber: e.target.value }))}
+                    />
+                  </label>
+                  <label className="login-field">
+                    Email
+                    <input
+                      className="login-input"
+                      value={contactForm.email}
+                      onChange={(e) => setContactForm((prev) => ({ ...prev, email: e.target.value }))}
+                    />
+                  </label>
+                  <label className="login-field">
+                    Extra phones (comma separated)
+                    <input
+                      className="login-input"
+                      value={contactForm.additionalPhones}
+                      onChange={(e) => setContactForm((prev) => ({ ...prev, additionalPhones: e.target.value }))}
+                    />
+                  </label>
+                  <label className="login-field">
+                    Extra emails (comma separated)
+                    <input
+                      className="login-input"
+                      value={contactForm.additionalEmails}
+                      onChange={(e) => setContactForm((prev) => ({ ...prev, additionalEmails: e.target.value }))}
+                    />
+                  </label>
+                  <label className="login-field">
+                    Escalation tier
+                    <select
+                      className="login-input"
+                      value={contactForm.escalationTier}
+                      onChange={(e) => setContactForm((prev) => ({ ...prev, escalationTier: e.target.value }))}
+                    >
+                      <option value="EMERGENCY">Emergency</option>
+                      <option value="CHECK_IN">Check-in</option>
+                    </select>
+                  </label>
+                  <div className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={contactForm.includeLocation}
+                      onChange={(e) => setContactForm((prev) => ({ ...prev, includeLocation: e.target.checked }))}
+                    />
+                    Share location with this contact
+                  </div>
+                  <div className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={contactForm.autoCall}
+                      onChange={(e) => setContactForm((prev) => ({ ...prev, autoCall: e.target.checked }))}
+                    />
+                    Auto-call after alert
+                  </div>
+                  <div className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={contactForm.allowRemoteOverride}
+                      onChange={(e) => setContactForm((prev) => ({ ...prev, allowRemoteOverride: e.target.checked }))}
+                    />
+                    Allow remote overrides
+                  </div>
+                  <div className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={contactForm.allowRemoteSoundChange}
+                      onChange={(e) => setContactForm((prev) => ({ ...prev, allowRemoteSoundChange: e.target.checked }))}
+                    />
+                    Allow remote sound changes
+                  </div>
+                  <div className="contact-actions">
+                    <button className="primary-btn" onClick={handleSaveContact}>
+                      {editingContactId ? 'Update contact' : 'Add contact'}
+                    </button>
+                    <button className="ghost-btn" onClick={resetContactForm}>
+                      Clear
+                    </button>
+                  </div>
+                  {contactStatus && <div className="settings-status">{contactStatus}</div>}
+                </div>
               </div>
             </div>
-          </>
-        )}
+          )}
+
+          {activePanel === 'settings' && (
+            <div className="settings-panel">
+              <div className="settings-header">
+                <h3>Settings</h3>
+                <p>Manage account, theme sync, and shared preferences.</p>
+              </div>
+              <div className="settings-grid">
+                <div className="settings-card">
+                  <h4>Account</h4>
+                  <div className="settings-row">
+                    <span className="settings-label">Signed in as</span>
+                    <span className="settings-value">{user.email || 'Unknown'}</span>
+                  </div>
+                  <div className="settings-row">
+                    <span className="settings-label">User ID</span>
+                    <span className="settings-value mono">{user.uid}</span>
+                  </div>
+                  <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
+                    Send password reset email
+                  </button>
+                  {settingsStatus && <div className="settings-status">{settingsStatus}</div>}
+                </div>
+                <div className="settings-card">
+                  <h4>Web preferences</h4>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={showPreviews}
+                      onChange={(e) => setShowPreviews(e.target.checked)}
+                    />
+                    Show message previews
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={autoScroll}
+                      onChange={(e) => setAutoScroll(e.target.checked)}
+                    />
+                    Auto-scroll to latest message
+                  </label>
+                  <p className="settings-note">
+                    Preferences apply to this browser only.
+                  </p>
+                </div>
+                <div className="settings-card">
+                  <h4>Theme sync</h4>
+                  <div className="theme-grid">
+                    {themePresets.map((preset) => (
+                      <button
+                        key={preset.name}
+                        className="theme-chip"
+                        onClick={() => handleApplyPreset(preset.theme)}
+                      >
+                        <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="theme-editor">
+                    <label className="login-field">
+                      Primary color
+                      <input
+                        className="login-input"
+                        type="color"
+                        value={themePrefs.primaryColor}
+                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, primaryColor: e.target.value }))}
+                      />
+                    </label>
+                    <label className="login-field">
+                      Background
+                      <input
+                        className="login-input"
+                        type="color"
+                        value={themePrefs.backgroundColor}
+                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, backgroundColor: e.target.value }))}
+                      />
+                    </label>
+                    <label className="login-field">
+                      Top bar
+                      <input
+                        className="login-input"
+                        type="color"
+                        value={themePrefs.topBarColor}
+                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, topBarColor: e.target.value }))}
+                      />
+                    </label>
+                    <label className="login-field">
+                      Bubble outgoing
+                      <input
+                        className="login-input"
+                        type="color"
+                        value={themePrefs.bubbleOutgoing}
+                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, bubbleOutgoing: e.target.value }))}
+                      />
+                    </label>
+                    <label className="login-field">
+                      Bubble incoming
+                      <input
+                        className="login-input"
+                        type="color"
+                        value={themePrefs.bubbleIncoming}
+                        onChange={(e) => setThemePrefs((prev) => ({ ...prev, bubbleIncoming: e.target.value }))}
+                      />
+                    </label>
+                  </div>
+                  <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
+                    Save theme
+                  </button>
+                  {themeStatus && <div className="settings-status">{themeStatus}</div>}
+                </div>
+                <div className="settings-card">
+                  <h4>PulseLink settings</h4>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.remoteWebAccessEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
+                    />
+                    Enable remote web access
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.autoUpdateContactInfo}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
+                    />
+                    Auto-update contact info
+                  </label>
+                  <label className="login-field">
+                    Time format
+                    <select
+                      className="login-input"
+                      value={remoteSettings.timeFormat}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
+                    >
+                      <option value="AUTO">Auto</option>
+                      <option value="TWELVE_HOUR">12-hour</option>
+                      <option value="TWENTY_FOUR_HOUR">24-hour</option>
+                    </select>
+                  </label>
+                  <button className="secondary-btn" type="button" onClick={handleRemoteSettingsSave}>
+                    Save PulseLink settings
+                  </button>
+                </div>
+                <div className="settings-card">
+                  <h4>Account data</h4>
+                  <p className="settings-note">
+                    Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
+                  </p>
+                  <div className="contact-actions">
+                    <button className="secondary-btn" type="button" onClick={handleDeleteAccountData}>
+                      Clear cloud data
+                    </button>
+                    <button className="primary-btn" type="button" onClick={handleDeleteAccount}>
+                      Delete account
+                    </button>
+                  </div>
+                  {deleteStatus && <div className="settings-status">{deleteStatus}</div>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'beacon' && (
+            <>
+              {selectedThread ? (
+                <>
+                  <div className="chat-header">
+                    <h3>{selectedThread.address}</h3>
+                  </div>
+                  <div className="messages-list">
+                    {messages.map(msg => (
+                      <div key={msg.id} className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
+                        <div className="message-bubble">
+                          {showPreviews ? msg.body : '••••••'}
+                        </div>
+                        <div className="message-time">
+                          {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </>
+              ) : (
+                <div className="empty-state">
+                  <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                  <div>Select a thread or start a new message</div>
+                </div>
+              )}
+              <div className="composer">
+                <div className="composer-row">
+                  <label className="composer-label" htmlFor="compose-address">To</label>
+                  <input
+                    id="compose-address"
+                    className="composer-input"
+                    type="tel"
+                    placeholder="Phone number"
+                    value={composeAddress}
+                    onChange={(e) => setComposeAddress(e.target.value)}
+                  />
+                </div>
+                <div className="composer-row composer-actions">
+                  <textarea
+                    className="composer-textarea"
+                    placeholder="Type a message..."
+                    value={composeBody}
+                    onChange={(e) => setComposeBody(e.target.value)}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={isSending || isLoggingIn}
+                    className="primary-btn"
+                  >
+                    {isSending ? "Sending..." : "Send"}
+                  </button>
+                </div>
+                {sendStatus && <div className="compose-status">{sendStatus}</div>}
+                <div className="compose-hint">
+                  Messages are sent from your phone when it's online and signed in.
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
