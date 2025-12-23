@@ -41,7 +41,10 @@ class SmsSyncWorker @AssistedInject constructor(
                     "address" to thread.address,
                     "snippet" to thread.snippet,
                     "date" to thread.timestamp,
-                    "unread" to thread.unread
+                    "unread" to thread.unread,
+                    "isFavorite" to thread.isFavorite,
+                    "isPrivate" to thread.isPrivate,
+                    "isTrusted" to thread.isTrusted
                 )
                 // Write thread data
                 threadDoc.set(threadData, SetOptions.merge()).await()

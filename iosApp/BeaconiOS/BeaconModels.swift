@@ -19,6 +19,9 @@ struct BeaconContactCard: Identifiable, Hashable {
     let role: String
     let presence: BeaconPresence
     var unread: Int
+    var isFavorite: Bool
+    var isPrivate: Bool
+    var isTrusted: Bool
 }
 
 struct BeaconConversationMessage: Identifiable {
