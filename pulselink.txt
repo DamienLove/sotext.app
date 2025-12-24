@@ -296,3 +296,9 @@ Current ad behavior in app:
 
 2025-12-23
 - Web portal: added Emergency Map panel that parses synced SMS alert locations, loads Google Maps when VITE_GOOGLE_MAPS_API_KEY is set, and added UI filters + map list.
+
+2025-12-24
+- Closed GitHub issues: #91, #173, #189, #190, #192, #58, #75, #54.
+- Fixed email-only contact linking: allow email delivery when no phone is available and auto-send link requests for email contacts (ContactLinkManager + MainViewModel); pushed Suite-Beta (commit 319dfaa3).
+- Attempted to locate stacktrace.txt for ad-related Pro crash; file not present in repo root.
+
