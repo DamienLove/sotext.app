@@ -276,6 +276,19 @@ Current ad behavior in app:
 - Release v68 (free/pro/premium): versionCode/Name bumped to 68; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v68.aab; release notes saved at disposable_aabs/release-notes-v68.txt.
 
 2025-12-23
+- Pulled latest Suite-Beta (merged PRs #211-#214); upstream removed .Jules/.jules directories.
+- Pre-update stashes now only reference removed palette notes or already-merged changes; not reapplied yet.
+
+2025-12-23
+- Synced Ds-work-suite-beta with Suite-Beta (merged origin/Suite-Beta into Ds-work-suite-beta and pushed).
+
+2025-12-23
+- Added Firebase AI Logic SDK (firebase-ai) to androidApp and bumped Firebase BoM to 34.7.0; removed Firebase KTX artifacts in androidApp dependencies.
+
+2025-12-23
+- Synced Suite-Beta with Ds-work-suite-beta (fast-forwarded Suite-Beta to Ds-work commit dc436f1d and pushed).
+
+2025-12-23
 - Verified allowRemoteOverride defaults to true for new contacts (Contact model default + sync defaults + migration 13_14 sets existing false values to true); no code changes yet.
 
 2025-12-23
