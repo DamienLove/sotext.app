@@ -44,6 +44,9 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.auth.FirebaseUser
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
+import androidx.work.ExistingWorkPolicy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -75,6 +78,8 @@ class MainViewModel @Inject constructor(
     private val functions: com.google.firebase.functions.FirebaseFunctions,
     private val widgetStateManager: WidgetStateManager
 ) : ViewModel() {
+
+    private val workManager = WorkManager.getInstance(context)
 
     private val _deleteAccountState = MutableStateFlow<DeleteAccountState>(DeleteAccountState.Idle)
     val deleteAccountState: StateFlow<DeleteAccountState> = _deleteAccountState
@@ -300,6 +305,11 @@ class MainViewModel @Inject constructor(
             }
             syncContactsFromCloud(user, forcePushLocal = true)
             linkManager.syncLinksOnLogin()
+        }
+        // Also trigger SMS sync if applicable
+        if (BuildConfig.PREMIUM_FEATURES) {
+            val request = OneTimeWorkRequest.Builder(com.pulselink.data.sms.SmsSyncWorker::class.java).build()
+            workManager.enqueueUniqueWork("SmsSyncManual", ExistingWorkPolicy.KEEP, request)
         }
     }
 
