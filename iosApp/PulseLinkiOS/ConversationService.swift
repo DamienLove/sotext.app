@@ -14,7 +14,17 @@ final class InMemoryConversationProvider: ConversationProvider {
     private var store: [ContactCard: [ConversationMessage]] = [:]
 
     init(seed: [ContactCard: [ConversationMessage]] = [:]) {
-        store = seed
+        // If seed is empty, provide some mock data compatible with new fields
+        if seed.isEmpty {
+            let c1 = ContactCard(name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false)
+            let c2 = ContactCard(name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
+            store = [
+                c1: [],
+                c2: []
+            ]
+        } else {
+            store = seed
+        }
     }
 
     func loadConversations() async throws -> [ContactCard: [ConversationMessage]] {
@@ -57,7 +67,10 @@ final class FirestoreConversationProvider: ConversationProvider {
                         address: address,
                         role: "Contact",
                         presence: .offline,
-                        unread: data["unread"] as? Int ?? 0
+                        unread: data["unread"] as? Int ?? 0,
+                        isFavorite: data["isFavorite"] as? Bool ?? false,
+                        isPrivate: data["isPrivate"] as? Bool ?? false,
+                        isTrusted: data["isTrusted"] as? Bool ?? false
                     )
 
                     let messagesSnapshot = try await threadDoc.reference.collection("messages")

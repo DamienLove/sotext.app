@@ -226,7 +226,7 @@ private struct ContactsTab: View {
         NavigationStack {
             List {
                 Section("Trusted contacts") {
-                    ForEach(viewModel.contacts) { contact in
+                    ForEach(viewModel.trustedContacts) { contact in
                         NavigationLink(value: contact) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
