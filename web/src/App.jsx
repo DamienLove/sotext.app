@@ -44,6 +44,20 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
 
 ThreadItem.displayName = 'ThreadItem';
 
+// Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
+const MessageItem = memo(({ msg, showPreviews }) => (
+  <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
+    <div className="message-bubble">
+      {showPreviews ? msg.body : '••••••'}
+    </div>
+    <div className="message-time">
+      {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    </div>
+  </div>
+));
+
+MessageItem.displayName = 'MessageItem';
+
 const defaultTheme = {
   primaryColor: "#6750A4",
   secondaryColor: "#625B71",
@@ -915,6 +929,11 @@ function App() {
     });
     mapInstanceRef.current.fitBounds(bounds);
   }, [filteredAlerts, userLocation]);
+
+  const fetchAlertLocations = () => {
+    // Snapshot listener handles real-time updates.
+    console.log("Refreshing alerts...");
+  };
 
   const handleAlertFocus = (alert) => {
     setSelectedAlertId(alert.id);
@@ -2158,14 +2177,7 @@ function App() {
                   </div>
                   <div className="messages-list">
                     {messages.map(msg => (
-                      <div key={msg.id} className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
-                        <div className="message-bubble">
-                          {showPreviews ? msg.body : '••••••'}
-                        </div>
-                        <div className="message-time">
-                          {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </div>
+                      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
                     ))}
                     <div ref={messagesEndRef} />
                   </div>
