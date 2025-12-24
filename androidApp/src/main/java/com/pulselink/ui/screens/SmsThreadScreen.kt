@@ -1,6 +1,7 @@
 package com.pulselink.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,13 +59,19 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.pulselink.data.sms.SmsMessageItem
 import com.pulselink.data.ai.AiComposeAction
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ThemePreferences
+import com.pulselink.ui.components.ThemeIcon
+import com.pulselink.ui.components.ThemeIconKey
 import com.pulselink.ui.state.AiComposeState
 import com.pulselink.ui.state.AiSummaryState
 import com.pulselink.util.parseColorOr
@@ -82,7 +89,12 @@ fun SmsThreadScreen(
     onUpdateContactTheme: (ThemePreferences?) -> Unit,
     onCustomizeTheme: () -> Unit,
     onEditNotificationSound: () -> Unit = {},
-    onSendMessage: (String) -> Unit,
+    onSendMessage: (String, String?) -> Unit,
+    lineOptions: List<com.pulselink.domain.model.SmsLine> = emptyList(),
+    selectedLineId: String? = null,
+    deviceLineId: String? = null,
+    lineStatus: Map<String, Boolean> = emptyMap(),
+    onSelectLine: (String) -> Unit = {},
     isArchived: Boolean,
     onToggleArchive: () -> Unit,
     aiSummaryState: AiSummaryState = AiSummaryState.Idle,
@@ -98,19 +110,24 @@ fun SmsThreadScreen(
     var showThemeMenu by remember { mutableStateOf(false) }
     val iconSize = (24f * effectiveTheme.iconSizeFactor).coerceIn(18f, 34f).dp
     var draft by rememberSaveable { mutableStateOf("") }
+    var showOfflineDialog by remember { mutableStateOf(false) }
+    var pendingDraft by remember { mutableStateOf<String?>(null) }
+    var pendingLineId by remember { mutableStateOf<String?>(null) }
     val lastInbound = remember(messages) { messages.lastOrNull { !it.outgoing }?.body }
+    val backgroundImageUrl = effectiveTheme.backgroundImageUrl?.takeIf { it.isNotBlank() }
+    val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
 
     val bgModifier = if (effectiveTheme.appBackgroundGradientStart != null && effectiveTheme.appBackgroundGradientEnd != null) {
         Modifier.background(
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientStart!!),
-                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientEnd!!)
+                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientStart!!).copy(alpha = overlayAlpha),
+                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientEnd!!).copy(alpha = overlayAlpha)
                 )
             )
         )
     } else {
-        Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor))
+        Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor).copy(alpha = overlayAlpha))
     }
 
     Scaffold(
@@ -119,14 +136,26 @@ fun SmsThreadScreen(
             MessageInput(
                 draft = draft,
                 onDraftChange = { draft = it },
-                onSend = {
-                    if (draft.isNotBlank()) {
-                        onSendMessage(draft)
+                onSend = { message, lineId ->
+                    if (message.isBlank()) return@MessageInput
+                    val resolvedLineId = lineId ?: deviceLineId
+                    val isRemoteLine = !resolvedLineId.isNullOrBlank() && resolvedLineId != deviceLineId
+                    val isOnline = resolvedLineId?.let { lineStatus[it] != false } ?: true
+                    if (isRemoteLine && !isOnline) {
+                        pendingDraft = message
+                        pendingLineId = resolvedLineId
+                        showOfflineDialog = true
+                    } else {
+                        onSendMessage(message, resolvedLineId)
                         draft = ""
                     }
                 },
                 theme = effectiveTheme,
                 iconSize = iconSize,
+                lineOptions = lineOptions,
+                selectedLineId = selectedLineId,
+                onSelectLine = onSelectLine,
+                lineStatus = lineStatus,
                 aiEnabled = aiComposeEnabled,
                 aiState = aiComposeState,
                 onAiAction = { action ->
@@ -153,8 +182,10 @@ fun SmsThreadScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.BACK,
+                            theme = effectiveTheme,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
                             modifier = Modifier.size(iconSize)
@@ -164,25 +195,32 @@ fun SmsThreadScreen(
                 actions = {
                     IconButton(onClick = onToggleArchive) {
                         val icon = if (isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
+                        val iconKey = if (isArchived) ThemeIconKey.UNARCHIVE else ThemeIconKey.ARCHIVE
                         val desc = if (isArchived) "Unarchive" else "Archive"
-                        Icon(
-                            icon,
+                        ThemeIcon(
+                            iconKey = iconKey,
+                            theme = effectiveTheme,
+                            imageVector = icon,
                             contentDescription = desc,
                             tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
                             modifier = Modifier.size(iconSize)
                         )
                     }
                     IconButton(onClick = onEditNotificationSound) {
-                        Icon(
-                            Icons.Filled.NotificationsActive,
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.NOTIFICATIONS,
+                            theme = effectiveTheme,
+                            imageVector = Icons.Filled.NotificationsActive,
                             contentDescription = "Notification sound",
                             tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
                             modifier = Modifier.size(iconSize)
                         )
                     }
                     IconButton(onClick = { showThemeMenu = true }) {
-                        Icon(
-                            Icons.Filled.Palette,
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.PALETTE,
+                            theme = effectiveTheme,
+                            imageVector = Icons.Filled.Palette,
                             contentDescription = "Theme",
                             tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
                             modifier = Modifier.size(iconSize)
@@ -216,26 +254,41 @@ fun SmsThreadScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = modifier
                 .fillMaxSize()
-                .then(bgModifier) // Apply gradient here
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(padding)
         ) {
-            if (aiSummaryEnabled) {
-                item {
-                    AiSummaryCard(
-                        state = aiSummaryState,
-                        onGenerate = onRequestSummary,
-                        onClear = onClearSummary,
-                        theme = effectiveTheme
-                    )
-                }
+            if (backgroundImageUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(backgroundImageUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             }
-            items(messages, key = { it.id }) { msg ->
-                MessageBubble(msg, dateFormatter, effectiveTheme, contact)
+            Box(modifier = Modifier.fillMaxSize().then(bgModifier))
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (aiSummaryEnabled) {
+                    item {
+                        AiSummaryCard(
+                            state = aiSummaryState,
+                            onGenerate = onRequestSummary,
+                            onClear = onClearSummary,
+                            theme = effectiveTheme
+                        )
+                    }
+                }
+                items(messages, key = { it.id }) { msg ->
+                    MessageBubble(msg, dateFormatter, effectiveTheme, contact)
+                }
             }
         }
     }
@@ -261,15 +314,57 @@ fun SmsThreadScreen(
             }
         )
     }
+
+    if (showOfflineDialog) {
+        AlertDialog(
+            onDismissRequest = { showOfflineDialog = false },
+            title = { Text("Line offline") },
+            text = {
+                Text("That line is offline. You can queue the message or send now from this device.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val message = pendingDraft
+                    if (!message.isNullOrBlank()) {
+                        onSendMessage(message, pendingLineId)
+                        draft = ""
+                    }
+                    pendingDraft = null
+                    pendingLineId = null
+                    showOfflineDialog = false
+                }) {
+                    Text("Queue")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    val message = pendingDraft
+                    if (!message.isNullOrBlank()) {
+                        onSendMessage(message, deviceLineId)
+                        draft = ""
+                    }
+                    pendingDraft = null
+                    pendingLineId = null
+                    showOfflineDialog = false
+                }) {
+                    Text("Send now")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun MessageInput(
     draft: String,
     onDraftChange: (String) -> Unit,
-    onSend: (String) -> Unit,
+    onSend: (String, String?) -> Unit,
     theme: ThemePreferences,
     iconSize: androidx.compose.ui.unit.Dp,
+    lineOptions: List<com.pulselink.domain.model.SmsLine>,
+    selectedLineId: String?,
+    onSelectLine: (String) -> Unit,
+    lineStatus: Map<String, Boolean>,
     aiEnabled: Boolean,
     aiState: AiComposeState,
     onAiAction: (AiComposeAction) -> Unit
@@ -317,8 +412,10 @@ private fun MessageInput(
                         onClick = { showAiMenu = true },
                         enabled = aiState !is AiComposeState.Loading
                     ) {
-                        Icon(
-                            Icons.Filled.AutoFixHigh,
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.AI,
+                            theme = theme,
+                            imageVector = Icons.Filled.AutoFixHigh,
                             contentDescription = "AI assist",
                             tint = primary,
                             modifier = Modifier.size(iconSize)
@@ -367,13 +464,14 @@ private fun MessageInput(
                         val enabled = draft.isNotBlank()
                         IconButton(
                             onClick = {
-                                onSend(draft)
-                                onDraftChange("")
+                                onSend(draft, selectedLineId)
                             },
                             enabled = enabled
                         ) {
-                            Icon(
-                                Icons.Filled.Send,
+                            ThemeIcon(
+                                iconKey = ThemeIconKey.SEND,
+                                theme = theme,
+                                imageVector = Icons.Filled.Send,
                                 contentDescription = "Send",
                                 tint = if (enabled) primary else primary.copy(alpha = 0.38f),
                                 modifier = Modifier.size(iconSize)
@@ -389,6 +487,96 @@ private fun MessageInput(
                     ),
                     shape = RoundedCornerShape(24.dp)
                 )
+                if (lineOptions.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    var expanded by remember { mutableStateOf(false) }
+                    val ordered = remember(lineOptions) {
+                        lineOptions.sortedBy { it.createdAt }
+                    }
+                    val selectedIndex = ordered.indexOfFirst { it.id == selectedLineId }
+                        .takeIf { it >= 0 } ?: 0
+                    val palette = listOf(
+                        parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor),
+                        parseColorOr(MaterialTheme.colorScheme.secondary, theme.secondaryColor),
+                        parseColorOr(MaterialTheme.colorScheme.tertiary, theme.bubbleOutgoing),
+                        parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleIncoming)
+                    )
+                    val badgeColor = palette[selectedIndex % palette.size]
+                    val label = (selectedIndex + 1).toString()
+                    val isOnline = ordered.getOrNull(selectedIndex)?.id?.let { lineStatus[it] != false } ?: true
+
+                    Box {
+                        Surface(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clickable { expanded = true },
+                            color = Color.Transparent
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(badgeColor, RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                if (!isOnline) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .background(Color.Red, shape = CircleShape)
+                                            .align(Alignment.TopEnd)
+                                    )
+                                }
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            ordered.forEachIndexed { index, line ->
+                                val itemColor = palette[index % palette.size]
+                                val numberLabel = line.phoneNumber.takeIf { it.isNotBlank() }
+                                val itemLabel = if (numberLabel != null) "Line ${index + 1} | $numberLabel" else "Line ${index + 1}"
+                                val online = lineStatus[line.id] != false
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(18.dp)
+                                                    .background(itemColor, RoundedCornerShape(4.dp)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = (index + 1).toString(),
+                                                    color = Color.White,
+                                                    fontSize = MaterialTheme.typography.labelSmall.fontSize
+                                                )
+                                            }
+                                            Text(itemLabel)
+                                            if (!online) {
+                                                Text("(offline)", style = MaterialTheme.typography.labelSmall)
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        expanded = false
+                                        onSelectLine(line.id)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -420,7 +608,9 @@ private fun AiSummaryCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
+                ThemeIcon(
+                    iconKey = ThemeIconKey.AI,
+                    theme = theme,
                     imageVector = Icons.Filled.AutoFixHigh,
                     contentDescription = null,
                     tint = accent,

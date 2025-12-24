@@ -9,6 +9,7 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
@@ -48,7 +49,11 @@ class SubscriptionManager @Inject constructor(
     private val billingClient: BillingClient by lazy {
         BillingClient.newBuilder(context)
             .setListener(this)
-            .enablePendingPurchases()
+            .enablePendingPurchases(
+                PendingPurchasesParams.newBuilder()
+                    .enableOneTimeProducts()
+                    .build()
+            )
             .build()
     }
 
@@ -122,7 +127,10 @@ class SubscriptionManager @Inject constructor(
             ).build()
         billingClient.queryProductDetailsAsync(productParams) { result, details ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                _state.value = _state.value.copy(product = details.firstOrNull(), loading = false)
+                _state.value = _state.value.copy(
+                    product = details.productDetailsList.firstOrNull(),
+                    loading = false
+                )
             } else {
                 _state.value = _state.value.copy(
                     loading = false,

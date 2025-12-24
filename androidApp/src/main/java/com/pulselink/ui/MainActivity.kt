@@ -68,6 +68,8 @@ import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.data.sms.MessageNotificationManager
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ManualMessageResult
+import com.pulselink.domain.model.LineInboxMode
+import com.pulselink.domain.model.LineSendPreference
 import com.pulselink.R
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BetaTesterListScreen
@@ -88,6 +90,8 @@ import com.pulselink.ui.screens.FaqScreen
 import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.MessageNotificationSoundScreen
+import com.pulselink.ui.screens.MultiLineSetupDialog
+import com.pulselink.ui.screens.LineLimitDialog
 import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.SmsInboxScreen
@@ -98,6 +102,7 @@ import com.pulselink.ui.state.LoginViewModel
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.MainViewModel.CallInitiationResult
 import com.pulselink.ui.state.SmsInboxViewModel
+import com.pulselink.ui.state.SmsLinesViewModel
 import com.pulselink.ui.state.SmsThreadViewModel
 import com.pulselink.ui.theme.PulseLinkTheme
 import com.pulselink.util.normalizeSmsAddress
@@ -195,7 +200,16 @@ class MainActivity : AppCompatActivity() {
             PulseLinkTheme {
                 val context = LocalContext.current
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
+                val linesViewModel: SmsLinesViewModel = hiltViewModel()
+                val lines by linesViewModel.lines.collectAsStateWithLifecycle()
+                val lineDevices by linesViewModel.devices.collectAsStateWithLifecycle()
+                val activeLineId by linesViewModel.activeLineId.collectAsStateWithLifecycle()
+                val deviceLineId by linesViewModel.deviceLineId.collectAsStateWithLifecycle()
+                val defaultSendLineId by linesViewModel.defaultSendLineId.collectAsStateWithLifecycle()
+                val lineSendPreference by linesViewModel.lineSendPreference.collectAsStateWithLifecycle()
+                val threadLineOverrides by linesViewModel.threadLineOverrides.collectAsStateWithLifecycle()
                 val authState by viewModel.authState.collectAsStateWithLifecycle()
+                val isPremium = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
                 val navController = rememberNavController()
                 var missingSmsPerms by remember { mutableStateOf(requiredSmsPermissions(context)) }
                 val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
@@ -213,6 +227,17 @@ class MainActivity : AppCompatActivity() {
                 var beaconEnableAttempted by remember { mutableStateOf(false) }
                 val scope = rememberCoroutineScope()
                 val lifecycleOwner = LocalLifecycleOwner.current
+                var lineSetupDismissed by remember { mutableStateOf(false) }
+                var lineLimitDismissed by remember { mutableStateOf(false) }
+                val orderedLines = remember(lines) { lines.sortedBy { it.createdAt } }
+                val maxLines = 2
+                val showLineLimit = isPremium && orderedLines.size > maxLines && !lineLimitDismissed
+                val showLineSetup = isPremium && orderedLines.size > 1 &&
+                    !state.settings.lineInboxModeChosen && !lineSetupDismissed && !showLineLimit
+                var lineSetupMode by remember { mutableStateOf(state.settings.lineInboxMode) }
+                var lineSetupDefaultLineId by remember { mutableStateOf(state.settings.defaultSendLineId) }
+                var lineSetupSendPreference by remember { mutableStateOf(state.settings.lineSendPreference) }
+                var lineSetupPhone by remember { mutableStateOf(state.settings.devicePhoneNumber ?: "") }
                 val refreshDefaultSms = remember(defaultSmsHelper) {
                     suspend refresh@{
                         val existing = defaultSmsCheck
@@ -316,13 +341,34 @@ class MainActivity : AppCompatActivity() {
                     if (initialInboxShortcut) inboxShortcutFlow.tryEmit(Unit)
                 }
 
+                LaunchedEffect(
+                    showLineSetup,
+                    orderedLines,
+                    state.settings.lineInboxMode,
+                    state.settings.defaultSendLineId,
+                    state.settings.lineSendPreference,
+                    state.settings.devicePhoneNumber
+                ) {
+                    if (showLineSetup) {
+                        lineSetupMode = state.settings.lineInboxMode
+                        val fallbackDefault = state.settings.defaultSendLineId
+                            ?: orderedLines.firstOrNull()?.id
+                        lineSetupDefaultLineId = fallbackDefault
+                        lineSetupSendPreference = state.settings.lineSendPreference
+                        lineSetupPhone = state.settings.devicePhoneNumber ?: ""
+                    }
+                }
+
                 // Refresh default-SMS status when returning from system settings or role dialog.
-                DisposableEffect(lifecycleOwner) {
+                DisposableEffect(lifecycleOwner, activeLineId, deviceLineId, isPremium) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
                             scope.launch {
                                 refreshDefaultSms()
                                 missingSmsPerms = requiredSmsPermissions(context)
+                                if (isPremium) {
+                                    linesViewModel.touchPresence(activeLineId ?: deviceLineId)
+                                }
                             }
                         }
                     }
@@ -1312,17 +1358,34 @@ class MainActivity : AppCompatActivity() {
                             onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                         }
                         LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
+                        LaunchedEffect(isDefaultSms, missingSmsPerms) {
+                            if (isDefaultSms || missingSmsPerms.none { it == Manifest.permission.READ_SMS }) {
+                                smsInboxViewModel.refresh()
+                            }
+                        }
                         SmsInboxScreen(
                             threads = threads,
                             archivedThreads = archivedThreads,
                             onOpenThread = { thread ->
-                                navController.navigate("sms/thread/${thread.threadId}/${Uri.encode(thread.address)}")
+                                val lineSuffix = thread.lineId?.let { Uri.encode(it) }.orEmpty()
+                                navController.navigate(
+                                    "sms/thread/${thread.threadId}/${Uri.encode(thread.address)}?lineId=$lineSuffix"
+                                )
                             },
                             onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
                             onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
                             onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
                             onBack = { navController.popBackStack() },
                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                            lineOptions = if (isPremium) orderedLines else emptyList(),
+                            deviceLineId = deviceLineId,
+                            activeLineId = if (isPremium) activeLineId else null,
+                            onSelectLine = { selected ->
+                                linesViewModel.setActiveLineId(selected)
+                                linesViewModel.touchPresence(selected)
+                            },
+                            showLinePicker = isPremium && state.settings.lineInboxMode == LineInboxMode.PER_LINE,
+                            onImportAll = { smsInboxViewModel.importAllMessages() },
                             banner = {
                                 if (!notificationsEnabled || notificationsSilent) {
                                     Surface(
@@ -1366,14 +1429,19 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable(
-                        route = "sms/thread/{threadId}/{address}",
+                        route = "sms/thread/{threadId}/{address}?lineId={lineId}",
                         arguments = listOf(
                             navArgument("threadId") { type = NavType.LongType },
-                            navArgument("address") { type = NavType.StringType }
+                            navArgument("address") { type = NavType.StringType },
+                            navArgument("lineId") {
+                                type = NavType.StringType
+                                defaultValue = ""
+                            }
                         )
                     ) { entry ->
                         val threadId = entry.arguments?.getLong("threadId") ?: return@composable
                         val address = entry.arguments?.getString("address") ?: ""
+                        val lineId = entry.arguments?.getString("lineId")?.takeIf { it.isNotBlank() }
                         val threadViewModel: SmsThreadViewModel = hiltViewModel()
                         val messages by threadViewModel.messages.collectAsStateWithLifecycle()
                         val contact by threadViewModel.contact.collectAsStateWithLifecycle()
@@ -1382,7 +1450,17 @@ class MainActivity : AppCompatActivity() {
                         val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
                         val decodedAddress = Uri.decode(address)
                         val premiumActive = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
-                        LaunchedEffect(threadId, decodedAddress) { threadViewModel.load(threadId, decodedAddress) }
+                        val threadLineId = lineId ?: deviceLineId
+                        val threadKey = "${threadLineId ?: deviceLineId}:$threadId"
+                        val fallbackLineId = defaultSendLineId ?: threadLineId ?: deviceLineId
+                        val selectedLine = when (lineSendPreference) {
+                            LineSendPreference.DEVICE_DEFAULT -> deviceLineId
+                            LineSendPreference.LINE_DEFAULT -> fallbackLineId
+                            LineSendPreference.LAST_USED -> threadLineOverrides[threadKey] ?: fallbackLineId
+                        }
+                        LaunchedEffect(threadId, decodedAddress, lineId) {
+                            threadViewModel.load(threadId, decodedAddress, lineId)
+                        }
                         SmsThreadScreen(
                             address = decodedAddress,
                             messages = messages,
@@ -1395,7 +1473,25 @@ class MainActivity : AppCompatActivity() {
                             onEditNotificationSound = {
                                 navController.navigate("notifications/message_sound?address=${Uri.encode(decodedAddress)}")
                             },
-                            onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) },
+                            onSendMessage = { body, sendLineId ->
+                                threadViewModel.sendMessage(decodedAddress, body, sendLineId)
+                            },
+                            lineOptions = if (isPremium) orderedLines else emptyList(),
+                            selectedLineId = if (isPremium) selectedLine else null,
+                            deviceLineId = deviceLineId,
+                            lineStatus = if (isPremium) {
+                                lineDevices.associate { device ->
+                                    val isOnline = device.lastSeen?.let { last ->
+                                        System.currentTimeMillis() - last < 2 * 60 * 1000
+                                    } ?: false
+                                    device.lineId to isOnline
+                                }
+                            } else {
+                                emptyMap()
+                            },
+                            onSelectLine = { selected ->
+                                linesViewModel.setThreadLineOverride(threadKey, selected)
+                            },
                             isArchived = isArchived,
                             onToggleArchive = { threadViewModel.toggleArchive() },
                             aiSummaryState = summaryState,
@@ -1476,6 +1572,45 @@ class MainActivity : AppCompatActivity() {
                             beaconFlowStage = BeaconFlowStage.Idle
                             inboxShortcutFlow.tryEmit(Unit)
                         }
+                    )
+                }
+
+                if (showLineLimit) {
+                    LineLimitDialog(
+                        lines = orderedLines,
+                        onDisableLine = { lineId -> linesViewModel.disableLine(lineId) },
+                        onDismiss = { lineLimitDismissed = true }
+                    )
+                }
+
+                if (showLineSetup) {
+                    MultiLineSetupDialog(
+                        lines = orderedLines,
+                        selectedMode = lineSetupMode,
+                        onModeChange = { lineSetupMode = it },
+                        selectedDefaultLineId = lineSetupDefaultLineId,
+                        onDefaultLineChange = { lineSetupDefaultLineId = it },
+                        lineSendPreference = lineSetupSendPreference,
+                        onLineSendPreferenceChange = { lineSetupSendPreference = it },
+                        devicePhoneInput = lineSetupPhone,
+                        onDevicePhoneChange = { lineSetupPhone = it },
+                        onConfirm = {
+                            val resolvedDefault = lineSetupDefaultLineId
+                                ?: orderedLines.firstOrNull()?.id
+                                ?: deviceLineId
+                            linesViewModel.setInboxMode(lineSetupMode)
+                            linesViewModel.setLineSendPreference(lineSetupSendPreference)
+                            linesViewModel.setDefaultSendLineId(resolvedDefault?.takeIf { it.isNotBlank() })
+                            linesViewModel.setDevicePhoneNumber(lineSetupPhone.takeIf { it.isNotBlank() })
+                            if (lineSetupMode == LineInboxMode.PER_LINE) {
+                                resolvedDefault?.takeIf { it.isNotBlank() }?.let {
+                                    linesViewModel.setActiveLineId(it)
+                                    linesViewModel.touchPresence(it)
+                                }
+                            }
+                            lineSetupDismissed = true
+                        },
+                        onDismiss = { lineSetupDismissed = true }
                     )
                 }
 

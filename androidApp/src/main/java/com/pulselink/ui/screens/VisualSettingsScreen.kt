@@ -22,11 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.util.parseColorOr
 
@@ -158,8 +160,19 @@ fun CustomizeTab(
             modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { showColorPickerTarget = "bg" },
             colors = CardDefaults.cardColors(containerColor = Color.Transparent) // Use manual background
         ) {
-             Box(modifier = bgModifier.fillMaxWidth()) {
-                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+             Box(modifier = Modifier.fillMaxWidth()) {
+                 if (!theme.backgroundImageUrl.isNullOrBlank()) {
+                     AsyncImage(
+                         model = theme.backgroundImageUrl,
+                         contentDescription = null,
+                         modifier = Modifier
+                             .fillMaxWidth()
+                             .height(220.dp),
+                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                     )
+                 }
+                 Box(modifier = bgModifier.fillMaxWidth()) {
+                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                      // Top Bar Preview
                      Surface(
                          color = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor),
@@ -211,6 +224,7 @@ fun CustomizeTab(
                      }
                  }
              }
+             }
         }
 
         HorizontalDivider()
@@ -229,6 +243,23 @@ fun CustomizeTab(
         ) {
             Text("Clear Gradient")
         }
+        Text("Background image", style = MaterialTheme.typography.titleMedium)
+        OutlinedTextField(
+            value = theme.backgroundImageUrl.orEmpty(),
+            onValueChange = { value ->
+                val trimmed = value.trim()
+                onUpdate(theme.copy(backgroundImageUrl = trimmed.ifBlank { null }))
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Image URL") },
+            placeholder = { Text("https://...") },
+            singleLine = true
+        )
+        Text(
+            "Recommended: under 1920x1080 and 1.5MB. Images require approval to publish.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
 
         Text("Colors", style = MaterialTheme.typography.titleMedium)
@@ -345,6 +376,48 @@ fun CustomizeTab(
             steps = 10,
             modifier = Modifier.semantics { contentDescription = "Icon size scaling" }
         )
+
+        HorizontalDivider()
+
+        Text("Icon overrides", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Paste image URLs for icons you want to replace. Transparent PNG/SVG recommended.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        val iconKeys = listOf(
+            "icon.back" to "Back",
+            "icon.settings" to "Settings",
+            "icon.lock" to "Private",
+            "icon.search" to "Search",
+            "icon.close" to "Close",
+            "icon.inbox" to "Inbox",
+            "icon.archive" to "Archive",
+            "icon.unarchive" to "Unarchive",
+            "icon.delete" to "Delete",
+            "icon.send" to "Send",
+            "icon.ai" to "AI",
+            "icon.notifications" to "Notifications"
+        )
+        iconKeys.forEach { (key, label) ->
+            OutlinedTextField(
+                value = theme.iconOverrides[key].orEmpty(),
+                onValueChange = { value ->
+                    val updated = theme.iconOverrides.toMutableMap()
+                    val trimmed = value.trim()
+                    if (trimmed.isBlank()) {
+                        updated.remove(key)
+                    } else {
+                        updated[key] = trimmed
+                    }
+                    onUpdate(theme.copy(iconOverrides = updated))
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(label) },
+                placeholder = { Text("https://...") },
+                singleLine = true
+            )
+        }
 
         if (isGlobal) {
             HorizontalDivider()
@@ -654,6 +727,121 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 dividerColor = "#5EEAD4",
                 inboxIconVariant = "aurora",
                 iconSizeFactor = 1.15f
+            )
+        ),
+        ThemePreset(
+            name = "Desert Clay",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 12,
+                backgroundColor = "#FFF7ED",
+                onBackground = "#7C2D12",
+                topBarColor = "#FFEDD5",
+                onTopBarColor = "#7C2D12",
+                bubbleOutgoing = "#FB923C",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#FED7AA",
+                onBubbleIncoming = "#7C2D12",
+                primaryColor = "#EA580C",
+                secondaryColor = "#FDBA74",
+                dividerColor = "#FED7AA",
+                inboxIconVariant = "sunset_fade"
+            )
+        ),
+        ThemePreset(
+            name = "Nord Frost",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 10,
+                backgroundColor = "#ECEFF4",
+                onBackground = "#2E3440",
+                topBarColor = "#E5E9F0",
+                onTopBarColor = "#2E3440",
+                bubbleOutgoing = "#81A1C1",
+                onBubbleOutgoing = "#ECEFF4",
+                bubbleIncoming = "#D8DEE9",
+                onBubbleIncoming = "#2E3440",
+                primaryColor = "#5E81AC",
+                secondaryColor = "#88C0D0",
+                dividerColor = "#D8DEE9",
+                inboxIconVariant = "default_light"
+            )
+        ),
+        ThemePreset(
+            name = "Neon Noir",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 16,
+                backgroundColor = "#0B0F14",
+                onBackground = "#E2E8F0",
+                topBarColor = "#111827",
+                onTopBarColor = "#E2E8F0",
+                bubbleOutgoing = "#22D3EE",
+                onBubbleOutgoing = "#0B0F14",
+                bubbleIncoming = "#1F2937",
+                onBubbleIncoming = "#E2E8F0",
+                primaryColor = "#22D3EE",
+                secondaryColor = "#F472B6",
+                dividerColor = "#1F2937",
+                inboxIconVariant = "midnight_oled"
+            )
+        ),
+        ThemePreset(
+            name = "Paperback",
+            theme = ThemePreferences(
+                fontStyle = "Serif",
+                bubbleCornerRadius = 14,
+                backgroundColor = "#FFFBEB",
+                onBackground = "#3F2D1C",
+                topBarColor = "#FEF3C7",
+                onTopBarColor = "#3F2D1C",
+                bubbleOutgoing = "#FCD34D",
+                onBubbleOutgoing = "#3F2D1C",
+                bubbleIncoming = "#FDE68A",
+                onBubbleIncoming = "#3F2D1C",
+                primaryColor = "#B45309",
+                secondaryColor = "#D97706",
+                dividerColor = "#FDE68A",
+                inboxIconVariant = "default_light"
+            )
+        ),
+        ThemePreset(
+            name = "Mint Breeze",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 12,
+                backgroundColor = "#ECFDF3",
+                onBackground = "#064E3B",
+                topBarColor = "#D1FAE5",
+                onTopBarColor = "#064E3B",
+                bubbleOutgoing = "#34D399",
+                onBubbleOutgoing = "#064E3B",
+                bubbleIncoming = "#A7F3D0",
+                onBubbleIncoming = "#064E3B",
+                primaryColor = "#10B981",
+                secondaryColor = "#34D399",
+                dividerColor = "#A7F3D0",
+                inboxIconVariant = "forest_trail"
+            )
+        ),
+        ThemePreset(
+            name = "Amethyst Night",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 18,
+                appBackgroundGradientStart = "#312E81",
+                appBackgroundGradientEnd = "#0F172A",
+                onBackground = "#E2E8F0",
+                topBarColor = "#312E81",
+                onTopBarColor = "#E2E8F0",
+                bubbleOutgoing = "#7C3AED",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#1E293B",
+                onBubbleIncoming = "#E2E8F0",
+                primaryColor = "#8B5CF6",
+                secondaryColor = "#6366F1",
+                dividerColor = "#312E81",
+                inboxIconVariant = "lavender_haze"
             )
         )
     )

@@ -189,15 +189,15 @@ private fun BeaconNav(
                 .padding(padding)
         ) {
             composable("inbox") {
-                InboxScreen(
-                    threads = vm.threads,
-                    theme = themeState.global,
-                    searchState = vm.searchState,
-                    isDefaultSms = isDefaultSms,
-                    isCheckingDefaultSms = isCheckingDefaultSms,
-                    missingPermissions = missingPerms,
-                    notificationsEnabled = notificationsEnabled,
-                    notificationsSilent = notificationsSilent,
+                    InboxScreen(
+                        threads = vm.threads,
+                        theme = themeState.global,
+                        searchState = vm.searchState,
+                        isDefaultSms = isDefaultSms,
+                        isCheckingDefaultSms = isCheckingDefaultSms,
+                        missingPermissions = missingReadPerms,
+                        notificationsEnabled = notificationsEnabled,
+                        notificationsSilent = notificationsSilent,
                     onOpenNotificationSettings = {
                         val intent = com.pulselink.beacon.notifications.MessageNotificationManager
                             .buildNotificationSettingsIntent(context)

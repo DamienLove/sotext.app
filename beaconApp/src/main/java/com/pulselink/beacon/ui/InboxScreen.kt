@@ -309,7 +309,7 @@ fun InboxScreen(
                         Column(Modifier.weight(1f)) {
                             Text("Permissions needed", fontWeight = FontWeight.SemiBold)
                             Text(
-                                "Grant SMS + notifications so Beacon can read and show messages.",
+                                "Grant SMS permission so Beacon can read and show messages.",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }

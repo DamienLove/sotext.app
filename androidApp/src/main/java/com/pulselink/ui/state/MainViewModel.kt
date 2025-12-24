@@ -39,6 +39,7 @@ import com.pulselink.util.AudioOverrideManager
 import com.pulselink.widget.WidgetStateManager
 import com.pulselink.util.BeaconIconManager
 import com.pulselink.util.normalizeSmsAddress
+import com.pulselink.util.stripSmsDisplayName
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
@@ -1342,8 +1343,7 @@ class MainViewModel @Inject constructor(
             }
 
             // Also mark the contact as private if found
-            val parts = address.split(" · ")
-            val phone = if (parts.size > 1) parts[1] else parts[0]
+            val phone = stripSmsDisplayName(address)
             val contact = contactRepository.getByPhone(phone)
                 ?: contactRepository.getByPhone(normalizePhone(phone))
 

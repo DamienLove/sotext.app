@@ -10,6 +10,8 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.pulselink.domain.model.AlertProfile
+import com.pulselink.domain.model.LineInboxMode
+import com.pulselink.domain.model.LineSendPreference
 import com.pulselink.domain.model.MessageChannel
 import com.pulselink.domain.model.PulseLinkSettings
 import com.pulselink.domain.repository.SettingsRepository
@@ -70,6 +72,13 @@ private val AI_COMPOSE_ENABLED = booleanPreferencesKey("ai_compose_enabled")
 private val AI_URGENCY_ENABLED = booleanPreferencesKey("ai_urgency_enabled")
 private val AI_URGENCY_BYPASS_DND = booleanPreferencesKey("ai_urgency_bypass_dnd")
 private val AI_URGENCY_INCLUDE_UNKNOWN = booleanPreferencesKey("ai_urgency_include_unknown")
+private val LINE_INBOX_MODE = stringPreferencesKey("line_inbox_mode")
+private val LINE_INBOX_MODE_CHOSEN = booleanPreferencesKey("line_inbox_mode_chosen")
+private val ACTIVE_LINE_ID = stringPreferencesKey("active_line_id")
+private val DEFAULT_SEND_LINE_ID = stringPreferencesKey("default_send_line_id")
+private val LINE_SEND_PREFERENCE = stringPreferencesKey("line_send_preference")
+private val THREAD_LINE_OVERRIDES = stringPreferencesKey("thread_line_overrides")
+private val DEVICE_PHONE_NUMBER = stringPreferencesKey("device_phone_number")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -135,7 +144,19 @@ class SettingsRepositoryImpl @Inject constructor(
             aiUrgencyEnabled = prefs[AI_URGENCY_ENABLED] ?: PulseLinkSettings().aiUrgencyEnabled,
             aiUrgencyBypassDnd = prefs[AI_URGENCY_BYPASS_DND] ?: PulseLinkSettings().aiUrgencyBypassDnd,
             aiUrgencyIncludeUnknown = prefs[AI_URGENCY_INCLUDE_UNKNOWN]
-                ?: PulseLinkSettings().aiUrgencyIncludeUnknown
+                ?: PulseLinkSettings().aiUrgencyIncludeUnknown,
+            lineInboxMode = prefs[LINE_INBOX_MODE]?.let { runCatching { LineInboxMode.valueOf(it) }.getOrNull() }
+                ?: PulseLinkSettings().lineInboxMode,
+            lineInboxModeChosen = prefs[LINE_INBOX_MODE_CHOSEN] ?: PulseLinkSettings().lineInboxModeChosen,
+            activeLineId = prefs[ACTIVE_LINE_ID],
+            defaultSendLineId = prefs[DEFAULT_SEND_LINE_ID],
+            lineSendPreference = prefs[LINE_SEND_PREFERENCE]?.let {
+                runCatching { LineSendPreference.valueOf(it) }.getOrNull()
+            } ?: PulseLinkSettings().lineSendPreference,
+            threadLineOverrides = prefs[THREAD_LINE_OVERRIDES]?.let {
+                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().threadLineOverrides,
+            devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER]
         )
     }
 
@@ -184,6 +205,13 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[AI_URGENCY_ENABLED] = updated.aiUrgencyEnabled
             prefs[AI_URGENCY_BYPASS_DND] = updated.aiUrgencyBypassDnd
             prefs[AI_URGENCY_INCLUDE_UNKNOWN] = updated.aiUrgencyIncludeUnknown
+            prefs[LINE_INBOX_MODE] = updated.lineInboxMode.name
+            prefs[LINE_INBOX_MODE_CHOSEN] = updated.lineInboxModeChosen
+            updated.activeLineId?.let { prefs[ACTIVE_LINE_ID] = it } ?: prefs.remove(ACTIVE_LINE_ID)
+            updated.defaultSendLineId?.let { prefs[DEFAULT_SEND_LINE_ID] = it } ?: prefs.remove(DEFAULT_SEND_LINE_ID)
+            prefs[LINE_SEND_PREFERENCE] = updated.lineSendPreference.name
+            prefs[THREAD_LINE_OVERRIDES] = json.encodeToString(updated.threadLineOverrides)
+            updated.devicePhoneNumber?.let { prefs[DEVICE_PHONE_NUMBER] = it } ?: prefs.remove(DEVICE_PHONE_NUMBER)
         }
     }
 
@@ -220,6 +248,57 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setAiUrgencyIncludeUnknown(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[AI_URGENCY_INCLUDE_UNKNOWN] = enabled
+        }
+    }
+
+    override suspend fun setLineInboxMode(mode: LineInboxMode, chosen: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[LINE_INBOX_MODE] = mode.name
+            prefs[LINE_INBOX_MODE_CHOSEN] = chosen
+        }
+    }
+
+    override suspend fun setActiveLineId(lineId: String?) {
+        dataStore.edit { prefs ->
+            lineId?.let { prefs[ACTIVE_LINE_ID] = it } ?: prefs.remove(ACTIVE_LINE_ID)
+        }
+    }
+
+    override suspend fun setDefaultSendLineId(lineId: String?) {
+        dataStore.edit { prefs ->
+            lineId?.let { prefs[DEFAULT_SEND_LINE_ID] = it } ?: prefs.remove(DEFAULT_SEND_LINE_ID)
+        }
+    }
+
+    override suspend fun setLineSendPreference(preference: LineSendPreference) {
+        dataStore.edit { prefs ->
+            prefs[LINE_SEND_PREFERENCE] = preference.name
+        }
+    }
+
+    override suspend fun setThreadLineOverrides(overrides: Map<String, String>) {
+        dataStore.edit { prefs ->
+            prefs[THREAD_LINE_OVERRIDES] = json.encodeToString(overrides)
+        }
+    }
+
+    override suspend fun setThreadLineOverride(threadKey: String, lineId: String?) {
+        dataStore.edit { prefs ->
+            val current = prefs[THREAD_LINE_OVERRIDES]?.let {
+                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
+            } ?: emptyMap()
+            val updated = if (lineId == null) {
+                current - threadKey
+            } else {
+                current + (threadKey to lineId)
+            }
+            prefs[THREAD_LINE_OVERRIDES] = json.encodeToString(updated)
+        }
+    }
+
+    override suspend fun setDevicePhoneNumber(phone: String?) {
+        dataStore.edit { prefs ->
+            phone?.let { prefs[DEVICE_PHONE_NUMBER] = it } ?: prefs.remove(DEVICE_PHONE_NUMBER)
         }
     }
 
@@ -455,7 +534,19 @@ class SettingsRepositoryImpl @Inject constructor(
             emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
             messagingChannelPriority = prefs[MESSAGING_CHANNEL_PRIORITY]?.let {
                 runCatching { json.decodeFromString<List<MessageChannel>>(it) }.getOrNull()
-            } ?: PulseLinkSettings().messagingChannelPriority
+            } ?: PulseLinkSettings().messagingChannelPriority,
+            lineInboxMode = prefs[LINE_INBOX_MODE]?.let { runCatching { LineInboxMode.valueOf(it) }.getOrNull() }
+                ?: PulseLinkSettings().lineInboxMode,
+            lineInboxModeChosen = prefs[LINE_INBOX_MODE_CHOSEN] ?: PulseLinkSettings().lineInboxModeChosen,
+            activeLineId = prefs[ACTIVE_LINE_ID],
+            defaultSendLineId = prefs[DEFAULT_SEND_LINE_ID],
+            lineSendPreference = prefs[LINE_SEND_PREFERENCE]?.let {
+                runCatching { LineSendPreference.valueOf(it) }.getOrNull()
+            } ?: PulseLinkSettings().lineSendPreference,
+            threadLineOverrides = prefs[THREAD_LINE_OVERRIDES]?.let {
+                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().threadLineOverrides,
+            devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER]
         )
     }
 

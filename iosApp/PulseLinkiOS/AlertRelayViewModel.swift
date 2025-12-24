@@ -23,6 +23,9 @@ struct ContactCard: Identifiable, Hashable {
     let role: String
     let presence: Presence
     var unread: Int
+    var isFavorite: Bool
+    var isPrivate: Bool
+    var isTrusted: Bool
 }
 
 struct ConversationMessage: Identifiable {
@@ -49,6 +52,10 @@ final class AlertRelayViewModel: ObservableObject {
     @Published var overrideDND: Bool = true
     @Published var maxVolumeOnUrgent: Bool = true
     @Published var baseUrl: String
+
+    var trustedContacts: [ContactCard] {
+        contacts.filter { $0.isTrusted && !$0.isPrivate }
+    }
 
     private let client: AlertRelayClient
     private let conversationProvider: ConversationProvider
