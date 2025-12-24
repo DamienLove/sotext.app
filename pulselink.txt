@@ -418,3 +418,6 @@ Current ad behavior in app:
 - Billing: updated billing-ktx to 8.2.1 (PendingPurchasesParams + QueryProductDetailsResult).
 - Inbox performance: canonical address caching + reduced SMS scans; added VIBRATE permission for message notifications.
 - Release v79 (free/pro/premium): bundles rebuilt and copied to disposable_aabs/pulselink-{free|pro|premium}-v79.aab; release notes at disposable_aabs/release-notes-v79.txt.
+
+2025-12-24
+- Rebuilt web/dist and deployed Firebase Hosting (pulselink-24899) with Theme Gallery updates; Hosting URL: https://pulselink-24899.web.app
