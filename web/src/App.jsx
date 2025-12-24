@@ -579,6 +579,7 @@ function App() {
   const [composeBody, setComposeBody] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
   const [alertLocations, setAlertLocations] = useState([]);
   const [alertStatus, setAlertStatus] = useState('');
@@ -1023,6 +1024,7 @@ function App() {
 
   const handleProfileSave = async () => {
     if (!user) return;
+    setIsSavingProfile(true);
     setProfileStatus("Saving profile...");
     try {
       const payload = {
@@ -1039,6 +1041,8 @@ function App() {
     } catch (error) {
       console.error("Profile update failed", error);
       setProfileStatus(error?.message ?? "Profile update failed.");
+    } finally {
+      setIsSavingProfile(false);
     }
   };
 
@@ -1480,15 +1484,21 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.map(thread => (
-                <ThreadItem
-                  key={thread.id}
-                  thread={thread}
-                  isActive={selectedThread?.id === thread.id}
-                  onSelect={setSelectedThread}
-                  showPreviews={showPreviews}
-                />
-              ))}
+              {threads.length === 0 ? (
+                <div className="sidebar-placeholder">
+                  <div className="sidebar-tip muted">No conversations found.</div>
+                </div>
+              ) : (
+                threads.map(thread => (
+                  <ThreadItem
+                    key={thread.id}
+                    thread={thread}
+                    isActive={selectedThread?.id === thread.id}
+                    onSelect={setSelectedThread}
+                    showPreviews={showPreviews}
+                  />
+                ))
+              )}
             </div>
           ) : (
             <div className="sidebar-placeholder">
@@ -1578,8 +1588,13 @@ function App() {
                       onChange={(e) => setProfile((prev) => ({ ...prev, avatarUrl: e.target.value }))}
                     />
                   </label>
-                  <button className="primary-btn" type="button" onClick={handleProfileSave}>
-                    Save profile
+                  <button
+                    className="primary-btn"
+                    type="button"
+                    onClick={handleProfileSave}
+                    disabled={isSavingProfile}
+                  >
+                    {isSavingProfile ? 'Saving...' : 'Save profile'}
                   </button>
                   {profileStatus && <div className="settings-status">{profileStatus}</div>}
                 </div>
@@ -1724,6 +1739,11 @@ function App() {
                 <p>Locations parsed from PulseLink alert messages synced to this account.</p>
               </div>
               <div className="map-controls">
+                <button
+                  className="secondary-btn"
+                  onClick={() => window.location.reload()}
+                  aria-label="Reload page"
+                >
                 <button className="ghost-btn" onClick={() => setActivePanel('home')}>
                   Back to Home
                 </button>
