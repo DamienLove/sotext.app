@@ -49,7 +49,7 @@ class SmsRepository @Inject constructor(
     ): List<SmsThreadItem> {
         if (!hasReadPerms()) return emptyList()
         ensureObserversRegistered()
-        val archivedIds = runCatching { archivedThreadDao.getAllIds() }.getOrDefault(emptyList())
+        val archivedIds = loadArchivedIds()
         val projection = arrayOf(
             Telephony.Threads._ID,
             Telephony.Threads.DATE,
@@ -122,6 +122,17 @@ class SmsRepository @Inject constructor(
                 return items
             }
         }
+        return listThreadsFromSms(limit, archivedIds, includeArchived, onlyArchived)
+    }
+
+    suspend fun listThreadsFromSmsOnly(
+        limit: Int = 50,
+        includeArchived: Boolean = false,
+        onlyArchived: Boolean = false
+    ): List<SmsThreadItem> {
+        if (!hasReadPerms()) return emptyList()
+        ensureObserversRegistered()
+        val archivedIds = loadArchivedIds()
         return listThreadsFromSms(limit, archivedIds, includeArchived, onlyArchived)
     }
 
@@ -563,6 +574,10 @@ class SmsRepository @Inject constructor(
             true
         }.getOrDefault(false)
         observersRegistered = registered
+    }
+
+    private fun loadArchivedIds(): List<Long> {
+        return runCatching { archivedThreadDao.getAllIds() }.getOrDefault(emptyList())
     }
 
     private suspend fun listThreadsFromSms(

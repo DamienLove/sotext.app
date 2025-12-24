@@ -82,6 +82,21 @@ class SmsInboxViewModel @Inject constructor(
         }
     }
 
+    fun importAllMessages() {
+        viewModelScope.launch {
+            val deviceId = deviceLineId.value.ifBlank {
+                settingsRepository.ensureDeviceId().also { deviceLineId.value = it }
+            }
+            localThreads.value = smsRepository.listThreadsFromSmsOnly(limit = THREAD_LIMIT)
+                .map { it.copy(lineId = deviceId) }
+            localArchived.value = smsRepository.listThreadsFromSmsOnly(
+                limit = THREAD_LIMIT,
+                includeArchived = true,
+                onlyArchived = true
+            ).map { it.copy(lineId = deviceId) }
+        }
+    }
+
     fun search(query: String) {
         if (query.isBlank()) {
             _searchState.value = SearchResultState.Idle
