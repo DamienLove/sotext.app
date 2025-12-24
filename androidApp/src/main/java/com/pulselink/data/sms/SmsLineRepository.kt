@@ -5,6 +5,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.pulselink.domain.model.SmsLine
 import com.pulselink.domain.model.SmsLineDevice
@@ -26,54 +27,72 @@ class SmsLineRepository @Inject constructor(
         const val TAG = "SmsLineRepository"
     }
     fun observeLines(): Flow<List<SmsLine>> = callbackFlow {
-        val user = auth.currentUser
-        if (user == null) {
-            trySend(emptyList())
-            close()
-            return@callbackFlow
+        var listener: ListenerRegistration? = null
+        val authListener = FirebaseAuth.AuthStateListener { state ->
+            listener?.remove()
+            listener = null
+            val user = state.currentUser
+            if (user == null) {
+                trySend(emptyList())
+                return@AuthStateListener
+            }
+            val ref = firestore.collection("users").document(user.uid).collection("lines")
+            listener = ref.addSnapshotListener { snapshot, _ ->
+                val lines = snapshot?.documents?.mapNotNull { doc ->
+                    val phoneNumber = doc.getString("phoneNumber").orEmpty()
+                    val createdAt = (doc.getTimestamp("createdAt") ?: doc.getTimestamp("updatedAt"))?.toDate()?.time ?: 0L
+                    val disabled = doc.getBoolean("disabled") == true
+                    SmsLine(
+                        id = doc.id,
+                        phoneNumber = phoneNumber,
+                        label = doc.getString("label"),
+                        primaryDeviceId = doc.getString("primaryDeviceId").orEmpty(),
+                        createdAt = createdAt,
+                        disabled = disabled
+                    )
+                } ?: emptyList()
+                trySend(lines)
+            }
         }
-        val ref = firestore.collection("users").document(user.uid).collection("lines")
-        val listener = ref.addSnapshotListener { snapshot, _ ->
-            val lines = snapshot?.documents?.mapNotNull { doc ->
-                val phoneNumber = doc.getString("phoneNumber").orEmpty()
-                val createdAt = (doc.getTimestamp("createdAt") ?: doc.getTimestamp("updatedAt"))?.toDate()?.time ?: 0L
-                val disabled = doc.getBoolean("disabled") == true
-                SmsLine(
-                    id = doc.id,
-                    phoneNumber = phoneNumber,
-                    label = doc.getString("label"),
-                    primaryDeviceId = doc.getString("primaryDeviceId").orEmpty(),
-                    createdAt = createdAt,
-                    disabled = disabled
-                )
-            } ?: emptyList()
-            trySend(lines)
+        auth.addAuthStateListener(authListener)
+        authListener.onAuthStateChanged(auth)
+        awaitClose {
+            listener?.remove()
+            auth.removeAuthStateListener(authListener)
         }
-        awaitClose { listener.remove() }
     }
 
     fun observeDevices(): Flow<List<SmsLineDevice>> = callbackFlow {
-        val user = auth.currentUser
-        if (user == null) {
-            trySend(emptyList())
-            close()
-            return@callbackFlow
+        var listener: ListenerRegistration? = null
+        val authListener = FirebaseAuth.AuthStateListener { state ->
+            listener?.remove()
+            listener = null
+            val user = state.currentUser
+            if (user == null) {
+                trySend(emptyList())
+                return@AuthStateListener
+            }
+            val ref = firestore.collection("users").document(user.uid).collection("devices")
+            listener = ref.addSnapshotListener { snapshot, _ ->
+                val devices = snapshot?.documents?.mapNotNull { doc ->
+                    SmsLineDevice(
+                        id = doc.id,
+                        lineId = doc.getString("lineId").orEmpty(),
+                        phoneNumber = doc.getString("phoneNumber"),
+                        displayName = doc.getString("deviceName"),
+                        isPrimary = doc.getBoolean("isPrimary") == true,
+                        lastSeen = doc.getTimestamp("lastSeen")?.toDate()?.time
+                    )
+                } ?: emptyList()
+                trySend(devices)
+            }
         }
-        val ref = firestore.collection("users").document(user.uid).collection("devices")
-        val listener = ref.addSnapshotListener { snapshot, _ ->
-            val devices = snapshot?.documents?.mapNotNull { doc ->
-                SmsLineDevice(
-                    id = doc.id,
-                    lineId = doc.getString("lineId").orEmpty(),
-                    phoneNumber = doc.getString("phoneNumber"),
-                    displayName = doc.getString("deviceName"),
-                    isPrimary = doc.getBoolean("isPrimary") == true,
-                    lastSeen = doc.getTimestamp("lastSeen")?.toDate()?.time
-                )
-            } ?: emptyList()
-            trySend(devices)
+        auth.addAuthStateListener(authListener)
+        authListener.onAuthStateChanged(auth)
+        awaitClose {
+            listener?.remove()
+            auth.removeAuthStateListener(authListener)
         }
-        awaitClose { listener.remove() }
     }
 
     suspend fun ensureDeviceLine(phoneNumber: String?): String? {
