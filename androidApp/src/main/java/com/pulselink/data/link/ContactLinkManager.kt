@@ -136,7 +136,10 @@ class ContactLinkManager @Inject constructor(
                      }
                 }
                 MessageChannel.EMAIL -> {
-                    if (settings.emailFallbackEnabled && !contact.email.isNullOrBlank()) {
+                    val hasPhone = !contact.primaryPhone().isNullOrBlank()
+                    val hasEmail = !contact.primaryEmail().isNullOrBlank()
+                    val allowEmail = settings.emailFallbackEnabled || !hasPhone
+                    if (allowEmail && hasEmail) {
                         messageDeliveryTracker.recordAttempt(contact.id, MessageChannel.EMAIL)
                         // Trigger email via Cloud Function
                         val success = sendEmailNotification(contact, message)
@@ -155,8 +158,9 @@ class ContactLinkManager @Inject constructor(
 
     private suspend fun sendEmailNotification(contact: Contact, message: PulseLinkMessage): Boolean {
         // Call the Firebase Function 'sendEmailNotification'
+        val targetEmail = contact.primaryEmail()?.takeIf { it.isNotBlank() } ?: return false
         val data = hashMapOf(
-            "email" to contact.email,
+            "email" to targetEmail,
             "messageType" to message::class.simpleName,
             "senderName" to (auth.currentUser?.displayName ?: "PulseLink User"),
             "payload" to when(message) {

@@ -206,14 +206,22 @@ class MainViewModel @Inject constructor(
                 upsertContactInCloud(user, storedContact)
             }
 
-            if (isNewContact && contact.phoneNumber.isNotBlank()) {
-                runCatching {
-                    val persisted = contactRepository.getByPhone(contact.phoneNumber)
-                    if (persisted != null) {
-                        linkManager.sendLinkRequest(persisted.id)
+            if (isNewContact) {
+                val phone = storedContact.primaryPhone()
+                val email = storedContact.primaryEmail()
+                if (!phone.isNullOrBlank() || !email.isNullOrBlank()) {
+                    runCatching {
+                        val persisted = when {
+                            !phone.isNullOrBlank() -> contactRepository.getByPhone(phone)
+                            !email.isNullOrBlank() -> contactRepository.getByEmail(email)
+                            else -> null
+                        }
+                        if (persisted != null) {
+                            linkManager.sendLinkRequest(persisted.id)
+                        }
+                    }.onFailure { error ->
+                        Log.w(TAG, "Unable to auto-send link request for ${contact.displayName}", error)
                     }
-                }.onFailure { error ->
-                    Log.w(TAG, "Unable to auto-send link request for ${contact.displayName}", error)
                 }
             }
         }
@@ -872,6 +880,9 @@ class MainViewModel @Inject constructor(
 
     private fun Contact.primaryPhone(): String? =
         (listOf(phoneNumber) + additionalPhones).firstOrNull { it.isNotBlank() }
+
+    private fun Contact.primaryEmail(): String? =
+        (listOfNotNull(email) + additionalEmails).firstOrNull { it.isNotBlank() }
 
     private fun isUnreachable(contact: Contact): Boolean {
         val hasPhone = contact.primaryPhone().isNullOrBlank().not()
