@@ -372,3 +372,8 @@ Current ad behavior in app:
 - Multi-device SMS: SmsLineRepository + RemoteSmsRepository now stay attached across auth changes so secondary devices load line/devices/threads after login.
 - Release v77 (free/pro/premium): versionCode/Name bumped to 77; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v77.aab; release notes saved at disposable_aabs/release-notes-v77.txt.
 
+2025-12-24
+- Inbox empty-state now shows "Import all messages" (forces full Telephony.Sms scan), and local inbox no longer filters out threads when deviceLineId is blank.
+- SmsInbox refreshes after default-SMS/READ_SMS changes; manual import pulls all historical device messages.
+- Release v78 (free/pro/premium): versionCode/Name bumped to 78; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v78.aab; release notes saved at disposable_aabs/release-notes-v78.txt.
+

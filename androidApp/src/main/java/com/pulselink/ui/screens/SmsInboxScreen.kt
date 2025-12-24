@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.DropdownMenu
@@ -46,6 +47,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.FabPosition
@@ -117,34 +119,37 @@ fun SmsInboxScreen(
     deviceLineId: String? = null,
     activeLineId: String? = null,
     onSelectLine: (String) -> Unit = {},
-    showLinePicker: Boolean = false
+    showLinePicker: Boolean = false,
+    onImportAll: () -> Unit = {}
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     var searchText by rememberSaveable { mutableStateOf("") }
 
+    val localDeviceId = deviceLineId?.takeIf { it.isNotBlank() }
+    val activeLine = activeLineId ?: localDeviceId
     val threadKey: (SmsThreadItem) -> String = { thread ->
-        val lineKey = thread.lineId ?: deviceLineId ?: "local"
+        val lineKey = thread.lineId ?: localDeviceId ?: "local"
         "$lineKey:${thread.threadId}"
     }
-    val gatedThreads = remember(threads, lineOptions, deviceLineId) {
-        if (lineOptions.isEmpty() && deviceLineId != null) {
+    val gatedThreads = remember(threads, lineOptions, localDeviceId) {
+        if (lineOptions.isEmpty() && localDeviceId != null) {
             threads.filter { thread ->
-                thread.lineId.isNullOrBlank() || thread.lineId == deviceLineId
+                thread.lineId.isNullOrBlank() || thread.lineId == localDeviceId
             }
         } else {
             threads
         }
     }
-    val gatedArchivedThreads = remember(archivedThreads, lineOptions, deviceLineId) {
-        if (lineOptions.isEmpty() && deviceLineId != null) {
+    val gatedArchivedThreads = remember(archivedThreads, lineOptions, localDeviceId) {
+        if (lineOptions.isEmpty() && localDeviceId != null) {
             archivedThreads.filter { thread ->
-                thread.lineId.isNullOrBlank() || thread.lineId == deviceLineId
+                thread.lineId.isNullOrBlank() || thread.lineId == localDeviceId
             }
         } else {
             archivedThreads
         }
     }
-    val archivedIds = remember(gatedArchivedThreads, deviceLineId) {
+    val archivedIds = remember(gatedArchivedThreads, localDeviceId) {
         gatedArchivedThreads.map { threadKey(it) }.toSet()
     }
     val filtered = remember(filter, gatedThreads, gatedArchivedThreads, privateThreadIds, showPrivateOnly) {
@@ -166,6 +171,9 @@ fun SmsInboxScreen(
             }
         }
     }
+    val showImportAll = filter == InboxFilter.ALL &&
+        localDeviceId != null &&
+        (activeLine == null || activeLine == localDeviceId)
 
     val colorScheme = MaterialTheme.colorScheme
     val iconSize = (24f * theme.iconSizeFactor).coerceIn(18f, 34f).dp
@@ -411,6 +419,12 @@ fun SmsInboxScreen(
                                         theme.onBackground
                                     )
                                 )
+                                if (showImportAll) {
+                                    OutlinedButton(onClick = onImportAll) {
+                                        Icon(Icons.Filled.Refresh, contentDescription = null)
+                                        Text("Import all messages", modifier = Modifier.padding(start = 6.dp))
+                                    }
+                                }
                             }
                         }
                     }
@@ -418,9 +432,9 @@ fun SmsInboxScreen(
                 items(filtered, key = { threadKey(it) }) { thread ->
                     val lineIndex = thread.lineId?.let { lineIndexMap[it] }
                     val lineColor = lineIndex?.let { lineColors[it % lineColors.size] }
-                    val isLocalLine = deviceLineId == null ||
+                    val isLocalLine = localDeviceId == null ||
                         thread.lineId.isNullOrBlank() ||
-                        thread.lineId == deviceLineId
+                        thread.lineId == localDeviceId
                     ThreadRow(
                         thread = thread,
                         onOpen = onOpenThread,

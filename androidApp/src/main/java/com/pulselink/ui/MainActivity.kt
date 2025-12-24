@@ -1358,6 +1358,11 @@ class MainActivity : AppCompatActivity() {
                             onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                         }
                         LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
+                        LaunchedEffect(isDefaultSms, missingSmsPerms) {
+                            if (isDefaultSms || missingSmsPerms.none { it == Manifest.permission.READ_SMS }) {
+                                smsInboxViewModel.refresh()
+                            }
+                        }
                         SmsInboxScreen(
                             threads = threads,
                             archivedThreads = archivedThreads,
@@ -1380,6 +1385,7 @@ class MainActivity : AppCompatActivity() {
                                 linesViewModel.touchPresence(selected)
                             },
                             showLinePicker = isPremium && state.settings.lineInboxMode == LineInboxMode.PER_LINE,
+                            onImportAll = { smsInboxViewModel.importAllMessages() },
                             banner = {
                                 if (!notificationsEnabled || notificationsSilent) {
                                     Surface(

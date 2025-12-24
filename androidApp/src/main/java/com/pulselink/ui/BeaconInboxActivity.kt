@@ -314,6 +314,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 viewModel.setThreadPrivacy(thread.threadId, thread.address, makePrivate)
                                             },
                                             theme = state.settings.themePreferences,
+                                            onImportAll = { smsInboxViewModel.importAllMessages() },
                                             sectionTitle = when (currentRoute) {
                                                 BeaconNavRoute.Inbox -> "All messages"
                                                 BeaconNavRoute.Otp -> "2-step codes"
