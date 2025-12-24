@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import android.provider.ContactsContract
 import android.net.Uri
 import android.app.role.RoleManager
+import com.pulselink.util.formatSmsDisplayName
+import com.pulselink.util.stripSmsDisplayName
 
 @Singleton
 class SmsRepository @Inject constructor(
@@ -84,8 +86,7 @@ class SmsRepository @Inject constructor(
                 val address = resolveAddress(lastMsg.address)
                 val isArchived = archivedIds.contains(threadId)
 
-                val parts = address.split(" · ")
-                val phone = if (parts.size > 1) parts[1] else parts[0]
+                val phone = stripSmsDisplayName(address)
                 val normalized = normalizePhone(phone)
                 val contact = contactDao.getByPhone(phone)
                     ?: contactDao.getByPhone(normalized)
@@ -381,7 +382,7 @@ class SmsRepository @Inject constructor(
                 val numIdx = c.getColumnIndexOrThrow(ContactsContract.PhoneLookup.NUMBER)
                 val name = c.getString(nameIdx) ?: ""
                 val formatted = c.getString(numIdx) ?: number
-                return if (name.isNotBlank()) "$name · $formatted" else formatted
+                return if (name.isNotBlank()) formatSmsDisplayName(name, formatted) else formatted
             }
         }
         return number
@@ -390,12 +391,7 @@ class SmsRepository @Inject constructor(
     private fun addressCandidates(raw: String): List<String> {
         val trimmed = raw.trim()
         if (trimmed.isBlank()) return emptyList()
-        val parsedNumber = when {
-            trimmed.contains(" ú ") -> trimmed.split(" ú ", limit = 2).getOrNull(1) ?: trimmed
-            trimmed.contains(" Ł ") -> trimmed.split(" Ł ", limit = 2).getOrNull(1) ?: trimmed
-            trimmed.contains(" L ") -> trimmed.split(" L ", limit = 2).getOrNull(1) ?: trimmed
-            else -> trimmed
-        }.trim()
+        val parsedNumber = stripSmsDisplayName(trimmed).trim()
         val normalized = normalizePhone(parsedNumber)
         val noPlus = normalized.removePrefix("+")
         return listOf(trimmed, parsedNumber, normalized, noPlus)
@@ -621,8 +617,7 @@ class SmsRepository @Inject constructor(
                 } else if (!includeArchived && isArchived) {
                     // skip
                 } else {
-                    val parts = address.split(" ú ")
-                    val phone = if (parts.size > 1) parts[1] else parts[0]
+                    val phone = stripSmsDisplayName(address)
                     val normalized = normalizePhone(phone)
                     val contact = contactDao.getByPhone(phone)
                         ?: contactDao.getByPhone(normalized)

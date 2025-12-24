@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.pulselink.domain.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,7 +17,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 class SmsRelayService @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
-    private val smsSender: SmsSender
+    private val smsSender: SmsSender,
+    private val settingsRepository: SettingsRepository
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var listener: ListenerRegistration? = null
@@ -50,9 +52,10 @@ class SmsRelayService @Inject constructor(
                     val data = doc.data ?: continue
                     val address = data["address"] as? String
                     val body = data["body"] as? String
+                    val lineId = data["lineId"] as? String
 
                     if (address != null && body != null) {
-                        processMessage(doc.id, address, body, uid)
+                        processMessage(doc.id, address, body, uid, lineId)
                     }
                 }
             }
@@ -64,9 +67,13 @@ class SmsRelayService @Inject constructor(
         listener = null
     }
 
-    private fun processMessage(docId: String, address: String, body: String, uid: String) {
+    private fun processMessage(docId: String, address: String, body: String, uid: String, lineId: String?) {
         scope.launch {
             try {
+                val deviceId = settingsRepository.ensureDeviceId()
+                if (!lineId.isNullOrBlank() && lineId != deviceId) {
+                    return@launch
+                }
                 // Warning: This assumes SEND_SMS permission is granted.
                 // In a real app, we should check ContextCompat.checkSelfPermission
                 // However, since this runs in the context of the app which (usually) has permission if it's the default SMS app

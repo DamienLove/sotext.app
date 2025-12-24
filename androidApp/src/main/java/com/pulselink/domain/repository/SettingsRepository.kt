@@ -1,5 +1,7 @@
 package com.pulselink.domain.repository
 
+import com.pulselink.domain.model.LineInboxMode
+import com.pulselink.domain.model.LineSendPreference
 import com.pulselink.domain.model.MessageChannel
 import com.pulselink.domain.model.PulseLinkSettings
 import kotlinx.coroutines.flow.Flow
@@ -43,4 +45,11 @@ interface SettingsRepository {
     suspend fun setAiUrgencyEnabled(enabled: Boolean)
     suspend fun setAiUrgencyBypassDnd(enabled: Boolean)
     suspend fun setAiUrgencyIncludeUnknown(enabled: Boolean)
+    suspend fun setLineInboxMode(mode: LineInboxMode, chosen: Boolean = true)
+    suspend fun setActiveLineId(lineId: String?)
+    suspend fun setDefaultSendLineId(lineId: String?)
+    suspend fun setLineSendPreference(preference: LineSendPreference)
+    suspend fun setThreadLineOverrides(overrides: Map<String, String>)
+    suspend fun setThreadLineOverride(threadKey: String, lineId: String?)
+    suspend fun setDevicePhoneNumber(phone: String?)
 }

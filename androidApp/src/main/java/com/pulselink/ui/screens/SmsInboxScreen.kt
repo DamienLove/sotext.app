@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -75,6 +76,7 @@ import com.pulselink.data.sms.SmsThreadItem
 import com.pulselink.domain.model.MessageUrgency
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.util.parseColorOr
+import com.pulselink.util.splitSmsDisplayAddress
 import com.pulselink.ui.state.SearchResultState
 import com.pulselink.data.sms.SmsMessageItem
 
@@ -106,17 +108,46 @@ fun SmsInboxScreen(
     onSearch: (String) -> Unit = {},
     onClearSearch: () -> Unit = {},
     onOpenThreadById: (Long, String) -> Unit = { _, _ -> },
-    floatingActionButton: @Composable () -> Unit = {}
+    floatingActionButton: @Composable () -> Unit = {},
+    lineOptions: List<com.pulselink.domain.model.SmsLine> = emptyList(),
+    deviceLineId: String? = null,
+    activeLineId: String? = null,
+    onSelectLine: (String) -> Unit = {},
+    showLinePicker: Boolean = false
 ) {
     var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     var searchText by rememberSaveable { mutableStateOf("") }
 
-    val archivedIds = remember(archivedThreads) { archivedThreads.map { it.threadId }.toSet() }
-    val filtered = remember(filter, threads, archivedThreads, privateThreadIds, showPrivateOnly) {
+    val threadKey: (SmsThreadItem) -> String = { thread ->
+        val lineKey = thread.lineId ?: deviceLineId ?: "local"
+        "$lineKey:${thread.threadId}"
+    }
+    val gatedThreads = remember(threads, lineOptions, deviceLineId) {
+        if (lineOptions.isEmpty() && deviceLineId != null) {
+            threads.filter { thread ->
+                thread.lineId.isNullOrBlank() || thread.lineId == deviceLineId
+            }
+        } else {
+            threads
+        }
+    }
+    val gatedArchivedThreads = remember(archivedThreads, lineOptions, deviceLineId) {
+        if (lineOptions.isEmpty() && deviceLineId != null) {
+            archivedThreads.filter { thread ->
+                thread.lineId.isNullOrBlank() || thread.lineId == deviceLineId
+            }
+        } else {
+            archivedThreads
+        }
+    }
+    val archivedIds = remember(gatedArchivedThreads, deviceLineId) {
+        gatedArchivedThreads.map { threadKey(it) }.toSet()
+    }
+    val filtered = remember(filter, gatedThreads, gatedArchivedThreads, privateThreadIds, showPrivateOnly) {
         val base = when (filter) {
-            InboxFilter.ARCHIVED -> archivedThreads
-            InboxFilter.ALL -> threads + archivedThreads
-            else -> threads
+            InboxFilter.ARCHIVED -> gatedArchivedThreads
+            InboxFilter.ALL -> gatedThreads + gatedArchivedThreads
+            else -> gatedThreads
         }
         val source = base.filter { thread ->
             val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
@@ -136,6 +167,16 @@ fun SmsInboxScreen(
     val iconSize = (24f * theme.iconSizeFactor).coerceIn(18f, 34f).dp
     val largeIconSize = (64f * theme.iconSizeFactor).coerceIn(48f, 86f).dp
     val beaconHeaderIconSize = (28f * theme.iconSizeFactor).coerceIn(22f, 38f).dp
+    val orderedLines = remember(lineOptions) { lineOptions.sortedBy { it.createdAt } }
+    val lineIndexMap = remember(orderedLines) { orderedLines.mapIndexed { index, line -> line.id to index }.toMap() }
+    val lineColors = remember(theme, colorScheme) {
+        listOf(
+            parseColorOr(colorScheme.primary, theme.primaryColor),
+            parseColorOr(colorScheme.secondary, theme.secondaryColor),
+            parseColorOr(colorScheme.tertiary, theme.bubbleOutgoing),
+            parseColorOr(colorScheme.primaryContainer, theme.bubbleIncoming)
+        )
+    }
     val bgModifier = remember(theme, colorScheme) {
         if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
             Modifier.background(
@@ -280,6 +321,15 @@ fun SmsInboxScreen(
                     shape = RoundedCornerShape(18.dp)
                 )
             }
+            if (showLinePicker && orderedLines.isNotEmpty()) {
+                LinePickerRow(
+                    lines = orderedLines,
+                    activeLineId = activeLineId,
+                    lineColors = lineColors,
+                    theme = theme,
+                    onSelectLine = onSelectLine
+                )
+            }
             banner()
             if (showSearchBar) {
                 when (searchState) {
@@ -361,7 +411,12 @@ fun SmsInboxScreen(
                         }
                     }
                 }
-                items(filtered, key = { it.threadId }) { thread ->
+                items(filtered, key = { threadKey(it) }) { thread ->
+                    val lineIndex = thread.lineId?.let { lineIndexMap[it] }
+                    val lineColor = lineIndex?.let { lineColors[it % lineColors.size] }
+                    val isLocalLine = deviceLineId == null ||
+                        thread.lineId.isNullOrBlank() ||
+                        thread.lineId == deviceLineId
                     ThreadRow(
                         thread = thread,
                         onOpen = onOpenThread,
@@ -369,10 +424,13 @@ fun SmsInboxScreen(
                         onUnarchive = onUnarchiveThread,
                         onDelete = onDeleteThread,
                         dateFormatter = dateFormatter,
-                        isArchived = archivedIds.contains(thread.threadId),
+                        isArchived = archivedIds.contains(threadKey(thread)),
                         isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
                         onTogglePrivate = onTogglePrivate,
-                        theme = theme
+                        theme = theme,
+                        lineIndex = lineIndex,
+                        lineColor = lineColor,
+                        actionsEnabled = isLocalLine
                     )
                 }
             }
@@ -399,11 +457,15 @@ private fun ThreadRow(
     isArchived: Boolean,
     isPrivate: Boolean,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit,
-    theme: ThemePreferences
+    theme: ThemePreferences,
+    lineIndex: Int? = null,
+    lineColor: Color? = null,
+    actionsEnabled: Boolean = true
 ) {
     val (displayName, number) = splitDisplay(thread.address)
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
+            if (!actionsEnabled) return@rememberSwipeToDismissBoxState false
             when (value) {
                 SwipeToDismissBoxValue.StartToEnd -> {
                     if (isArchived) onUnarchive(thread) else onArchive(thread)
@@ -447,7 +509,11 @@ private fun ThreadRow(
                     .fillMaxWidth()
                     .combinedClickable(
                         onClick = { onOpen(thread) },
-                        onLongClick = { onTogglePrivate(thread, !isPrivate) }
+                        onLongClick = {
+                            if (actionsEnabled) {
+                                onTogglePrivate(thread, !isPrivate)
+                            }
+                        }
                     ),
                 tonalElevation = 1.dp,
                 shape = RoundedCornerShape(14.dp),
@@ -463,6 +529,13 @@ private fun ThreadRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (lineIndex != null && lineColor != null) {
+                        LineBadge(
+                            index = lineIndex,
+                            color = lineColor,
+                            theme = theme
+                        )
+                    }
                     AvatarCircle(text = displayName, theme = theme)
                     Column(
                         modifier = Modifier.weight(1f),
@@ -526,6 +599,101 @@ private fun ThreadRow(
             }
         }
     )
+}
+
+@Composable
+private fun LineBadge(
+    index: Int,
+    color: Color,
+    theme: ThemePreferences
+) {
+    val size = (22f * theme.iconSizeFactor).coerceIn(16f, 28f).dp
+    Box(
+        modifier = Modifier
+            .size(size)
+            .background(color, RoundedCornerShape(6.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = (index + 1).toString(),
+            color = Color.White,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+private fun LinePickerRow(
+    lines: List<com.pulselink.domain.model.SmsLine>,
+    activeLineId: String?,
+    lineColors: List<Color>,
+    theme: ThemePreferences,
+    onSelectLine: (String) -> Unit
+) {
+    if (lines.isEmpty()) return
+    var expanded by remember { mutableStateOf(false) }
+    val selectedIndex = lines.indexOfFirst { it.id == activeLineId }.takeIf { it >= 0 } ?: 0
+    val selectedLine = lines.getOrNull(selectedIndex)
+    val badgeColor = lineColors[selectedIndex % lineColors.size]
+    val label = "Line ${selectedIndex + 1}"
+    val subtitle = selectedLine?.phoneNumber ?: ""
+    val onBackground = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true },
+            tonalElevation = 1.dp,
+            shape = RoundedCornerShape(12.dp),
+            color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LineBadge(index = selectedIndex, color = badgeColor, theme = theme)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(label, fontWeight = FontWeight.SemiBold, color = onBackground)
+                    if (subtitle.isNotBlank()) {
+                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = onBackground.copy(alpha = 0.7f))
+                    }
+                }
+                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = onBackground)
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            lines.forEachIndexed { index, line ->
+                val itemColor = lineColors[index % lineColors.size]
+                val itemLabel = "Line ${index + 1}"
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            LineBadge(index = index, color = itemColor, theme = theme)
+                            Column {
+                                Text(itemLabel)
+                                if (line.phoneNumber.isNotBlank()) {
+                                    Text(line.phoneNumber, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelectLine(line.id)
+                    }
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -702,13 +870,7 @@ private fun SearchResults(
     }
 }
 
-private fun splitDisplay(address: String): Pair<String, String?> {
-    val parts = when {
-        address.contains(" ú ") -> address.split(" ú ", limit = 2)
-        address.contains(" Ł ") -> address.split(" Ł ", limit = 2)
-        address.contains(" L ") -> address.split(" L ", limit = 2)
-        else -> listOf(address)
-    }
+private fun splitDisplay(address: String): Pair<String, String?> = splitSmsDisplayAddress(address)
     return when (parts.size) {
         2 -> parts[0] to parts[1]
         else -> address to null

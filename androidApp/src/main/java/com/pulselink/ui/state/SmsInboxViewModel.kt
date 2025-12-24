@@ -5,20 +5,30 @@ import androidx.lifecycle.viewModelScope
 import com.pulselink.BuildConfig
 import com.pulselink.data.ai.AiAssistantRepository
 import com.pulselink.data.ai.AiComposeAction
+import com.pulselink.data.sms.RemoteSmsRepository
+import com.pulselink.data.sms.SmsLineRepository
 import com.pulselink.data.sms.SmsMessageItem
+import com.pulselink.data.sms.SmsOutboxService
 import com.pulselink.data.sms.SmsRepository
 import com.pulselink.data.sms.SmsSender
 import com.pulselink.data.sms.SmsThreadItem
 import com.pulselink.domain.model.Contact
+import com.pulselink.domain.model.LineInboxMode
+import com.pulselink.domain.model.SmsLine
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.SettingsRepository
+import com.pulselink.util.normalizeSmsAddress
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -35,22 +45,40 @@ sealed class SearchResultState {
 
 @HiltViewModel
 class SmsInboxViewModel @Inject constructor(
-    private val smsRepository: SmsRepository
+    private val smsRepository: SmsRepository,
+    private val remoteSmsRepository: RemoteSmsRepository,
+    private val smsLineRepository: SmsLineRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
     private companion object {
         const val THREAD_LIMIT = Int.MAX_VALUE
     }
+    private val localThreads = MutableStateFlow<List<SmsThreadItem>>(emptyList())
+    private val localArchived = MutableStateFlow<List<SmsThreadItem>>(emptyList())
+    private val remoteThreads = MutableStateFlow<List<SmsThreadItem>>(emptyList())
     private val _threads = MutableStateFlow<List<SmsThreadItem>>(emptyList())
     val threads: StateFlow<List<SmsThreadItem>> = _threads
     private val _archived = MutableStateFlow<List<SmsThreadItem>>(emptyList())
     val archived: StateFlow<List<SmsThreadItem>> = _archived
     private val _searchState = MutableStateFlow<SearchResultState>(SearchResultState.Idle)
     val searchState: StateFlow<SearchResultState> = _searchState
+    private val _lines = MutableStateFlow<List<SmsLine>>(emptyList())
+    val lines: StateFlow<List<SmsLine>> = _lines
+    private val _activeLineId = MutableStateFlow<String?>(null)
+    val activeLineId: StateFlow<String?> = _activeLineId
+    private val _inboxMode = MutableStateFlow(LineInboxMode.COMBINED)
+    val inboxMode: StateFlow<LineInboxMode> = _inboxMode
+    private val deviceLineId = MutableStateFlow("")
 
     fun refresh() {
         viewModelScope.launch {
-            _threads.value = smsRepository.listThreads(limit = THREAD_LIMIT)
-            _archived.value = smsRepository.listArchivedThreads(limit = THREAD_LIMIT)
+            val deviceId = deviceLineId.value.ifBlank {
+                settingsRepository.ensureDeviceId().also { deviceLineId.value = it }
+            }
+            localThreads.value = smsRepository.listThreads(limit = THREAD_LIMIT)
+                .map { it.copy(lineId = deviceId) }
+            localArchived.value = smsRepository.listArchivedThreads(limit = THREAD_LIMIT)
+                .map { it.copy(lineId = deviceId) }
         }
     }
 
@@ -106,6 +134,63 @@ class SmsInboxViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            deviceLineId.value = settingsRepository.ensureDeviceId()
+        }
+
+        settingsRepository.settings
+            .onEach { settings ->
+                _inboxMode.value = settings.lineInboxMode
+                _activeLineId.value = settings.activeLineId ?: settings.deviceId.ifBlank { deviceLineId.value }
+                if (settings.deviceId.isNotBlank() && deviceLineId.value != settings.deviceId) {
+                    deviceLineId.value = settings.deviceId
+                }
+            }
+            .launchIn(viewModelScope)
+
+        smsLineRepository.observeLines()
+            .onEach { lines -> _lines.value = lines.filter { line -> !line.disabled } }
+            .launchIn(viewModelScope)
+
+        combine(_lines, _inboxMode, _activeLineId, deviceLineId) { lines, mode, active, deviceId ->
+            val lineIds = when (mode) {
+                LineInboxMode.COMBINED -> lines.map { it.id }.filter { it.isNotBlank() && it != deviceId }
+                LineInboxMode.PER_LINE -> listOfNotNull(active).filter { it.isNotBlank() && it != deviceId }
+            }
+            lineIds
+        }
+            .flatMapLatest { lineIds ->
+                if (lineIds.isEmpty()) flowOf(emptyList()) else remoteSmsRepository.observeThreads(lineIds)
+            }
+            .onEach { remoteThreads.value = it }
+            .launchIn(viewModelScope)
+
+        combine(
+            localThreads,
+            localArchived,
+            remoteThreads,
+            _inboxMode,
+            _activeLineId,
+            deviceLineId
+        ) { local, archived, remote, mode, activeLine, deviceId ->
+            val active = activeLine ?: deviceId
+            val visibleThreads = when (mode) {
+                LineInboxMode.COMBINED -> (local + remote).sortedByDescending { it.timestamp }
+                LineInboxMode.PER_LINE -> if (active == deviceId) local else remote.filter { it.lineId == active }
+            }
+            val visibleArchived = if (mode == LineInboxMode.PER_LINE && active != deviceId) {
+                emptyList()
+            } else {
+                archived
+            }
+            Pair(visibleThreads, visibleArchived)
+        }
+            .onEach { (visibleThreads, visibleArchived) ->
+                _threads.value = visibleThreads
+                _archived.value = visibleArchived
+            }
+            .launchIn(viewModelScope)
+
         smsRepository.changes()
             .onEach { refresh() }
             .launchIn(viewModelScope)
@@ -118,7 +203,9 @@ class SmsThreadViewModel @Inject constructor(
     private val contactRepository: ContactRepository,
     private val smsSender: SmsSender,
     private val aiAssistantRepository: AiAssistantRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val remoteSmsRepository: RemoteSmsRepository,
+    private val smsOutboxService: SmsOutboxService
 ) : ViewModel() {
     private companion object {
         const val MESSAGE_LIMIT = Int.MAX_VALUE
@@ -135,17 +222,36 @@ class SmsThreadViewModel @Inject constructor(
     val composeState: StateFlow<AiComposeState> = _composeState
     private var activeThreadId: Long? = null
     private var activeAddress: String = ""
+    private var activeLineId: String? = null
+    private var deviceLineId: String = ""
     private var lastSummaryMessageId: Long? = null
+    private var remoteMessagesJob: Job? = null
+    private var localMessagesJob: Job? = null
 
-    fun load(threadId: Long, address: String) {
+    fun load(threadId: Long, address: String, lineId: String? = null) {
         activeThreadId = threadId.takeIf { it > 0 }
         activeAddress = address
         viewModelScope.launch {
-            refreshMessages()
+            deviceLineId = settingsRepository.ensureDeviceId()
+            activeLineId = lineId ?: deviceLineId
+            if (activeAddress.isNotBlank()) {
+                _contact.value = contactRepository.getByPhone(activeAddress)
+            }
+            remoteMessagesJob?.cancel()
+            localMessagesJob?.cancel()
+            if (!activeLineId.isNullOrBlank() && activeLineId != deviceLineId && activeThreadId != null) {
+                remoteMessagesJob = remoteSmsRepository
+                    .observeMessages(activeLineId!!, activeThreadId!!)
+                    .onEach { _messages.value = it }
+                    .launchIn(viewModelScope)
+                _isArchived.value = false
+            } else {
+                refreshMessages()
+                localMessagesJob = smsRepository.changes()
+                    .onEach { refreshMessages() }
+                    .launchIn(viewModelScope)
+            }
         }
-        smsRepository.changes()
-            .onEach { refreshMessages() }
-            .launchIn(viewModelScope)
     }
 
     private suspend fun refreshMessages() {
@@ -199,35 +305,38 @@ class SmsThreadViewModel @Inject constructor(
         }
     }
 
-    fun sendMessage(address: String, body: String) {
+    fun sendMessage(address: String, body: String, lineId: String? = null) {
         viewModelScope.launch {
-            // Handle multi-recipient (Broadcast) by splitting on semicolon
+            // Handle multi-recipient (Broadcast) by splitting on common delimiters
             val targetAddress = address.ifBlank { activeAddress }
             if (targetAddress.isBlank()) return@launch
             activeAddress = targetAddress
-            val destinations = targetAddress.split(";")
+            val destinations = targetAddress.split(';', ',')
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+            val resolvedLineId = lineId ?: activeLineId ?: deviceLineId
+            val isRemoteLine = resolvedLineId.isNotBlank() && resolvedLineId != deviceLineId
 
             destinations.forEach { dest ->
-                // Clean up "Name Ł Number" or "Name ú Number" formats if present
-                val rawNumber = when {
-                    dest.contains(" Ł ") -> dest.split(" Ł ", limit = 2)[1]
-                    dest.contains(" ú ") -> dest.split(" ú ", limit = 2)[1]
-                    else -> dest
-                }
-
+                val rawNumber = normalizeSmsAddress(dest)
                 if (rawNumber.isNotBlank()) {
                     try {
-                        // awaitResult = false to parallelize if multiple
-                        smsSender.sendSms(rawNumber, body, awaitResult = false)
+                        if (isRemoteLine) {
+                            smsOutboxService.queueMessage(rawNumber, body, resolvedLineId, activeThreadId)
+                        } else {
+                            // awaitResult = false to parallelize if multiple
+                            smsSender.sendSms(rawNumber, body, awaitResult = false)
+                        }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
             }
-            refreshMessages()
+            if (!isRemoteLine) {
+                refreshMessages()
+            }
         }
     }
-
     fun requestSummary(force: Boolean = false) {
         viewModelScope.launch {
             val settings = settingsRepository.settings.first()

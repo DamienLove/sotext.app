@@ -10,7 +10,8 @@ data class SmsThreadItem(
     val isFavorite: Boolean = false,
     val isTrusted: Boolean = false,
     val trustedUrgency: com.pulselink.domain.model.MessageUrgency? = null,
-    val isOtp: Boolean = false
+    val isOtp: Boolean = false,
+    val lineId: String? = null
 )
 
 data class SmsMessageItem(

@@ -14,6 +14,7 @@ import com.pulselink.R
 import com.pulselink.data.sms.SmsRepository
 import com.pulselink.data.sms.SmsThreadItem
 import com.pulselink.domain.repository.ContactRepository
+import com.pulselink.util.splitSmsDisplayAddress
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -74,7 +75,7 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
 
             val views = RemoteViews(context.packageName, R.layout.widget_list_item)
 
-            val displayName = item.address.split(" · ").firstOrNull() ?: item.address
+            val displayName = splitSmsDisplayAddress(item.address).first
 
             // Simplified text handling to prevent RemoteViews crashes
             views.setTextViewText(R.id.widget_item_title, displayName)
