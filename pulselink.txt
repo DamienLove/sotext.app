@@ -317,3 +317,10 @@ Current ad behavior in app:
 2025-12-24
 - iOS (PulseLink) now records emergency locations to Firestore users/{uid}/emergencyLocations on emergency activation; added CoreLocation one-shot provider + emergency location service and Info.plist location usage string.
 
+
+2025-12-24
+- Deferred AI listening features for now per request; proceed only with non-listening AI features (summaries/compose/urgency) when ready.
+
+2025-12-24
+- Release v72 (free/pro/premium): versionCode/Name bumped to 72; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v72.aab; release notes saved at disposable_aabs/release-notes-v72.txt.
+- Web portal rebuilt (web/dist).
