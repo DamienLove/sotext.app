@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import com.google.android.gms.ads.MobileAds
 import com.pulselink.beacon.ui.ads.BannerAd
 import com.pulselink.beacon.ui.InboxScreen
+import com.pulselink.beacon.ui.NewMessageScreen
 import com.pulselink.beacon.ui.SmsViewModel
 import com.pulselink.beacon.ui.ThreadScreen
 import androidx.compose.ui.platform.LocalContext
@@ -99,7 +100,8 @@ private fun BeaconNav(vm: SmsViewModel) {
                         navController.navigate("thread/$id/${Uri.encode(address)}")
                     },
                     onDeleteThread = { vm.deleteThread(it) },
-                    onRefresh = { vm.refreshThreads() }
+                    onRefresh = { vm.refreshThreads() },
+                                        onCompose = { navController.navigate("newMessage") }
                 )
             }
             composable(
@@ -127,6 +129,18 @@ private fun BeaconNav(vm: SmsViewModel) {
         }
     }
 }
+
+            composable("newMessage") {
+                NewMessageScreen(
+                    theme = themeState.global,
+                    onBack = { navController.popBackStack() },
+                    onStartConversation = { address ->
+                        navController.navigate("thread/0/${Uri.encode(address)}") {
+                            popUpTo("inbox")
+                        }
+                    }
+                )
+            }
 
 private fun requestDefaultSms(context: android.content.Context) {
     val packageName = context.packageName

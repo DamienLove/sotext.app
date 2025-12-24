@@ -42,6 +42,14 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openThread(threadId: Long, address: String) {
+                // Handle new conversations
+        if (threadId == 0L && !address.isNullOrBlank()) {
+            currentThreadId = 0L
+            currentAddress = address
+            messages = emptyList()
+            return
+        }
+
         currentThreadId = threadId
         currentAddress = address
         refreshThread(threadId, refreshRead = true)
