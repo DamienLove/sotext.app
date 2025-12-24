@@ -35,6 +35,9 @@ private val ASSISTANT_HINT_DISMISSED = booleanPreferencesKey("assistant_hint_dis
 private val EMERGENCY_PROFILE = stringPreferencesKey("emergency_profile")
 private val CHECKIN_PROFILE = stringPreferencesKey("checkin_profile")
 private val CALL_SOUND = stringPreferencesKey("call_sound")
+private val MESSAGE_NOTIFICATION_SOUND = stringPreferencesKey("message_notification_sound")
+private val MESSAGE_NOTIFICATION_VIBRATE = booleanPreferencesKey("message_notification_vibrate")
+private val MESSAGE_NOTIFICATION_SOUND_OVERRIDES = stringPreferencesKey("message_notification_sound_overrides")
 private val BETA_AGREEMENT_ACCEPTED = booleanPreferencesKey("beta_agreement_accepted")
 private val BETA_AGREEMENT_VERSION = stringPreferencesKey("beta_agreement_version")
 private val AUTO_CALL = booleanPreferencesKey("auto_call")
@@ -90,6 +93,13 @@ class SettingsRepositoryImpl @Inject constructor(
             checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
                 ?: PulseLinkSettings().checkInProfile,
             callSoundKey = prefs[CALL_SOUND] ?: PulseLinkSettings().callSoundKey,
+            messageNotificationSoundUri = prefs[MESSAGE_NOTIFICATION_SOUND]
+                ?: PulseLinkSettings().messageNotificationSoundUri,
+            messageNotificationVibrate = prefs[MESSAGE_NOTIFICATION_VIBRATE]
+                ?: PulseLinkSettings().messageNotificationVibrate,
+            messageNotificationSoundOverrides = prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES]?.let {
+                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().messageNotificationSoundOverrides,
             betaAgreementAccepted = prefs[BETA_AGREEMENT_ACCEPTED] ?: PulseLinkSettings().betaAgreementAccepted,
             betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
@@ -141,6 +151,11 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[EMERGENCY_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.emergencyProfile)
             prefs[CHECKIN_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.checkInProfile)
             updated.callSoundKey?.let { prefs[CALL_SOUND] = it } ?: prefs.remove(CALL_SOUND)
+            updated.messageNotificationSoundUri?.let { prefs[MESSAGE_NOTIFICATION_SOUND] = it }
+                ?: prefs.remove(MESSAGE_NOTIFICATION_SOUND)
+            prefs[MESSAGE_NOTIFICATION_VIBRATE] = updated.messageNotificationVibrate
+            prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES] =
+                json.encodeToString(updated.messageNotificationSoundOverrides)
             prefs[BETA_AGREEMENT_ACCEPTED] = updated.betaAgreementAccepted
             updated.betaAgreementVersion?.let { prefs[BETA_AGREEMENT_VERSION] = it } ?: prefs.remove(BETA_AGREEMENT_VERSION)
             prefs[AUTO_CALL] = updated.autoCallAfterAlert
@@ -405,6 +420,13 @@ class SettingsRepositoryImpl @Inject constructor(
             checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
                 ?: PulseLinkSettings().checkInProfile,
             callSoundKey = prefs[CALL_SOUND] ?: PulseLinkSettings().callSoundKey,
+            messageNotificationSoundUri = prefs[MESSAGE_NOTIFICATION_SOUND]
+                ?: PulseLinkSettings().messageNotificationSoundUri,
+            messageNotificationVibrate = prefs[MESSAGE_NOTIFICATION_VIBRATE]
+                ?: PulseLinkSettings().messageNotificationVibrate,
+            messageNotificationSoundOverrides = prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES]?.let {
+                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().messageNotificationSoundOverrides,
             betaAgreementAccepted = prefs[BETA_AGREEMENT_ACCEPTED] ?: PulseLinkSettings().betaAgreementAccepted,
             betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,

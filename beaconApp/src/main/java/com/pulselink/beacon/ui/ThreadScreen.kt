@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,6 +56,7 @@ fun ThreadScreen(
     onBack: () -> Unit,
     onSend: (String) -> Unit,
     onDeleteThread: () -> Unit,
+    onEditNotificationSound: () -> Unit,
     onCustomize: () -> Unit,
 ) {
     var draft by remember { mutableStateOf("") }
@@ -72,6 +74,9 @@ fun ThreadScreen(
                 actions = {
                     IconButton(onClick = onCustomize) {
                         Icon(Icons.Default.Palette, contentDescription = "Customize theme", tint = iconTint)
+                    }
+                    IconButton(onClick = onEditNotificationSound) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = "Notification sound", tint = iconTint)
                     }
                     IconButton(onClick = onDeleteThread) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete thread", tint = iconTint)

@@ -7,6 +7,12 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Telephony
 import android.telephony.SmsMessage
+import com.pulselink.beacon.data.MessageNotificationPreferences
+import com.pulselink.beacon.notifications.MessageNotificationManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * Receives inbound SMS when Beacon is set as the default SMS app.
@@ -20,8 +26,32 @@ class SmsReceiver : BroadcastReceiver() {
         ) return
 
         val msgs = Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return
-        msgs.forEach { sms ->
-            writeToInbox(context, sms)
+        val pendingResult = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
+            try {
+                msgs.forEach { sms ->
+                    writeToInbox(context, sms)
+                }
+                val origin = msgs.firstOrNull()?.displayOriginatingAddress.orEmpty()
+                val body = msgs.joinToString(separator = "") { it.displayMessageBody }.trim()
+                if (origin.isNotBlank() && body.isNotBlank()) {
+                    val timestamp = msgs.maxOfOrNull { it.timestampMillis } ?: System.currentTimeMillis()
+                    val settings = MessageNotificationPreferences(context).getConfig()
+                    val threadId = runCatching {
+                        Telephony.Threads.getOrCreateThreadId(context, origin)
+                    }.getOrNull()
+                    MessageNotificationManager.notifyIncoming(
+                        context = context,
+                        address = origin,
+                        body = body,
+                        timestamp = timestamp,
+                        settings = settings,
+                        threadId = threadId
+                    )
+                }
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 

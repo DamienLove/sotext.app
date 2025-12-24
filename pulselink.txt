@@ -344,3 +344,11 @@ Current ad behavior in app:
 - Release v73 (free/pro/premium): versionCode/Name bumped to 73; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v73.aab; release notes saved at disposable_aabs/release-notes-v73.txt.
 - Web portal rebuilt (web/dist).
 - WIP Premium AI UI + urgency classification now wired into thread screen + inbound SMS (premium gated).
+
+2025-12-24
+- Beacon inbox notifications: added message notification manager to post SMS notifications with sound/vibration, plus banners to prompt enabling notifications or sound.
+- Message sound settings: global + per-conversation custom audio picker screens (PulseLink Beacon inbox + standalone Beacon), with vibration toggle for global settings.
+- Beacon app: added POST_NOTIFICATIONS permission, notification settings screen entry, and notification deep-link to threads.
+
+2025-12-24
+- Release v74 (free/pro/premium): versionCode/Name bumped to 74; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v74.aab; release notes saved at disposable_aabs/release-notes-v74.txt.

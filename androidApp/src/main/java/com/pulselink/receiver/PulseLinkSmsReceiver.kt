@@ -20,6 +20,7 @@ import com.pulselink.data.ai.AiAssistantRepository
 import com.pulselink.data.sms.OtpHelper
 import com.pulselink.data.sms.OtpNotifier
 import com.pulselink.data.sms.SmsCodec
+import com.pulselink.data.sms.MessageNotificationManager
 import com.pulselink.data.sms.SmsStore
 import com.pulselink.service.AlertRouter
 import com.pulselink.domain.repository.ContactRepository
@@ -27,6 +28,7 @@ import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.MessageUrgency
+import com.pulselink.domain.model.PulseLinkSettings
 import com.pulselink.domain.model.VolumeHint
 import com.pulselink.BuildConfig
 import android.telephony.PhoneNumberUtils
@@ -56,14 +58,16 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
         val body = mergedBody.trim()
         if (body.isBlank()) return
         val origin = messages.firstOrNull()?.originatingAddress.orEmpty()
+        val timestamp = messages.maxOfOrNull { it.timestampMillis } ?: System.currentTimeMillis()
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
                 try {
-                    smsStore.insertIncoming(origin, body, System.currentTimeMillis())
+                    smsStore.insertIncoming(origin, body, timestamp)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to insert incoming SMS from $origin", e)
                 }
+                val settings = settingsRepository.settings.first()
                 val completed = withTimeoutOrNull(8_000L) {
                     val parsed = SmsCodec.parse(body)
                     if (parsed != null) {
@@ -85,7 +89,18 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                         if (otpCode != null) {
                             OtpNotifier.notify(context, origin, otpCode)
                         }
-                        handleTrustedSms(origin, body)
+                        handleTrustedSms(origin, body, settings)
+                        val threadId = runCatching {
+                            Telephony.Threads.getOrCreateThreadId(context, origin)
+                        }.getOrNull()
+                        MessageNotificationManager.notifyIncoming(
+                            context = context,
+                            address = origin,
+                            body = body,
+                            timestamp = timestamp,
+                            settings = settings,
+                            threadId = threadId
+                        )
                     }
                 }
                 if (completed == null) {
@@ -99,11 +114,10 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun handleTrustedSms(origin: String, body: String) {
+    private suspend fun handleTrustedSms(origin: String, body: String, settings: PulseLinkSettings) {
         val normalized = PhoneNumberUtils.normalizeNumber(origin)
         val contact = contactRepository.getByPhone(origin)
             ?: contactRepository.getByPhone(normalized)
-        val settings = settingsRepository.settings.first()
         val premium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
         val aiEnabled = premium && settings.aiUrgencyEnabled
         val includeUnknown = settings.aiUrgencyIncludeUnknown

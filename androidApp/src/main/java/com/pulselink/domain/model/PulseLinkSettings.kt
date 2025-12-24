@@ -24,6 +24,9 @@ data class PulseLinkSettings(
         vibrate = true
     ),
     val callSoundKey: String? = null,
+    val messageNotificationSoundUri: String? = null,
+    val messageNotificationVibrate: Boolean = true,
+    val messageNotificationSoundOverrides: Map<String, String> = emptyMap(),
     val betaAgreementAccepted: Boolean = false,
     val betaAgreementVersion: String? = null,
     val autoCallAfterAlert: Boolean = false,

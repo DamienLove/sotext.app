@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -80,6 +81,7 @@ fun SmsThreadScreen(
     globalTheme: ThemePreferences,
     onUpdateContactTheme: (ThemePreferences?) -> Unit,
     onCustomizeTheme: () -> Unit,
+    onEditNotificationSound: () -> Unit = {},
     onSendMessage: (String) -> Unit,
     isArchived: Boolean,
     onToggleArchive: () -> Unit,
@@ -166,6 +168,14 @@ fun SmsThreadScreen(
                         Icon(
                             icon,
                             contentDescription = desc,
+                            tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
+                            modifier = Modifier.size(iconSize)
+                        )
+                    }
+                    IconButton(onClick = onEditNotificationSound) {
+                        Icon(
+                            Icons.Filled.NotificationsActive,
+                            contentDescription = "Notification sound",
                             tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
                             modifier = Modifier.size(iconSize)
                         )

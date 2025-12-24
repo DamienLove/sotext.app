@@ -65,6 +65,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.pulselink.auth.AuthState
 import com.pulselink.data.ads.AppOpenAdController
+import com.pulselink.data.sms.MessageNotificationManager
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.R
@@ -86,6 +87,7 @@ import com.pulselink.ui.screens.OnboardingIntroScreen
 import com.pulselink.ui.screens.FaqScreen
 import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
+import com.pulselink.ui.screens.MessageNotificationSoundScreen
 import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.SmsInboxScreen
@@ -98,6 +100,7 @@ import com.pulselink.ui.state.MainViewModel.CallInitiationResult
 import com.pulselink.ui.state.SmsInboxViewModel
 import com.pulselink.ui.state.SmsThreadViewModel
 import com.pulselink.ui.theme.PulseLinkTheme
+import com.pulselink.util.normalizeSmsAddress
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -112,14 +115,17 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Surface
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.TopAppBar
@@ -1188,6 +1194,11 @@ class MainActivity : AppCompatActivity() {
                     }
                     composable("settings") {
                         val hasDndAccess = notificationManager?.isNotificationPolicyAccessGranted == true
+                        val messageSoundLabel = if (state.settings.messageNotificationSoundUri.isNullOrBlank()) {
+                            "Phone default notification"
+                        } else {
+                            "Custom audio"
+                        }
                         SettingsScreen(
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
@@ -1213,6 +1224,10 @@ class MainActivity : AppCompatActivity() {
                             onEditEmergencyTone = { navController.navigate("alerts/default/emergency") },
                             onEditCheckInTone = { navController.navigate("alerts/default/checkin") },
                             onEditCallTone = { navController.navigate("alerts/default/call") },
+                            messageSoundLabel = messageSoundLabel,
+                            messageVibrate = state.settings.messageNotificationVibrate,
+                            onEditMessageSound = { navController.navigate("notifications/message_sound") },
+                            onToggleMessageVibrate = viewModel::updateMessageNotificationVibrate,
                             onReportBug = { navController.navigate("bug_report") },
                             onBetaTesters = { navController.navigate("beta_testers") },
                             onOpenHelp = { navController.navigate("settings_help") },
@@ -1220,6 +1235,45 @@ class MainActivity : AppCompatActivity() {
                             onEditProfile = { navController.navigate("profile_settings") },
                             onSignOut = {
                                 viewModel.signOut()
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(
+                        route = "notifications/message_sound?address={address}",
+                        arguments = listOf(navArgument("address") {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        })
+                    ) { entry ->
+                        val addressArg = entry.arguments?.getString("address")
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { Uri.decode(it) }
+                        val normalized = addressArg?.let { normalizeSmsAddress(it) }
+                        val overrideUri = normalized?.let { state.settings.messageNotificationSoundOverrides[it] }
+                        val isContact = addressArg != null
+                        MessageNotificationSoundScreen(
+                            title = if (isContact) "Notification sound" else "Message notification sound",
+                            subtitle = if (isContact) {
+                                "Overrides the global sound for this conversation."
+                            } else {
+                                "Choose the sound for incoming texts."
+                            },
+                            defaultLabel = if (isContact) "Use global message sound" else "Phone default notification",
+                            currentSoundUri = if (isContact) overrideUri else state.settings.messageNotificationSoundUri,
+                            onSelectDefault = {
+                                if (addressArg != null) {
+                                    viewModel.updateMessageNotificationOverride(addressArg, null)
+                                } else {
+                                    viewModel.updateMessageNotificationSound(null)
+                                }
+                            },
+                            onSelectCustom = { uri ->
+                                if (addressArg != null) {
+                                    viewModel.updateMessageNotificationOverride(addressArg, uri.toString())
+                                } else {
+                                    viewModel.updateMessageNotificationSound(uri.toString())
+                                }
                             },
                             onBack = { navController.popBackStack() }
                         )
@@ -1240,6 +1294,23 @@ class MainActivity : AppCompatActivity() {
                         val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
                         val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
                         val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
+                        val lifecycleOwner = LocalLifecycleOwner.current
+                        var notificationsEnabled by remember {
+                            mutableStateOf(MessageNotificationManager.areNotificationsEnabled(context))
+                        }
+                        var notificationsSilent by remember {
+                            mutableStateOf(MessageNotificationManager.isMessageChannelSilent(context))
+                        }
+                        DisposableEffect(lifecycleOwner) {
+                            val observer = LifecycleEventObserver { _, event ->
+                                if (event == Lifecycle.Event.ON_RESUME) {
+                                    notificationsEnabled = MessageNotificationManager.areNotificationsEnabled(context)
+                                    notificationsSilent = MessageNotificationManager.isMessageChannelSilent(context)
+                                }
+                            }
+                            lifecycleOwner.lifecycle.addObserver(observer)
+                            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                        }
                         LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
                         SmsInboxScreen(
                             threads = threads,
@@ -1251,7 +1322,47 @@ class MainActivity : AppCompatActivity() {
                             onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
                             onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
                             onBack = { navController.popBackStack() },
-                            dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) }
+                            dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                            banner = {
+                                if (!notificationsEnabled || notificationsSilent) {
+                                    Surface(
+                                        tonalElevation = 2.dp,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(Icons.Filled.NotificationsActive, contentDescription = null)
+                                            Column(Modifier.weight(1f)) {
+                                                Text(
+                                                    text = if (!notificationsEnabled) {
+                                                        "Message notifications are off"
+                                                    } else {
+                                                        "Message alerts are silent"
+                                                    },
+                                                    style = MaterialTheme.typography.titleSmall
+                                                )
+                                                Text(
+                                                    text = if (!notificationsEnabled) {
+                                                        "Turn on notifications so Beacon can alert you."
+                                                    } else {
+                                                        "Enable sound or vibration for incoming texts."
+                                                    },
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
+                                            OutlinedButton(onClick = {
+                                                val intent = MessageNotificationManager.buildNotificationSettingsIntent(context)
+                                                context.startActivity(intent)
+                                            }) {
+                                                Text("Open")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         )
                     }
                     composable(
@@ -1281,6 +1392,9 @@ class MainActivity : AppCompatActivity() {
                             globalTheme = state.settings.themePreferences,
                             onUpdateContactTheme = { /* no-op for SMS inbox contacts */ },
                             onCustomizeTheme = { navController.navigate("visual_settings") },
+                            onEditNotificationSound = {
+                                navController.navigate("notifications/message_sound?address=${Uri.encode(decodedAddress)}")
+                            },
                             onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) },
                             isArchived = isArchived,
                             onToggleArchive = { threadViewModel.toggleArchive() },

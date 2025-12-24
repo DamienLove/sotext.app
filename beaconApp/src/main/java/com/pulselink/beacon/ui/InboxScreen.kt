@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -98,6 +99,10 @@ fun InboxScreen(
     onSearch: (String) -> Unit,
     onClearSearch: () -> Unit,
     onCustomize: () -> Unit,
+    onOpenNotifications: () -> Unit,
+    notificationsEnabled: Boolean,
+    notificationsSilent: Boolean,
+    onOpenNotificationSettings: () -> Unit,
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -157,6 +162,9 @@ fun InboxScreen(
                 actions = {
                     IconButton(onClick = onRefresh) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = iconTint)
+                    }
+                    IconButton(onClick = onOpenNotifications) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = "Notifications", tint = iconTint)
                     }
                     IconButton(onClick = onCustomize) {
                         Icon(Icons.Default.ColorLens, contentDescription = "Customize", tint = iconTint)
@@ -249,6 +257,40 @@ fun InboxScreen(
                     style = MaterialTheme.typography.bodyMedium
                 )
                 else -> Unit
+            }
+
+            if (!notificationsEnabled || notificationsSilent) {
+                Surface(
+                    tonalElevation = 2.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = iconTint)
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                text = if (!notificationsEnabled) "Message notifications are off" else "Message alerts are silent",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = if (!notificationsEnabled) {
+                                    "Turn on notifications so Beacon can alert you."
+                                } else {
+                                    "Enable sound or vibration for incoming texts."
+                                },
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        OutlinedButton(onClick = onOpenNotificationSettings) {
+                            Text("Open")
+                        }
+                    }
+                }
             }
 
             if (missingPermissions.isNotEmpty()) {

@@ -11,6 +11,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,26 +51,54 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val notificationTarget = mutableStateOf<NotificationTarget?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        notificationTarget.value = readNotificationTarget(intent)
         MobileAds.initialize(this)
         setContent {
             val vm: SmsViewModel = viewModel(factory = SmsViewModel.factory(application))
             val themeVm: ThemeViewModel = viewModel(factory = ThemeViewModel.factory(application))
             BeaconTheme(theme = themeVm.themeState.global) {
-                BeaconNav(vm, themeVm, themeVm.themeState)
+                BeaconNav(vm, themeVm, themeVm.themeState, notificationTarget)
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        notificationTarget.value = readNotificationTarget(intent)
+    }
+
+    private fun readNotificationTarget(intent: Intent?): NotificationTarget? {
+        val address = intent?.getStringExtra(com.pulselink.beacon.notifications.MessageNotificationManager.EXTRA_ADDRESS)
+            ?.takeIf { it.isNotBlank() } ?: return null
+        val threadId = intent.getLongExtra(
+            com.pulselink.beacon.notifications.MessageNotificationManager.EXTRA_THREAD_ID,
+            0L
+        )
+        return NotificationTarget(threadId, address)
+    }
+
 }
+
+private data class NotificationTarget(val threadId: Long, val address: String)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: ThemeState) {
+private fun BeaconNav(
+    vm: SmsViewModel,
+    themeVm: ThemeViewModel,
+    themeState: ThemeState,
+    notificationTarget: androidx.compose.runtime.MutableState<NotificationTarget?>
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val notificationPrefs = remember { com.pulselink.beacon.data.MessageNotificationPreferences(context.applicationContext) }
+    val notificationSettings by notificationPrefs.flow.collectAsState(initial = com.pulselink.beacon.data.MessageNotificationPrefs())
     var isDefaultSms by remember {
         mutableStateOf(isDefaultSmsRoleHeld(context))
     }
@@ -77,6 +106,12 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
     var defaultSmsCheckJob by remember { mutableStateOf<Job?>(null) }
     var missingPerms by remember { mutableStateOf(requiredPermissions(context)) }
     var missingReadPerms by remember { mutableStateOf(requiredReadPermissions(context)) }
+    var notificationsEnabled by remember {
+        mutableStateOf(com.pulselink.beacon.notifications.MessageNotificationManager.areNotificationsEnabled(context))
+    }
+    var notificationsSilent by remember {
+        mutableStateOf(com.pulselink.beacon.notifications.MessageNotificationManager.isMessageChannelSilent(context))
+    }
     val refreshDefaultSms = remember {
         suspend {
             val latest = checkDefaultSmsWithRetry(context)
@@ -122,10 +157,21 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
         }
     }
 
+    val pendingNotification by notificationTarget
+    LaunchedEffect(pendingNotification) {
+        val target = pendingNotification ?: return@LaunchedEffect
+        val encoded = Uri.encode(target.address)
+        val threadId = target.threadId.takeIf { it > 0 } ?: 0L
+        navController.navigate("thread/$threadId/$encoded")
+        notificationTarget.value = null
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 launchDefaultSmsCheck()
+                notificationsEnabled = com.pulselink.beacon.notifications.MessageNotificationManager.areNotificationsEnabled(context)
+                notificationsSilent = com.pulselink.beacon.notifications.MessageNotificationManager.isMessageChannelSilent(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -150,6 +196,13 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
                     isDefaultSms = isDefaultSms,
                     isCheckingDefaultSms = isCheckingDefaultSms,
                     missingPermissions = missingPerms,
+                    notificationsEnabled = notificationsEnabled,
+                    notificationsSilent = notificationsSilent,
+                    onOpenNotificationSettings = {
+                        val intent = com.pulselink.beacon.notifications.MessageNotificationManager
+                            .buildNotificationSettingsIntent(context)
+                        context.startActivity(intent)
+                    },
                     onRequestPermissions = {
                         permissionLauncher.launch(missingPerms.toTypedArray())
                     },
@@ -168,7 +221,8 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
                     onSearch = { vm.search(it) },
                     onClearSearch = { vm.clearSearch() },
                     onCustomize = { navController.navigate("customize?address=") },
-                    onCompose = { navController.navigate("newMessage") }
+                    onCompose = { navController.navigate("newMessage") },
+                    onOpenNotifications = { navController.navigate("notifications") }
                 )
             }
             composable(
@@ -194,9 +248,62 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
                             vm.deleteThread(threadId)
                             navController.popBackStack()
                         },
-                        onCustomize = { navController.navigate("customize?address=${Uri.encode(address)}") }
+                        onCustomize = { navController.navigate("customize?address=${Uri.encode(address)}") },
+                        onEditNotificationSound = { navController.navigate("notifications?address=${Uri.encode(address)}") }
                     )
                 }
+            }
+            composable(
+                route = "notifications?address={address}",
+                arguments = listOf(
+                    navArgument("address") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                        nullable = true
+                    }
+                )
+            ) { backStackEntry ->
+                val addressArg = backStackEntry.arguments?.getString("address")
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { Uri.decode(it) }
+                val normalized = addressArg?.let { com.pulselink.beacon.util.normalizeSmsAddress(it) }
+                val key = normalized?.takeIf { it.isNotBlank() } ?: addressArg
+                val overrideUri = key?.let { notificationSettings.contactOverrides[it] }
+                val isContact = addressArg != null
+                com.pulselink.beacon.ui.NotificationSoundScreen(
+                    title = if (isContact) "Notification sound" else "Message notification sound",
+                    subtitle = if (isContact) {
+                        "Overrides the global sound for this conversation."
+                    } else {
+                        "Choose the sound for incoming texts."
+                    },
+                    defaultLabel = if (isContact) "Use global message sound" else "Phone default notification",
+                    currentSoundUri = if (isContact) overrideUri else notificationSettings.soundUri,
+                    vibrate = notificationSettings.vibrate,
+                    showVibrateToggle = !isContact,
+                    onToggleVibrate = { enabled ->
+                        scope.launch { notificationPrefs.setVibrate(enabled) }
+                    },
+                    onSelectDefault = {
+                        scope.launch {
+                            if (addressArg != null) {
+                                key?.let { notificationPrefs.setContactSound(it, null) }
+                            } else {
+                                notificationPrefs.setGlobalSound(null)
+                            }
+                        }
+                    },
+                    onSelectCustom = { uri ->
+                        scope.launch {
+                            if (addressArg != null) {
+                                key?.let { notificationPrefs.setContactSound(it, uri.toString()) }
+                            } else {
+                                notificationPrefs.setGlobalSound(uri.toString())
+                            }
+                        }
+                    },
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable("newMessage") {
                 NewMessageScreen(

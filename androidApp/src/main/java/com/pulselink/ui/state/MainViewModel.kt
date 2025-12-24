@@ -38,6 +38,7 @@ import com.pulselink.ui.state.DndStatusMessage
 import com.pulselink.util.AudioOverrideManager
 import com.pulselink.widget.WidgetStateManager
 import com.pulselink.util.BeaconIconManager
+import com.pulselink.util.normalizeSmsAddress
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
@@ -412,6 +413,38 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.update { settings ->
                 settings.copy(callSoundKey = key)
+            }
+        }
+    }
+
+    fun updateMessageNotificationSound(uri: String?) {
+        viewModelScope.launch {
+            settingsRepository.update { settings ->
+                settings.copy(messageNotificationSoundUri = uri)
+            }
+        }
+    }
+
+    fun updateMessageNotificationVibrate(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { settings ->
+                settings.copy(messageNotificationVibrate = enabled)
+            }
+        }
+    }
+
+    fun updateMessageNotificationOverride(address: String, uri: String?) {
+        val normalized = normalizeSmsAddress(address)
+        if (normalized.isBlank()) return
+        viewModelScope.launch {
+            settingsRepository.update { settings ->
+                val overrides = settings.messageNotificationSoundOverrides.toMutableMap()
+                if (uri.isNullOrBlank()) {
+                    overrides.remove(normalized)
+                } else {
+                    overrides[normalized] = uri
+                }
+                settings.copy(messageNotificationSoundOverrides = overrides)
             }
         }
     }

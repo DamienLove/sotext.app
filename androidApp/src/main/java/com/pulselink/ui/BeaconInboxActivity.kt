@@ -1,6 +1,7 @@
 package com.pulselink.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sms
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.runtime.key
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -66,6 +68,7 @@ import com.pulselink.ui.screens.BeaconNavRoute
 import com.pulselink.ui.screens.BeaconSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.NewMessageScreen
+import com.pulselink.ui.screens.MessageNotificationSoundScreen
 import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
@@ -91,9 +94,11 @@ class BeaconInboxActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
     @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
     @Inject lateinit var subscriptionManager: SubscriptionManager
+    private val notificationTarget = mutableStateOf<NotificationTarget?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        notificationTarget.value = readNotificationTarget(intent)
         enableEdgeToEdge()
         setContent {
             PulseLinkTheme {
@@ -105,6 +110,12 @@ class BeaconInboxActivity : ComponentActivity() {
                 val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
                 var isCheckingDefaultSms by remember { mutableStateOf(false) }
+                var notificationsEnabled by remember {
+                    mutableStateOf(com.pulselink.data.sms.MessageNotificationManager.areNotificationsEnabled(context))
+                }
+                var notificationsSilent by remember {
+                    mutableStateOf(com.pulselink.data.sms.MessageNotificationManager.isMessageChannelSilent(context))
+                }
                 val privateThreads = state.settings.privateThreadIds.toSet()
                 var showPrivate by remember { mutableStateOf(false) }
                 var showPinDialog by remember { mutableStateOf(false) }
@@ -149,6 +160,8 @@ class BeaconInboxActivity : ComponentActivity() {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
                             launchDefaultSmsCheck()
+                            notificationsEnabled = com.pulselink.data.sms.MessageNotificationManager.areNotificationsEnabled(context)
+                            notificationsSilent = com.pulselink.data.sms.MessageNotificationManager.isMessageChannelSilent(context)
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
@@ -166,6 +179,15 @@ class BeaconInboxActivity : ComponentActivity() {
                     if (isDefaultSms && !hasSmsPermissions) {
                         permissionLauncher.launch(requiredSmsPermissions())
                     }
+                }
+
+                val pendingNotification by notificationTarget
+                LaunchedEffect(pendingNotification) {
+                    val target = pendingNotification ?: return@LaunchedEffect
+                    val encoded = Uri.encode(target.address)
+                    val threadId = target.threadId.takeIf { it > 0 } ?: 0L
+                    navController.navigate("sms/thread/$threadId/$encoded")
+                    notificationTarget.value = null
                 }
 
                 Column(modifier = Modifier.fillMaxSize()) {
@@ -248,6 +270,48 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onClearSearch = { smsInboxViewModel.clearSearch() },
                                             banner = {
                                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    if (!notificationsEnabled || notificationsSilent) {
+                                                        Surface(
+                                                            tonalElevation = 2.dp,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(12.dp),
+                                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Icon(
+                                                                    Icons.Filled.NotificationsActive,
+                                                                    contentDescription = null
+                                                                )
+                                                                Column(Modifier.weight(1f)) {
+                                                                    Text(
+                                                                        text = if (!notificationsEnabled) {
+                                                                            "Message notifications are off"
+                                                                        } else {
+                                                                            "Message alerts are silent"
+                                                                        },
+                                                                        style = MaterialTheme.typography.titleSmall
+                                                                    )
+                                                                    Text(
+                                                                        text = if (!notificationsEnabled) {
+                                                                            "Turn on notifications so Beacon can alert you."
+                                                                        } else {
+                                                                            "Enable sound or vibration for incoming texts."
+                                                                        },
+                                                                        style = MaterialTheme.typography.bodySmall
+                                                                    )
+                                                                }
+                                                                OutlinedButton(onClick = {
+                                                                    val intent = com.pulselink.data.sms.MessageNotificationManager
+                                                                        .buildNotificationSettingsIntent(context)
+                                                                    context.startActivity(intent)
+                                                                }) {
+                                                                    Text("Open")
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                                     if (!hasSmsPermissions) {
                                                         Surface(
                                                             tonalElevation = 2.dp,
@@ -476,24 +540,27 @@ class BeaconInboxActivity : ComponentActivity() {
                                         state.settings.premiumUnlocked ||
                                         BuildConfig.PREMIUM_FEATURES
                                     LaunchedEffect(threadId, decodedAddress) { threadViewModel.load(threadId, decodedAddress) }
-                                    SmsThreadScreen(
-                                        address = decodedAddress,
-                                        messages = messages,
-                                        contact = contact,
-                                        onBack = { navController.popBackStack() },
-                                        dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
-                                        globalTheme = state.settings.themePreferences,
-                                        onUpdateContactTheme = { theme -> threadViewModel.setContactTheme(theme) },
-                                        onCustomizeTheme = {
-                                            val contactId = contact?.id ?: -1L
-                                            if (contactId != -1L) {
-                                                navController.navigate("visual_settings?contactId=$contactId")
-                                            }
-                                        },
-                                        onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) },
-                                        isArchived = isArchived,
-                                        onToggleArchive = { threadViewModel.toggleArchive() },
-                                        aiSummaryState = summaryState,
+                                        SmsThreadScreen(
+                                            address = decodedAddress,
+                                            messages = messages,
+                                            contact = contact,
+                                            onBack = { navController.popBackStack() },
+                                            dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                                            globalTheme = state.settings.themePreferences,
+                                            onUpdateContactTheme = { theme -> threadViewModel.setContactTheme(theme) },
+                                            onCustomizeTheme = {
+                                                val contactId = contact?.id ?: -1L
+                                                if (contactId != -1L) {
+                                                    navController.navigate("visual_settings?contactId=$contactId")
+                                                }
+                                            },
+                                            onEditNotificationSound = {
+                                                navController.navigate("notifications/message_sound?address=${Uri.encode(decodedAddress)}")
+                                            },
+                                            onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) },
+                                            isArchived = isArchived,
+                                            onToggleArchive = { threadViewModel.toggleArchive() },
+                                            aiSummaryState = summaryState,
                                         onRequestSummary = { threadViewModel.requestSummary() },
                                         onClearSummary = { threadViewModel.clearSummary() },
                                         aiComposeState = composeState,
@@ -509,12 +576,21 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val premiumActive = subscriptionUiState.isPremiumActive ||
                                         state.settings.premiumUnlocked ||
                                         BuildConfig.PREMIUM_FEATURES
+                                    val messageSoundLabel = if (state.settings.messageNotificationSoundUri.isNullOrBlank()) {
+                                        "Phone default notification"
+                                    } else {
+                                        "Custom audio"
+                                    }
                                     BeaconSettingsScreen(
                                         settings = state.settings,
                                         onBack = { navController.popBackStack() },
                                         onTimeFormatChange = { viewModel.setTimeFormat(it) },
                                         onOpenVisualSettings = { navController.navigate("visual_settings") },
                                         onOpenProfileSettings = { navController.navigate("profile_settings") },
+                                        messageSoundLabel = messageSoundLabel,
+                                        messageVibrate = state.settings.messageNotificationVibrate,
+                                        onEditMessageSound = { navController.navigate("notifications/message_sound") },
+                                        onToggleMessageVibrate = viewModel::updateMessageNotificationVibrate,
                                         isDefaultSmsApp = isDefaultSms,
                                         defaultSmsSupported = defaultSmsSupported,
                                         onRequestDefaultSms = {
@@ -546,6 +622,45 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleAiUrgencyIncludeUnknown = { enabled ->
                                             viewModel.setAiUrgencyIncludeUnknown(enabled)
                                         }
+                                    )
+                                }
+                                composable(
+                                    route = "notifications/message_sound?address={address}",
+                                    arguments = listOf(navArgument("address") {
+                                        type = NavType.StringType
+                                        defaultValue = ""
+                                    })
+                                ) { entry ->
+                                    val addressArg = entry.arguments?.getString("address")
+                                        ?.takeIf { it.isNotBlank() }
+                                        ?.let { Uri.decode(it) }
+                                    val normalized = addressArg?.let { com.pulselink.util.normalizeSmsAddress(it) }
+                                    val overrideUri = normalized?.let { state.settings.messageNotificationSoundOverrides[it] }
+                                    val isContact = addressArg != null
+                                    MessageNotificationSoundScreen(
+                                        title = if (isContact) "Notification sound" else "Message notification sound",
+                                        subtitle = if (isContact) {
+                                            "Overrides the global sound for this conversation."
+                                        } else {
+                                            "Choose the sound for incoming texts."
+                                        },
+                                        defaultLabel = if (isContact) "Use global message sound" else "Phone default notification",
+                                        currentSoundUri = if (isContact) overrideUri else state.settings.messageNotificationSoundUri,
+                                        onSelectDefault = {
+                                            if (addressArg != null) {
+                                                viewModel.updateMessageNotificationOverride(addressArg, null)
+                                            } else {
+                                                viewModel.updateMessageNotificationSound(null)
+                                            }
+                                        },
+                                        onSelectCustom = { uri ->
+                                            if (addressArg != null) {
+                                                viewModel.updateMessageNotificationOverride(addressArg, uri.toString())
+                                            } else {
+                                                viewModel.updateMessageNotificationSound(uri.toString())
+                                            }
+                                        },
+                                        onBack = { navController.popBackStack() }
                                     )
                                 }
                                 composable(
@@ -642,6 +757,18 @@ class BeaconInboxActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        notificationTarget.value = readNotificationTarget(intent)
+    }
+
+    private fun readNotificationTarget(intent: Intent?): NotificationTarget? {
+        val address = intent?.getStringExtra(com.pulselink.data.sms.MessageNotificationManager.EXTRA_ADDRESS)
+            ?.takeIf { it.isNotBlank() } ?: return null
+        val threadId = intent.getLongExtra(com.pulselink.data.sms.MessageNotificationManager.EXTRA_THREAD_ID, 0L)
+        return NotificationTarget(threadId, address)
+    }
+
     private fun checkSmsPermissions(context: android.content.Context): Boolean {
         return requiredSmsPermissions().all {
             ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
@@ -677,4 +804,6 @@ class BeaconInboxActivity : ComponentActivity() {
         }
         return if (input.trim().startsWith("+")) "+$digits" else digits
     }
+
+    private data class NotificationTarget(val threadId: Long, val address: String)
 }

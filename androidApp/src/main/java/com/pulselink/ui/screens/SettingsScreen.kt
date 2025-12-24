@@ -94,6 +94,10 @@ fun SettingsScreen(
     onEditEmergencyTone: () -> Unit,
     onEditCheckInTone: () -> Unit,
     onEditCallTone: () -> Unit,
+    messageSoundLabel: String,
+    messageVibrate: Boolean,
+    onEditMessageSound: () -> Unit,
+    onToggleMessageVibrate: (Boolean) -> Unit,
     onReportBug: () -> Unit,
     onBetaTesters: () -> Unit,
     onOpenHelp: () -> Unit,
@@ -182,6 +186,18 @@ fun SettingsScreen(
                     title = stringResource(R.string.settings_call_tone_title),
                     actionLabel = "Edit",
                     onAction = onEditCallTone
+                )
+                SettingsActionRow(
+                    title = "Message notification sound",
+                    subtitle = messageSoundLabel,
+                    actionLabel = "Edit",
+                    onAction = onEditMessageSound
+                )
+                SettingsToggleRow(
+                    title = "Message vibration",
+                    subtitle = "Vibrate when new texts arrive.",
+                    checked = messageVibrate,
+                    onCheckedChange = onToggleMessageVibrate
                 )
                 SettingsActionRow(
                     title = stringResource(R.string.dnd_override_title),
