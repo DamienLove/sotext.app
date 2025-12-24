@@ -462,3 +462,26 @@ Current ad behavior in app:
 
 2025-12-24
 - Release v80: versionCode/Name bumped to 80; built free/pro/premium AABs and copied to disposable_aabs/pulselink-{free|pro|premium}-v80.aab; release notes at disposable_aabs/release-notes-v80.txt.\n- iOS build fix: ContentView passes isPro into HomeTab to resolve scope error.
+
+2025-12-24
+- Inbox archive fixes: archive/unarchive now run on IO and force refresh; archived threads removed from All/other tabs, and Archived route is archived-only.
+- Multi-line presence: lineStatus now aggregates by line and always marks the current device line online to avoid false offline warnings.
+
+2025-12-24
+- Fix login redirect: login screen no longer auto-navigates away for anonymous SMS-only users; onboarding completion nav now only fires from splash/onboarding routes.
+
+2025-12-24
+- Crash fix: removed androidx.glance appwidget/material dependencies (no Glance usage in repo) to eliminate ActionTrampolineActivity crash in com.pulselink.pro.
+
+2025-12-24
+- Login access restored: SMS inbox settings now opens Settings, and Settings shows an Add Login action for SMS-only (anonymous) users that navigates to the login screen.
+
+2025-12-24
+- Updated pulselink.txt per request (login access restored via SMS inbox settings + Settings Add Login for SMS-only users).
+
+2025-12-24
+- Release v81 (free/pro/premium): versionCode/Name bumped to 81; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v81.aab; release notes saved at disposable_aabs/release-notes-v81.txt.
+- Login flow fix: login screen no longer auto-navigates for anonymous SMS-only users; Add Login action now available in Settings.
+- Inbox archive: archive/unarchive now runs on IO with forced refresh; Archived tab is archived-only and All excludes archived threads.
+- Multi-line presence: line status now aggregates per line and always marks the current device line online.
+- Crash fix: removed unused Glance widget dependencies to avoid ActionTrampolineActivity crash in pro builds.

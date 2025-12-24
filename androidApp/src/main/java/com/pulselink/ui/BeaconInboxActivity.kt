@@ -329,6 +329,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                             searchState = searchState,
                                             onSearch = { smsInboxViewModel.search(it) },
                                             onClearSearch = { smsInboxViewModel.clearSearch() },
+                                            archivedOnly = currentRoute == BeaconNavRoute.Archived,
                                             banner = {
                                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                                     if (!notificationsEnabled || notificationsSilent) {
@@ -642,12 +643,21 @@ class BeaconInboxActivity : ComponentActivity() {
                                             selectedLineId = if (isPremium) selectedLine else null,
                                             deviceLineId = deviceLineId,
                                             lineStatus = if (isPremium) {
-                                                lineDevices.associate { device ->
-                                                    val isOnline = device.lastSeen?.let { last ->
-                                                        System.currentTimeMillis() - last < 2 * 60 * 1000
-                                                    } ?: false
-                                                    device.lineId to isOnline
+                                                val now = System.currentTimeMillis()
+                                                val status = lineDevices
+                                                    .groupBy { it.lineId }
+                                                    .mapValues { (_, devices) ->
+                                                        devices.any { device ->
+                                                            device.lastSeen?.let { last ->
+                                                                now - last < 2 * 60 * 1000
+                                                            } == true
+                                                        }
+                                                    }
+                                                    .toMutableMap()
+                                                if (deviceLineId.isNotBlank()) {
+                                                    status[deviceLineId] = true
                                                 }
+                                                status
                                             } else {
                                                 emptyMap()
                                             },
