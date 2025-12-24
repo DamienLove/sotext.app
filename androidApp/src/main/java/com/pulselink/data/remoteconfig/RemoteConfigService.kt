@@ -1,9 +1,8 @@
 package com.pulselink.data.remoteconfig
 
 import android.util.Log
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.remoteconfig.ktx.remoteConfig
-import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 import com.pulselink.R
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -12,12 +11,12 @@ import javax.inject.Singleton
 @Singleton
 class RemoteConfigService @Inject constructor() {
 
-    private val remoteConfig = Firebase.remoteConfig
+    private val remoteConfig = FirebaseRemoteConfig.getInstance()
 
     init {
-        val configSettings = remoteConfigSettings {
-            minimumFetchIntervalInSeconds = 3600
-        }
+        val configSettings = FirebaseRemoteConfigSettings.Builder()
+            .setMinimumFetchIntervalInSeconds(3600)
+            .build()
         remoteConfig.setConfigSettingsAsync(configSettings)
         remoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
     }

@@ -307,3 +307,9 @@ Current ad behavior in app:
 - Added Emergency Map feature: Android map screen (MapView + list + clear) wired from emergency banner and Alert History; new EmergencyLocationRepository records outgoing emergency locations and inbound emergency SMS locations into Firestore users/{uid}/emergencyLocations; Firestore rules updated to allow access.
 - Web Emergency Map now reads users/{uid}/emergencyLocations, supports clearing entries, and map list styling updated. Map API keys now load from local properties (.env.local on web, local.properties on Android).
 
+
+2025-12-24
+- Release v69 (free/pro/premium): versionCode/Name bumped to 69; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v69.aab; release notes saved at disposable_aabs/release-notes-v69.txt.
+- Web portal rebuilt (web/dist) after Emergency Map data-source update.
+- RemoteConfigService updated to use non-KTX Firebase Remote Config APIs (build fix).
+
