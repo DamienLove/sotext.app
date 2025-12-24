@@ -377,3 +377,6 @@ Current ad behavior in app:
 - SmsInbox refreshes after default-SMS/READ_SMS changes; manual import pulls all historical device messages.
 - Release v78 (free/pro/premium): versionCode/Name bumped to 78; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v78.aab; release notes saved at disposable_aabs/release-notes-v78.txt.
 
+2025-12-24
+- Web Emergency Map: added Back button, friendly empty-state copy, geolocation centering with "your location" marker, and clearer status text; rebuilt web/dist.
+
