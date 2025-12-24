@@ -490,3 +490,7 @@ Current ad behavior in app:
 - Inbox archive: archive/unarchive now runs on IO with forced refresh; Archived tab is archived-only and All excludes archived threads.
 - Multi-line presence: line status now aggregates per line and always marks the current device line online.
 - Crash fix: removed unused Glance widget dependencies to avoid ActionTrampolineActivity crash in pro builds.
+
+2025-12-24
+- Synced Suite-Beta with Ds-work-suite-beta (fast-forward to 523cd6a6) and rebuilt v81 AABs after sync.
+- bundleProRelease OOM (mergeDexProRelease) resolved by rerunning with ORG_GRADLE_JVMARGS="-Xmx6g -XX:MaxMetaspaceSize=2g".
