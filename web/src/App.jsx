@@ -424,6 +424,8 @@ function App() {
   const [incomingOnly, setIncomingOnly] = useState(true);
   const [selectedAlertId, setSelectedAlertId] = useState(null);
   const [mapStatus, setMapStatus] = useState('');
+  const [geoStatus, setGeoStatus] = useState('');
+  const [userLocation, setUserLocation] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
   const [showPreviews, setShowPreviews] = useState(true);
@@ -433,7 +435,9 @@ function App() {
   const mapInstanceRef = useRef(null);
   const mapMarkersRef = useRef(new Map());
   const mapInfoRef = useRef(null);
+  const mapHomeMarkerRef = useRef(null);
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const defaultMapCenter = { lat: 39.5, lng: -98.35 };
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
   const filteredAlerts = useMemo(() => {
     return alertLocations.filter((alert) => {
@@ -586,7 +590,7 @@ function App() {
           };
         }).filter(Boolean).filter(item => !item.clearedAt);
         setAlertLocations(items);
-        setAlertStatus(items.length ? '' : 'No emergency locations yet.');
+        setAlertStatus(items.length ? '' : 'No emergencies recently — that’s good news.');
       },
       (error) => {
         console.error('Failed to load emergency locations', error);
@@ -609,7 +613,7 @@ function App() {
         if (cancelled) return;
         if (!mapInstanceRef.current && mapRef.current) {
           mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-            center: { lat: 39.5, lng: -98.35 },
+            center: defaultMapCenter,
             zoom: 3,
             mapTypeControl: false,
             fullscreenControl: false,
@@ -627,13 +631,55 @@ function App() {
   }, [activePanel, mapsApiKey]);
 
   useEffect(() => {
+    if (activePanel !== 'map') return;
+    if (!navigator.geolocation) {
+      setGeoStatus('Location services are not available in this browser.');
+      return;
+    }
+    if (userLocation) return;
+    setGeoStatus('Locating your position…');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const next = { lat: position.coords.latitude, lng: position.coords.longitude };
+        setUserLocation(next);
+        setGeoStatus('Showing your current location.');
+      },
+      (error) => {
+        const message = error?.message ?? 'Unable to access location.';
+        setGeoStatus(message);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  }, [activePanel, userLocation]);
+
+  useEffect(() => {
     if (!mapInstanceRef.current || !window.google?.maps) return;
     mapMarkersRef.current.forEach((marker) => marker.setMap(null));
     mapMarkersRef.current.clear();
+    if (mapHomeMarkerRef.current) {
+      mapHomeMarkerRef.current.setMap(null);
+      mapHomeMarkerRef.current = null;
+    }
 
     if (!filteredAlerts.length) {
-      mapInstanceRef.current.setCenter({ lat: 39.5, lng: -98.35 });
-      mapInstanceRef.current.setZoom(3);
+      const center = userLocation ?? defaultMapCenter;
+      mapInstanceRef.current.setCenter(center);
+      mapInstanceRef.current.setZoom(userLocation ? 12 : 3);
+      if (userLocation) {
+        mapHomeMarkerRef.current = new window.google.maps.Marker({
+          position: center,
+          map: mapInstanceRef.current,
+          title: 'Your location',
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: '#3b82f6',
+            fillOpacity: 0.9,
+            strokeColor: '#0b0e16',
+            strokeWeight: 2,
+            scale: 7
+          }
+        });
+      }
       return;
     }
 
@@ -670,7 +716,7 @@ function App() {
       bounds.extend({ lat: alert.lat, lng: alert.lng });
     });
     mapInstanceRef.current.fitBounds(bounds);
-  }, [filteredAlerts]);
+  }, [filteredAlerts, userLocation]);
 
   const handleAlertFocus = (alert) => {
     setSelectedAlertId(alert.id);
@@ -1385,6 +1431,9 @@ function App() {
                 <p>Locations parsed from PulseLink alert messages synced to this account.</p>
               </div>
               <div className="map-controls">
+                <button className="ghost-btn" onClick={() => setActivePanel('home')}>
+                  Back to Home
+                </button>
                 <button className="secondary-btn" onClick={fetchAlertLocations}>
                   Refresh
                 </button>
@@ -1409,7 +1458,12 @@ function App() {
                     <option value="all">All</option>
                   </select>
                 </label>
-                {alertStatus && <div className="map-status-text">{alertStatus}</div>}
+                {(alertStatus || geoStatus) && (
+                  <div className="map-status-text">
+                    {alertStatus && <div>{alertStatus}</div>}
+                    {geoStatus && <div>{geoStatus}</div>}
+                  </div>
+                )}
               </div>
               <div className="map-grid">
                 <div className="map-card">
@@ -1463,7 +1517,12 @@ function App() {
                     </div>
                   ))}
                   {filteredAlerts.length === 0 && (
-                    <div className="map-empty">No alert locations yet.</div>
+                    <div className="map-empty">
+                      <div className="map-empty-title">No emergencies recently — that’s good news.</div>
+                      <div className="map-empty-sub">
+                        {userLocation ? 'Showing your location on the map.' : 'We’ll center the map once your location is available.'}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

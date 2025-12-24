@@ -786,6 +786,16 @@
   text-align: center;
 }
 
+.map-empty-title {
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.map-empty-sub {
+  font-size: 0.9em;
+}
+
 @keyframes riseIn {
   from {
     opacity: 0;

@@ -373,3 +373,5 @@ Current ad behavior in app:
 - Inbox empty-state now shows "Import all messages" (forces full Telephony.Sms scan), and local inbox no longer filters out threads when deviceLineId is blank.
 - SmsInbox refreshes after default-SMS/READ_SMS changes; manual import pulls all historical device messages.
 - Release v78 (free/pro/premium): versionCode/Name bumped to 78; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v78.aab; release notes saved at disposable_aabs/release-notes-v78.txt.
+2025-12-24
+- Web Emergency Map: added Back button, friendly empty-state copy, geolocation centering with "your location" marker, and clearer status text; rebuilt web/dist.
