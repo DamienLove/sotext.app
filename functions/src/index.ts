@@ -21,6 +21,7 @@ setGlobalOptions({ maxInstances: 10 });
 
 export { naturalLanguageQuery } from './naturalLanguageInterface';
 export { menuSuggestion } from './genkit-sample';
+export { summarizeSmsThread, composeSmsAssist, classifySmsUrgency } from './ai';
 export { alertRelay, alertRelayHttp } from './alertRelay';
 export { onMessageCreated } from './messaging';
 export { sendEmailNotification } from './email';

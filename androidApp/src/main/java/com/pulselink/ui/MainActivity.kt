@@ -1267,7 +1267,10 @@ class MainActivity : AppCompatActivity() {
                         val messages by threadViewModel.messages.collectAsStateWithLifecycle()
                         val contact by threadViewModel.contact.collectAsStateWithLifecycle()
                         val isArchived by threadViewModel.isArchived.collectAsStateWithLifecycle()
+                        val summaryState by threadViewModel.summaryState.collectAsStateWithLifecycle()
+                        val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
                         val decodedAddress = Uri.decode(address)
+                        val premiumActive = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
                         LaunchedEffect(threadId, decodedAddress) { threadViewModel.load(threadId, decodedAddress) }
                         SmsThreadScreen(
                             address = decodedAddress,
@@ -1280,7 +1283,17 @@ class MainActivity : AppCompatActivity() {
                             onCustomizeTheme = { navController.navigate("visual_settings") },
                             onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) },
                             isArchived = isArchived,
-                            onToggleArchive = { threadViewModel.toggleArchive() }
+                            onToggleArchive = { threadViewModel.toggleArchive() },
+                            aiSummaryState = summaryState,
+                            onRequestSummary = { threadViewModel.requestSummary() },
+                            onClearSummary = { threadViewModel.clearSummary() },
+                            aiComposeState = composeState,
+                            onRequestCompose = { action, draft, last ->
+                                threadViewModel.requestCompose(action, draft, last)
+                            },
+                            onClearCompose = { threadViewModel.clearCompose() },
+                            aiSummaryEnabled = premiumActive && state.settings.aiSummariesEnabled,
+                            aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled
                         )
                     }
                     composable("settings_help") {

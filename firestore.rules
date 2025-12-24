@@ -42,6 +42,16 @@ service cloud.firestore {
                    (!exists(/databases/$(database)/documents/devices/$(deviceId)) || resource.data.uid == request.auth.uid);
     }
 
+    match /users_by_phone/{phoneNumber} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /callerIdCache/{phoneNumber} {
+      allow read, write: if request.auth != null;
+    }
+
     match /linkChannels/{channelId} {
        // Security: Deny access to the channel container document to prevent deletion/modification.
        // Clients only interact with the 'messages' subcollection.

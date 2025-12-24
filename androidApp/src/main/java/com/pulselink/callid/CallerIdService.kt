@@ -11,6 +11,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Singleton
 class CallerIdService @Inject constructor(
     providers: Set<@JvmSuppressWildcards CallerIdProvider>,
+    private val cacheRepository: CallerIdCacheRepository,
     private val usageLimiter: CallerIdUsageLimiter
 ) {
     private val orderedProviders: List<CallerIdProvider> = providers.sortedBy { it.priority }
@@ -26,8 +27,11 @@ class CallerIdService @Inject constructor(
     suspend fun lookup(rawNumber: String): CallerIdLookupResult? = withContext(Dispatchers.IO) {
         val normalized = rawNumber.filter { it.isDigit() || it == '+' }
         if (normalized.isBlank()) return@withContext null
+        cacheRepository.lookupUserMapping(normalized)?.let { return@withContext it }
+        cacheRepository.getCached(normalized)?.let { return@withContext it }
 
-        for (provider in orderedProviders) {
+        val providerChain = orderedProviders.shuffled()
+        for (provider in providerChain) {
             val redacted = normalized.takeLast(4).padStart(normalized.length, '*')
             val cap = providerCaps[provider.providerName] ?: Int.MAX_VALUE
             if (!usageLimiter.tryConsume(provider.providerName, cap)) {
@@ -39,6 +43,7 @@ class CallerIdService @Inject constructor(
             }
             if (result != null) {
                 Log.i(TAG, "[${provider.providerName}] hit for $redacted -> ${result.summary}")
+                cacheRepository.store(normalized, result)
                 return@withContext result
             } else {
                 Log.w(TAG, "[${provider.providerName}] no result for $redacted")

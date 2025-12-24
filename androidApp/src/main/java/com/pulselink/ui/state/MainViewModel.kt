@@ -609,6 +609,7 @@ class MainViewModel @Inject constructor(
             if (remoteDeviceId.isNullOrBlank() || remoteDeviceId != deviceId) {
                 profileRef.set(mapOf("deviceId" to deviceId), SetOptions.merge()).await()
             }
+            upsertUserByPhoneMapping(user, remoteName, remoteAvatar ?: localSettings.ownerAvatarUrl)
         }.onFailure { error ->
             Log.w(TAG, "Unable to sync profile", error)
         }
@@ -675,11 +676,46 @@ class MainViewModel @Inject constructor(
                 payload["email"] = email
                 payload["emailLowercase"] = email.lowercase()
             }
+            user.phoneNumber?.let { phone ->
+                val normalized = normalizePhone(phone)
+                if (normalized.isNotBlank()) {
+                    payload["phoneNumber"] = phone
+                    payload["phoneNumberNormalized"] = normalized
+                }
+            }
             firestore.collection("users").document(user.uid)
                 .set(payload, SetOptions.merge())
                 .await()
+            upsertUserByPhoneMapping(user, ownerName, settings.ownerAvatarUrl)
         }.onFailure { error ->
             Log.w(TAG, "Unable to push profile name", error)
+        }
+    }
+
+    private suspend fun upsertUserByPhoneMapping(
+        user: FirebaseUser,
+        ownerName: String?,
+        avatarUrl: String?
+    ) {
+        val rawPhone = user.phoneNumber?.trim().orEmpty()
+        val normalized = normalizePhone(rawPhone)
+        if (normalized.isBlank()) return
+        val displayName = ownerName?.trim().takeIf { !it.isNullOrBlank() } ?: rawPhone
+        val payload = mutableMapOf<String, Any>(
+            "uid" to user.uid,
+            "displayName" to displayName,
+            "phoneNumber" to rawPhone,
+            "phoneNumberNormalized" to normalized,
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        avatarUrl?.takeIf { it.isNotBlank() }?.let { payload["avatarUrl"] = it }
+        runCatching {
+            firestore.collection("users_by_phone")
+                .document(normalized)
+                .set(payload, SetOptions.merge())
+                .await()
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to update users_by_phone mapping", error)
         }
     }
 
@@ -1313,6 +1349,36 @@ class MainViewModel @Inject constructor(
     fun setCrashDetectionEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setCrashDetectionEnabled(enabled)
+        }
+    }
+
+    fun setAiSummariesEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAiSummariesEnabled(enabled)
+        }
+    }
+
+    fun setAiComposeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAiComposeEnabled(enabled)
+        }
+    }
+
+    fun setAiUrgencyEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAiUrgencyEnabled(enabled)
+        }
+    }
+
+    fun setAiUrgencyBypassDnd(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAiUrgencyBypassDnd(enabled)
+        }
+    }
+
+    fun setAiUrgencyIncludeUnknown(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAiUrgencyIncludeUnknown(enabled)
         }
     }
 

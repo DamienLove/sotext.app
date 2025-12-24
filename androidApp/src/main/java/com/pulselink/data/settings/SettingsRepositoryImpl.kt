@@ -62,6 +62,11 @@ private val FIREBASE_MESSAGING_ENABLED = booleanPreferencesKey("firebase_messagi
 private val EMAIL_FALLBACK_ENABLED = booleanPreferencesKey("email_fallback_enabled")
 private val MESSAGING_CHANNEL_PRIORITY = stringPreferencesKey("messaging_channel_priority")
 private val CRASH_DETECTION_ENABLED = booleanPreferencesKey("crash_detection_enabled")
+private val AI_SUMMARIES_ENABLED = booleanPreferencesKey("ai_summaries_enabled")
+private val AI_COMPOSE_ENABLED = booleanPreferencesKey("ai_compose_enabled")
+private val AI_URGENCY_ENABLED = booleanPreferencesKey("ai_urgency_enabled")
+private val AI_URGENCY_BYPASS_DND = booleanPreferencesKey("ai_urgency_bypass_dnd")
+private val AI_URGENCY_INCLUDE_UNKNOWN = booleanPreferencesKey("ai_urgency_include_unknown")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -114,7 +119,13 @@ class SettingsRepositoryImpl @Inject constructor(
             messagingChannelPriority = prefs[MESSAGING_CHANNEL_PRIORITY]?.let {
                 runCatching { json.decodeFromString<List<MessageChannel>>(it) }.getOrNull()
             } ?: PulseLinkSettings().messagingChannelPriority,
-            crashDetectionEnabled = prefs[CRASH_DETECTION_ENABLED] ?: PulseLinkSettings().crashDetectionEnabled
+            crashDetectionEnabled = prefs[CRASH_DETECTION_ENABLED] ?: PulseLinkSettings().crashDetectionEnabled,
+            aiSummariesEnabled = prefs[AI_SUMMARIES_ENABLED] ?: PulseLinkSettings().aiSummariesEnabled,
+            aiComposeEnabled = prefs[AI_COMPOSE_ENABLED] ?: PulseLinkSettings().aiComposeEnabled,
+            aiUrgencyEnabled = prefs[AI_URGENCY_ENABLED] ?: PulseLinkSettings().aiUrgencyEnabled,
+            aiUrgencyBypassDnd = prefs[AI_URGENCY_BYPASS_DND] ?: PulseLinkSettings().aiUrgencyBypassDnd,
+            aiUrgencyIncludeUnknown = prefs[AI_URGENCY_INCLUDE_UNKNOWN]
+                ?: PulseLinkSettings().aiUrgencyIncludeUnknown
         )
     }
 
@@ -153,12 +164,47 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[EMAIL_FALLBACK_ENABLED] = updated.emailFallbackEnabled
             prefs[MESSAGING_CHANNEL_PRIORITY] = json.encodeToString(updated.messagingChannelPriority)
             prefs[CRASH_DETECTION_ENABLED] = updated.crashDetectionEnabled
+            prefs[AI_SUMMARIES_ENABLED] = updated.aiSummariesEnabled
+            prefs[AI_COMPOSE_ENABLED] = updated.aiComposeEnabled
+            prefs[AI_URGENCY_ENABLED] = updated.aiUrgencyEnabled
+            prefs[AI_URGENCY_BYPASS_DND] = updated.aiUrgencyBypassDnd
+            prefs[AI_URGENCY_INCLUDE_UNKNOWN] = updated.aiUrgencyIncludeUnknown
         }
     }
 
     override suspend fun setCrashDetectionEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[CRASH_DETECTION_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setAiSummariesEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[AI_SUMMARIES_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setAiComposeEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[AI_COMPOSE_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setAiUrgencyEnabled(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[AI_URGENCY_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setAiUrgencyBypassDnd(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[AI_URGENCY_BYPASS_DND] = enabled
+        }
+    }
+
+    override suspend fun setAiUrgencyIncludeUnknown(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[AI_URGENCY_INCLUDE_UNKNOWN] = enabled
         }
     }
 

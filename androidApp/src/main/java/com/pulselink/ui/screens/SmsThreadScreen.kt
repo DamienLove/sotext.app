@@ -21,7 +21,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,12 +33,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +50,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -55,8 +61,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pulselink.data.sms.SmsMessageItem
+import com.pulselink.data.ai.AiComposeAction
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ThemePreferences
+import com.pulselink.ui.state.AiComposeState
+import com.pulselink.ui.state.AiSummaryState
 import com.pulselink.util.parseColorOr
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,11 +82,21 @@ fun SmsThreadScreen(
     onCustomizeTheme: () -> Unit,
     onSendMessage: (String) -> Unit,
     isArchived: Boolean,
-    onToggleArchive: () -> Unit
+    onToggleArchive: () -> Unit,
+    aiSummaryState: AiSummaryState = AiSummaryState.Idle,
+    onRequestSummary: () -> Unit = {},
+    onClearSummary: () -> Unit = {},
+    aiComposeState: AiComposeState = AiComposeState.Idle,
+    onRequestCompose: (AiComposeAction, String?, String?) -> Unit = { _, _, _ -> },
+    onClearCompose: () -> Unit = {},
+    aiSummaryEnabled: Boolean = false,
+    aiComposeEnabled: Boolean = false
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
     val iconSize = (24f * effectiveTheme.iconSizeFactor).coerceIn(18f, 34f).dp
+    var draft by rememberSaveable { mutableStateOf("") }
+    val lastInbound = remember(messages) { messages.lastOrNull { !it.outgoing }?.body }
 
     val bgModifier = if (effectiveTheme.appBackgroundGradientStart != null && effectiveTheme.appBackgroundGradientEnd != null) {
         Modifier.background(
@@ -96,9 +115,21 @@ fun SmsThreadScreen(
         containerColor = if (effectiveTheme.appBackgroundGradientStart != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor),
         bottomBar = {
             MessageInput(
-                onSend = onSendMessage,
+                draft = draft,
+                onDraftChange = { draft = it },
+                onSend = {
+                    if (draft.isNotBlank()) {
+                        onSendMessage(draft)
+                        draft = ""
+                    }
+                },
                 theme = effectiveTheme,
-                iconSize = iconSize
+                iconSize = iconSize,
+                aiEnabled = aiComposeEnabled,
+                aiState = aiComposeState,
+                onAiAction = { action ->
+                    onRequestCompose(action, draft, lastInbound)
+                }
             )
         },
         topBar = {
@@ -183,22 +214,60 @@ fun SmsThreadScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            if (aiSummaryEnabled) {
+                item {
+                    AiSummaryCard(
+                        state = aiSummaryState,
+                        onGenerate = onRequestSummary,
+                        onClear = onClearSummary,
+                        theme = effectiveTheme
+                    )
+                }
+            }
             items(messages, key = { it.id }) { msg ->
                 MessageBubble(msg, dateFormatter, effectiveTheme, contact)
             }
         }
     }
+
+    if (aiComposeState is AiComposeState.Suggestion) {
+        val suggestion = aiComposeState
+        AlertDialog(
+            onDismissRequest = onClearCompose,
+            title = { Text("AI suggestion") },
+            text = { Text(suggestion.text) },
+            confirmButton = {
+                TextButton(onClick = {
+                    draft = suggestion.text
+                    onClearCompose()
+                }) {
+                    Text("Use")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onClearCompose) {
+                    Text("Dismiss")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 private fun MessageInput(
+    draft: String,
+    onDraftChange: (String) -> Unit,
     onSend: (String) -> Unit,
     theme: ThemePreferences,
-    iconSize: androidx.compose.ui.unit.Dp
+    iconSize: androidx.compose.ui.unit.Dp,
+    aiEnabled: Boolean,
+    aiState: AiComposeState,
+    onAiAction: (AiComposeAction) -> Unit
 ) {
-    var text by remember { mutableStateOf("") }
+    var showAiMenu by remember { mutableStateOf(false) }
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val onSurface = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+    val errorMessage = (aiState as? AiComposeState.Error)?.message
 
     Surface(
         color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor), // Or distinct input BG
@@ -208,50 +277,202 @@ private fun MessageInput(
             .navigationBarsPadding()
             .imePadding()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .padding(8.dp)
                 .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Text message") },
-                maxLines = 4,
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                    autoCorrect = true,
-                    keyboardType = KeyboardType.Text,
-                    imeAction = ImeAction.Send
-                ),
-                trailingIcon = {
-                    val enabled = text.isNotBlank()
+            if (aiEnabled) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "AI assist",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = onSurface
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (aiState is AiComposeState.Loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .padding(end = 4.dp),
+                            strokeWidth = 2.dp,
+                            color = primary
+                        )
+                    }
                     IconButton(
-                        onClick = {
-                            onSend(text)
-                            text = ""
-                        },
-                        enabled = enabled
+                        onClick = { showAiMenu = true },
+                        enabled = aiState !is AiComposeState.Loading
                     ) {
                         Icon(
-                            Icons.Filled.Send,
-                            contentDescription = "Send",
-                            tint = if (enabled) primary else primary.copy(alpha = 0.38f),
+                            Icons.Filled.AutoFixHigh,
+                            contentDescription = "AI assist",
+                            tint = primary,
                             modifier = Modifier.size(iconSize)
                         )
                     }
-                },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = primary,
-                    unfocusedBorderColor = onSurface.copy(alpha = 0.5f),
-                    focusedTextColor = onSurface,
-                    unfocusedTextColor = onSurface,
-                    cursorColor = primary
-                ),
-                shape = RoundedCornerShape(24.dp)
-            )
+                    DropdownMenu(
+                        expanded = showAiMenu,
+                        onDismissRequest = { showAiMenu = false }
+                    ) {
+                        AiComposeAction.values().forEach { action ->
+                            DropdownMenuItem(
+                                text = { Text(action.label) },
+                                onClick = {
+                                    showAiMenu = false
+                                    onAiAction(action)
+                                }
+                            )
+                        }
+                    }
+                }
+                if (!errorMessage.isNullOrBlank()) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = onDraftChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Text message") },
+                    maxLines = 4,
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Sentences,
+                        autoCorrect = true,
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Send
+                    ),
+                    trailingIcon = {
+                        val enabled = draft.isNotBlank()
+                        IconButton(
+                            onClick = {
+                                onSend(draft)
+                                onDraftChange("")
+                            },
+                            enabled = enabled
+                        ) {
+                            Icon(
+                                Icons.Filled.Send,
+                                contentDescription = "Send",
+                                tint = if (enabled) primary else primary.copy(alpha = 0.38f),
+                                modifier = Modifier.size(iconSize)
+                            )
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = primary,
+                        unfocusedBorderColor = onSurface.copy(alpha = 0.5f),
+                        focusedTextColor = onSurface,
+                        unfocusedTextColor = onSurface,
+                        cursorColor = primary
+                    ),
+                    shape = RoundedCornerShape(24.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiSummaryCard(
+    state: AiSummaryState,
+    onGenerate: () -> Unit,
+    onClear: () -> Unit,
+    theme: ThemePreferences
+) {
+    val container = parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming)
+    val onContainer = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
+    val accent = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+
+    Surface(
+        color = container,
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.AutoFixHigh,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "AI summary",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = onContainer
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                when (state) {
+                    is AiSummaryState.Loading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = accent
+                        )
+                    }
+                    is AiSummaryState.Success -> {
+                        TextButton(onClick = onGenerate) { Text("Refresh") }
+                        TextButton(onClick = onClear) { Text("Clear") }
+                    }
+                    is AiSummaryState.Error -> {
+                        TextButton(onClick = onGenerate) { Text("Retry") }
+                    }
+                    AiSummaryState.Idle -> {
+                        TextButton(onClick = onGenerate) { Text("Generate") }
+                    }
+                }
+            }
+            when (state) {
+                is AiSummaryState.Success -> {
+                    Text(
+                        text = state.summary,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = onContainer
+                    )
+                }
+                is AiSummaryState.Error -> {
+                    Text(
+                        text = state.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                is AiSummaryState.Loading -> {
+                    Text(
+                        text = "Summarizing recent messages...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = onContainer.copy(alpha = 0.7f)
+                    )
+                }
+                AiSummaryState.Idle -> {
+                    Text(
+                        text = "Summarize the latest messages in this thread.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = onContainer.copy(alpha = 0.7f)
+                    )
+                }
+            }
         }
     }
 }

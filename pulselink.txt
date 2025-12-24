@@ -324,3 +324,23 @@ Current ad behavior in app:
 2025-12-24
 - Release v72 (free/pro/premium): versionCode/Name bumped to 72; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v72.aab; release notes saved at disposable_aabs/release-notes-v72.txt.
 - Web portal rebuilt (web/dist).
+
+2025-12-24
+- Caller ID plan confirmed: users_by_phone mapping approved; cache TTL 90 days; share cache across all users; provider order = best/most accurate first, then fall back to free sources.
+
+2025-12-24
+- In progress: Premium AI features (1 summaries, 2 compose assist, 3 urgency classification; caller ID later). Added Firebase Functions ai.ts with summarizeSmsThread/composeSmsAssist/classifySmsUrgency and exported from index.ts.
+- Android: added AiAssistantRepository + impl, wired Settings for AI toggles (aiSummariesEnabled/aiComposeEnabled/aiUrgencyEnabled/aiUrgencyBypassDnd/aiUrgencyIncludeUnknown) with repository setters and MainViewModel methods.
+- Android: updated Beacon Settings to show AI toggles (premium gated). BeaconInboxActivity wired new toggles.
+- Android: SmsThreadViewModel now supports AI summary + compose state (AiSummaryState/AiComposeState) and Firebase callable hooks; SmsThreadScreen updated to show AI summary card + compose actions and apply suggestion to draft. (Work not yet compiled or committed.)
+- Pending: implement AiSummaryCard + MessageInput AI UI pieces in SmsThreadScreen, add AI compose UI actions, hook SmsThreadScreen in MainActivity/BeaconInboxActivity to pass ai state + request handlers. Add AI urgency classification in PulseLinkSmsReceiver and possibly SmsRepository to mark threads; decide behavior for unknown senders per aiUrgencyIncludeUnknown.
+- Pending: update functions/package.json duplicate nodemailer entry (optional), run functions build/lint and android build once AI UI is complete, then commit + push.
+
+2025-12-24
+- Premium AI: finished SmsThreadScreen AI UI (summary card + compose menu) and wired MainActivity/BeaconInboxActivity to pass AI state/toggles.
+- Premium AI: added AI urgency classification in PulseLinkSmsReceiver (premium-gated, confidence threshold, optional unknown-sender alert via synthetic contact, DND bypass gated by aiUrgencyBypassDnd).
+2025-12-24
+- Caller ID: added shared cache (90-day TTL) + users_by_phone mapping update on profile push; provider chain now randomizes order. Firestore rules updated for callerIdCache + users_by_phone.
+- Release v73 (free/pro/premium): versionCode/Name bumped to 73; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v73.aab; release notes saved at disposable_aabs/release-notes-v73.txt.
+- Web portal rebuilt (web/dist).
+- WIP Premium AI UI + urgency classification now wired into thread screen + inbound SMS (premium gated).

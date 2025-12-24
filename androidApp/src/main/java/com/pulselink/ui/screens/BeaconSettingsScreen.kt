@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Language
@@ -57,7 +58,17 @@ fun BeaconSettingsScreen(
     onSetPrivatePin: () -> Unit,
     onPurchasePremium: () -> Unit,
     beaconLauncherEnabled: Boolean,
-    onToggleBeaconLauncher: (Boolean) -> Unit
+    onToggleBeaconLauncher: (Boolean) -> Unit,
+    aiSummariesEnabled: Boolean,
+    aiComposeEnabled: Boolean,
+    aiUrgencyEnabled: Boolean,
+    aiUrgencyBypassDnd: Boolean,
+    aiUrgencyIncludeUnknown: Boolean,
+    onToggleAiSummaries: (Boolean) -> Unit,
+    onToggleAiCompose: (Boolean) -> Unit,
+    onToggleAiUrgency: (Boolean) -> Unit,
+    onToggleAiUrgencyBypass: (Boolean) -> Unit,
+    onToggleAiUrgencyIncludeUnknown: (Boolean) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -172,6 +183,77 @@ fun BeaconSettingsScreen(
                     }
                 },
                 leadingIcon = Icons.Filled.Language
+            )
+            Text(
+                text = "AI features",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            BeaconSettingsToggleRow(
+                title = "AI summaries",
+                subtitle = "Summarize conversations in Beacon inbox.",
+                checked = aiSummariesEnabled,
+                onCheckedChange = {
+                    if (isPremiumActive) {
+                        onToggleAiSummaries(it)
+                    } else {
+                        onPurchasePremium()
+                    }
+                },
+                leadingIcon = Icons.Filled.Message
+            )
+            BeaconSettingsToggleRow(
+                title = "AI writing",
+                subtitle = "Rewrite, shorten, or draft replies.",
+                checked = aiComposeEnabled,
+                onCheckedChange = {
+                    if (isPremiumActive) {
+                        onToggleAiCompose(it)
+                    } else {
+                        onPurchasePremium()
+                    }
+                },
+                leadingIcon = Icons.Filled.Edit
+            )
+            BeaconSettingsToggleRow(
+                title = "AI urgency detection",
+                subtitle = "Flag urgent or emergency incoming messages.",
+                checked = aiUrgencyEnabled,
+                onCheckedChange = {
+                    if (isPremiumActive) {
+                        onToggleAiUrgency(it)
+                    } else {
+                        onPurchasePremium()
+                    }
+                },
+                leadingIcon = Icons.Filled.Message
+            )
+            BeaconSettingsToggleRow(
+                title = "AI urgency: bypass DND",
+                subtitle = "Let urgent AI alerts bypass silent/DND.",
+                checked = aiUrgencyBypassDnd,
+                onCheckedChange = {
+                    if (isPremiumActive) {
+                        onToggleAiUrgencyBypass(it)
+                    } else {
+                        onPurchasePremium()
+                    }
+                },
+                leadingIcon = Icons.Filled.Message
+            )
+            BeaconSettingsToggleRow(
+                title = "AI urgency: include unknown senders",
+                subtitle = "Also classify messages from non-trusted numbers.",
+                checked = aiUrgencyIncludeUnknown,
+                onCheckedChange = {
+                    if (isPremiumActive) {
+                        onToggleAiUrgencyIncludeUnknown(it)
+                    } else {
+                        onPurchasePremium()
+                    }
+                },
+                leadingIcon = Icons.Filled.Message
             )
             BeaconSettingsActionRow(
                 title = "Private chats PIN",

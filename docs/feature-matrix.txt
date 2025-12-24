@@ -1,0 +1,59 @@
+PulseLink Feature Matrix (Free / Pro / Premium)
+
+PulseLink Free
+- Safety core: always-on phrase detection, emergency + check-in alerts, silent SOS mode.
+- Alert delivery: SMS + high-priority notifications, audio gain/DND override, alert profiles per tier.
+- Location sharing: last-known + live updates in alerts (permission gated).
+- Trusted contacts: add/edit, escalation tier (Emergency vs Check-in), auto-call, include location.
+- Multi-channel delivery: Firebase-first, SMS fallback, optional email fallback (when enabled).
+- Assistant + shortcuts: emergency/check-in widgets and quick actions.
+- Onboarding + permissions: notifications, microphone, contacts, location, call/sms as needed.
+- Profile: owner name/avatar, cloud profile sync, contact sync, delivery tracking.
+- Emergency map: view and clear emergency locations (device + synced entries).
+- UI customization: global theme presets, time format, basic settings.
+- Ads: banner/app-open/native placements (free only).
+
+PulseLink Pro (one-time)
+- Everything in PulseLink Free.
+- Ads removed.
+- Beacon inbox access from PulseLink (SMS inbox + thread UI).
+- Default-SMS role support + SMS/MMS/WAP permissions in PulseLink.
+- SMS inbox: live updates, search, archive/unarchive, OTP detection, private threads.
+- Compose: new message flow, contact picker, device contacts merge.
+- Caller ID screening (non-premium still disabled; premium only).
+
+PulseLink Premium (subscription)
+- Everything in PulseLink Pro.
+- AI assist (premium): thread summaries, compose assist (rewrite/shorten/expand/polish/reply/urgent).
+- AI urgency classification for inbound SMS (optional unknown-sender alerting).
+- Caller ID screening + provider chain + shared caller-ID cache (premium build gated).
+- Web access + sync: remote messaging outbox, settings + theme sync, trusted contacts CRUD.
+- Emergency map on web portal (read/clear synced locations).
+
+Beacon Feature Matrix (Free / Pro / Premium)
+
+Beacon Free
+- Default SMS app: send/receive SMS, Telephony provider read/write, live updates.
+- Inbox/thread UI with contact resolution, search, archive/unarchive.
+- New message compose with device contacts + trusted contacts merge.
+- OTP detection + clipboard/notification + optional cleanup worker.
+- Private threads + PIN gate.
+- Theme customization: presets, gradients, fonts, bubble radius, per-contact overrides.
+- Launcher icon controls + theme-based Beacon icons.
+- Ads enabled (banner/app-open/native/inline).
+
+Beacon Pro (one-time)
+- Everything in Beacon Free.
+- Ads removed.
+- Pro features flag enabled (shared with PulseLink Pro build config).
+
+Beacon Premium (subscription)
+- Everything in Beacon Pro.
+- AI assist in SMS threads (summaries + compose assist) with premium toggles.
+- AI urgency classification for inbound SMS (optional unknown-sender alerting).
+- Web access + sync (same premium portal features as PulseLink Premium).
+- Caller ID screening + provider chain + shared caller-ID cache (premium build gated).
+
+Notes
+- Caller ID cache is shared across users (90-day TTL) and includes PulseLink user mapping when available.
+- Some MMS send/receive flows are stubbed pending carrier-grade pipeline completion.

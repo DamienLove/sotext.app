@@ -79,6 +79,12 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindBetaAgreementRepository(impl: BetaAgreementRepositoryImpl): BetaAgreementRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAiAssistantRepository(
+        impl: com.pulselink.data.ai.AiAssistantRepositoryImpl
+    ): com.pulselink.data.ai.AiAssistantRepository
 }
 
 @Module

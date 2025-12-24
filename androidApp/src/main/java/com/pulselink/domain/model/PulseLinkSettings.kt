@@ -47,7 +47,12 @@ data class PulseLinkSettings(
     val firebaseMessagingEnabled: Boolean = true,
     val emailFallbackEnabled: Boolean = false,
     val messagingChannelPriority: List<MessageChannel> = listOf(MessageChannel.FIREBASE, MessageChannel.SMS, MessageChannel.EMAIL),
-    val crashDetectionEnabled: Boolean = false
+    val crashDetectionEnabled: Boolean = false,
+    val aiSummariesEnabled: Boolean = true,
+    val aiComposeEnabled: Boolean = true,
+    val aiUrgencyEnabled: Boolean = true,
+    val aiUrgencyBypassDnd: Boolean = false,
+    val aiUrgencyIncludeUnknown: Boolean = true
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

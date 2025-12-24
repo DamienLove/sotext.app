@@ -58,6 +58,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.pulselink.BuildConfig
 import com.pulselink.billing.SubscriptionManager
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BeaconNavBar
@@ -468,7 +469,12 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val messages by threadViewModel.messages.collectAsStateWithLifecycle()
                                     val contact by threadViewModel.contact.collectAsStateWithLifecycle()
                                     val isArchived by threadViewModel.isArchived.collectAsStateWithLifecycle()
+                                    val summaryState by threadViewModel.summaryState.collectAsStateWithLifecycle()
+                                    val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
                                     val decodedAddress = Uri.decode(address)
+                                    val premiumActive = subscriptionUiState.isPremiumActive ||
+                                        state.settings.premiumUnlocked ||
+                                        BuildConfig.PREMIUM_FEATURES
                                     LaunchedEffect(threadId, decodedAddress) { threadViewModel.load(threadId, decodedAddress) }
                                     SmsThreadScreen(
                                         address = decodedAddress,
@@ -486,10 +492,23 @@ class BeaconInboxActivity : ComponentActivity() {
                                         },
                                         onSendMessage = { body -> threadViewModel.sendMessage(decodedAddress, body) },
                                         isArchived = isArchived,
-                                        onToggleArchive = { threadViewModel.toggleArchive() }
+                                        onToggleArchive = { threadViewModel.toggleArchive() },
+                                        aiSummaryState = summaryState,
+                                        onRequestSummary = { threadViewModel.requestSummary() },
+                                        onClearSummary = { threadViewModel.clearSummary() },
+                                        aiComposeState = composeState,
+                                        onRequestCompose = { action, draft, last ->
+                                            threadViewModel.requestCompose(action, draft, last)
+                                        },
+                                        onClearCompose = { threadViewModel.clearCompose() },
+                                        aiSummaryEnabled = premiumActive && state.settings.aiSummariesEnabled,
+                                        aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled
                                     )
                                 }
                                 composable("beacon_settings") {
+                                    val premiumActive = subscriptionUiState.isPremiumActive ||
+                                        state.settings.premiumUnlocked ||
+                                        BuildConfig.PREMIUM_FEATURES
                                     BeaconSettingsScreen(
                                         settings = state.settings,
                                         onBack = { navController.popBackStack() },
@@ -505,7 +524,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                             }
                                         },
                                         remoteWebAccessEnabled = state.settings.remoteWebAccessEnabled,
-                                        isPremiumActive = subscriptionUiState.isPremiumActive || state.settings.premiumUnlocked,
+                                        isPremiumActive = premiumActive,
                                         onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
                                         otpCleanupEnabled = state.settings.otpCleanupEnabled,
                                         otpCleanupDays = state.settings.otpCleanupDays,
@@ -514,7 +533,19 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onSetPrivatePin = { navController.navigate("private_pin") },
                                         onPurchasePremium = { subscriptionManager.launchSubscribe(this@BeaconInboxActivity) },
                                         beaconLauncherEnabled = state.settings.beaconLauncherEnabled,
-                                        onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) }
+                                        onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) },
+                                        aiSummariesEnabled = state.settings.aiSummariesEnabled,
+                                        aiComposeEnabled = state.settings.aiComposeEnabled,
+                                        aiUrgencyEnabled = state.settings.aiUrgencyEnabled,
+                                        aiUrgencyBypassDnd = state.settings.aiUrgencyBypassDnd,
+                                        aiUrgencyIncludeUnknown = state.settings.aiUrgencyIncludeUnknown,
+                                        onToggleAiSummaries = { enabled -> viewModel.setAiSummariesEnabled(enabled) },
+                                        onToggleAiCompose = { enabled -> viewModel.setAiComposeEnabled(enabled) },
+                                        onToggleAiUrgency = { enabled -> viewModel.setAiUrgencyEnabled(enabled) },
+                                        onToggleAiUrgencyBypass = { enabled -> viewModel.setAiUrgencyBypassDnd(enabled) },
+                                        onToggleAiUrgencyIncludeUnknown = { enabled ->
+                                            viewModel.setAiUrgencyIncludeUnknown(enabled)
+                                        }
                                     )
                                 }
                                 composable(
