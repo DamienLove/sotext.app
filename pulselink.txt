@@ -358,3 +358,6 @@ Current ad behavior in app:
 2025-12-24
 - Multi-device SMS: wired line setup dialog (combined/per-line inbox, default line, send preference, device phone) + line-limit dialog (2 lines) in MainActivity + BeaconInboxActivity; premium-gated line pickers and thread send-line dropdown now use ordered lines and update presence on resume/selection.
 - Address formatting cleanup: standardized display delimiter to ' | ' with SmsAddressUtils helpers; updated SmsRepository, MainViewModel, widget, and thread sending to normalize/split addresses consistently; removed legacy control delimiters and filtered disabled lines in SmsInboxViewModel.
+2025-12-24
+- Fixed SmsInboxScreen line picker build errors (Material3 dropdown imports, cleaned splitDisplay) and SmsInboxViewModel combine for 6 flows.
+- Rebuilt v75 AABs (free/pro/premium) and copied to disposable_aabs/pulselink-{free|pro|premium}-v75.aab; release notes saved at disposable_aabs/release-notes-v75.txt.
