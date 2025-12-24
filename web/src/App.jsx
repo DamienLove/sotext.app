@@ -710,6 +710,15 @@ function App() {
     }
   };
 
+  const fetchAlertLocations = () => {
+    // Firestore onSnapshot handles real-time updates automatically.
+    // We just provide visual feedback that the system is connected.
+    setAlertStatus('Syncing...');
+    setTimeout(() => {
+      setAlertStatus(alertLocations.length ? '' : 'No emergency locations yet.');
+    }, 800);
+  };
+
   const handleLogin = async () => {
     setIsLoggingIn(true);
     setAuthError('');
@@ -1332,38 +1341,38 @@ function App() {
                       <option value="CHECK_IN">Check-in</option>
                     </select>
                   </label>
-                  <div className="settings-toggle">
+                  <label className="settings-toggle">
                     <input
                       type="checkbox"
                       checked={contactForm.includeLocation}
                       onChange={(e) => setContactForm((prev) => ({ ...prev, includeLocation: e.target.checked }))}
                     />
                     Share location with this contact
-                  </div>
-                  <div className="settings-toggle">
+                  </label>
+                  <label className="settings-toggle">
                     <input
                       type="checkbox"
                       checked={contactForm.autoCall}
                       onChange={(e) => setContactForm((prev) => ({ ...prev, autoCall: e.target.checked }))}
                     />
                     Auto-call after alert
-                  </div>
-                  <div className="settings-toggle">
+                  </label>
+                  <label className="settings-toggle">
                     <input
                       type="checkbox"
                       checked={contactForm.allowRemoteOverride}
                       onChange={(e) => setContactForm((prev) => ({ ...prev, allowRemoteOverride: e.target.checked }))}
                     />
                     Allow remote overrides
-                  </div>
-                  <div className="settings-toggle">
+                  </label>
+                  <label className="settings-toggle">
                     <input
                       type="checkbox"
                       checked={contactForm.allowRemoteSoundChange}
                       onChange={(e) => setContactForm((prev) => ({ ...prev, allowRemoteSoundChange: e.target.checked }))}
                     />
                     Allow remote sound changes
-                  </div>
+                  </label>
                   <div className="contact-actions">
                     <button className="primary-btn" onClick={handleSaveContact}>
                       {editingContactId ? 'Update contact' : 'Add contact'}
