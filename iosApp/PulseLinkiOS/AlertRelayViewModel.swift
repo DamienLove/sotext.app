@@ -54,6 +54,7 @@ final class AlertRelayViewModel: ObservableObject {
     private let conversationProvider: ConversationProvider
     private var armingTask: Task<Void, Never>?
     private let pinCode = "1234" // demo PIN; replace with secure storage
+    private let emergencyLocationService = EmergencyLocationService()
 
     init(baseUrl: String = AlertRelay.shared.DEFAULT_BASE_URL) {
         self.baseUrl = baseUrl
@@ -122,6 +123,7 @@ final class AlertRelayViewModel: ObservableObject {
                 self?.emergencyState = .active
                 self?.statusText = "Emergency active"
             }
+            await self?.recordEmergencyLocation()
         }
     }
 
@@ -138,6 +140,15 @@ final class AlertRelayViewModel: ObservableObject {
         armingTask?.cancel()
         emergencyState = .idle
         statusText = "Emergency canceled"
+    }
+
+    private func recordEmergencyLocation() async {
+        let success = await emergencyLocationService.recordEmergencyLocation(message: "Emergency triggered from iOS")
+        if !success {
+            await MainActor.run {
+                self.statusText = "Emergency active (location unavailable)"
+            }
+        }
     }
 
     // MARK: - Conversations

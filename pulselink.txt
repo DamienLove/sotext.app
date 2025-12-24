@@ -313,3 +313,7 @@ Current ad behavior in app:
 - Web portal rebuilt (web/dist) after Emergency Map data-source update.
 - RemoteConfigService updated to use non-KTX Firebase Remote Config APIs (build fix).
 
+
+2025-12-24
+- iOS (PulseLink) now records emergency locations to Firestore users/{uid}/emergencyLocations on emergency activation; added CoreLocation one-shot provider + emergency location service and Info.plist location usage string.
+
