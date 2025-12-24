@@ -67,7 +67,9 @@ const defaultTheme = {
   dividerColor: null,
   appBackgroundGradientStart: null,
   appBackgroundGradientEnd: null,
-  fontScale: 1.0
+  fontScale: 1.0,
+  backgroundImageUrl: null,
+  iconOverrides: {}
 };
 
 const themePresets = [
@@ -268,7 +270,137 @@ const themePresets = [
       inboxIconVariant: "aurora",
       iconSizeFactor: 1.15
     }
+  },
+  {
+    name: "Desert Clay",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 12,
+      backgroundColor: "#FFF7ED",
+      onBackground: "#7C2D12",
+      topBarColor: "#FFEDD5",
+      onTopBarColor: "#7C2D12",
+      bubbleOutgoing: "#FB923C",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#FED7AA",
+      onBubbleIncoming: "#7C2D12",
+      primaryColor: "#EA580C",
+      secondaryColor: "#FDBA74",
+      dividerColor: "#FED7AA",
+      inboxIconVariant: "sunset_fade"
+    }
+  },
+  {
+    name: "Nord Frost",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 10,
+      backgroundColor: "#ECEFF4",
+      onBackground: "#2E3440",
+      topBarColor: "#E5E9F0",
+      onTopBarColor: "#2E3440",
+      bubbleOutgoing: "#81A1C1",
+      onBubbleOutgoing: "#ECEFF4",
+      bubbleIncoming: "#D8DEE9",
+      onBubbleIncoming: "#2E3440",
+      primaryColor: "#5E81AC",
+      secondaryColor: "#88C0D0",
+      dividerColor: "#D8DEE9",
+      inboxIconVariant: "default_light"
+    }
+  },
+  {
+    name: "Neon Noir",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 16,
+      backgroundColor: "#0B0F14",
+      onBackground: "#E2E8F0",
+      topBarColor: "#111827",
+      onTopBarColor: "#E2E8F0",
+      bubbleOutgoing: "#22D3EE",
+      onBubbleOutgoing: "#0B0F14",
+      bubbleIncoming: "#1F2937",
+      onBubbleIncoming: "#E2E8F0",
+      primaryColor: "#22D3EE",
+      secondaryColor: "#F472B6",
+      dividerColor: "#1F2937",
+      inboxIconVariant: "midnight_oled"
+    }
+  },
+  {
+    name: "Paperback",
+    theme: {
+      fontStyle: "Serif",
+      bubbleCornerRadius: 14,
+      backgroundColor: "#FFFBEB",
+      onBackground: "#3F2D1C",
+      topBarColor: "#FEF3C7",
+      onTopBarColor: "#3F2D1C",
+      bubbleOutgoing: "#FCD34D",
+      onBubbleOutgoing: "#3F2D1C",
+      bubbleIncoming: "#FDE68A",
+      onBubbleIncoming: "#3F2D1C",
+      primaryColor: "#B45309",
+      secondaryColor: "#D97706",
+      dividerColor: "#FDE68A",
+      inboxIconVariant: "default_light"
+    }
+  },
+  {
+    name: "Mint Breeze",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 12,
+      backgroundColor: "#ECFDF3",
+      onBackground: "#064E3B",
+      topBarColor: "#D1FAE5",
+      onTopBarColor: "#064E3B",
+      bubbleOutgoing: "#34D399",
+      onBubbleOutgoing: "#064E3B",
+      bubbleIncoming: "#A7F3D0",
+      onBubbleIncoming: "#064E3B",
+      primaryColor: "#10B981",
+      secondaryColor: "#34D399",
+      dividerColor: "#A7F3D0",
+      inboxIconVariant: "forest_trail"
+    }
+  },
+  {
+    name: "Amethyst Night",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 18,
+      appBackgroundGradientStart: "#312E81",
+      appBackgroundGradientEnd: "#0F172A",
+      onBackground: "#E2E8F0",
+      topBarColor: "#312E81",
+      onTopBarColor: "#E2E8F0",
+      bubbleOutgoing: "#7C3AED",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#1E293B",
+      onBubbleIncoming: "#E2E8F0",
+      primaryColor: "#8B5CF6",
+      secondaryColor: "#6366F1",
+      dividerColor: "#312E81",
+      inboxIconVariant: "lavender_haze"
+    }
   }
+];
+
+const iconOverrideKeys = [
+  { key: "icon.back", label: "Back" },
+  { key: "icon.settings", label: "Settings" },
+  { key: "icon.lock", label: "Private" },
+  { key: "icon.search", label: "Search" },
+  { key: "icon.close", label: "Close" },
+  { key: "icon.inbox", label: "Inbox" },
+  { key: "icon.archive", label: "Archive" },
+  { key: "icon.unarchive", label: "Unarchive" },
+  { key: "icon.delete", label: "Delete" },
+  { key: "icon.send", label: "Send" },
+  { key: "icon.ai", label: "AI" },
+  { key: "icon.notifications", label: "Notifications" }
 ];
 
 const normalizeTheme = (input = {}) => ({
@@ -284,7 +416,9 @@ const normalizeTheme = (input = {}) => ({
   timestampColor: input.timestampColor ?? defaultTheme.timestampColor,
   dividerColor: input.dividerColor ?? defaultTheme.dividerColor,
   appBackgroundGradientStart: input.appBackgroundGradientStart ?? defaultTheme.appBackgroundGradientStart,
-  appBackgroundGradientEnd: input.appBackgroundGradientEnd ?? defaultTheme.appBackgroundGradientEnd
+  appBackgroundGradientEnd: input.appBackgroundGradientEnd ?? defaultTheme.appBackgroundGradientEnd,
+  backgroundImageUrl: input.backgroundImageUrl ?? defaultTheme.backgroundImageUrl,
+  iconOverrides: input.iconOverrides ?? defaultTheme.iconOverrides
 });
 
 const buildThemeVars = (theme) => {
@@ -306,6 +440,22 @@ const buildThemeVars = (theme) => {
     "--app-gradient-start": active.appBackgroundGradientStart ?? active.backgroundColor,
     "--app-gradient-end": active.appBackgroundGradientEnd ?? active.backgroundColor
   };
+};
+
+const buildThemePreviewStyle = (theme) => {
+  const active = normalizeTheme(theme);
+  const style = {
+    backgroundColor: active.backgroundColor
+  };
+  if (active.appBackgroundGradientStart && active.appBackgroundGradientEnd) {
+    style.backgroundImage = `linear-gradient(135deg, ${active.appBackgroundGradientStart}, ${active.appBackgroundGradientEnd})`;
+  }
+  if (active.backgroundImageUrl) {
+    style.backgroundImage = `url(${active.backgroundImageUrl})`;
+    style.backgroundSize = 'cover';
+    style.backgroundPosition = 'center';
+  }
+  return style;
 };
 
 const parseList = (raw) =>
@@ -405,6 +555,17 @@ function App() {
   const [profileStatus, setProfileStatus] = useState('');
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
   const [themeStatus, setThemeStatus] = useState('');
+  const [publicThemes, setPublicThemes] = useState([]);
+  const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
+  const [themeSearch, setThemeSearch] = useState('');
+  const [themePublishForm, setThemePublishForm] = useState({
+    name: '',
+    authorName: '',
+    authorHandle: '',
+    anonymous: false,
+    backgroundImageUrl: ''
+  });
+  const [themePublishStatus, setThemePublishStatus] = useState('');
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
@@ -448,6 +609,16 @@ function App() {
       return true;
     });
   }, [alertLocations, incomingOnly, severityFilter]);
+  const filteredThemes = useMemo(() => {
+    const term = themeSearch.trim().toLowerCase();
+    if (!term) return publicThemes;
+    return publicThemes.filter((theme) => {
+      const name = (theme.name ?? '').toString().toLowerCase();
+      const author = (theme.authorName ?? '').toString().toLowerCase();
+      const handle = (theme.authorHandle ?? '').toString().toLowerCase();
+      return name.includes(term) || author.includes(term) || handle.includes(term);
+    });
+  }, [publicThemes, themeSearch]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -527,6 +698,26 @@ function App() {
       setThreads([]);
     }
   }, [user]);
+
+  useEffect(() => {
+    const themesRef = collection(db, "themes_public");
+    const q = query(themesRef, orderBy("createdAt", "desc"), limit(200));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const items = snapshot.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...docSnap.data()
+        }));
+        setPublicThemes(items);
+      },
+      (error) => {
+        console.error("Failed to load theme gallery", error);
+        setThemeGalleryStatus(error?.message ?? "Unable to load theme gallery.");
+      }
+    );
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (user && selectedThread) {
@@ -948,6 +1139,67 @@ function App() {
     }
   };
 
+  const handleImportPublicTheme = async (themeDoc) => {
+    if (!themeDoc?.theme) return;
+    await handleApplyPreset(themeDoc.theme);
+    setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
+  };
+
+  const handlePublishTheme = async () => {
+    if (!user) return;
+    const name = themePublishForm.name.trim();
+    if (!name) {
+      setThemePublishStatus("Theme name is required.");
+      return;
+    }
+    setThemePublishStatus("Publishing theme...");
+    const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
+    const normalized = normalizeTheme({
+      ...themePrefs,
+      backgroundImageUrl: backgroundImageUrl || themePrefs.backgroundImageUrl || null
+    });
+    const iconOverrides = normalized.iconOverrides ?? {};
+    const hasImages = Boolean(normalized.backgroundImageUrl) ||
+      Object.values(iconOverrides).some((value) => (value ?? '').toString().trim().length > 0);
+    const anonymous = themePublishForm.anonymous;
+    const authorName = anonymous
+      ? null
+      : (themePublishForm.authorName.trim() || profile.ownerName || null);
+    const authorHandle = anonymous
+      ? null
+      : (themePublishForm.authorHandle.trim() || null);
+    const payload = {
+      name,
+      nameLowercase: name.toLowerCase(),
+      ownerUid: user.uid,
+      anonymous,
+      authorName,
+      authorHandle,
+      hasImages,
+      status: hasImages ? "pending" : "approved",
+      theme: normalized,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+    try {
+      const targetCollection = hasImages ? "themes_submissions" : "themes_public";
+      await addDoc(collection(db, targetCollection), payload);
+      setThemePublishStatus(
+        hasImages ? "Submitted for approval (images require review)." : "Theme published."
+      );
+      setThemePublishForm((prev) => ({
+        ...prev,
+        name: '',
+        authorHandle: '',
+        anonymous: false,
+        backgroundImageUrl: ''
+      }));
+    } catch (error) {
+      console.error("Theme publish failed", error);
+      setThemePublishStatus(error?.message ?? "Theme publish failed.");
+    }
+  };
+
   const handleRemoteSettingsSave = async () => {
     if (!user) return;
     setSettingsStatus("Saving settings...");
@@ -1178,6 +1430,13 @@ function App() {
               Emergency Map
             </button>
             <button
+              className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+              onClick={() => setActivePanel('themes')}
+              aria-current={activePanel === 'themes' ? 'page' : undefined}
+            >
+              Themes
+            </button>
+            <button
               className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
               onClick={() => setActivePanel('pulselink')}
               aria-current={activePanel === 'pulselink' ? 'page' : undefined}
@@ -1239,6 +1498,13 @@ function App() {
                   </div>
                   <h3>Emergency Map</h3>
                   <p>Track shared locations from PulseLink alerts.</p>
+                </button>
+                <button className="home-card" onClick={() => setActivePanel('themes')}>
+                  <div className="home-icon pulselink">
+                    <img src={logo} alt="PulseLink themes" />
+                  </div>
+                  <h3>Theme Gallery</h3>
+                  <p>Browse, import, and publish custom themes.</p>
                 </button>
               </div>
             </div>
@@ -1529,6 +1795,116 @@ function App() {
             </div>
           )}
 
+          {activePanel === 'themes' && (
+            <div className="themes-panel">
+              <div className="panel-header">
+                <h3>Theme Gallery</h3>
+                <p>Browse community themes or publish your own. Image-based themes require approval.</p>
+              </div>
+              <div className="themes-grid">
+                <div className="settings-card themes-card">
+                  <div className="themes-toolbar">
+                    <label className="login-field">
+                      Search themes
+                      <input
+                        className="login-input"
+                        value={themeSearch}
+                        onChange={(e) => setThemeSearch(e.target.value)}
+                        placeholder="Search by name or creator"
+                      />
+                    </label>
+                    <button className="secondary-btn" type="button" onClick={() => setThemeSearch('')}>
+                      Clear
+                    </button>
+                  </div>
+                  <div className="theme-gallery-grid">
+                    {filteredThemes.map((themeDoc) => {
+                      const previewTheme = normalizeTheme(themeDoc.theme || {});
+                      const previewStyle = buildThemePreviewStyle(previewTheme);
+                      const authorLabel = themeDoc.anonymous
+                        ? 'Anonymous'
+                        : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+                      return (
+                        <div key={themeDoc.id} className="theme-card">
+                          <div className="theme-preview" style={previewStyle} />
+                          <div className="theme-meta">
+                            <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
+                            <div className="theme-author">{authorLabel}</div>
+                          </div>
+                          <button
+                            className="primary-btn"
+                            type="button"
+                            onClick={() => handleImportPublicTheme(themeDoc)}
+                          >
+                            Import
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {filteredThemes.length === 0 && (
+                      <div className="theme-empty">No themes yet. Be the first to publish!</div>
+                    )}
+                  </div>
+                  {themeGalleryStatus && <div className="settings-status">{themeGalleryStatus}</div>}
+                </div>
+                <div className="settings-card themes-card">
+                  <h4>Publish your theme</h4>
+                  <label className="login-field">
+                    Theme name
+                    <input
+                      className="login-input"
+                      value={themePublishForm.name}
+                      onChange={(e) => setThemePublishForm((prev) => ({ ...prev, name: e.target.value }))}
+                      placeholder="e.g., Aurora Drift"
+                    />
+                  </label>
+                  <label className="login-field">
+                    Creator name (optional)
+                    <input
+                      className="login-input"
+                      value={themePublishForm.authorName}
+                      onChange={(e) => setThemePublishForm((prev) => ({ ...prev, authorName: e.target.value }))}
+                      placeholder="Leave blank for profile name"
+                    />
+                  </label>
+                  <label className="login-field">
+                    Creator handle (optional)
+                    <input
+                      className="login-input"
+                      value={themePublishForm.authorHandle}
+                      onChange={(e) => setThemePublishForm((prev) => ({ ...prev, authorHandle: e.target.value }))}
+                      placeholder="@pulseartist"
+                    />
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={themePublishForm.anonymous}
+                      onChange={(e) => setThemePublishForm((prev) => ({ ...prev, anonymous: e.target.checked }))}
+                    />
+                    Publish anonymously
+                  </label>
+                  <label className="login-field">
+                    Background image URL (optional)
+                    <input
+                      className="login-input"
+                      value={themePublishForm.backgroundImageUrl}
+                      onChange={(e) => setThemePublishForm((prev) => ({ ...prev, backgroundImageUrl: e.target.value }))}
+                      placeholder="https://..."
+                    />
+                  </label>
+                  <p className="settings-note">
+                    Suggested max: 1920x1080 and under 1.5MB. Image themes require approval.
+                  </p>
+                  <button className="primary-btn" type="button" onClick={handlePublishTheme}>
+                    Publish theme
+                  </button>
+                  {themePublishStatus && <div className="settings-status">{themePublishStatus}</div>}
+                </div>
+              </div>
+            </div>
+          )}
+
           {activePanel === 'settings' && (
             <div className="settings-panel">
               <div className="settings-header">
@@ -1633,6 +2009,40 @@ function App() {
                         onChange={(e) => setThemePrefs((prev) => ({ ...prev, bubbleIncoming: e.target.value }))}
                       />
                     </label>
+                    <label className="login-field theme-wide">
+                      Background image URL
+                      <input
+                        className="login-input"
+                        value={themePrefs.backgroundImageUrl ?? ''}
+                        onChange={(e) => setThemePrefs((prev) => ({
+                          ...prev,
+                          backgroundImageUrl: e.target.value
+                        }))}
+                      />
+                    </label>
+                  </div>
+                  <div className="theme-icon-grid">
+                    {iconOverrideKeys.map(({ key, label }) => (
+                      <label className="login-field" key={key}>
+                        {label} icon URL
+                        <input
+                          className="login-input"
+                          value={themePrefs.iconOverrides?.[key] ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setThemePrefs((prev) => {
+                              const next = { ...(prev.iconOverrides ?? {}) };
+                              if (!value.trim()) {
+                                delete next[key];
+                              } else {
+                                next[key] = value.trim();
+                              }
+                              return { ...prev, iconOverrides: next };
+                            });
+                          }}
+                        />
+                      </label>
+                    ))}
                   </div>
                   <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
                     Save theme

@@ -68,6 +68,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -77,10 +79,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import android.text.format.DateUtils
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.pulselink.R
 import com.pulselink.data.sms.SmsThreadItem
 import com.pulselink.domain.model.MessageUrgency
 import com.pulselink.domain.model.ThemePreferences
+import com.pulselink.ui.components.ThemeIcon
+import com.pulselink.ui.components.ThemeIconKey
 import com.pulselink.util.parseColorOr
 import com.pulselink.util.splitSmsDisplayAddress
 import com.pulselink.ui.state.SearchResultState
@@ -189,18 +195,20 @@ fun SmsInboxScreen(
             parseColorOr(colorScheme.primaryContainer, theme.bubbleIncoming)
         )
     }
+    val backgroundImageUrl = theme.backgroundImageUrl?.takeIf { it.isNotBlank() }
+    val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
     val bgModifier = remember(theme, colorScheme) {
         if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
             Modifier.background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        parseColorOr(Color.White, theme.appBackgroundGradientStart!!),
-                        parseColorOr(Color.White, theme.appBackgroundGradientEnd!!)
+                        parseColorOr(Color.White, theme.appBackgroundGradientStart!!).copy(alpha = overlayAlpha),
+                        parseColorOr(Color.White, theme.appBackgroundGradientEnd!!).copy(alpha = overlayAlpha)
                     )
                 )
             )
         } else {
-            Modifier.background(parseColorOr(colorScheme.background, theme.backgroundColor))
+            Modifier.background(parseColorOr(colorScheme.background, theme.backgroundColor).copy(alpha = overlayAlpha))
         }
     }
     val topAppBarState = rememberTopAppBarState()
@@ -235,16 +243,20 @@ fun SmsInboxScreen(
                     },
                     actions = {
                         IconButton(onClick = onOpenPrivate) {
-                            Icon(
-                                Icons.Filled.Lock,
+                            ThemeIcon(
+                                iconKey = ThemeIconKey.LOCK,
+                                theme = theme,
+                                imageVector = Icons.Filled.Lock,
                                 contentDescription = "Private inbox",
                                 tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
                                 modifier = Modifier.size(iconSize)
                             )
                         }
                         IconButton(onClick = onOpenSettings) {
-                            Icon(
-                                Icons.Filled.Settings,
+                            ThemeIcon(
+                                iconKey = ThemeIconKey.SETTINGS,
+                                theme = theme,
+                                imageVector = Icons.Filled.Settings,
                                 contentDescription = "Settings",
                                 tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
                                 modifier = Modifier.size(iconSize)
@@ -261,8 +273,10 @@ fun SmsInboxScreen(
                     title = { Text("Messages", color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
+                            ThemeIcon(
+                                iconKey = ThemeIconKey.BACK,
+                                theme = theme,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back",
                                 tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
                                 modifier = Modifier.size(iconSize)
@@ -280,14 +294,29 @@ fun SmsInboxScreen(
         floatingActionButton = floatingActionButton,
         floatingActionButtonPosition = FabPosition.End
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .then(bgModifier) // Apply gradient here to fill size
                 .padding(padding)
-                .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            if (backgroundImageUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(backgroundImageUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            Box(modifier = Modifier.fillMaxSize().then(bgModifier))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
             if (showSearchBar) {
                 OutlinedTextField(
                     value = searchText,
@@ -304,7 +333,12 @@ fun SmsInboxScreen(
                         .padding(top = 8.dp),
                     placeholder = { Text("Search all messages") },
                     leadingIcon = {
-                        Icon(Icons.Filled.Search, contentDescription = null)
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.SEARCH,
+                            theme = theme,
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = null
+                        )
                     },
                     trailingIcon = {
                         if (searchText.isNotBlank()) {
@@ -312,7 +346,12 @@ fun SmsInboxScreen(
                                 searchText = ""
                                 onClearSearch()
                             }) {
-                                Icon(Icons.Filled.Close, contentDescription = "Clear")
+                                ThemeIcon(
+                                    iconKey = ThemeIconKey.CLOSE,
+                                    theme = theme,
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Clear"
+                                )
                             }
                         }
                     },
@@ -402,7 +441,9 @@ fun SmsInboxScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.alpha(0.6f)
                             ) {
-                                Icon(
+                                ThemeIcon(
+                                    iconKey = ThemeIconKey.INBOX,
+                                    theme = theme,
                                     imageVector = Icons.Filled.Inbox,
                                     contentDescription = null,
                                     modifier = Modifier.size(largeIconSize),
@@ -421,7 +462,12 @@ fun SmsInboxScreen(
                                 )
                                 if (showImportAll) {
                                     OutlinedButton(onClick = onImportAll) {
-                                        Icon(Icons.Filled.Refresh, contentDescription = null)
+                                        ThemeIcon(
+                                            iconKey = ThemeIconKey.REFRESH,
+                                            theme = theme,
+                                            imageVector = Icons.Filled.Refresh,
+                                            contentDescription = null
+                                        )
                                         Text("Import all messages", modifier = Modifier.padding(start = 6.dp))
                                     }
                                 }
@@ -451,6 +497,7 @@ fun SmsInboxScreen(
                         actionsEnabled = isLocalLine
                     )
                 }
+            }
             }
         }
     }
@@ -506,6 +553,11 @@ private fun ThreadRow(
             val color = if (isDelete) Color(0xFFE84A4A) else Color(0xFF5BC174)
             val label = if (isDelete) "Delete" else if (isArchived) "Unarchive" else "Archive"
             val icon = if (isDelete) Icons.Filled.Delete else Icons.Filled.Archive
+            val iconKey = when {
+                isDelete -> ThemeIconKey.DELETE
+                isArchived -> ThemeIconKey.UNARCHIVE
+                else -> ThemeIconKey.ARCHIVE
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -516,7 +568,14 @@ private fun ThreadRow(
                 horizontalArrangement = if (isDelete) Arrangement.End else Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(actionIconSize))
+                ThemeIcon(
+                    iconKey = iconKey,
+                    theme = theme,
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = Color.White,
+                    modifier = Modifier.size(actionIconSize)
+                )
                 Spacer(modifier = Modifier.size(8.dp))
                 Text(label, color = Color.White, fontWeight = FontWeight.SemiBold)
             }
@@ -679,7 +738,13 @@ private fun LinePickerRow(
                         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = onBackground.copy(alpha = 0.7f))
                     }
                 }
-                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null, tint = onBackground)
+                ThemeIcon(
+                    iconKey = ThemeIconKey.ARROW_DOWN,
+                    theme = theme,
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = onBackground
+                )
             }
         }
         DropdownMenu(
@@ -817,7 +882,9 @@ private fun SearchContactResult(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
+            ThemeIcon(
+                iconKey = ThemeIconKey.INBOX,
+                theme = theme,
                 imageVector = Icons.Filled.Inbox,
                 contentDescription = null,
                 tint = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)

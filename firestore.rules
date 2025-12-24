@@ -44,6 +44,10 @@ service cloud.firestore {
       match /emergencyLocations/{locationId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+
+      match /themes/{themeId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     match /devices/{deviceId} {
@@ -116,6 +120,22 @@ service cloud.firestore {
     match /relayAlerts/{alertId} {
       // Security: Force usage of 'alertRelay' Cloud Function for validation.
       allow read, write: if false;
+    }
+
+    match /themes_public/{themeId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == "approved" &&
+        request.resource.data.hasImages == false;
+    }
+
+    match /themes_submissions/{themeId} {
+      allow read: if request.auth != null && resource.data.ownerUid == request.auth.uid;
+      allow create: if request.auth != null &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.status == "pending";
+      allow update, delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
   }
 }

@@ -97,5 +97,7 @@ data class ThemePreferences(
     val dividerColor: String? = null,
     val appBackgroundGradientStart: String? = null,
     val appBackgroundGradientEnd: String? = null,
-    val fontScale: Float = 1.0f
+    val fontScale: Float = 1.0f,
+    val backgroundImageUrl: String? = null,
+    val iconOverrides: Map<String, String> = emptyMap()
 )

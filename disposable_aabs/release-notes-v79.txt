@@ -1,0 +1,5 @@
+Release v79
+- Premium AI reliability: automatic anonymous sign-in + clearer error messaging when AI is unavailable.
+- Theme customization expanded: background images and per-icon overrides; publish/import themes via the new Theme Gallery.
+- Inbox performance: faster thread listing with canonical address caching and fewer SMS scans.
+- Billing library update and vibration permission for message notifications.

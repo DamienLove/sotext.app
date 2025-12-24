@@ -59,13 +59,19 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.pulselink.data.sms.SmsMessageItem
 import com.pulselink.data.ai.AiComposeAction
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ThemePreferences
+import com.pulselink.ui.components.ThemeIcon
+import com.pulselink.ui.components.ThemeIconKey
 import com.pulselink.ui.state.AiComposeState
 import com.pulselink.ui.state.AiSummaryState
 import com.pulselink.util.parseColorOr
@@ -108,18 +114,20 @@ fun SmsThreadScreen(
     var pendingDraft by remember { mutableStateOf<String?>(null) }
     var pendingLineId by remember { mutableStateOf<String?>(null) }
     val lastInbound = remember(messages) { messages.lastOrNull { !it.outgoing }?.body }
+    val backgroundImageUrl = effectiveTheme.backgroundImageUrl?.takeIf { it.isNotBlank() }
+    val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
 
     val bgModifier = if (effectiveTheme.appBackgroundGradientStart != null && effectiveTheme.appBackgroundGradientEnd != null) {
         Modifier.background(
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientStart!!),
-                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientEnd!!)
+                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientStart!!).copy(alpha = overlayAlpha),
+                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientEnd!!).copy(alpha = overlayAlpha)
                 )
             )
         )
     } else {
-        Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor))
+        Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor).copy(alpha = overlayAlpha))
     }
 
     Scaffold(
@@ -174,8 +182,10 @@ fun SmsThreadScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.BACK,
+                            theme = effectiveTheme,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
                             modifier = Modifier.size(iconSize)
@@ -185,25 +195,32 @@ fun SmsThreadScreen(
                 actions = {
                     IconButton(onClick = onToggleArchive) {
                         val icon = if (isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
+                        val iconKey = if (isArchived) ThemeIconKey.UNARCHIVE else ThemeIconKey.ARCHIVE
                         val desc = if (isArchived) "Unarchive" else "Archive"
-                        Icon(
-                            icon,
+                        ThemeIcon(
+                            iconKey = iconKey,
+                            theme = effectiveTheme,
+                            imageVector = icon,
                             contentDescription = desc,
                             tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
                             modifier = Modifier.size(iconSize)
                         )
                     }
                     IconButton(onClick = onEditNotificationSound) {
-                        Icon(
-                            Icons.Filled.NotificationsActive,
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.NOTIFICATIONS,
+                            theme = effectiveTheme,
+                            imageVector = Icons.Filled.NotificationsActive,
                             contentDescription = "Notification sound",
                             tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
                             modifier = Modifier.size(iconSize)
                         )
                     }
                     IconButton(onClick = { showThemeMenu = true }) {
-                        Icon(
-                            Icons.Filled.Palette,
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.PALETTE,
+                            theme = effectiveTheme,
+                            imageVector = Icons.Filled.Palette,
                             contentDescription = "Theme",
                             tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
                             modifier = Modifier.size(iconSize)
@@ -237,26 +254,41 @@ fun SmsThreadScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
+        Box(
             modifier = modifier
                 .fillMaxSize()
-                .then(bgModifier) // Apply gradient here
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(padding)
         ) {
-            if (aiSummaryEnabled) {
-                item {
-                    AiSummaryCard(
-                        state = aiSummaryState,
-                        onGenerate = onRequestSummary,
-                        onClear = onClearSummary,
-                        theme = effectiveTheme
-                    )
-                }
+            if (backgroundImageUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(backgroundImageUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             }
-            items(messages, key = { it.id }) { msg ->
-                MessageBubble(msg, dateFormatter, effectiveTheme, contact)
+            Box(modifier = Modifier.fillMaxSize().then(bgModifier))
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (aiSummaryEnabled) {
+                    item {
+                        AiSummaryCard(
+                            state = aiSummaryState,
+                            onGenerate = onRequestSummary,
+                            onClear = onClearSummary,
+                            theme = effectiveTheme
+                        )
+                    }
+                }
+                items(messages, key = { it.id }) { msg ->
+                    MessageBubble(msg, dateFormatter, effectiveTheme, contact)
+                }
             }
         }
     }
@@ -380,8 +412,10 @@ private fun MessageInput(
                         onClick = { showAiMenu = true },
                         enabled = aiState !is AiComposeState.Loading
                     ) {
-                        Icon(
-                            Icons.Filled.AutoFixHigh,
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.AI,
+                            theme = theme,
+                            imageVector = Icons.Filled.AutoFixHigh,
                             contentDescription = "AI assist",
                             tint = primary,
                             modifier = Modifier.size(iconSize)
@@ -434,8 +468,10 @@ private fun MessageInput(
                             },
                             enabled = enabled
                         ) {
-                            Icon(
-                                Icons.Filled.Send,
+                            ThemeIcon(
+                                iconKey = ThemeIconKey.SEND,
+                                theme = theme,
+                                imageVector = Icons.Filled.Send,
                                 contentDescription = "Send",
                                 tint = if (enabled) primary else primary.copy(alpha = 0.38f),
                                 modifier = Modifier.size(iconSize)
@@ -572,7 +608,9 @@ private fun AiSummaryCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
+                ThemeIcon(
+                    iconKey = ThemeIconKey.AI,
+                    theme = theme,
                     imageVector = Icons.Filled.AutoFixHigh,
                     contentDescription = null,
                     tint = accent,

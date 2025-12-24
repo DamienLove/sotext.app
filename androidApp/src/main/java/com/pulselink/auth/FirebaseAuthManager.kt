@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 
 @Singleton
 class FirebaseAuthManager @Inject constructor(
@@ -39,7 +40,16 @@ class FirebaseAuthManager @Inject constructor(
 
     suspend fun ensureSignedIn() {
         if (auth.currentUser != null) return
-        _authState.filterIsInstance<AuthState.Authenticated>().first()
+        val result = signInSmsOnly()
+        if (result.isSuccess) return
+        val fallback = runCatching {
+            withTimeout(3_000L) {
+                _authState.filterIsInstance<AuthState.Authenticated>().first()
+            }
+        }.getOrNull()
+        if (fallback == null) {
+            throw IllegalStateException("Sign-in required to use AI features.")
+        }
     }
 
     suspend fun signInSmsOnly(): Result<FirebaseUser> {
