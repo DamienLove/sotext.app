@@ -380,3 +380,6 @@ Current ad behavior in app:
 2025-12-24
 - Web Emergency Map: added Back button, friendly empty-state copy, geolocation centering with "your location" marker, and clearer status text; rebuilt web/dist.
 
+2025-12-24
+- Deployed updated web Emergency Map UX to Firebase Hosting (pulselink-24899) after rebuild.
+
