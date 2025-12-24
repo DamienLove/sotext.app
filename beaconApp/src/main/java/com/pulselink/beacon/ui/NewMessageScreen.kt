@@ -22,6 +22,7 @@ fun NewMessageScreen(
 ) {
     var phoneNumber by remember { mutableStateOf("") }
     val isValid = phoneNumber.isNotBlank()
+        var messageText by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -82,6 +83,22 @@ fun NewMessageScreen(
                     cursorColor = theme.accentColor
                 )
             )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                                            OutlinedTextField(
+                                                                    value = messageText,
+                                                                                        onValueChange = { messageText = it },
+                                                                                                            modifier = Modifier.fillMaxWidth(),
+                                                                                                                                label = { Text("Message") },
+                                                                                                                                                    placeholder = { Text("Enter message") },
+                                                                                                                                                                        minLines = 3,
+                                                                                                                                                                                            maxLines = 5,
+                                                                                                                                                                                                                colors = OutlinedTextFieldDefaults.colors(
+                                                                                                                                                                                                                                            focusedBorderColor = theme.accentColor,
+                                                                                                                                                                                                                                                                    cursorColor = theme.accentColor
+                                                                                                                                                                                                                                                                                        )
+                                                                                                                                                                                                                                                                                                        )
         }
     }
 }

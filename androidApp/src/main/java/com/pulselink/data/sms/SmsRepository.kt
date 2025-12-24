@@ -542,7 +542,49 @@ class SmsRepository @Inject constructor(
                 }
             }
         }
+
+                // Fallback: if no regular messages found, use most recent PulseLinkPayload
+        cursor.getOrNull()?.use { c ->
+            if (c.moveToFirst()) {
+                val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+                val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+                val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
+                val typeIdx = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
+                
+                val body = c.getString(bodyIdx) ?: ""
+                val friendlySnippet = generateFriendlySnippet(body)
+                val address = c.getString(addrIdx) ?: ""
+                val ts = c.getLong(dateIdx)
+                val type = c.getInt(typeIdx)
+                val outgoing = type == Telephony.Sms.MESSAGE_TYPE_SENT
+                
+                return SmsMessageItem(
+                    id = -1,
+                    threadId = threadId,
+                    address = address,
+                    body = friendlySnippet,
+                    timestamp = ts,
+                    outgoing = outgoing
+                )
+            }
+        }
         return null
+    }
+
+        private fun generateFriendlySnippet(body: String): String {
+        return if (SmsCodec.isPulseLinkPayload(body)) {
+            val message = SmsCodec.parse(body)
+            when (message) {
+                is PulseLinkMessage.LinkRequest -> "Connection request"
+                is PulseLinkMessage.LinkAccept -> "Connection accepted"
+                is PulseLinkMessage.Ping -> "Status check"
+                is PulseLinkMessage.Alert -> "Alert sent"
+                is PulseLinkMessage.ManualMessage -> message.body
+                else -> "PulseLink message"
+            }
+        } else {
+            body
+        }
     }
 
     private fun ensureObserversRegistered() {
