@@ -172,7 +172,13 @@ class SmsInboxViewModel @Inject constructor(
             _inboxMode,
             _activeLineId,
             deviceLineId
-        ) { local, archived, remote, mode, activeLine, deviceId ->
+) { values ->
+            val local = values[0] as List<SmsThreadItem>
+            val archived = values[1] as List<SmsThreadItem>
+            val remote = values[2] as List<SmsThreadItem>
+            val mode = values[3] as LineInboxMode
+            val activeLine = values[4] as String?
+            val deviceId = values[5] as String
             val active = activeLine ?: deviceId
             val visibleThreads = when (mode) {
                 LineInboxMode.COMBINED -> (local + remote).sortedByDescending { it.timestamp }
@@ -408,3 +414,4 @@ class SmsThreadViewModel @Inject constructor(
         _composeState.value = AiComposeState.Idle
     }
 }
+

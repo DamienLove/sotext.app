@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.ui.semantics.Role
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -871,11 +873,6 @@ private fun SearchResults(
 }
 
 private fun splitDisplay(address: String): Pair<String, String?> = splitSmsDisplayAddress(address)
-    return when (parts.size) {
-        2 -> parts[0] to parts[1]
-        else -> address to null
-    }
-}
 
 @Composable
 private fun TabsRow(
@@ -935,3 +932,4 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePreferences, o
 }
 
 private enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED }
+
