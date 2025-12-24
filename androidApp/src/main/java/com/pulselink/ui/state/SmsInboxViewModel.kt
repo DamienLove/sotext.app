@@ -49,7 +49,8 @@ class SmsInboxViewModel @Inject constructor(
     private val smsRepository: SmsRepository,
     private val remoteSmsRepository: RemoteSmsRepository,
     private val smsLineRepository: SmsLineRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val contactRepository: ContactRepository
 ) : ViewModel() {
     private companion object {
         const val THREAD_LIMIT = Int.MAX_VALUE
@@ -88,6 +89,13 @@ class SmsInboxViewModel @Inject constructor(
                     fromSmsOnly = false,
                     forceRefresh = force
                 )
+            }
+            if (!force &&
+                threads.isEmpty() &&
+                archived.isEmpty() &&
+                (localThreads.value.isNotEmpty() || localArchived.value.isNotEmpty())
+            ) {
+                return@launch
             }
             localThreads.value = threads.map { it.copy(lineId = deviceId) }
             localArchived.value = archived.map { it.copy(lineId = deviceId) }
@@ -228,6 +236,11 @@ class SmsInboxViewModel @Inject constructor(
 
         smsRepository.changes()
             .debounce(400)
+            .onEach { refresh(force = true) }
+            .launchIn(viewModelScope)
+
+        contactRepository.observeContacts()
+            .debounce(300)
             .onEach { refresh(force = true) }
             .launchIn(viewModelScope)
     }

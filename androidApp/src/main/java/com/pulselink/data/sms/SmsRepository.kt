@@ -91,12 +91,17 @@ class SmsRepository @Inject constructor(
         fromSmsOnly: Boolean = false,
         forceRefresh: Boolean = false
     ): Pair<List<SmsThreadItem>, List<SmsThreadItem>> {
-        if (!hasReadPerms()) return emptyList<SmsThreadItem>() to emptyList()
         val now = System.currentTimeMillis()
         val cache = if (fromSmsOnly) smsOnlyCache else threadsCache
-        if (!forceRefresh && cache != null && cache.limit == limit && now - cache.updatedAt < CACHE_TTL_MS) {
-            return cache.threads to cache.archived
+        if (cache != null) {
+            if (!hasReadPerms()) {
+                return cache.threads to cache.archived
+            }
+            if (!forceRefresh && cache.limit == limit && now - cache.updatedAt < CACHE_TTL_MS) {
+                return cache.threads to cache.archived
+            }
         }
+        if (!hasReadPerms()) return emptyList<SmsThreadItem>() to emptyList()
         val archivedIds = loadArchivedIds().toSet()
         val allThreads = if (fromSmsOnly) {
             listThreadsFromSms(limit, archivedIds, includeArchived = true, onlyArchived = false)

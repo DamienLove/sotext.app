@@ -1161,6 +1161,8 @@ class MainActivity : AppCompatActivity() {
                             onToggleLocation = { enabled -> contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) } },
                             onToggleCamera = { enabled -> contact?.let { viewModel.updateContact(it.copy(cameraEnabled = enabled)) } },
                             onToggleAutoCall = { enabled -> contact?.let { viewModel.updateContact(it.copy(autoCall = enabled)) } },
+                            onToggleFavorite = { enabled -> contact?.let { viewModel.updateContact(it.copy(isFavorite = enabled)) } },
+                            onTogglePrivate = { enabled -> contact?.let { viewModel.updateContact(it.copy(isPrivate = enabled)) } },
                             onToggleRemoteOverride = { allow -> viewModel.setRemoteOverridePermission(contactId, allow) },
                             onToggleRemoteSound = { allow -> viewModel.setRemoteSoundPermission(contactId, allow) },
                             onSendLink = {
@@ -1385,6 +1387,7 @@ class MainActivity : AppCompatActivity() {
                                 linesViewModel.touchPresence(selected)
                             },
                             showLinePicker = isPremium && state.settings.lineInboxMode == LineInboxMode.PER_LINE,
+                            hideOtpInAll = true,
                             onImportAll = { smsInboxViewModel.importAllMessages() },
                             banner = {
                                 if (!notificationsEnabled || notificationsSilent) {

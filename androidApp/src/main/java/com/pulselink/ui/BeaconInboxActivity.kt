@@ -310,6 +310,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onOpenPrivate = {},
                                             privateThreadIds = privateThreads,
                                             showPrivateOnly = currentRoute == BeaconNavRoute.Private,
+                                            hideOtpInAll = currentRoute == BeaconNavRoute.Inbox,
                                             onTogglePrivate = { thread, makePrivate ->
                                                 viewModel.setThreadPrivacy(thread.threadId, thread.address, makePrivate)
                                             },

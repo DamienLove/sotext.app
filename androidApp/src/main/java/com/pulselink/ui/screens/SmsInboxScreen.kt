@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
@@ -109,6 +110,7 @@ fun SmsInboxScreen(
     onOpenPrivate: () -> Unit = {},
     privateThreadIds: Set<Long> = emptySet(),
     showPrivateOnly: Boolean = false,
+    hideOtpInAll: Boolean = false,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
     theme: ThemePreferences = ThemePreferences(),
     sectionTitle: String? = null,
@@ -168,7 +170,12 @@ fun SmsInboxScreen(
             val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
             if (showPrivateOnly) isPrivate else !isPrivate
         }
-        source.filter { thread ->
+        val otpFiltered = if (hideOtpInAll) {
+            source.filterNot { it.isOtp }
+        } else {
+            source
+        }
+        otpFiltered.filter { thread ->
             when (filter) {
                 InboxFilter.ALL -> true
                 InboxFilter.READ -> !thread.unread
@@ -184,7 +191,8 @@ fun SmsInboxScreen(
     val colorScheme = MaterialTheme.colorScheme
     val iconSize = (24f * theme.iconSizeFactor).coerceIn(18f, 34f).dp
     val largeIconSize = (64f * theme.iconSizeFactor).coerceIn(48f, 86f).dp
-    val beaconHeaderIconSize = (28f * theme.iconSizeFactor).coerceIn(22f, 38f).dp
+    val beaconCollapsedIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 26f).dp
+    val beaconExpandedIconSize = (52f * theme.iconSizeFactor).coerceIn(40f, 72f).dp
     val orderedLines = remember(lineOptions) { lineOptions.sortedBy { it.createdAt } }
     val lineIndexMap = remember(orderedLines) { orderedLines.mapIndexed { index, line -> line.id to index }.toMap() }
     val lineColors = remember(theme, colorScheme) {
@@ -217,7 +225,10 @@ fun SmsInboxScreen(
     } else {
         TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     }
-    val beaconIconAlpha = (1f - scrollBehavior.state.collapsedFraction).coerceIn(0f, 1f)
+    val topBarForeground = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
+    val collapsedFraction = scrollBehavior.state.collapsedFraction
+    val beaconExpandedAlpha = (1f - collapsedFraction).coerceIn(0f, 1f)
+    val beaconCollapsedAlpha = collapsedFraction.coerceIn(0f, 1f)
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -226,19 +237,32 @@ fun SmsInboxScreen(
             if (isBeaconMode) {
                 LargeTopAppBar(
                     title = {
-                        Text(
-                            "Beacon Inbox",
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_beacon_inbox),
+                                contentDescription = null,
+                                tint = topBarForeground,
+                                modifier = Modifier
+                                    .size(beaconExpandedIconSize * beaconExpandedAlpha)
+                                    .alpha(beaconExpandedAlpha)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp * beaconExpandedAlpha))
+                            Text(
+                                "Beacon Inbox",
+                                color = topBarForeground
+                            )
+                        }
                     },
                     navigationIcon = {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_beacon_inbox),
                             contentDescription = "Beacon",
-                            tint = Color.Unspecified,
+                            tint = topBarForeground,
                             modifier = Modifier
-                                .size(beaconHeaderIconSize)
-                                .alpha(beaconIconAlpha)
+                                .size(beaconCollapsedIconSize)
+                                .alpha(beaconCollapsedAlpha)
                         )
                     },
                     actions = {

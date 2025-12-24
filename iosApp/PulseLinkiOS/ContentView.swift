@@ -18,7 +18,8 @@ struct ContentView: View {
         TabView {
             HomeTab(viewModel: viewModel,
                     showCancelSheet: $showCancelSheet,
-                    pinInput: $pinInput)
+                    pinInput: $pinInput,
+                    isPro: isPro)
                 .tabItem {
                     Label("Home", systemImage: "shield.lefthalf.filled")
                 }
@@ -51,6 +52,7 @@ private struct HomeTab: View {
     @ObservedObject var viewModel: AlertRelayViewModel
     @Binding var showCancelSheet: Bool
     @Binding var pinInput: String
+    let isPro: Bool
 
     var body: some View {
         NavigationStack {

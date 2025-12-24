@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
+import com.pulselink.BuildConfig
 import com.pulselink.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,20 +76,24 @@ fun SettingsHelpScreen(
         ) {
             SectionHeader(title = stringResource(id = R.string.settings_help_section_heading))
             HelpSection(
-                title = "How do I add contacts to PulseLink?",
-                body = "Adding contacts is simple. Select the 'add trusted contact' button and you will then be able to add a contact by name and phone/email or select the \"Import from contacts\" button below it. There is an option to allow remote alert changes just above the 'Save' button in the bottom right of the screen."
+                title = "Add and link trusted contacts",
+                body = "Tap Add trusted contact on the Home screen, enter a name with phone or email, then send a link invite. Use the toggles on the contact profile to allow remote alert changes, and mark contacts as Favorite or Private to control inbox tabs."
             )
             HelpSection(
-                title = "What happens when I press the 'I am safe' button?",
-                body = "When you press the main 'I am safe' button, all your chosen contacts instantly receive a customized alert with your message. They can send you messages, or call for help. The alert goes through PulseLink's secure cloud first, and if contacts are offline or SMS-only."
+                title = "Send emergency and check-in alerts",
+                body = "Use Emergency or Check-in to notify trusted contacts. You can include location, auto-call after sending, and a short camera clip per contact. Linked contacts can override Do Not Disturb when allowed."
             )
             HelpSection(
-                title = "Can I customize how I receive notifications?",
-                body = "Yes. PulseLink uses smart notifications that can reach you via text, call, or app notification—whichever works best. In Settings > Notifications, you can choose different alert tones and vibration patterns for incoming alerts. You can also enable Do Not Disturb exceptions so critical alerts always get through when you need them most."
+                title = "Beacon Inbox and messaging",
+                body = "Open Messages and set PulseLink or Beacon as your default SMS app to load your inbox. Use search, swipe to archive, and the tabs for All, 2-step codes, Trusted, Favorites, and Private."
             )
             HelpSection(
-                title = "Does PulseLink drain my battery?",
-                body = "PulseLink is optimized for minimal battery drain. It only activates location sharing when an alert is sent or when you press the 'I am safe' button. For best results, allow Battery Optimization mode in Settings. This balances background responsiveness with power efficiency, so you get alerts."
+                title = "Customize alerts and the app look",
+                body = "Settings > Alert tones lets you pick sirens, check-in chimes, and call overrides. Visual Settings lets you change colors, backgrounds, and the inbox icon. Per-contact tones live in the contact profile."
+            )
+            HelpSection(
+                title = "Premium highlights",
+                body = "Premium removes ads and unlocks AI summaries, compose assist, urgency alerts, and multi-device SMS sync with line controls. Enable Web access below to read messages on https://app.damiennichols.com."
             )
             HelpSection(
                 title = stringResource(id = R.string.settings_help_battery_title),
@@ -226,6 +231,14 @@ fun FaqList(
                 answer = stringResource(id = aRes)
             )
         }
+        FaqItem(
+            question = stringResource(id = R.string.faq_question_version),
+            answer = stringResource(
+                id = R.string.faq_answer_version,
+                BuildConfig.VERSION_NAME,
+                BuildConfig.VERSION_CODE
+            )
+        )
     }
 }
 
