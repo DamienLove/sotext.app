@@ -150,16 +150,20 @@ class SmsInboxViewModel @Inject constructor(
 
     fun archive(threadId: Long) {
         viewModelScope.launch {
-            smsRepository.markThreadRead(threadId)
-            smsRepository.archiveThread(threadId)
-            refresh()
+            withContext(Dispatchers.IO) {
+                smsRepository.markThreadRead(threadId)
+                smsRepository.archiveThread(threadId)
+            }
+            refresh(force = true)
         }
     }
 
     fun unarchive(threadId: Long) {
         viewModelScope.launch {
-            smsRepository.unarchiveThread(threadId)
-            refresh()
+            withContext(Dispatchers.IO) {
+                smsRepository.unarchiveThread(threadId)
+            }
+            refresh(force = true)
         }
     }
 
@@ -340,12 +344,15 @@ class SmsThreadViewModel @Inject constructor(
                 activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
             }
             val threadId = activeThreadId ?: return@launch
-            if (_isArchived.value) {
-                smsRepository.unarchiveThread(threadId)
-            } else {
-                smsRepository.archiveThread(threadId)
+            val updatedArchived = withContext(Dispatchers.IO) {
+                if (_isArchived.value) {
+                    smsRepository.unarchiveThread(threadId)
+                } else {
+                    smsRepository.archiveThread(threadId)
+                }
+                smsRepository.isThreadArchived(threadId)
             }
-            _isArchived.value = !_isArchived.value
+            _isArchived.value = updatedArchived
         }
     }
 

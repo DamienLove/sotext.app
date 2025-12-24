@@ -128,9 +128,12 @@ fun SmsInboxScreen(
     activeLineId: String? = null,
     onSelectLine: (String) -> Unit = {},
     showLinePicker: Boolean = false,
-    onImportAll: () -> Unit = {}
+    onImportAll: () -> Unit = {},
+    archivedOnly: Boolean = false
 ) {
-    var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
+    var filter by rememberSaveable(archivedOnly) {
+        mutableStateOf(if (archivedOnly) InboxFilter.ARCHIVED else InboxFilter.ALL)
+    }
     var searchText by rememberSaveable { mutableStateOf("") }
 
     val localDeviceId = deviceLineId?.takeIf { it.isNotBlank() }
@@ -163,7 +166,7 @@ fun SmsInboxScreen(
     val filtered = remember(filter, gatedThreads, gatedArchivedThreads, privateThreadIds, showPrivateOnly) {
         val base = when (filter) {
             InboxFilter.ARCHIVED -> gatedArchivedThreads
-            InboxFilter.ALL -> gatedThreads + gatedArchivedThreads
+            InboxFilter.ALL -> gatedThreads
             else -> gatedThreads
         }
         val source = base.filter { thread ->

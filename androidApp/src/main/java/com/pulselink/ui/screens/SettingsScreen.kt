@@ -103,6 +103,8 @@ fun SettingsScreen(
     onOpenHelp: () -> Unit,
     onOpenBeacon: () -> Unit,
     onEditProfile: () -> Unit,
+    showAddLogin: Boolean,
+    onAddLogin: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -365,6 +367,15 @@ fun SettingsScreen(
                     proEnabled = !BuildConfig.ADS_ENABLED || settings.proUnlocked,
                     onOpenHelp = onOpenHelp
                 )
+                if (showAddLogin) {
+                    SettingsActionRow(
+                        title = "Add login",
+                        subtitle = "Sign in to sync across devices and web.",
+                        actionLabel = "Sign in",
+                        onAction = onAddLogin,
+                        leadingIcon = Icons.Filled.Person
+                    )
+                }
                 SettingsActionRow(
                     title = stringResource(id = R.string.settings_report_bug),
                     actionLabel = "Report",

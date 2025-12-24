@@ -58,6 +58,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -211,6 +212,8 @@ class MainActivity : AppCompatActivity() {
                 val authState by viewModel.authState.collectAsStateWithLifecycle()
                 val isPremium = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
                 val navController = rememberNavController()
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
                 var missingSmsPerms by remember { mutableStateOf(requiredSmsPermissions(context)) }
                 val notificationManager = ContextCompat.getSystemService(context, NotificationManager::class.java)
                 val ownerName = state.settings.ownerName
@@ -703,8 +706,11 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                LaunchedEffect(state.onboardingComplete) {
-                    if (state.onboardingComplete) {
+                LaunchedEffect(state.onboardingComplete, currentRoute) {
+                    val route = currentRoute.orEmpty()
+                    val shouldNavigateHome = state.onboardingComplete &&
+                        (route == "splash" || route.startsWith("onboarding_"))
+                    if (shouldNavigateHome) {
                         navController.navigate("home") {
                             popUpTo(0) { inclusive = true }
                             launchSingleTop = true
@@ -821,7 +827,8 @@ class MainActivity : AppCompatActivity() {
                             onMessageConsumed = loginViewModel::clearTransientMessages
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
-                            if (authState is AuthState.Authenticated) {
+                            val authenticated = authState as? AuthState.Authenticated
+                            if (authenticated != null && !authenticated.user.isAnonymous) {
                                 val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
                                 navController.navigate(destination) {
                                     popUpTo(0) { inclusive = true }
@@ -1247,6 +1254,7 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             "Custom audio"
                         }
+                        val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
                         SettingsScreen(
                             settings = state.settings,
                             hasDndAccess = hasDndAccess,
@@ -1281,6 +1289,8 @@ class MainActivity : AppCompatActivity() {
                             onOpenHelp = { navController.navigate("settings_help") },
                             onOpenBeacon = launchBeaconInbox,
                             onEditProfile = { navController.navigate("profile_settings") },
+                            showAddLogin = isSmsOnlyUser,
+                            onAddLogin = { navController.navigate("login") },
                             onSignOut = {
                                 viewModel.signOut()
                             },
@@ -1379,6 +1389,7 @@ class MainActivity : AppCompatActivity() {
                             onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
                             onBack = { navController.popBackStack() },
                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                            onOpenSettings = { navController.navigate("settings") },
                             lineOptions = if (isPremium) orderedLines else emptyList(),
                             deviceLineId = deviceLineId,
                             activeLineId = if (isPremium) activeLineId else null,
@@ -1483,12 +1494,21 @@ class MainActivity : AppCompatActivity() {
                             selectedLineId = if (isPremium) selectedLine else null,
                             deviceLineId = deviceLineId,
                             lineStatus = if (isPremium) {
-                                lineDevices.associate { device ->
-                                    val isOnline = device.lastSeen?.let { last ->
-                                        System.currentTimeMillis() - last < 2 * 60 * 1000
-                                    } ?: false
-                                    device.lineId to isOnline
+                                val now = System.currentTimeMillis()
+                                val status = lineDevices
+                                    .groupBy { it.lineId }
+                                    .mapValues { (_, devices) ->
+                                        devices.any { device ->
+                                            device.lastSeen?.let { last ->
+                                                now - last < 2 * 60 * 1000
+                                            } == true
+                                        }
+                                    }
+                                    .toMutableMap()
+                                if (deviceLineId.isNotBlank()) {
+                                    status[deviceLineId] = true
                                 }
+                                status
                             } else {
                                 emptyMap()
                             },
