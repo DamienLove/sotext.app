@@ -44,7 +44,11 @@ service cloud.firestore {
 
     match /users_by_phone/{phoneNumber} {
       allow read: if request.auth != null;
-      allow create, update: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      // Security: Sentinel - Ensure user owns the phone number they are claiming.
+      // This prevents identity spoofing where a user claims a number they don't own.
+      allow create, update: if request.auth != null
+                            && request.resource.data.uid == request.auth.uid
+                            && request.auth.token.phone_number == phoneNumber;
       allow delete: if false;
     }
 
