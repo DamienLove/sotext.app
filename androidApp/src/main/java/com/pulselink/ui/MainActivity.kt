@@ -72,6 +72,7 @@ import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BetaTesterListScreen
 import com.pulselink.ui.screens.HomeScreen
 import com.pulselink.ui.screens.AlertHistoryScreen
+import com.pulselink.ui.screens.EmergencyMapScreen
 import com.pulselink.ui.screens.AlertTonePickerScreen
 import com.pulselink.ui.screens.BetaAgreementFullScreen
 import com.pulselink.ui.screens.BetaAgreementScreen
@@ -1010,6 +1011,7 @@ class MainActivity : AppCompatActivity() {
                             onCallContact = callContactHandler,
                             onReorderContacts = viewModel::reorderContacts,
                             onRequestCancelEmergency = cancelEmergencyHandler,
+                            onViewEmergencyMap = { navController.navigate("emergency_map") },
                             isCancelingEmergency = isCancelingEmergency,
                             onAlertsClick = { navController.navigate("alerts_history") },
                             showAddLoginPrompt = isSmsOnlyUser,
@@ -1038,7 +1040,13 @@ class MainActivity : AppCompatActivity() {
                         AlertHistoryScreen(
                             state = state,
                             onBackClick = { navController.popBackStack() },
-                            onMarkAlertsAsRead = { ids -> viewModel.markAlertsAsRead(ids) }
+                            onMarkAlertsAsRead = { ids -> viewModel.markAlertsAsRead(ids) },
+                            onViewEmergencyMap = { navController.navigate("emergency_map") }
+                        )
+                    }
+                    composable("emergency_map") {
+                        EmergencyMapScreen(
+                            onBackClick = { navController.popBackStack() }
                         )
                     }
                     composable(

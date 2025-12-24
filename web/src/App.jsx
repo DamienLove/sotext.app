@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, memo } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -322,29 +322,12 @@ const buildContactDocId = (contact) => {
   return contact.displayName.trim().toLowerCase().replace(/\s+/g, '_') || `contact_${Date.now()}`;
 };
 
-const MAPS_LINK_RE = /https?:\/\/maps\.google\.com\/\?q=([-\\d.]+),([-\\d.]+)/i;
-
-const classifyAlertSeverity = (body = '') => {
-  const normalized = body.toUpperCase();
-  if (normalized.includes('PULSELINK EMERGENCY')) return 'emergency';
-  if (normalized.includes("I'M SAFE") || normalized.includes('CHECK-IN') || normalized.includes('CHECK IN')) {
-    return 'check_in';
-  }
-  return 'non_urgent';
-};
-
-const extractAlertLocation = (body) => {
-  if (!body || !body.includes('PulseLink')) return null;
-  const match = body.match(MAPS_LINK_RE);
-  if (!match) return null;
-  const lat = Number(match[1]);
-  const lng = Number(match[2]);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return {
-    lat,
-    lng,
-    severity: classifyAlertSeverity(body)
-  };
+const toMillis = (value) => {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.seconds === 'number') return value.seconds * 1000;
+  return 0;
 };
 
 const alertBadgeCopy = {
@@ -574,53 +557,44 @@ function App() {
     }
   }, [messages, autoScroll]);
 
-  const fetchAlertLocations = useCallback(async () => {
-    if (!user) return;
-    if (!threads.length) {
+  useEffect(() => {
+    if (!user) {
       setAlertLocations([]);
-      setAlertStatus('No synced messages yet.');
+      setAlertStatus('');
       return;
     }
-    setAlertStatus('Loading alert locations...');
-    try {
-      const results = await Promise.all(
-        threads.map(async (thread) => {
-          const messagesRef = collection(db, "users", user.uid, "synced_threads", thread.id, "messages");
-          const q = query(messagesRef, orderBy("date", "desc"), limit(50));
-          const snapshot = await getDocs(q);
-          const alerts = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            const body = data.body ?? '';
-            const location = extractAlertLocation(body);
-            if (!location) return;
-            alerts.push({
-              id: `${thread.id}-${docSnap.id}`,
-              threadId: thread.id,
-              address: thread.address ?? 'Unknown sender',
-              body,
-              date: data.date ?? 0,
-              incoming: data.type === 1,
-              ...location
-            });
-          });
-          return alerts;
-        })
-      );
-      const merged = results.flat().sort((a, b) => b.date - a.date);
-      setAlertLocations(merged);
-      setAlertStatus(merged.length ? '' : 'No alert locations found yet.');
-    } catch (error) {
-      console.error('Failed to load alert locations', error);
-      setAlertStatus(error?.message ?? 'Unable to load alert locations.');
-    }
-  }, [user, threads]);
-
-  useEffect(() => {
-    if (activePanel === 'map') {
-      fetchAlertLocations();
-    }
-  }, [activePanel, fetchAlertLocations]);
+    const alertsRef = collection(db, "users", user.uid, "emergencyLocations");
+    const q = query(alertsRef, orderBy("createdAt", "desc"), limit(200));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const items = snapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          const lat = Number(data.lat);
+          const lng = Number(data.lng);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+          return {
+            id: docSnap.id,
+            lat,
+            lng,
+            severity: data.severity ?? 'emergency',
+            incoming: data.incoming ?? false,
+            address: data.sourceName || data.sourcePhone || (data.incoming ? 'Trusted contact' : 'You'),
+            body: data.message ?? '',
+            date: toMillis(data.createdAt),
+            clearedAt: data.clearedAt ?? null
+          };
+        }).filter(Boolean).filter(item => !item.clearedAt);
+        setAlertLocations(items);
+        setAlertStatus(items.length ? '' : 'No emergency locations yet.');
+      },
+      (error) => {
+        console.error('Failed to load emergency locations', error);
+        setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+      }
+    );
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (activePanel !== 'map') return;
@@ -719,6 +693,20 @@ function App() {
     } else {
       mapInstanceRef.current.panTo({ lat: alert.lat, lng: alert.lng });
       mapInstanceRef.current.setZoom(13);
+    }
+  };
+
+  const handleClearAlert = async (alertId) => {
+    if (!user) return;
+    try {
+      await setDoc(
+        doc(db, "users", user.uid, "emergencyLocations", alertId),
+        { clearedAt: serverTimestamp() },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error('Failed to clear alert', error);
+      setAlertStatus(error?.message ?? 'Unable to clear alert.');
     }
   };
 
@@ -1429,17 +1417,25 @@ function App() {
                   {!mapsApiKey && (
                     <div className="map-fallback">
                       <div className="map-fallback-title">Maps key required</div>
-                      <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env to load the map view.</p>
+                      <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env.local to load the map view.</p>
                     </div>
                   )}
                   {mapStatus && <div className="map-status">{mapStatus}</div>}
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
-                    <button
+                    <div
                       key={alert.id}
                       className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
                       onClick={() => handleAlertFocus(alert)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleAlertFocus(alert);
+                        }
+                      }}
                     >
                       <div className="map-item-header">
                         <div className="map-item-title">{alert.address}</div>
@@ -1452,7 +1448,19 @@ function App() {
                       </div>
                       <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
                       <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-                    </button>
+                      <div className="map-item-actions">
+                        <button
+                          className="secondary-btn"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleClearAlert(alert.id);
+                          }}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
                   ))}
                   {filteredAlerts.length === 0 && (
                     <div className="map-empty">No alert locations yet.</div>

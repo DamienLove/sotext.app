@@ -42,7 +42,8 @@ import com.pulselink.ui.state.PulseLinkUiState
 fun AlertHistoryScreen(
     state: PulseLinkUiState,
     onBackClick: () -> Unit,
-    onMarkAlertsAsRead: (List<Long>) -> Unit
+    onMarkAlertsAsRead: (List<Long>) -> Unit,
+    onViewEmergencyMap: () -> Unit
 ) {
     // Automatically mark visible alerts as read when the screen opens
     LaunchedEffect(state.recentEvents, state.unreadAlertCount) {
@@ -112,7 +113,10 @@ fun AlertHistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(state.recentEvents, key = { it.id }) { event ->
-                    AlertEventItem(event = event)
+                    AlertEventItem(
+                        event = event,
+                        onViewEmergencyMap = onViewEmergencyMap
+                    )
                 }
             }
         }
@@ -120,7 +124,10 @@ fun AlertHistoryScreen(
 }
 
 @Composable
-fun AlertEventItem(event: AlertEvent) {
+fun AlertEventItem(
+    event: AlertEvent,
+    onViewEmergencyMap: () -> Unit
+) {
     val tierColor = when (event.tier) {
         EscalationTier.EMERGENCY -> Color(0xFFB91C1C) // Red
         EscalationTier.CHECK_IN -> Color(0xFF059669) // Green
@@ -174,12 +181,19 @@ fun AlertEventItem(event: AlertEvent) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (!event.isRead) {
-                    Text(
-                        text = "NEW",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (event.tier == EscalationTier.EMERGENCY) {
+                        TextButton(onClick = onViewEmergencyMap) {
+                            Text("View map")
+                        }
+                    }
+                    if (!event.isRead) {
+                        Text(
+                            text = "NEW",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }

@@ -15,6 +15,7 @@ import androidx.core.app.PendingIntentCompat
 import com.pulselink.R
 import com.pulselink.data.location.LocationProvider
 import com.pulselink.data.sms.SmsSender
+import com.pulselink.data.emergency.EmergencyLocationRepository
 import com.pulselink.domain.model.AlertProfile
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.EscalationTier
@@ -39,7 +40,8 @@ class AlertDispatcher @Inject constructor(
     private val locationProvider: LocationProvider,
     private val registrar: NotificationRegistrar,
     private val soundCatalog: SoundCatalog,
-    private val audioOverrideManager: AudioOverrideManager
+    private val audioOverrideManager: AudioOverrideManager,
+    private val emergencyLocationRepository: EmergencyLocationRepository
 ) {
 
     suspend fun dispatch(
@@ -52,7 +54,8 @@ class AlertDispatcher @Inject constructor(
     ): AlertResult = withContext(Dispatchers.IO) {
         registrar.ensureChannels()
 
-        val locationText = if (settings.includeLocation) buildLocationText() else null
+        val locationInfo = if (settings.includeLocation) buildLocationInfo() else null
+        val locationText = locationInfo?.message
         val message = buildMessage(phrase, tier, locationText)
 
         val (profile, soundCategory) = when (tier) {
@@ -120,6 +123,14 @@ class AlertDispatcher @Inject constructor(
             audioOverrideManager.scheduleRestore()
         }
 
+        if (tier == EscalationTier.EMERGENCY && locationInfo != null) {
+            emergencyLocationRepository.recordOutgoing(
+                location = locationInfo.location,
+                message = message,
+                sourceName = settings.ownerName.takeIf { it.isNotBlank() }
+            )
+        }
+
         val resolvedSoundKey = if (shouldPlayLocalSound) soundOption?.key ?: profile.soundKey else null
         AlertResult(
             message = message,
@@ -131,11 +142,12 @@ class AlertDispatcher @Inject constructor(
         )
     }
 
-    private suspend fun buildLocationText(): String? {
+    private suspend fun buildLocationInfo(): LocationInfo? {
         val location = runCatching { locationProvider.lastKnownLocation() }.getOrNull() ?: return null
         val geoUri = "https://maps.google.com/?q=${location.latitude},${location.longitude}"
         val timestamp = SimpleDateFormat("MMM d, HH:mm", Locale.US).format(Date())
-        return "Last known location @ $timestamp: $geoUri"
+        val message = "Last known location @ $timestamp: $geoUri"
+        return LocationInfo(location = location, message = message)
     }
 
     @android.annotation.SuppressLint("MissingPermission")
@@ -286,6 +298,11 @@ class AlertDispatcher @Inject constructor(
         val overrideResult: AudioOverrideManager.OverrideResult? = null,
         val soundKey: String? = null,
         val contactId: Long? = null
+    )
+
+    private data class LocationInfo(
+        val location: android.location.Location,
+        val message: String
     )
 
     companion object {

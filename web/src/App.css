@@ -766,6 +766,17 @@
   margin-top: 6px;
 }
 
+.map-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.map-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .map-empty {
   padding: 16px;
   font-size: 0.9em;

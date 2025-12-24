@@ -14,6 +14,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import com.pulselink.data.link.ContactLinkManager
 import com.pulselink.data.link.RemoteActionHandler
+import com.pulselink.data.emergency.EmergencyLocationRepository
+import com.pulselink.data.emergency.parseEmergencyAlertLocation
 import com.pulselink.data.sms.OtpHelper
 import com.pulselink.data.sms.OtpNotifier
 import com.pulselink.data.sms.SmsCodec
@@ -33,6 +35,7 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
     @Inject lateinit var smsStore: SmsStore
     @Inject lateinit var contactRepository: ContactRepository
     @Inject lateinit var remoteActionHandler: RemoteActionHandler
+    @Inject lateinit var emergencyLocationRepository: EmergencyLocationRepository
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
@@ -59,6 +62,13 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                         contactLinkManager.handleInbound(parsed, origin)
                     } else {
                         alertRouter.onInboundMessage(body)
+                        val alertLocation = parseEmergencyAlertLocation(body)
+                        if (alertLocation != null && alertLocation.severity == EmergencyLocationRepository.SEVERITY_EMERGENCY) {
+                            val normalized = PhoneNumberUtils.normalizeNumber(origin)
+                            val contact = contactRepository.getByPhone(origin)
+                                ?: contactRepository.getByPhone(normalized)
+                            emergencyLocationRepository.recordIncoming(origin, contact, alertLocation, body)
+                        }
                         val otpCode = if (OtpHelper.isOtpMessage(origin, body)) {
                             OtpHelper.extractCode(body)
                         } else {

@@ -130,6 +130,7 @@ fun HomeScreen(
     onCallContact: suspend (Contact) -> Unit,
     onReorderContacts: (List<Long>) -> Unit,
     onRequestCancelEmergency: () -> Unit,
+    onViewEmergencyMap: () -> Unit,
     isCancelingEmergency: Boolean = false,
     onAlertsClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
@@ -215,6 +216,7 @@ fun HomeScreen(
                 onSendCheckInAll = onSendCheckIn,
                 isEmergencyActive = state.isEmergencyActive,
                 onCancelEmergency = onRequestCancelEmergency,
+                onViewEmergencyMap = onViewEmergencyMap,
                 isCancelingEmergency = isCancelingEmergency
             )
             SearchAndAddRow(
@@ -659,6 +661,7 @@ private fun QuickActionsRow(
     onSendCheckInAll: () -> Unit,
     isEmergencyActive: Boolean,
     onCancelEmergency: () -> Unit,
+    onViewEmergencyMap: () -> Unit,
     isCancelingEmergency: Boolean
 ) {
     val fontScale = LocalDensity.current.fontScale
@@ -667,7 +670,8 @@ private fun QuickActionsRow(
         if (isEmergencyActive) {
             CancelEmergencyCard(
                 isCanceling = isCancelingEmergency,
-                onCancelEmergency = onCancelEmergency
+                onCancelEmergency = onCancelEmergency,
+                onViewEmergencyMap = onViewEmergencyMap
             )
         }
         Row(
@@ -756,6 +760,7 @@ private fun ScrollHintCard() {
 private fun CancelEmergencyCard(
     isCanceling: Boolean,
     onCancelEmergency: () -> Unit,
+    onViewEmergencyMap: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val gradient = Brush.linearGradient(
@@ -814,6 +819,16 @@ private fun CancelEmergencyCard(
                     color = Color.White.copy(alpha = 0.75f),
                     modifier = Modifier.weight(1f)
                 )
+                Button(
+                    onClick = onViewEmergencyMap,
+                    shape = RoundedCornerShape(999.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White.copy(alpha = 0.15f),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(text = stringResource(id = R.string.cancel_emergency_card_map))
+                }
                 Button(
                     onClick = onCancelEmergency,
                     enabled = !isCanceling,

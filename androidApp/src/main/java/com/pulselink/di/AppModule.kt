@@ -17,6 +17,7 @@ import com.pulselink.data.alert.NotificationRegistrar
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.beta.BetaAgreementRepositoryImpl
 import com.pulselink.data.contacts.DeviceContactsRepository
+import com.pulselink.data.emergency.EmergencyLocationRepository
 import com.pulselink.data.db.AlertEventDao
 import com.pulselink.data.db.AlertRepositoryImpl
 import com.pulselink.data.db.BlockedContactDao
@@ -162,14 +163,16 @@ object DatabaseModule {
         locationProvider: com.pulselink.data.location.LocationProvider,
         registrar: NotificationRegistrar,
         soundCatalog: SoundCatalog,
-        audioOverrideManager: AudioOverrideManager
+        audioOverrideManager: AudioOverrideManager,
+        emergencyLocationRepository: EmergencyLocationRepository
     ): AlertDispatcher = AlertDispatcher(
         context = context,
         smsSender = smsSender,
         locationProvider = locationProvider,
         registrar = registrar,
         soundCatalog = soundCatalog,
-        audioOverrideManager = audioOverrideManager
+        audioOverrideManager = audioOverrideManager,
+        emergencyLocationRepository = emergencyLocationRepository
     )
 
     @Provides

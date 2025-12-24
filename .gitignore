@@ -73,3 +73,6 @@ shared/.gradle/
 .gradle-local*
 /disposable_aabs/*.aab
 /disposable_aabs/*.txt
+.env.local
+web/.env.local
+web/.env.*.local

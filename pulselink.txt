@@ -302,3 +302,8 @@ Current ad behavior in app:
 - Fixed email-only contact linking: allow email delivery when no phone is available and auto-send link requests for email contacts (ContactLinkManager + MainViewModel); pushed Suite-Beta (commit 319dfaa3).
 - Attempted to locate stacktrace.txt for ad-related Pro crash; file not present in repo root.
 
+
+2025-12-24
+- Added Emergency Map feature: Android map screen (MapView + list + clear) wired from emergency banner and Alert History; new EmergencyLocationRepository records outgoing emergency locations and inbound emergency SMS locations into Firestore users/{uid}/emergencyLocations; Firestore rules updated to allow access.
+- Web Emergency Map now reads users/{uid}/emergencyLocations, supports clearing entries, and map list styling updated. Map API keys now load from local properties (.env.local on web, local.properties on Android).
+
