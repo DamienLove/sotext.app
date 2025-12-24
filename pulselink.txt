@@ -361,3 +361,7 @@ Current ad behavior in app:
 2025-12-24
 - Fixed SmsInboxScreen line picker build errors (Material3 dropdown imports, cleaned splitDisplay) and SmsInboxViewModel combine for 6 flows.
 - Rebuilt v75 AABs (free/pro/premium) and copied to disposable_aabs/pulselink-{free|pro|premium}-v75.aab; release notes saved at disposable_aabs/release-notes-v75.txt.
+2025-12-24
+- Crashlytics premium v75 crash traced to Firestore PERMISSION_DENIED on users/{uid}/lines/devices writes; deployed Firestore rules update to allow lines/devices.
+- Hardened SmsLineRepository and SmsOutboxService to catch Firestore write failures instead of crashing.
+- Release v76 (free/pro/premium): versionCode/Name bumped to 76; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v76.aab; release notes saved at disposable_aabs/release-notes-v76.txt.
