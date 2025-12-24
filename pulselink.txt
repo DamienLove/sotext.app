@@ -274,3 +274,12 @@ Current ad behavior in app:
 
 2025-12-23
 - Release v68 (free/pro/premium): versionCode/Name bumped to 68; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v68.aab; release notes saved at disposable_aabs/release-notes-v68.txt.
+
+2025-12-23
+- Verified allowRemoteOverride defaults to true for new contacts (Contact model default + sync defaults + migration 13_14 sets existing false values to true); no code changes yet.
+
+2025-12-23
+- Added Maps SDK key wiring (mapsApiKey from local.properties or env -> resValue google_maps_key) and manifest meta-data; stored local key in local.properties.
+
+2025-12-23
+- Web portal: added Emergency Map panel that parses synced SMS alert locations, loads Google Maps when VITE_GOOGLE_MAPS_API_KEY is set, and added UI filters + map list.

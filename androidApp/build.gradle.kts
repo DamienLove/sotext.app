@@ -45,7 +45,21 @@ val keystoreProperties = Properties().apply {
     }
 }
 
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties().apply {
+    if (localPropertiesFile.exists()) {
+        load(localPropertiesFile.inputStream())
+    }
+}
+
 val defaultKeystoreFile = rootProject.file("upload-keystore.jks")
+
+// Optional Maps SDK key (keep out of VCS).
+val mapsApiKey = optionalProperty("mapsApiKey")
+    ?: localProperties.optional("mapsApiKey")
+    ?: System.getenv("MAPS_API_KEY")
+    ?: System.getenv("GOOGLE_MAPS_API_KEY")
+    ?: ""
 
 // Optional Numlookup API key (keep out of VCS).
 val numlookupApiKey = optionalProperty("numlookupApiKey")
@@ -199,6 +213,8 @@ android {
         versionName = "68"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        resValue("string", "google_maps_key", mapsApiKey)
 
         buildConfigField("String", "NUMLOOKUP_API_BASE", "\"https://api.numlookupapi.com/v1\"")
         buildConfigField("String", "NUMLOOKUP_API_KEY", "\"$escapedNumlookupApiKey\"")

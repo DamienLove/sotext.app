@@ -630,6 +630,151 @@
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
+.map-panel {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.map-filter {
+  min-width: 160px;
+}
+
+.map-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.map-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(14, 19, 32, 0.8);
+  min-height: 360px;
+}
+
+.map-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+}
+
+.map-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: rgba(7, 10, 18, 0.85);
+  color: var(--ink);
+}
+
+.map-fallback-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.map-status {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(7, 10, 18, 0.75);
+  border: 1px solid var(--border);
+  font-size: 0.82em;
+}
+
+.map-status-text {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+.map-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.map-item {
+  border: 1px solid var(--border);
+  background: rgba(15, 20, 34, 0.6);
+  border-radius: 14px;
+  padding: 12px;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.map-item:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.map-item.active {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-soft);
+}
+
+.map-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.map-item-title {
+  font-weight: 600;
+  font-size: 0.98em;
+}
+
+.map-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: #0b0e16;
+}
+
+.map-item-meta {
+  font-size: 0.8em;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.map-item-snippet {
+  font-size: 0.82em;
+  color: var(--ink);
+  opacity: 0.8;
+  margin-top: 6px;
+}
+
+.map-empty {
+  padding: 16px;
+  font-size: 0.9em;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  text-align: center;
+}
+
 @keyframes riseIn {
   from {
     opacity: 0;
@@ -662,5 +807,13 @@
 
   .main-content {
     min-height: 60vh;
+  }
+
+  .map-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .map-list {
+    max-height: none;
   }
 }

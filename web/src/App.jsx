@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -20,6 +20,7 @@ import {
   setDoc,
   deleteDoc,
   getDocs,
+  limit,
   writeBatch
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
@@ -321,6 +322,76 @@ const buildContactDocId = (contact) => {
   return contact.displayName.trim().toLowerCase().replace(/\s+/g, '_') || `contact_${Date.now()}`;
 };
 
+const MAPS_LINK_RE = /https?:\/\/maps\.google\.com\/\?q=([-\\d.]+),([-\\d.]+)/i;
+
+const classifyAlertSeverity = (body = '') => {
+  const normalized = body.toUpperCase();
+  if (normalized.includes('PULSELINK EMERGENCY')) return 'emergency';
+  if (normalized.includes("I'M SAFE") || normalized.includes('CHECK-IN') || normalized.includes('CHECK IN')) {
+    return 'check_in';
+  }
+  return 'non_urgent';
+};
+
+const extractAlertLocation = (body) => {
+  if (!body || !body.includes('PulseLink')) return null;
+  const match = body.match(MAPS_LINK_RE);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lng = Number(match[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return {
+    lat,
+    lng,
+    severity: classifyAlertSeverity(body)
+  };
+};
+
+const alertBadgeCopy = {
+  emergency: 'Emergency',
+  check_in: 'Check-in',
+  non_urgent: 'Alert'
+};
+
+const alertBadgeColor = {
+  emergency: '#f43f5e',
+  check_in: '#22c55e',
+  non_urgent: '#60a5fa'
+};
+
+const buildAlertSnippet = (body = '') => {
+  const firstLine = body.split('\n')[0] ?? '';
+  if (firstLine.length <= 88) return firstLine;
+  return `${firstLine.slice(0, 85)}...`;
+};
+
+const loadGoogleMaps = (() => {
+  let loaderPromise;
+  return (apiKey) => {
+    if (typeof window === 'undefined') {
+      return Promise.reject(new Error('Maps unavailable in this environment.'));
+    }
+    if (!apiKey) {
+      return Promise.reject(new Error('Maps API key missing.'));
+    }
+    if (window.google?.maps) {
+      return Promise.resolve(window.google.maps);
+    }
+    if (!loaderPromise) {
+      loaderPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly`;
+        script.async = true;
+        script.defer = true;
+        script.onload = () => resolve(window.google.maps);
+        script.onerror = () => reject(new Error('Failed to load Google Maps.'));
+        document.head.appendChild(script);
+      });
+    }
+    return loaderPromise;
+  };
+})();
+
 function App() {
   const [user, setUser] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -364,12 +435,32 @@ function App() {
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
+  const [alertLocations, setAlertLocations] = useState([]);
+  const [alertStatus, setAlertStatus] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('emergency');
+  const [incomingOnly, setIncomingOnly] = useState(true);
+  const [selectedAlertId, setSelectedAlertId] = useState(null);
+  const [mapStatus, setMapStatus] = useState('');
   const [settingsStatus, setSettingsStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const messagesEndRef = useRef(null);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const mapMarkersRef = useRef(new Map());
+  const mapInfoRef = useRef(null);
+  const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
+  const filteredAlerts = useMemo(() => {
+    return alertLocations.filter((alert) => {
+      if (incomingOnly && !alert.incoming) return false;
+      if (severityFilter === 'emergency') return alert.severity === 'emergency';
+      if (severityFilter === 'check_in') return alert.severity === 'check_in';
+      if (severityFilter === 'non_urgent') return alert.severity === 'non_urgent';
+      return true;
+    });
+  }, [alertLocations, incomingOnly, severityFilter]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -482,6 +573,154 @@ function App() {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages, autoScroll]);
+
+  const fetchAlertLocations = useCallback(async () => {
+    if (!user) return;
+    if (!threads.length) {
+      setAlertLocations([]);
+      setAlertStatus('No synced messages yet.');
+      return;
+    }
+    setAlertStatus('Loading alert locations...');
+    try {
+      const results = await Promise.all(
+        threads.map(async (thread) => {
+          const messagesRef = collection(db, "users", user.uid, "synced_threads", thread.id, "messages");
+          const q = query(messagesRef, orderBy("date", "desc"), limit(50));
+          const snapshot = await getDocs(q);
+          const alerts = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const body = data.body ?? '';
+            const location = extractAlertLocation(body);
+            if (!location) return;
+            alerts.push({
+              id: `${thread.id}-${docSnap.id}`,
+              threadId: thread.id,
+              address: thread.address ?? 'Unknown sender',
+              body,
+              date: data.date ?? 0,
+              incoming: data.type === 1,
+              ...location
+            });
+          });
+          return alerts;
+        })
+      );
+      const merged = results.flat().sort((a, b) => b.date - a.date);
+      setAlertLocations(merged);
+      setAlertStatus(merged.length ? '' : 'No alert locations found yet.');
+    } catch (error) {
+      console.error('Failed to load alert locations', error);
+      setAlertStatus(error?.message ?? 'Unable to load alert locations.');
+    }
+  }, [user, threads]);
+
+  useEffect(() => {
+    if (activePanel === 'map') {
+      fetchAlertLocations();
+    }
+  }, [activePanel, fetchAlertLocations]);
+
+  useEffect(() => {
+    if (activePanel !== 'map') return;
+    if (!mapsApiKey) {
+      setMapStatus('Add VITE_GOOGLE_MAPS_API_KEY to load the map.');
+      return;
+    }
+    setMapStatus('');
+    let cancelled = false;
+    loadGoogleMaps(mapsApiKey)
+      .then(() => {
+        if (cancelled) return;
+        if (!mapInstanceRef.current && mapRef.current) {
+          mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+            center: { lat: 39.5, lng: -98.35 },
+            zoom: 3,
+            mapTypeControl: false,
+            fullscreenControl: false,
+            streetViewControl: false
+          });
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setMapStatus(error?.message ?? 'Map failed to load.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activePanel, mapsApiKey]);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.google?.maps) return;
+    mapMarkersRef.current.forEach((marker) => marker.setMap(null));
+    mapMarkersRef.current.clear();
+
+    if (!filteredAlerts.length) {
+      mapInstanceRef.current.setCenter({ lat: 39.5, lng: -98.35 });
+      mapInstanceRef.current.setZoom(3);
+      return;
+    }
+
+    const bounds = new window.google.maps.LatLngBounds();
+    filteredAlerts.forEach((alert) => {
+      const color = alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent;
+      const marker = new window.google.maps.Marker({
+        position: { lat: alert.lat, lng: alert.lng },
+        map: mapInstanceRef.current,
+        title: `${alertBadgeCopy[alert.severity] ?? 'Alert'} from ${alert.address}`,
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          fillColor: color,
+          fillOpacity: 0.9,
+          strokeColor: '#0b0e16',
+          strokeWeight: 2,
+          scale: 8
+        }
+      });
+      marker.addListener('click', () => {
+        if (!mapInfoRef.current) {
+          mapInfoRef.current = new window.google.maps.InfoWindow();
+        }
+        mapInfoRef.current.setContent(
+          `<div style="font-family: sans-serif; max-width: 220px;">
+            <strong>${alertBadgeCopy[alert.severity] ?? 'Alert'}</strong><br/>
+            ${alert.address}<br/>
+            <span style="font-size: 12px;">${new Date(alert.date).toLocaleString()}</span>
+          </div>`
+        );
+        mapInfoRef.current.open(mapInstanceRef.current, marker);
+      });
+      mapMarkersRef.current.set(alert.id, marker);
+      bounds.extend({ lat: alert.lat, lng: alert.lng });
+    });
+    mapInstanceRef.current.fitBounds(bounds);
+  }, [filteredAlerts]);
+
+  const handleAlertFocus = (alert) => {
+    setSelectedAlertId(alert.id);
+    if (!mapInstanceRef.current || !window.google?.maps) return;
+    const marker = mapMarkersRef.current.get(alert.id);
+    if (marker) {
+      mapInstanceRef.current.panTo(marker.getPosition());
+      mapInstanceRef.current.setZoom(13);
+      if (!mapInfoRef.current) {
+        mapInfoRef.current = new window.google.maps.InfoWindow();
+      }
+      mapInfoRef.current.setContent(
+        `<div style="font-family: sans-serif; max-width: 220px;">
+          <strong>${alertBadgeCopy[alert.severity] ?? 'Alert'}</strong><br/>
+          ${alert.address}<br/>
+          <span style="font-size: 12px;">${new Date(alert.date).toLocaleString()}</span>
+        </div>`
+      );
+      mapInfoRef.current.open(mapInstanceRef.current, marker);
+    } else {
+      mapInstanceRef.current.panTo({ lat: alert.lat, lng: alert.lng });
+      mapInstanceRef.current.setZoom(13);
+    }
+  };
 
   const handleLogin = async () => {
     setIsLoggingIn(true);
@@ -896,6 +1135,12 @@ function App() {
               Beacon Inbox
             </button>
             <button
+              className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+              onClick={() => setActivePanel('map')}
+            >
+              Emergency Map
+            </button>
+            <button
               className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
               onClick={() => setActivePanel('pulselink')}
             >
@@ -948,6 +1193,13 @@ function App() {
                   </div>
                   <h3>Beacon Inbox</h3>
                   <p>View SMS synced from your phone.</p>
+                </button>
+                <button className="home-card" onClick={() => setActivePanel('map')}>
+                  <div className="home-icon pulselink">
+                    <img src={logo} alt="PulseLink map" />
+                  </div>
+                  <h3>Emergency Map</h3>
+                  <p>Track shared locations from PulseLink alerts.</p>
                 </button>
               </div>
             </div>
@@ -1116,6 +1368,78 @@ function App() {
                     </button>
                   </div>
                   {contactStatus && <div className="settings-status">{contactStatus}</div>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'map' && (
+            <div className="map-panel">
+              <div className="panel-header">
+                <h3>Emergency map</h3>
+                <p>Locations parsed from PulseLink alert messages synced to this account.</p>
+              </div>
+              <div className="map-controls">
+                <button className="secondary-btn" onClick={fetchAlertLocations}>
+                  Refresh
+                </button>
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={incomingOnly}
+                    onChange={(e) => setIncomingOnly(e.target.checked)}
+                  />
+                  Incoming only
+                </label>
+                <label className="login-field map-filter">
+                  Alert type
+                  <select
+                    className="login-input"
+                    value={severityFilter}
+                    onChange={(e) => setSeverityFilter(e.target.value)}
+                  >
+                    <option value="emergency">Emergency</option>
+                    <option value="check_in">Check-in</option>
+                    <option value="non_urgent">Other</option>
+                    <option value="all">All</option>
+                  </select>
+                </label>
+                {alertStatus && <div className="map-status-text">{alertStatus}</div>}
+              </div>
+              <div className="map-grid">
+                <div className="map-card">
+                  <div className="map-canvas" ref={mapRef} />
+                  {!mapsApiKey && (
+                    <div className="map-fallback">
+                      <div className="map-fallback-title">Maps key required</div>
+                      <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env to load the map view.</p>
+                    </div>
+                  )}
+                  {mapStatus && <div className="map-status">{mapStatus}</div>}
+                </div>
+                <div className="map-list">
+                  {filteredAlerts.map((alert) => (
+                    <button
+                      key={alert.id}
+                      className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
+                      onClick={() => handleAlertFocus(alert)}
+                    >
+                      <div className="map-item-header">
+                        <div className="map-item-title">{alert.address}</div>
+                        <span
+                          className="map-badge"
+                          style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+                        >
+                          {alertBadgeCopy[alert.severity] ?? 'Alert'}
+                        </span>
+                      </div>
+                      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+                      <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+                    </button>
+                  ))}
+                  {filteredAlerts.length === 0 && (
+                    <div className="map-empty">No alert locations yet.</div>
+                  )}
                 </div>
               </div>
             </div>
