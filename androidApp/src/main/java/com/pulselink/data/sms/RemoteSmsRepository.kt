@@ -15,48 +15,61 @@ class RemoteSmsRepository @Inject constructor(
     private val auth: FirebaseAuth
 ) {
     fun observeThreads(lineIds: List<String>): Flow<List<SmsThreadItem>> = callbackFlow {
-        val user = auth.currentUser
-        if (user == null) {
-            trySend(emptyList())
-            close()
-            return@callbackFlow
-        }
         if (lineIds.isEmpty()) {
             trySend(emptyList())
             close()
             return@callbackFlow
         }
-        val userRef = firestore.collection("users").document(user.uid)
         val snapshotsByLine = mutableMapOf<String, List<SmsThreadItem>>()
         val listeners = mutableListOf<ListenerRegistration>()
 
-        lineIds.forEach { lineId ->
-            val ref = userRef.collection("lines").document(lineId).collection("threads")
-            val listener = ref.addSnapshotListener { snapshot, _ ->
-                val threads = snapshot?.documents?.mapNotNull { doc ->
-                    val threadId = doc.id.toLongOrNull() ?: return@mapNotNull null
-                    val address = doc.getString("address") ?: return@mapNotNull null
-                    SmsThreadItem(
-                        threadId = threadId,
-                        address = address,
-                        snippet = doc.getString("snippet").orEmpty(),
-                        timestamp = doc.getLong("date") ?: 0L,
-                        unread = doc.getBoolean("unread") == true,
-                        isPrivate = doc.getBoolean("isPrivate") == true,
-                        isFavorite = doc.getBoolean("isFavorite") == true,
-                        isTrusted = doc.getBoolean("isTrusted") == true,
-                        lineId = lineId
-                    )
-                } ?: emptyList()
-                snapshotsByLine[lineId] = threads
-                val merged = snapshotsByLine.values.flatten()
-                    .sortedByDescending { it.timestamp }
-                trySend(merged)
-            }
-            listeners.add(listener)
+        fun clearListeners() {
+            listeners.forEach { it.remove() }
+            listeners.clear()
+            snapshotsByLine.clear()
         }
 
-        awaitClose { listeners.forEach { it.remove() } }
+        val authListener = FirebaseAuth.AuthStateListener { state ->
+            clearListeners()
+            val user = state.currentUser
+            if (user == null) {
+                trySend(emptyList())
+                return@AuthStateListener
+            }
+            val userRef = firestore.collection("users").document(user.uid)
+            lineIds.forEach { lineId ->
+                val ref = userRef.collection("lines").document(lineId).collection("threads")
+                val listener = ref.addSnapshotListener { snapshot, _ ->
+                    val threads = snapshot?.documents?.mapNotNull { doc ->
+                        val threadId = doc.id.toLongOrNull() ?: return@mapNotNull null
+                        val address = doc.getString("address") ?: return@mapNotNull null
+                        SmsThreadItem(
+                            threadId = threadId,
+                            address = address,
+                            snippet = doc.getString("snippet").orEmpty(),
+                            timestamp = doc.getLong("date") ?: 0L,
+                            unread = doc.getBoolean("unread") == true,
+                            isPrivate = doc.getBoolean("isPrivate") == true,
+                            isFavorite = doc.getBoolean("isFavorite") == true,
+                            isTrusted = doc.getBoolean("isTrusted") == true,
+                            lineId = lineId
+                        )
+                    } ?: emptyList()
+                    snapshotsByLine[lineId] = threads
+                    val merged = snapshotsByLine.values.flatten()
+                        .sortedByDescending { it.timestamp }
+                    trySend(merged)
+                }
+                listeners.add(listener)
+            }
+        }
+        auth.addAuthStateListener(authListener)
+        authListener.onAuthStateChanged(auth)
+
+        awaitClose {
+            clearListeners()
+            auth.removeAuthStateListener(authListener)
+        }
     }
 
     fun observeMessages(lineId: String, threadId: Long): Flow<List<SmsMessageItem>> = callbackFlow {
