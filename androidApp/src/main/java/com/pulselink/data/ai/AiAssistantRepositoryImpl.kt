@@ -1,10 +1,12 @@
 package com.pulselink.data.ai
 
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.functions.FirebaseFunctionsException
 import com.pulselink.auth.FirebaseAuthManager
 import com.pulselink.domain.model.MessageUrgency
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.util.Log
 import kotlinx.coroutines.tasks.await
 
 @Singleton
@@ -56,7 +58,30 @@ class AiAssistantRepositoryImpl @Inject constructor(
 
     @Suppress("UNCHECKED_CAST")
     private suspend fun callFunction(name: String, payload: Map<String, Any?>): Map<String, Any?> {
-        val result = functions.getHttpsCallable(name).call(payload).await()
-        return result.data as? Map<String, Any?> ?: emptyMap()
+        return try {
+            val result = functions.getHttpsCallable(name).call(payload).await()
+            result.data as? Map<String, Any?> ?: emptyMap()
+        } catch (error: FirebaseFunctionsException) {
+            Log.w(TAG, "AI function $name failed code=${error.code}", error)
+            val message = when (error.code) {
+                FirebaseFunctionsException.Code.UNAUTHENTICATED ->
+                    "Sign in to use AI features."
+                FirebaseFunctionsException.Code.PERMISSION_DENIED ->
+                    "AI access denied for this account."
+                FirebaseFunctionsException.Code.NOT_FOUND,
+                FirebaseFunctionsException.Code.UNIMPLEMENTED ->
+                    "AI backend not deployed yet."
+                FirebaseFunctionsException.Code.UNAVAILABLE ->
+                    "AI service unavailable. Try again shortly."
+                FirebaseFunctionsException.Code.DEADLINE_EXCEEDED ->
+                    "AI timed out. Try again."
+                else -> "AI request failed."
+            }
+            throw IllegalStateException(message, error)
+        }
+    }
+
+    companion object {
+        private const val TAG = "AiAssistantRepository"
     }
 }

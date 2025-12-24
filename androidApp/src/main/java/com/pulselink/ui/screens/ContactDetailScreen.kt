@@ -80,6 +80,8 @@ fun ContactDetailScreen(
     onToggleLocation: (Boolean) -> Unit,
     onToggleCamera: (Boolean) -> Unit,
     onToggleAutoCall: (Boolean) -> Unit,
+    onToggleFavorite: (Boolean) -> Unit,
+    onTogglePrivate: (Boolean) -> Unit,
     onToggleRemoteOverride: (Boolean) -> Unit,
     onToggleRemoteSound: (Boolean) -> Unit,
     onSendLink: () -> Unit,
@@ -166,6 +168,8 @@ fun ContactDetailScreen(
                     onToggleLocation = onToggleLocation,
                     onToggleCamera = onToggleCamera,
                     onToggleAutoCall = onToggleAutoCall,
+                    onToggleFavorite = onToggleFavorite,
+                    onTogglePrivate = onTogglePrivate,
                     onEditEmergencyAlert = onEditEmergencyAlert,
                     onEditCheckInAlert = onEditCheckInAlert,
                     onToggleRemoteOverride = onToggleRemoteOverride,
@@ -305,6 +309,8 @@ private fun SettingsCard(
     onToggleLocation: (Boolean) -> Unit,
     onToggleCamera: (Boolean) -> Unit,
     onToggleAutoCall: (Boolean) -> Unit,
+    onToggleFavorite: (Boolean) -> Unit,
+    onTogglePrivate: (Boolean) -> Unit,
     onEditEmergencyAlert: () -> Unit,
     onEditCheckInAlert: () -> Unit,
     onToggleRemoteOverride: (Boolean) -> Unit,
@@ -314,6 +320,18 @@ private fun SettingsCard(
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(text = "Contact settings", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+            ToggleRow(
+                title = "Favorite contact",
+                subtitle = "Show in Favorites tab",
+                checked = contact.isFavorite,
+                onCheckedChange = onToggleFavorite
+            )
+            ToggleRow(
+                title = "Private contact",
+                subtitle = "Show only in Private tab",
+                checked = contact.isPrivate,
+                onCheckedChange = onTogglePrivate
+            )
             ToggleRow(title = "Location share", subtitle = "Include GPS when alerting", checked = contact.includeLocation, onCheckedChange = onToggleLocation)
             ActionRow(title = "Emergency alert tone", subtitle = contact.emergencySoundKey ?: "Default", onClick = onEditEmergencyAlert)
             ActionRow(title = "Check-in alert tone", subtitle = contact.checkInSoundKey ?: "Default", onClick = onEditCheckInAlert)

@@ -383,3 +383,87 @@ Current ad behavior in app:
 2025-12-24
 - Deployed updated web Emergency Map UX to Firebase Hosting (pulselink-24899) after rebuild.
 
+2025-12-24
+- Attempted to access Thamara DNS panel at https://damiennichols.com:8443 for pulselink.damiennichols.com; Playwright blocked by ERR_CERT_COMMON_NAME_INVALID (need correct hostname/cert or alternate URL).
+- Hosting site default domain: pulselink-24899.web.app (from firebase hosting:sites:list).
+- Pending: add required DNS records once Firebase custom domain verification values are confirmed.
+
+
+2025-12-24
+- Pulled Firebase Hosting required DNS for pulselink.damiennichols.com via Hosting API: add CNAME to pulselink-24899.web.app, add TXT _acme-challenge value QnS-E_VBaglgPikHmp7OjWGJZTzeSgouHajIu2CBGSU, remove A 213.239.220.209. Current custom domain state = HOST_MISMATCH.
+
+
+2025-12-24
+- Inbox performance: SmsRepository now uses a 2-query Threads+Sms scan (no per-thread queries), caches thread lists for 20s with invalidation on changes, and caches contact lookups; SmsInboxViewModel refresh runs on IO, debounced, and uses listThreadsAndArchived to avoid double queries; SmsThreadViewModel message loads + sends moved to IO for faster UI.
+
+
+2025-12-24
+- Thamara DNS (pulselink.damiennichols.com) updated for Firebase Hosting: apex A records set to 199.36.158.100/101/102/103; _acme-challenge TXT set to QnS-E_VBaglgPikHmp7OjWGJZTzeSgouHajIu2CBGSU; existing MX/NS/SPF/CNAME/mail/etc untouched. Applied via DNS Update in Plesk.
+
+
+2025-12-24
+- SmsRepository threads-path now resolves canonical addresses (with cache + fallback) and skips PulseLink payload snippets; fixed Threads cursor limit condition.
+- Added VIBRATE permission to androidApp and beaconApp manifests for message notification vibration.
+
+2025-12-24
+- Billing: bumped billing-ktx to 8.2.1; updated SubscriptionManager to use PendingPurchasesParams + QueryProductDetailsResult.productDetailsList.
+- compileFreeDebugKotlin fails in kapt due to unresolved RemoteSmsRepository/AiAssistantRepository/EmergencyLocationRepository (pre-existing project issue).
+
+2025-12-24
+- AI: FirebaseAuthManager.ensureSignedIn now attempts anonymous sign-in; AI functions map FirebaseFunctions errors to friendly messages (unauth/auth/undeployed/timeout).
+
+2025-12-24
+- AI: removed unused GOOGLE_GENAI_API_KEY secret requirement in functions/ai.ts; deployed summarizeSmsThread/composeSmsAssist/classifySmsUrgency (deploy timed out but functions now listed).
+- Themes: added ThemePreferences backgroundImageUrl + iconOverrides, ThemeIcon helper, background image support in SmsInbox/SmsThread, and icon override inputs in VisualSettingsScreen; added new theme presets.
+- Theme gallery: added themes_public/themes_submissions rules, and web Theme Gallery panel with publish/import + search + icon/background fields; added extra theme presets and theme editor fields.
+
+2025-12-24
+- AI reliability: FirebaseAuthManager now signs in anonymously when needed; AI Functions errors mapped to friendly messages.
+- Themes: added backgroundImageUrl + iconOverrides, ThemeIcon helper, updated inbox/thread + VisualSettings; web Theme Gallery with publish/import + Firestore rules for themes_public/themes_submissions.
+- Billing: updated billing-ktx to 8.2.1 (PendingPurchasesParams + QueryProductDetailsResult).
+- Inbox performance: canonical address caching + reduced SMS scans; added VIBRATE permission for message notifications.
+- Release v79 (free/pro/premium): bundles rebuilt and copied to disposable_aabs/pulselink-{free|pro|premium}-v79.aab; release notes at disposable_aabs/release-notes-v79.txt.
+
+2025-12-24
+- Rebuilt web/dist and deployed Firebase Hosting (pulselink-24899) with Theme Gallery updates; Hosting URL: https://pulselink-24899.web.app
+
+2025-12-24
+- Investigated pulselink.damiennichols.com outage: pulselink-24899.web.app returns 200; pulselink.damiennichols.com returns 404 (Firebase edge), so domain resolves to Firebase but is not mapped/verified.
+- DNS check: 1.1.1.1 shows A records -> 199.36.158.100/101/102/103; no CNAME found; TXT on subdomain is SPF. Local resolver sometimes shows only SOA/TXT.
+- Likely fix: attach/verify custom domain in Firebase Hosting for site pulselink-24899 and add required TXT _acme-challenge + CNAME (or keep A records) in DNS.
+
+2025-12-24
+- Firebase Hosting custom domain status for pulselink.damiennichols.com: hostState=HOST_MISMATCH, ownershipState=OWNERSHIP_MISSING. Required DNS: add CNAME pulselink.damiennichols.com -> pulselink-24899.web.app; add TXT _acme-challenge.pulselink.damiennichols.com = QnS-E_VBaglgPikHmp7OjWGJZTzeSgouHajIu2CBGSU; remove existing A records 199.36.158.100/101/102/103.
+- DNS check via 1.1.1.1 shows _acme-challenge TXT missing; A records still present; hence 404 at custom domain though web.app works.
+
+2025-12-24
+- DNS finding: pulselink.damiennichols.com is delegated as its own zone (NS records at that label). Zone apex cannot host a CNAME, which blocks Firebase Hosting verification. Need to remove subdomain delegation/zone to allow CNAME at pulselink, or use a different host (e.g., app.pulselink.damiennichols.com) for Firebase while keeping mail/MX at pulselink.
+
+2025-12-24
+- DNS now shows CNAME pulselink.damiennichols.com -> pulselink-24899.web.app and _acme-challenge TXT present (authoritative ns1.thamara.cloud + public resolvers). Firebase Hosting still reports DOMAIN_VERIFICATION_LOST / DNS_PARTIAL_MATCH (likely DNS cache lag); custom domain still 404 until Firebase rechecks.
+
+2025-12-24
+- After DNS change, public resolvers show CNAME pulselink.damiennichols.com -> pulselink-24899.web.app and _acme-challenge TXT OK, but Firebase Hosting still reports HOST_CONFLICT/OWNERSHIP_MISSING (seeing old A/TXT) and domain shows Firebase 'site not found' placeholder; likely awaiting Firebase DNS cache recheck or manual re-verify.
+
+2025-12-24
+- Forced Firebase Hosting re-verify by deleting and recreating custom domain pulselink.damiennichols.com. DNS now shows CNAME -> pulselink-24899.web.app and _acme-challenge TXT OK, but Firebase still reports HOST_MISMATCH/OWNERSHIP_MISSING (likely resolver cache lag).
+
+2025-12-24
+- Created Firebase Hosting custom domain app.damiennichols.com (site pulselink-24899). Required DNS: add CNAME app -> pulselink-24899.web.app. DNS currently NXDOMAIN until record added.
+
+2025-12-24
+- app.damiennichols.com custom domain created and verified (HOST_ACTIVE/OWNERSHIP_ACTIVE). DNS shows CNAME app -> pulselink-24899.web.app; HTTPS responds 200 (cert still provisioning in some clients).
+
+2025-12-24
+- EmergencyPopupActivity biometric cancel flow hardened: added canAuthenticate precheck with toast + fallback confirmation dialog for no hardware/none enrolled, added proper error handling/toasts/logging, switched prompt to string resources and allowed authenticators (device credential fallback on API 30+). Added cancel_emergency_fallback_message string.
+
+2025-12-24
+- SMS inbox: keep cached threads when refresh returns empty; All filter hides OTP; refresh now reacts to contact updates; contact detail adds Favorite/Private toggles to drive tabs.
+- Beacon inbox UI: large beacon icon in expanded header + small themed icon when collapsed.
+- Help/FAQ: updated help copy, web portal URL, premium highlights, and FAQ version item.
+
+2025-12-24
+- iOS build failure: ContentView.swift referenced isPro in HomeTab without scope; passed isPro into HomeTab to fix compile error.
+
+2025-12-24
+- Release v80: versionCode/Name bumped to 80; built free/pro/premium AABs and copied to disposable_aabs/pulselink-{free|pro|premium}-v80.aab; release notes at disposable_aabs/release-notes-v80.txt.\n- iOS build fix: ContentView passes isPro into HomeTab to resolve scope error.

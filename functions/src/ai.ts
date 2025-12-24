@@ -2,9 +2,6 @@
 import {genkit, z} from "genkit";
 import {vertexAI, gemini15Flash} from "@genkit-ai/vertexai";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {defineSecret} from "firebase-functions/params";
-
-const apiKey = defineSecret("GOOGLE_GENAI_API_KEY");
 
 const ai = genkit({
   plugins: [
@@ -149,9 +146,7 @@ Return JSON: {"urgency":"standard|urgent|emergency","confidence":0.0-1.0}
   return structuredOutput;
 });
 
-export const summarizeSmsThread = onCall({
-  secrets: [apiKey],
-}, async (request) => {
+export const summarizeSmsThread = onCall({}, async (request) => {
   if (!request.auth) {
     throw new HttpsError(
       "unauthenticated",
@@ -161,9 +156,7 @@ export const summarizeSmsThread = onCall({
   return await summarizeSmsThreadFlow.run(request.data);
 });
 
-export const composeSmsAssist = onCall({
-  secrets: [apiKey],
-}, async (request) => {
+export const composeSmsAssist = onCall({}, async (request) => {
   if (!request.auth) {
     throw new HttpsError(
       "unauthenticated",
@@ -173,9 +166,7 @@ export const composeSmsAssist = onCall({
   return await composeSmsAssistFlow.run(request.data);
 });
 
-export const classifySmsUrgency = onCall({
-  secrets: [apiKey],
-}, async (request) => {
+export const classifySmsUrgency = onCall({}, async (request) => {
   if (!request.auth) {
     throw new HttpsError(
       "unauthenticated",

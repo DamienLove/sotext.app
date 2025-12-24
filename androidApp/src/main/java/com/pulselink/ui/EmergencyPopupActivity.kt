@@ -6,8 +6,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.util.Log
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
@@ -20,7 +21,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,7 +34,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import com.pulselink.R
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.service.AlertRouter
 import com.pulselink.ui.theme.PulseLinkTheme
@@ -108,6 +110,12 @@ class EmergencyPopupActivity : AppCompatActivity() {
     }
 
     private fun authenticateAndCancel() {
+        val biometricResult = BiometricManager.from(this)
+            .canAuthenticate(CANCEL_EMERGENCY_AUTHENTICATORS)
+        if (biometricResult != BiometricManager.BIOMETRIC_SUCCESS) {
+            handleBiometricUnavailable(biometricResult)
+            return
+        }
         val executor = ContextCompat.getMainExecutor(this)
         val biometricPrompt = BiometricPrompt(this, executor,
             object : BiometricPrompt.AuthenticationCallback() {
@@ -115,19 +123,68 @@ class EmergencyPopupActivity : AppCompatActivity() {
                     super.onAuthenticationSucceeded(result)
                     cancelEmergency()
                 }
-                
+
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                     // Handle error (optional toast)
+                    if (
+                        errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
+                        errorCode == BiometricPrompt.ERROR_CANCELED ||
+                        errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON
+                    ) {
+                        return
+                    }
+                    Log.w(TAG, "Biometric auth error $errorCode: $errString")
+                    val message = errString.takeIf { it.isNotBlank() }?.toString()
+                        ?: getString(R.string.cancel_emergency_failure)
+                    Toast.makeText(this@EmergencyPopupActivity, message, Toast.LENGTH_LONG).show()
+                }
+
+                override fun onAuthenticationFailed() {
+                    Toast.makeText(
+                        this@EmergencyPopupActivity,
+                        getString(R.string.cancel_emergency_failure),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             })
 
-        val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Cancel Emergency Alert")
-            .setSubtitle("Confirm it's you to cancel")
-            .setNegativeButtonText("Use PIN") // Fallback
-            .build()
+        val promptInfoBuilder = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(getString(R.string.cancel_emergency_prompt_title))
+            .setSubtitle(getString(R.string.cancel_emergency_prompt_subtitle))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            promptInfoBuilder.setAllowedAuthenticators(CANCEL_EMERGENCY_AUTHENTICATORS)
+        } else {
+            promptInfoBuilder.setNegativeButtonText(getString(android.R.string.cancel))
+        }
+        val promptInfo = promptInfoBuilder.build()
 
         biometricPrompt.authenticate(promptInfo)
+    }
+
+    private fun handleBiometricUnavailable(biometricResult: Int) {
+        Toast.makeText(
+            this,
+            getString(R.string.cancel_emergency_biometric_unavailable),
+            Toast.LENGTH_LONG
+        ).show()
+        if (
+            biometricResult == BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE ||
+            biometricResult == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED
+        ) {
+            showCancelEmergencyFallbackDialog()
+        } else {
+            Log.w(TAG, "Biometric unavailable: $biometricResult")
+        }
+    }
+
+    private fun showCancelEmergencyFallbackDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.cancel_emergency_prompt_title))
+            .setMessage(getString(R.string.cancel_emergency_fallback_message))
+            .setPositiveButton(getString(R.string.cancel_emergency_button)) { _, _ ->
+                cancelEmergency()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun cancelEmergency() {
@@ -151,6 +208,10 @@ class EmergencyPopupActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_CONTACT_NAME = "extra_contact_name"
         private const val EXTRA_ESCALATION_TIER = "extra_escalation_tier"
+        private const val TAG = "EmergencyPopupActivity"
+        private const val CANCEL_EMERGENCY_AUTHENTICATORS =
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
         fun newIntent(context: Context, contactName: String, tier: String): Intent {
             return Intent(context, EmergencyPopupActivity::class.java).apply {

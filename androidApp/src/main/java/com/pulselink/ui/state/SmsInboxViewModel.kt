@@ -26,6 +26,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -48,7 +49,8 @@ class SmsInboxViewModel @Inject constructor(
     private val smsRepository: SmsRepository,
     private val remoteSmsRepository: RemoteSmsRepository,
     private val smsLineRepository: SmsLineRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val contactRepository: ContactRepository
 ) : ViewModel() {
     private companion object {
         const val THREAD_LIMIT = Int.MAX_VALUE
@@ -69,16 +71,34 @@ class SmsInboxViewModel @Inject constructor(
     private val _inboxMode = MutableStateFlow(LineInboxMode.COMBINED)
     val inboxMode: StateFlow<LineInboxMode> = _inboxMode
     private val deviceLineId = MutableStateFlow("")
+    private var refreshJob: Job? = null
+    private var lastRefreshAt = 0L
 
-    fun refresh() {
-        viewModelScope.launch {
+    fun refresh(force: Boolean = false) {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            if (!force && now - lastRefreshAt < 1500L) return@launch
+            lastRefreshAt = now
             val deviceId = deviceLineId.value.ifBlank {
                 settingsRepository.ensureDeviceId().also { deviceLineId.value = it }
             }
-            localThreads.value = smsRepository.listThreads(limit = THREAD_LIMIT)
-                .map { it.copy(lineId = deviceId) }
-            localArchived.value = smsRepository.listArchivedThreads(limit = THREAD_LIMIT)
-                .map { it.copy(lineId = deviceId) }
+            val (threads, archived) = withContext(Dispatchers.IO) {
+                smsRepository.listThreadsAndArchived(
+                    limit = THREAD_LIMIT,
+                    fromSmsOnly = false,
+                    forceRefresh = force
+                )
+            }
+            if (!force &&
+                threads.isEmpty() &&
+                archived.isEmpty() &&
+                (localThreads.value.isNotEmpty() || localArchived.value.isNotEmpty())
+            ) {
+                return@launch
+            }
+            localThreads.value = threads.map { it.copy(lineId = deviceId) }
+            localArchived.value = archived.map { it.copy(lineId = deviceId) }
         }
     }
 
@@ -87,13 +107,15 @@ class SmsInboxViewModel @Inject constructor(
             val deviceId = deviceLineId.value.ifBlank {
                 settingsRepository.ensureDeviceId().also { deviceLineId.value = it }
             }
-            localThreads.value = smsRepository.listThreadsFromSmsOnly(limit = THREAD_LIMIT)
-                .map { it.copy(lineId = deviceId) }
-            localArchived.value = smsRepository.listThreadsFromSmsOnly(
-                limit = THREAD_LIMIT,
-                includeArchived = true,
-                onlyArchived = true
-            ).map { it.copy(lineId = deviceId) }
+            val (threads, archived) = withContext(Dispatchers.IO) {
+                smsRepository.listThreadsAndArchived(
+                    limit = THREAD_LIMIT,
+                    fromSmsOnly = true,
+                    forceRefresh = true
+                )
+            }
+            localThreads.value = threads.map { it.copy(lineId = deviceId) }
+            localArchived.value = archived.map { it.copy(lineId = deviceId) }
         }
     }
 
@@ -213,7 +235,13 @@ class SmsInboxViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         smsRepository.changes()
-            .onEach { refresh() }
+            .debounce(400)
+            .onEach { refresh(force = true) }
+            .launchIn(viewModelScope)
+
+        contactRepository.observeContacts()
+            .debounce(300)
+            .onEach { refresh(force = true) }
             .launchIn(viewModelScope)
     }
 }
@@ -256,7 +284,9 @@ class SmsThreadViewModel @Inject constructor(
             deviceLineId = settingsRepository.ensureDeviceId()
             activeLineId = lineId ?: deviceLineId
             if (activeAddress.isNotBlank()) {
-                _contact.value = contactRepository.getByPhone(activeAddress)
+                _contact.value = withContext(Dispatchers.IO) {
+                    contactRepository.getByPhone(activeAddress)
+                }
             }
             remoteMessagesJob?.cancel()
             localMessagesJob?.cancel()
@@ -276,14 +306,22 @@ class SmsThreadViewModel @Inject constructor(
     }
 
     private suspend fun refreshMessages() {
-        if (activeThreadId == null && activeAddress.isNotBlank()) {
-            activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
+        val result = withContext(Dispatchers.IO) {
+            if (activeThreadId == null && activeAddress.isNotBlank()) {
+                activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
+            }
+            val msgs = when {
+                activeThreadId != null -> smsRepository.messagesForThread(activeThreadId!!, limit = MESSAGE_LIMIT)
+                activeAddress.isNotBlank() -> smsRepository.messagesForAddress(activeAddress, limit = MESSAGE_LIMIT)
+                else -> emptyList()
+            }
+            val contact = msgs.firstOrNull()?.address?.let { contactRepository.getByPhone(it) }
+            val archived = activeThreadId?.let { smsRepository.isThreadArchived(it) } ?: false
+            Triple(msgs, contact, archived)
         }
-        val msgs = when {
-            activeThreadId != null -> smsRepository.messagesForThread(activeThreadId!!, limit = MESSAGE_LIMIT)
-            activeAddress.isNotBlank() -> smsRepository.messagesForAddress(activeAddress, limit = MESSAGE_LIMIT)
-            else -> emptyList()
-        }
+        val msgs = result.first
+        val contact = result.second
+        val archived = result.third
         _messages.value = msgs
         val latestMessageId = msgs.firstOrNull()?.id
         if (latestMessageId != lastSummaryMessageId) {
@@ -292,13 +330,8 @@ class SmsThreadViewModel @Inject constructor(
                 _summaryState.value = AiSummaryState.Idle
             }
         }
-        if (msgs.isNotEmpty()) {
-            val address = msgs.first().address
-            _contact.value = contactRepository.getByPhone(address)
-        }
-        activeThreadId?.let { threadId ->
-            _isArchived.value = smsRepository.isThreadArchived(threadId)
-        }
+        _contact.value = contact
+        _isArchived.value = archived
     }
 
     fun toggleArchive() {
@@ -338,18 +371,20 @@ class SmsThreadViewModel @Inject constructor(
             val resolvedLineId = lineId ?: activeLineId ?: deviceLineId
             val isRemoteLine = resolvedLineId.isNotBlank() && resolvedLineId != deviceLineId
 
-            destinations.forEach { dest ->
-                val rawNumber = normalizeSmsAddress(dest)
-                if (rawNumber.isNotBlank()) {
-                    try {
-                        if (isRemoteLine) {
-                            smsOutboxService.queueMessage(rawNumber, body, resolvedLineId, activeThreadId)
-                        } else {
-                            // awaitResult = false to parallelize if multiple
-                            smsSender.sendSms(rawNumber, body, awaitResult = false)
+            withContext(Dispatchers.IO) {
+                destinations.forEach { dest ->
+                    val rawNumber = normalizeSmsAddress(dest)
+                    if (rawNumber.isNotBlank()) {
+                        try {
+                            if (isRemoteLine) {
+                                smsOutboxService.queueMessage(rawNumber, body, resolvedLineId, activeThreadId)
+                            } else {
+                                // awaitResult = false to parallelize if multiple
+                                smsSender.sendSms(rawNumber, body, awaitResult = false)
+                            }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
                         }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
                     }
                 }
             }
