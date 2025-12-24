@@ -55,7 +55,14 @@ data class PulseLinkSettings(
     val aiComposeEnabled: Boolean = true,
     val aiUrgencyEnabled: Boolean = true,
     val aiUrgencyBypassDnd: Boolean = false,
-    val aiUrgencyIncludeUnknown: Boolean = true
+    val aiUrgencyIncludeUnknown: Boolean = true,
+    val lineInboxMode: LineInboxMode = LineInboxMode.COMBINED,
+    val lineInboxModeChosen: Boolean = false,
+    val activeLineId: String? = null,
+    val defaultSendLineId: String? = null,
+    val lineSendPreference: LineSendPreference = LineSendPreference.LAST_USED,
+    val threadLineOverrides: Map<String, String> = emptyMap(),
+    val devicePhoneNumber: String? = null
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

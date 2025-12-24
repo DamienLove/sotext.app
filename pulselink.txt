@@ -352,3 +352,9 @@ Current ad behavior in app:
 
 2025-12-24
 - Release v74 (free/pro/premium): versionCode/Name bumped to 74; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v74.aab; release notes saved at disposable_aabs/release-notes-v74.txt.
+- Beacon inbox read gating now only requires READ_SMS so message history shows even if send/receive permissions are missing; Beacon standalone permission banner now keys off READ_SMS.
+- Feature request: premium multi-device SMS sync with line selection (primary SIM relays SMS to linked devices) and per-message send-line switcher in composer.
+
+2025-12-24
+- Multi-device SMS: wired line setup dialog (combined/per-line inbox, default line, send preference, device phone) + line-limit dialog (2 lines) in MainActivity + BeaconInboxActivity; premium-gated line pickers and thread send-line dropdown now use ordered lines and update presence on resume/selection.
+- Address formatting cleanup: standardized display delimiter to ' | ' with SmsAddressUtils helpers; updated SmsRepository, MainViewModel, widget, and thread sending to normalize/split addresses consistently; removed legacy control delimiters and filtered disabled lines in SmsInboxViewModel.
