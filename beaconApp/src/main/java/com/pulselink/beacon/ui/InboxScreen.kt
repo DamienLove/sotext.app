@@ -37,6 +37,10 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FabPosition
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -88,6 +92,7 @@ fun InboxScreen(
     onRequestDefault: () -> Unit,
     onRefreshDefaultStatus: () -> Unit,
     onOpenThread: (Long, String) -> Unit,
+        onCompose: () -> Unit,
     onDeleteThread: (Long) -> Unit,
     onRefresh: () -> Unit,
     onSearch: (String) -> Unit,
@@ -165,6 +170,18 @@ fun InboxScreen(
                 scrollBehavior = scrollBehavior
             )
         },
+                floatingActionButton = {
+            FloatingActionButton(
+                onClick = onCompose,
+                containerColor = theme.accentColor
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "New message"
+                )
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End,
         snackbarHost = { SnackbarHost(host) }
     ) { padding ->
         Column(

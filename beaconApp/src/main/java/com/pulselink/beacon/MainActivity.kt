@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.google.android.gms.ads.MobileAds
 import com.pulselink.beacon.ui.ads.BannerAd
 import com.pulselink.beacon.ui.InboxScreen
+import com.pulselink.beacon.ui.NewMessageScreen
 import com.pulselink.beacon.ui.SmsViewModel
 import com.pulselink.beacon.ui.ThreadScreen
 import com.pulselink.beacon.ui.ThemeViewModel
@@ -166,7 +167,8 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
                     onRefresh = { vm.refreshThreads() },
                     onSearch = { vm.search(it) },
                     onClearSearch = { vm.clearSearch() },
-                    onCustomize = { navController.navigate("customize?address=") }
+                    onCustomize = { navController.navigate("customize?address=") },
+                    onCompose = { navController.navigate("newMessage") }
                 )
             }
             composable(
@@ -195,6 +197,17 @@ private fun BeaconNav(vm: SmsViewModel, themeVm: ThemeViewModel, themeState: The
                         onCustomize = { navController.navigate("customize?address=${Uri.encode(address)}") }
                     )
                 }
+            }
+            composable("newMessage") {
+                NewMessageScreen(
+                    theme = themeState.global,
+                    onBack = { navController.popBackStack() },
+                    onStartConversation = { address ->
+                        navController.navigate("thread/0/${Uri.encode(address)}") {
+                            popUpTo("inbox")
+                        }
+                    }
+                )
             }
             composable(
                 route = "customize?address={address}",
