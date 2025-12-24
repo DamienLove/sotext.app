@@ -223,6 +223,7 @@ private fun BeaconNav(
                     onCustomize = { navController.navigate("customize?address=") },
                     onCompose = { navController.navigate("newMessage") },
                     onOpenNotifications = { navController.navigate("notifications") }
+                                        onCompose = { navController.navigate("newMessage") }
                 )
             }
             composable(
@@ -345,6 +346,19 @@ private fun BeaconNav(
 }
 
 private fun buildDefaultSmsRequestIntent(context: android.content.Context): Intent? {
+            composable("newMessage") {
+                NewMessageScreen(
+                    theme = themeState.global,
+                    onBack = { navController.popBackStack() },
+                    onStartConversation = { address ->
+                        navController.navigate("thread/0/${Uri.encode(address)}") {
+                            popUpTo("inbox")
+                        }
+                    }
+                )
+            }
+
+private fun requestDefaultSms(context: android.content.Context) {
     val packageName = context.packageName
     if (isDefaultSmsRoleHeld(context)) return null
 
