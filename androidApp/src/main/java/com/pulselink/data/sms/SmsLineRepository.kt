@@ -1,6 +1,7 @@
 package com.pulselink.data.sms
 
 import android.os.Build
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -21,6 +22,9 @@ class SmsLineRepository @Inject constructor(
     private val auth: FirebaseAuth,
     private val settingsRepository: SettingsRepository
 ) {
+    private companion object {
+        const val TAG = "SmsLineRepository"
+    }
     fun observeLines(): Flow<List<SmsLine>> = callbackFlow {
         val user = auth.currentUser
         if (user == null) {
@@ -76,26 +80,29 @@ class SmsLineRepository @Inject constructor(
         val user = auth.currentUser ?: return null
         val deviceId = settingsRepository.ensureDeviceId()
         val lineId = deviceId
+        return try {
+            val linePayload = mutableMapOf<String, Any>(
+                "primaryDeviceId" to deviceId,
+                "updatedAt" to FieldValue.serverTimestamp()
+            )
+            phoneNumber?.takeIf { it.isNotBlank() }?.let { linePayload["phoneNumber"] = it }
+            val lineRef = firestore.collection("users").document(user.uid).collection("lines").document(lineId)
+            lineRef.set(linePayload, SetOptions.merge()).await()
 
-        val linePayload = mutableMapOf<String, Any>(
-            "primaryDeviceId" to deviceId,
-            "updatedAt" to FieldValue.serverTimestamp()
-        )
-        phoneNumber?.takeIf { it.isNotBlank() }?.let { linePayload["phoneNumber"] = it }
-        val lineRef = firestore.collection("users").document(user.uid).collection("lines").document(lineId)
-        lineRef.set(linePayload, SetOptions.merge()).await()
-
-        val devicePayload = mutableMapOf<String, Any>(
-            "lineId" to lineId,
-            "isPrimary" to true,
-            "lastSeen" to FieldValue.serverTimestamp(),
-            "deviceName" to "${Build.MANUFACTURER} ${Build.MODEL}".trim()
-        )
-        phoneNumber?.takeIf { it.isNotBlank() }?.let { devicePayload["phoneNumber"] = it }
-        val deviceRef = firestore.collection("users").document(user.uid).collection("devices").document(deviceId)
-        deviceRef.set(devicePayload, SetOptions.merge()).await()
-
-        return lineId
+            val devicePayload = mutableMapOf<String, Any>(
+                "lineId" to lineId,
+                "isPrimary" to true,
+                "lastSeen" to FieldValue.serverTimestamp(),
+                "deviceName" to "${Build.MANUFACTURER} ${Build.MODEL}".trim()
+            )
+            phoneNumber?.takeIf { it.isNotBlank() }?.let { devicePayload["phoneNumber"] = it }
+            val deviceRef = firestore.collection("users").document(user.uid).collection("devices").document(deviceId)
+            deviceRef.set(devicePayload, SetOptions.merge()).await()
+            lineId
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to ensure device line", e)
+            null
+        }
     }
 
     suspend fun updateDevicePresence(activeLineId: String?, phoneNumber: String?) {
@@ -106,17 +113,25 @@ class SmsLineRepository @Inject constructor(
         )
         activeLineId?.takeIf { it.isNotBlank() }?.let { payload["activeLineId"] = it }
         phoneNumber?.takeIf { it.isNotBlank() }?.let { payload["phoneNumber"] = it }
-        firestore.collection("users").document(user.uid)
-            .collection("devices").document(deviceId)
-            .set(payload, SetOptions.merge())
-            .await()
+        try {
+            firestore.collection("users").document(user.uid)
+                .collection("devices").document(deviceId)
+                .set(payload, SetOptions.merge())
+                .await()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to update device presence", e)
+        }
     }
 
     suspend fun setLineDisabled(lineId: String, disabled: Boolean) {
         val user = auth.currentUser ?: return
-        firestore.collection("users").document(user.uid)
-            .collection("lines").document(lineId)
-            .set(mapOf("disabled" to disabled, "updatedAt" to FieldValue.serverTimestamp()), SetOptions.merge())
-            .await()
+        try {
+            firestore.collection("users").document(user.uid)
+                .collection("lines").document(lineId)
+                .set(mapOf("disabled" to disabled, "updatedAt" to FieldValue.serverTimestamp()), SetOptions.merge())
+                .await()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to set line disabled", e)
+        }
     }
 }
