@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -98,6 +99,7 @@ fun SmsThreadScreen(
     onSelectLine: (String) -> Unit = {},
     isArchived: Boolean,
     onToggleArchive: () -> Unit,
+    isDatabaseBusy: Boolean = false,
     aiSummaryState: AiSummaryState = AiSummaryState.Idle,
     onRequestSummary: () -> Unit = {},
     onClearSummary: () -> Unit = {},
@@ -292,6 +294,13 @@ fun SmsThreadScreen(
                 )
             }
             Box(modifier = Modifier.fillMaxSize().then(bgModifier))
+            if (isDatabaseBusy) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                )
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),

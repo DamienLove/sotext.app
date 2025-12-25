@@ -1438,6 +1438,7 @@ class MainActivity : AppCompatActivity() {
                         val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
                         val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
                         val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
+                        val inboxBusy by smsInboxViewModel.isDatabaseBusy.collectAsStateWithLifecycle()
                         val lifecycleOwner = LocalLifecycleOwner.current
                         var notificationsEnabled by remember {
                             mutableStateOf(MessageNotificationManager.areNotificationsEnabled(context))
@@ -1486,6 +1487,7 @@ class MainActivity : AppCompatActivity() {
                             showLinePicker = isPremium && state.settings.lineInboxMode == LineInboxMode.PER_LINE,
                             hideOtpInAll = true,
                             onImportAll = { smsInboxViewModel.importAllMessages() },
+                            isDatabaseBusy = inboxBusy,
                             banner = {
                                 if (!notificationsEnabled || notificationsSilent) {
                                     Surface(
@@ -1546,6 +1548,7 @@ class MainActivity : AppCompatActivity() {
                         val messages by threadViewModel.messages.collectAsStateWithLifecycle()
                         val contact by threadViewModel.contact.collectAsStateWithLifecycle()
                         val isArchived by threadViewModel.isArchived.collectAsStateWithLifecycle()
+                        val threadBusy by threadViewModel.isDatabaseBusy.collectAsStateWithLifecycle()
                         val summaryState by threadViewModel.summaryState.collectAsStateWithLifecycle()
                         val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
                         val decodedAddress = Uri.decode(address)
@@ -1606,6 +1609,7 @@ class MainActivity : AppCompatActivity() {
                             },
                             isArchived = isArchived,
                             onToggleArchive = { threadViewModel.toggleArchive() },
+                            isDatabaseBusy = threadBusy,
                             aiSummaryState = summaryState,
                             onRequestSummary = { threadViewModel.requestSummary() },
                             onClearSummary = { threadViewModel.clearSummary() },

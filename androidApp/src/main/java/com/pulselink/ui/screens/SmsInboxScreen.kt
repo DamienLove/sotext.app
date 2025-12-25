@@ -51,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -129,7 +130,8 @@ fun SmsInboxScreen(
     onSelectLine: (String) -> Unit = {},
     showLinePicker: Boolean = false,
     onImportAll: () -> Unit = {},
-    archivedOnly: Boolean = false
+    archivedOnly: Boolean = false,
+    isDatabaseBusy: Boolean = false
 ) {
     var filter by rememberSaveable(archivedOnly) {
         mutableStateOf(if (archivedOnly) InboxFilter.ARCHIVED else InboxFilter.ALL)
@@ -344,7 +346,14 @@ fun SmsInboxScreen(
                     .padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-            if (showSearchBar) {
+                if (isDatabaseBusy) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                    )
+                }
+                if (showSearchBar) {
                 OutlinedTextField(
                     value = searchText,
                     onValueChange = {
