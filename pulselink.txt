@@ -508,3 +508,7 @@ Current ad behavior in app:
 - Fixed vibration pattern wiring issues (duplicate settings mapping, channel params, nullable pattern updates, weight import) and rebuilt v81 AABs (free/pro/premium, not submitted) to `disposable_aabs/pulselink-{free|pro|premium}-v81.aab`.
 - Updated `disposable_aabs/release-notes-v81.txt` with vibration patterns + web contacts; used ORG_GRADLE_JVMARGS="-Xmx6g -XX:MaxMetaspaceSize=2g" for bundle builds.
 - Committed/pushed Suite-Beta and synced Ds-work-suite-beta.
+
+2025-12-25
+- Wrap-up: updated pulselink.txt per request and closing out for the day.
+- Removed legacy UI mockups and old artifacts/AABs from the repo (archived elsewhere).

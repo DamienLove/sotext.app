@@ -1,6 +1,0 @@
-Release v80
-- Inbox stability: cached threads stay visible, refresh reacts to contact updates, and All messages hides OTP codes.
-- Contact controls: favorite and private toggles for accurate tab placement.
-- Beacon header polish: themed icon stays visible and scales on scroll.
-- Help/FAQ refreshed with web portal details and premium highlights.
-- Emergency cancel biometric flow hardened with capability checks and fallback.

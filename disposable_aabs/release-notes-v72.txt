@@ -1,3 +1,0 @@
-PulseLink v72 (free/pro/premium)
-- Maintenance release: version bump + rebuild.
-- Web portal rebuilt for latest deployment.
