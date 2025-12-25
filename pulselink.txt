@@ -515,3 +515,9 @@ Current ad behavior in app:
 
 2025-12-25
 - Phase 1 ANR hardening: removed widget runBlocking, added widget cache + async refresh + placeholders; SettingsRepositoryImpl JSON + DataStore edits moved to IO; CallerIdCacheRepository wrapped in IO; SmsInbox/Thread DB ops moved to IO with loading indicators.
+2025-12-25
+- Phase 1 ANR hardening + cleanup committed/pushed (Suite-Beta); removed tracked .kotlin cache files and added ignores; moved NEWDOCS into docs/marketing.
+- Built v82 AABs (free/pro/premium) and saved release notes to disposable_aabs/release-notes-v82.txt.
+- Web App.jsx build errors fixed; web build succeeded; Firebase deploy blocked by expired auth (needs firebase login --reauth).
+- Moved misc items (Pulse Link – Draft Patent Claims.pdf + Projects shortcut) to H:\Shared drives\PulseLink\misc\pulselink-cleanup-2025-12-25.
+- Synced Ds-work-suite-beta by merging Suite-Beta and pushing to origin/Ds-work-suite-beta.
