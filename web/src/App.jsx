@@ -615,13 +615,9 @@ function App() {
   const mapInfoRef = useRef(null);
   const mapHomeMarkerRef = useRef(null);
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const defaultMapCenter = { lat: 39.5, lng: -98.35 };
+  const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
 
-  // Fix for undefined function causing crash/lint error
-  const fetchAlertLocations = () => {
-    console.log("Refresh functionality not implemented");
-  };
   const filteredAlerts = useMemo(() => {
     return alertLocations.filter((alert) => {
       if (incomingOnly && !alert.incoming) return false;
@@ -857,7 +853,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, mapsApiKey]);
+  }, [activePanel, mapsApiKey, defaultMapCenter]);
 
   useEffect(() => {
     if (activePanel !== 'map') return;
@@ -945,12 +941,7 @@ function App() {
       bounds.extend({ lat: alert.lat, lng: alert.lng });
     });
     mapInstanceRef.current.fitBounds(bounds);
-  }, [filteredAlerts, userLocation]);
-
-  const fetchAlertLocations = () => {
-    // Snapshot listener handles real-time updates.
-    console.log("Refreshing alerts...");
-  };
+  }, [filteredAlerts, userLocation, defaultMapCenter]);
 
   const handleAlertFocus = (alert) => {
     setSelectedAlertId(alert.id);
@@ -1870,6 +1861,8 @@ function App() {
                   onClick={() => window.location.reload()}
                   aria-label="Reload page"
                 >
+                  Reload
+                </button>
                 <button className="ghost-btn" onClick={() => setActivePanel('home')}>
                   Back to Home
                 </button>
@@ -2008,6 +2001,7 @@ function App() {
                             className="primary-btn"
                             type="button"
                             onClick={() => handleImportPublicTheme(themeDoc)}
+                            aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
                           >
                             Import
                           </button>
@@ -2313,6 +2307,7 @@ function App() {
                     placeholder="Type a message..."
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
+                    aria-label="Message body"
                   />
                   <button
                     onClick={handleSendMessage}

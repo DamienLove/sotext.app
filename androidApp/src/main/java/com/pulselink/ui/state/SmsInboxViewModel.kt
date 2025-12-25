@@ -70,6 +70,8 @@ class SmsInboxViewModel @Inject constructor(
     val activeLineId: StateFlow<String?> = _activeLineId
     private val _inboxMode = MutableStateFlow(LineInboxMode.COMBINED)
     val inboxMode: StateFlow<LineInboxMode> = _inboxMode
+    private val _isDatabaseBusy = MutableStateFlow(false)
+    val isDatabaseBusy: StateFlow<Boolean> = _isDatabaseBusy
     private val deviceLineId = MutableStateFlow("")
     private var refreshJob: Job? = null
     private var lastRefreshAt = 0L
@@ -104,18 +106,20 @@ class SmsInboxViewModel @Inject constructor(
 
     fun importAllMessages() {
         viewModelScope.launch {
-            val deviceId = deviceLineId.value.ifBlank {
-                settingsRepository.ensureDeviceId().also { deviceLineId.value = it }
+            runDatabaseAction {
+                val deviceId = deviceLineId.value.ifBlank {
+                    settingsRepository.ensureDeviceId().also { deviceLineId.value = it }
+                }
+                val (threads, archived) = withContext(Dispatchers.IO) {
+                    smsRepository.listThreadsAndArchived(
+                        limit = THREAD_LIMIT,
+                        fromSmsOnly = true,
+                        forceRefresh = true
+                    )
+                }
+                localThreads.value = threads.map { it.copy(lineId = deviceId) }
+                localArchived.value = archived.map { it.copy(lineId = deviceId) }
             }
-            val (threads, archived) = withContext(Dispatchers.IO) {
-                smsRepository.listThreadsAndArchived(
-                    limit = THREAD_LIMIT,
-                    fromSmsOnly = true,
-                    forceRefresh = true
-                )
-            }
-            localThreads.value = threads.map { it.copy(lineId = deviceId) }
-            localArchived.value = archived.map { it.copy(lineId = deviceId) }
         }
     }
 
@@ -150,27 +154,42 @@ class SmsInboxViewModel @Inject constructor(
 
     fun archive(threadId: Long) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                smsRepository.markThreadRead(threadId)
-                smsRepository.archiveThread(threadId)
+            runDatabaseAction {
+                withContext(Dispatchers.IO) {
+                    smsRepository.markThreadRead(threadId)
+                    smsRepository.archiveThread(threadId)
+                }
+                refresh(force = true)
             }
-            refresh(force = true)
         }
     }
 
     fun unarchive(threadId: Long) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                smsRepository.unarchiveThread(threadId)
+            runDatabaseAction {
+                withContext(Dispatchers.IO) {
+                    smsRepository.unarchiveThread(threadId)
+                }
+                refresh(force = true)
             }
-            refresh(force = true)
         }
     }
 
     fun delete(threadId: Long) {
-        viewModelScope.launch {
-            smsRepository.deleteThread(threadId)
-            refresh()
+        viewModelScope.launch(Dispatchers.IO) {
+            runDatabaseAction {
+                smsRepository.deleteThread(threadId)
+                refresh()
+            }
+        }
+    }
+
+    private suspend fun runDatabaseAction(block: suspend () -> Unit) {
+        _isDatabaseBusy.value = true
+        try {
+            block()
+        } finally {
+            _isDatabaseBusy.value = false
         }
     }
 
@@ -273,6 +292,8 @@ class SmsThreadViewModel @Inject constructor(
     val summaryState: StateFlow<AiSummaryState> = _summaryState
     private val _composeState = MutableStateFlow<AiComposeState>(AiComposeState.Idle)
     val composeState: StateFlow<AiComposeState> = _composeState
+    private val _isDatabaseBusy = MutableStateFlow(false)
+    val isDatabaseBusy: StateFlow<Boolean> = _isDatabaseBusy
     private var activeThreadId: Long? = null
     private var activeAddress: String = ""
     private var activeLineId: String? = null
@@ -340,29 +361,44 @@ class SmsThreadViewModel @Inject constructor(
 
     fun toggleArchive() {
         viewModelScope.launch {
-            if (activeThreadId == null && activeAddress.isNotBlank()) {
-                activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
-            }
-            val threadId = activeThreadId ?: return@launch
-            val updatedArchived = withContext(Dispatchers.IO) {
-                if (_isArchived.value) {
-                    smsRepository.unarchiveThread(threadId)
-                } else {
-                    smsRepository.archiveThread(threadId)
+            runDatabaseAction {
+                if (activeThreadId == null && activeAddress.isNotBlank()) {
+                    activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
                 }
-                smsRepository.isThreadArchived(threadId)
+                val threadId = activeThreadId ?: return@runDatabaseAction
+                val updatedArchived = withContext(Dispatchers.IO) {
+                    if (_isArchived.value) {
+                        smsRepository.unarchiveThread(threadId)
+                    } else {
+                        smsRepository.archiveThread(threadId)
+                    }
+                    smsRepository.isThreadArchived(threadId)
+                }
+                _isArchived.value = updatedArchived
             }
-            _isArchived.value = updatedArchived
         }
     }
 
     fun setContactTheme(theme: ThemePreferences?) {
-        viewModelScope.launch {
-            _contact.value?.let { currentContact ->
-                val updated = currentContact.copy(themeOverride = theme)
-                contactRepository.upsert(updated)
-                _contact.value = updated
+        viewModelScope.launch(Dispatchers.IO) {
+            runDatabaseAction {
+                _contact.value?.let { currentContact ->
+                    val updated = currentContact.copy(themeOverride = theme)
+                    contactRepository.upsert(updated)
+                    withContext(Dispatchers.Main) {
+                        _contact.value = updated
+                    }
+                }
             }
+        }
+    }
+
+    private suspend fun runDatabaseAction(block: suspend () -> Unit) {
+        _isDatabaseBusy.value = true
+        try {
+            block()
+        } finally {
+            _isDatabaseBusy.value = false
         }
     }
 

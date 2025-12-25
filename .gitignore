@@ -76,3 +76,8 @@ shared/.gradle/
 .env.local
 web/.env.local
 web/.env.*.local
+.firebase/
+.kotlin/
+firebase-debug.log
+temp_gradle_*.log
+node_modules/

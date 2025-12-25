@@ -512,3 +512,6 @@ Current ad behavior in app:
 2025-12-25
 - Wrap-up: updated pulselink.txt per request and closing out for the day.
 - Removed legacy UI mockups and old artifacts/AABs from the repo (archived elsewhere).
+
+2025-12-25
+- Phase 1 ANR hardening: removed widget runBlocking, added widget cache + async refresh + placeholders; SettingsRepositoryImpl JSON + DataStore edits moved to IO; CallerIdCacheRepository wrapped in IO; SmsInbox/Thread DB ops moved to IO with loading indicators.
