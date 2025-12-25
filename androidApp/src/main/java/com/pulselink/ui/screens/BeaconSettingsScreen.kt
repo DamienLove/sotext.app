@@ -48,6 +48,8 @@ fun BeaconSettingsScreen(
     messageSoundLabel: String,
     messageVibrate: Boolean,
     onEditMessageSound: () -> Unit,
+    messageVibrationLabel: String,
+    onEditMessageVibration: () -> Unit,
     onToggleMessageVibrate: (Boolean) -> Unit,
     isDefaultSmsApp: Boolean,
     defaultSmsSupported: Boolean,
@@ -135,6 +137,13 @@ fun BeaconSettingsScreen(
                 subtitle = "Vibrate when new texts arrive.",
                 checked = messageVibrate,
                 onCheckedChange = onToggleMessageVibrate,
+                leadingIcon = Icons.Filled.Message
+            )
+            BeaconSettingsActionRow(
+                title = "Message vibration pattern",
+                subtitle = messageVibrationLabel,
+                actionLabel = "Edit",
+                onAction = onEditMessageVibration,
                 leadingIcon = Icons.Filled.Message
             )
             val retentionLabel = when (otpCleanupDays) {

@@ -40,6 +40,8 @@ private val CALL_SOUND = stringPreferencesKey("call_sound")
 private val MESSAGE_NOTIFICATION_SOUND = stringPreferencesKey("message_notification_sound")
 private val MESSAGE_NOTIFICATION_VIBRATE = booleanPreferencesKey("message_notification_vibrate")
 private val MESSAGE_NOTIFICATION_SOUND_OVERRIDES = stringPreferencesKey("message_notification_sound_overrides")
+private val MESSAGE_NOTIFICATION_VIBRATION_PATTERN = stringPreferencesKey("message_notification_vibration_pattern")
+private val MESSAGE_NOTIFICATION_VIBRATION_OVERRIDES = stringPreferencesKey("message_notification_vibration_overrides")
 private val BETA_AGREEMENT_ACCEPTED = booleanPreferencesKey("beta_agreement_accepted")
 private val BETA_AGREEMENT_VERSION = stringPreferencesKey("beta_agreement_version")
 private val AUTO_CALL = booleanPreferencesKey("auto_call")
@@ -102,13 +104,18 @@ class SettingsRepositoryImpl @Inject constructor(
             checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
                 ?: PulseLinkSettings().checkInProfile,
             callSoundKey = prefs[CALL_SOUND] ?: PulseLinkSettings().callSoundKey,
-            messageNotificationSoundUri = prefs[MESSAGE_NOTIFICATION_SOUND]
+            messageNotificationSoundUri = prefs[MESSAGE_NOTIFICATION_SOUND]     
                 ?: PulseLinkSettings().messageNotificationSoundUri,
-            messageNotificationVibrate = prefs[MESSAGE_NOTIFICATION_VIBRATE]
+            messageNotificationVibrate = prefs[MESSAGE_NOTIFICATION_VIBRATE]    
                 ?: PulseLinkSettings().messageNotificationVibrate,
             messageNotificationSoundOverrides = prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES]?.let {
                 runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
             } ?: PulseLinkSettings().messageNotificationSoundOverrides,
+            messageNotificationVibrationPattern = prefs[MESSAGE_NOTIFICATION_VIBRATION_PATTERN]
+                ?: PulseLinkSettings().messageNotificationVibrationPattern,
+            messageNotificationVibrationOverrides = prefs[MESSAGE_NOTIFICATION_VIBRATION_OVERRIDES]?.let {
+                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
+            } ?: PulseLinkSettings().messageNotificationVibrationOverrides,
             betaAgreementAccepted = prefs[BETA_AGREEMENT_ACCEPTED] ?: PulseLinkSettings().betaAgreementAccepted,
             betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
@@ -177,6 +184,10 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[MESSAGE_NOTIFICATION_VIBRATE] = updated.messageNotificationVibrate
             prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES] =
                 json.encodeToString(updated.messageNotificationSoundOverrides)
+            prefs[MESSAGE_NOTIFICATION_VIBRATION_PATTERN] =
+                updated.messageNotificationVibrationPattern
+            prefs[MESSAGE_NOTIFICATION_VIBRATION_OVERRIDES] =
+                json.encodeToString(updated.messageNotificationVibrationOverrides)
             prefs[BETA_AGREEMENT_ACCEPTED] = updated.betaAgreementAccepted
             updated.betaAgreementVersion?.let { prefs[BETA_AGREEMENT_VERSION] = it } ?: prefs.remove(BETA_AGREEMENT_VERSION)
             prefs[AUTO_CALL] = updated.autoCallAfterAlert

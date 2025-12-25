@@ -31,6 +31,7 @@ import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
 import com.pulselink.util.AudioOverrideManager
+import com.pulselink.util.VibrationPatterns
 import com.pulselink.util.resolveUri
 import com.pulselink.ui.EmergencyPopupActivity
 import com.pulselink.util.CallStateMonitor
@@ -1538,7 +1539,8 @@ class RemoteActionHandler @Inject constructor(
             .setAutoCancel(true)
             .apply {
                 if (profile.vibrate) {
-                    setVibrate(longArrayOf(0, 250, 250, 250, 500, 250))
+                    val pattern = VibrationPatterns.alertOption(profile.vibrationPatternKey).pattern
+                    setVibrate(pattern)
                 }
                 if (requestBypass) {
                     setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -1598,7 +1600,8 @@ class RemoteActionHandler @Inject constructor(
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .apply {
                 if (profile.vibrate) {
-                    setVibrate(longArrayOf(0, 250, 250, 250, 500, 250))
+                    val pattern = VibrationPatterns.alertOption(profile.vibrationPatternKey).pattern
+                    setVibrate(pattern)
                 }
             }
             .build()

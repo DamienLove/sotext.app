@@ -552,6 +552,7 @@ function App() {
     phoneNumber: ''
   });
   const [contacts, setContacts] = useState([]);
+  const [contactSearch, setContactSearch] = useState('');
   const [contactForm, setContactForm] = useState({
     displayName: '',
     phoneNumber: '',
@@ -640,6 +641,22 @@ function App() {
       return name.includes(term) || author.includes(term) || handle.includes(term);
     });
   }, [publicThemes, themeSearch]);
+  const filteredContacts = useMemo(() => {
+    const term = contactSearch.trim().toLowerCase();
+    if (!term) return contacts;
+    return contacts.filter((contact) => {
+      const values = [
+        contact.displayName,
+        contact.phoneNumber,
+        contact.email,
+        ...(contact.additionalPhones || []),
+        ...(contact.additionalEmails || [])
+      ];
+      return values.some((value) =>
+        (value ?? '').toString().toLowerCase().includes(term)
+      );
+    });
+  }, [contacts, contactSearch]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -1503,6 +1520,13 @@ function App() {
               PulseLink
             </button>
             <button
+              className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
+              onClick={() => setActivePanel('contacts')}
+              aria-current={activePanel === 'contacts' ? 'page' : undefined}
+            >
+              Contacts
+            </button>
+            <button
               className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
               onClick={() => setActivePanel('settings')}
               aria-current={activePanel === 'settings' ? 'page' : undefined}
@@ -1549,6 +1573,13 @@ function App() {
                   </div>
                   <h3>PulseLink</h3>
                   <p>Update your profile and trusted contacts.</p>
+                </button>
+                <button className="home-card" onClick={() => setActivePanel('contacts')}>
+                  <div className="home-icon pulselink">
+                    <img src={logo} alt="PulseLink contacts" />
+                  </div>
+                  <h3>Contacts</h3>
+                  <p>Browse every trusted contact at a glance.</p>
                 </button>
                 <button className="home-card" onClick={() => setActivePanel('beacon')}>
                   <div className="home-icon beacon">
@@ -1756,6 +1787,73 @@ function App() {
                   </div>
                   {contactStatus && <div className="settings-status">{contactStatus}</div>}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'contacts' && (
+            <div className="contacts-panel">
+              <div className="panel-header">
+                <h3>Contacts</h3>
+                <p>Browse all trusted contacts synced from PulseLink.</p>
+              </div>
+              <div className="contacts-toolbar">
+                <div className="contact-count">
+                  {filteredContacts.length} contact{filteredContacts.length === 1 ? '' : 's'}
+                </div>
+                <input
+                  className="login-input contact-search"
+                  placeholder="Search by name, phone, or email"
+                  value={contactSearch}
+                  onChange={(e) => setContactSearch(e.target.value)}
+                />
+              </div>
+              <div className="contact-list contact-list--full">
+                {filteredContacts.map((contact) => {
+                  const extraPhones = Array.isArray(contact.additionalPhones)
+                    ? contact.additionalPhones
+                    : [];
+                  const extraEmails = Array.isArray(contact.additionalEmails)
+                    ? contact.additionalEmails
+                    : [];
+                  const extras = [...extraPhones, ...extraEmails].filter(Boolean).join(' • ');
+                  const tierLabel = contact.escalationTier === 'CHECK_IN' ? 'Check-in' : 'Emergency';
+                  return (
+                    <div key={contact.id} className="contact-row contact-row--stacked">
+                      <div className="contact-main">
+                        <div className="contact-name">{contact.displayName || 'Unnamed contact'}</div>
+                        <div className="contact-meta">
+                          {contact.phoneNumber || contact.email || 'No phone or email'}
+                        </div>
+                        {extras && <div className="contact-extra">{extras}</div>}
+                        <div className="contact-tags">
+                          <span className="contact-tag">{tierLabel}</span>
+                          {contact.includeLocation && <span className="contact-tag">Location</span>}
+                          {contact.autoCall && <span className="contact-tag">Auto call</span>}
+                          {contact.allowRemoteOverride && <span className="contact-tag">DND override</span>}
+                        </div>
+                      </div>
+                      <div className="contact-actions">
+                        <button
+                          className="secondary-btn"
+                          onClick={() => {
+                            handleEditContact(contact);
+                            setActivePanel('pulselink');
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {filteredContacts.length === 0 && (
+                  <div className="settings-note">
+                    {contactSearch.trim()
+                      ? 'No contacts match that search.'
+                      : 'No trusted contacts yet.'}
+                  </div>
+                )}
               </div>
             </div>
           )}

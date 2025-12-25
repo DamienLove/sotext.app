@@ -8,7 +8,8 @@ data class AlertProfile(
     @SerialName("sound")
     val soundKey: String? = null,
     val breakThroughDnd: Boolean = true,
-    val vibrate: Boolean = true
+    val vibrate: Boolean = true,
+    val vibrationPatternKey: String = "alert_default"
 )
 
 @Serializable
@@ -27,6 +28,8 @@ data class PulseLinkSettings(
     val messageNotificationSoundUri: String? = null,
     val messageNotificationVibrate: Boolean = true,
     val messageNotificationSoundOverrides: Map<String, String> = emptyMap(),
+    val messageNotificationVibrationPattern: String = "message_default",
+    val messageNotificationVibrationOverrides: Map<String, String> = emptyMap(),
     val betaAgreementAccepted: Boolean = false,
     val betaAgreementVersion: String? = null,
     val autoCallAfterAlert: Boolean = false,

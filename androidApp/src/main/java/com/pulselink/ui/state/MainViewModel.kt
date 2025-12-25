@@ -436,10 +436,34 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun updateMessageNotificationVibrationPattern(key: String) {
+        viewModelScope.launch {
+            settingsRepository.update { settings ->
+                settings.copy(messageNotificationVibrationPattern = key)
+            }
+        }
+    }
+
     fun updateMessageNotificationVibrate(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.update { settings ->
                 settings.copy(messageNotificationVibrate = enabled)
+            }
+        }
+    }
+
+    fun updateMessageNotificationVibrationOverride(address: String, key: String?) {
+        val normalized = normalizeSmsAddress(address)
+        if (normalized.isBlank()) return
+        viewModelScope.launch {
+            settingsRepository.update { settings ->
+                val overrides = settings.messageNotificationVibrationOverrides.toMutableMap()
+                if (key.isNullOrBlank()) {
+                    overrides.remove(normalized)
+                } else {
+                    overrides[normalized] = key
+                }
+                settings.copy(messageNotificationVibrationOverrides = overrides)
             }
         }
     }
@@ -456,6 +480,26 @@ class MainViewModel @Inject constructor(
                     overrides[normalized] = uri
                 }
                 settings.copy(messageNotificationSoundOverrides = overrides)
+            }
+        }
+    }
+
+    fun updateEmergencyVibrationPattern(key: String) {
+        viewModelScope.launch {
+            settingsRepository.update { settings ->
+                settings.copy(
+                    emergencyProfile = settings.emergencyProfile.copy(vibrationPatternKey = key)
+                )
+            }
+        }
+    }
+
+    fun updateCheckInVibrationPattern(key: String) {
+        viewModelScope.launch {
+            settingsRepository.update { settings ->
+                settings.copy(
+                    checkInProfile = settings.checkInProfile.copy(vibrationPatternKey = key)
+                )
             }
         }
     }

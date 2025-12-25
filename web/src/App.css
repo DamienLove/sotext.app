@@ -469,10 +469,38 @@
   gap: 18px;
 }
 
+.contacts-panel {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.contacts-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.contact-count {
+  font-weight: 600;
+}
+
+.contact-search {
+  min-width: 220px;
+  max-width: 360px;
+}
+
 .contact-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.contact-list--full {
+  gap: 14px;
 }
 
 .contact-row {
@@ -483,6 +511,10 @@
   border-radius: 12px;
   border: 1px solid var(--border);
   background: rgba(15, 20, 34, 0.6);
+}
+
+.contact-row--stacked {
+  align-items: flex-start;
 }
 
 .contact-main {
@@ -498,6 +530,28 @@
 .contact-meta {
   font-size: 0.85em;
   color: var(--muted);
+}
+
+.contact-extra {
+  font-size: 0.8em;
+  color: var(--muted);
+}
+
+.contact-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.contact-tag {
+  font-size: 0.72em;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
+  letter-spacing: 0.01em;
 }
 
 .contact-actions {

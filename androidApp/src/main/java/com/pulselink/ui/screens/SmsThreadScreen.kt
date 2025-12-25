@@ -89,6 +89,7 @@ fun SmsThreadScreen(
     onUpdateContactTheme: (ThemePreferences?) -> Unit,
     onCustomizeTheme: () -> Unit,
     onEditNotificationSound: () -> Unit = {},
+    onEditNotificationVibration: () -> Unit = {},
     onSendMessage: (String, String?) -> Unit,
     lineOptions: List<com.pulselink.domain.model.SmsLine> = emptyList(),
     selectedLineId: String? = null,
@@ -108,6 +109,7 @@ fun SmsThreadScreen(
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
+    var showNotificationMenu by remember { mutableStateOf(false) }
     val iconSize = (24f * effectiveTheme.iconSizeFactor).coerceIn(18f, 34f).dp
     var draft by rememberSaveable { mutableStateOf("") }
     var showOfflineDialog by remember { mutableStateOf(false) }
@@ -206,14 +208,33 @@ fun SmsThreadScreen(
                             modifier = Modifier.size(iconSize)
                         )
                     }
-                    IconButton(onClick = onEditNotificationSound) {
+                    IconButton(onClick = { showNotificationMenu = true }) {
                         ThemeIcon(
                             iconKey = ThemeIconKey.NOTIFICATIONS,
                             theme = effectiveTheme,
                             imageVector = Icons.Filled.NotificationsActive,
-                            contentDescription = "Notification sound",
+                            contentDescription = "Notification settings",
                             tint = parseColorOr(MaterialTheme.colorScheme.onSurface, effectiveTheme.onTopBarColor),
                             modifier = Modifier.size(iconSize)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showNotificationMenu,
+                        onDismissRequest = { showNotificationMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Notification sound") },
+                            onClick = {
+                                showNotificationMenu = false
+                                onEditNotificationSound()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Notification vibration") },
+                            onClick = {
+                                showNotificationMenu = false
+                                onEditNotificationVibration()
+                            }
                         )
                     }
                     IconButton(onClick = { showThemeMenu = true }) {

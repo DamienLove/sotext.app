@@ -494,3 +494,17 @@ Current ad behavior in app:
 2025-12-24
 - Synced Suite-Beta with Ds-work-suite-beta (fast-forward to 523cd6a6) and rebuilt v81 AABs after sync.
 - bundleProRelease OOM (mergeDexProRelease) resolved by rerunning with ORG_GRADLE_JVMARGS="-Xmx6g -XX:MaxMetaspaceSize=2g".
+
+2025-12-25
+- Added customizable vibration patterns: global message pattern + per-contact overrides, and emergency/check-in alert vibration patterns.
+- New VibrationPatternPickerScreen with test button; Settings/Beacon Settings now link to pattern pickers.
+- Message notification channels now respect per-contact vibration overrides; alert channels update vibration patterns when settings change.
+- SmsThreadScreen notification menu now includes sound + vibration settings.
+
+2025-12-25
+- Web app: added Contacts panel with search, tags, and quick edit jump, plus nav/home tiles for browsing trusted contacts.
+
+2025-12-25
+- Fixed vibration pattern wiring issues (duplicate settings mapping, channel params, nullable pattern updates, weight import) and rebuilt v81 AABs (free/pro/premium) to `disposable_aabs/pulselink-{free|pro|premium}-v81.aab`.
+- Updated `disposable_aabs/release-notes-v81.txt` with vibration patterns + web contacts; used ORG_GRADLE_JVMARGS="-Xmx6g -XX:MaxMetaspaceSize=2g" for bundle builds.
+- Committed/pushed Suite-Beta and synced Ds-work-suite-beta.

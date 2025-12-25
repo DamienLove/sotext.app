@@ -69,6 +69,7 @@ import com.pulselink.ui.screens.BeaconSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.NewMessageScreen
 import com.pulselink.ui.screens.MessageNotificationSoundScreen
+import com.pulselink.ui.screens.VibrationPatternPickerScreen
 import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.MultiLineSetupDialog
 import com.pulselink.ui.screens.LineLimitDialog
@@ -85,6 +86,7 @@ import com.pulselink.domain.model.LineInboxMode
 import com.pulselink.domain.model.LineSendPreference
 import com.pulselink.ui.theme.PulseLinkTheme
 import com.pulselink.util.DefaultSmsHelper
+import com.pulselink.util.VibrationPatterns
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.hashPin
 import com.pulselink.util.parseColorOr
@@ -636,6 +638,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onEditNotificationSound = {
                                                 navController.navigate("notifications/message_sound?address=${Uri.encode(decodedAddress)}")
                                             },
+                                            onEditNotificationVibration = {
+                                                navController.navigate("notifications/message_vibration?address=${Uri.encode(decodedAddress)}")
+                                            },
                                             onSendMessage = { body, sendLineId ->
                                                 threadViewModel.sendMessage(decodedAddress, body, sendLineId)
                                             },
@@ -687,6 +692,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                     } else {
                                         "Custom audio"
                                     }
+                                    val messageVibrationLabel = VibrationPatterns
+                                        .messageOption(state.settings.messageNotificationVibrationPattern)
+                                        .label
                                     BeaconSettingsScreen(
                                         settings = state.settings,
                                         onBack = { navController.popBackStack() },
@@ -696,6 +704,10 @@ class BeaconInboxActivity : ComponentActivity() {
                                         messageSoundLabel = messageSoundLabel,
                                         messageVibrate = state.settings.messageNotificationVibrate,
                                         onEditMessageSound = { navController.navigate("notifications/message_sound") },
+                                        messageVibrationLabel = messageVibrationLabel,
+                                        onEditMessageVibration = {
+                                            navController.navigate("notifications/message_vibration")
+                                        },
                                         onToggleMessageVibrate = viewModel::updateMessageNotificationVibrate,
                                         isDefaultSmsApp = isDefaultSms,
                                         defaultSmsSupported = defaultSmsSupported,
@@ -764,6 +776,41 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 viewModel.updateMessageNotificationOverride(addressArg, uri.toString())
                                             } else {
                                                 viewModel.updateMessageNotificationSound(uri.toString())
+                                            }
+                                        },
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable(
+                                    route = "notifications/message_vibration?address={address}",
+                                    arguments = listOf(navArgument("address") {
+                                        type = NavType.StringType
+                                        defaultValue = ""
+                                    })
+                                ) { entry ->
+                                    val addressArg = entry.arguments?.getString("address")
+                                        ?.takeIf { it.isNotBlank() }
+                                        ?.let { Uri.decode(it) }
+                                    val normalized = addressArg?.let { com.pulselink.util.normalizeSmsAddress(it) }
+                                    val overrideKey = normalized?.let { state.settings.messageNotificationVibrationOverrides[it] }
+                                    val isContact = addressArg != null
+                                    VibrationPatternPickerScreen(
+                                        title = if (isContact) "Notification vibration" else "Message vibration pattern",
+                                        subtitle = if (isContact) {
+                                            "Overrides the global pattern for this conversation."
+                                        } else {
+                                            "Choose the vibration style for incoming texts."
+                                        },
+                                        options = VibrationPatterns.messageOptions,
+                                        selectedKey = if (isContact) overrideKey else state.settings.messageNotificationVibrationPattern,
+                                        defaultLabel = if (isContact) "Use global message pattern" else null,
+                                        onSelect = { key ->
+                                            if (addressArg != null) {
+                                                viewModel.updateMessageNotificationVibrationOverride(addressArg, key)
+                                            } else {
+                                                viewModel.updateMessageNotificationVibrationPattern(
+                                                    key ?: VibrationPatterns.MESSAGE_DEFAULT
+                                                )
                                             }
                                         },
                                         onBack = { navController.popBackStack() }

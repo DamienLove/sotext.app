@@ -24,6 +24,7 @@ import com.pulselink.domain.model.SoundOption
 import com.pulselink.domain.model.PulseLinkSettings
 import com.pulselink.util.AudioOverrideManager
 import com.pulselink.util.resolveUri
+import com.pulselink.util.VibrationPatterns
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -232,7 +233,10 @@ class AlertDispatcher @Inject constructor(
             .setGroup(GROUP_KEY_ALERTS)
             .setGroupSummary(false)
 
-        if (shouldPlaySound && profile.vibrate) builder.setVibrate(longArrayOf(0, 250, 250, 250, 500, 250))
+        if (shouldPlaySound && profile.vibrate) {
+            val pattern = VibrationPatterns.alertOption(profile.vibrationPatternKey).pattern
+            builder.setVibrate(pattern)
+        }
         if (shouldPlaySound && profile.breakThroughDnd) builder.setCategory(NotificationCompat.CATEGORY_ALARM)
 
         val soundUri = soundOption?.resolveUri(context)

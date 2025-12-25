@@ -13,6 +13,7 @@ import com.pulselink.domain.model.AlertProfile
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.model.SoundOption
 import com.pulselink.util.resolveUri
+import com.pulselink.util.VibrationPatterns
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -80,7 +81,23 @@ class NotificationRegistrar @Inject constructor(
         val channelId = buildChannelId(category, soundOption)
         Log.d(TAG, "Ensuring alert channel=$channelId category=$category sound=${soundOption?.key}")
         val existing = manager.getNotificationChannel(channelId)
-        if (existing != null) {
+        val soundUri = soundOption?.resolveUri(context)
+        val desiredPattern = if (profile.vibrate) {
+            VibrationPatterns.alertOption(profile.vibrationPatternKey).pattern
+        } else {
+            null
+        }
+        val needsUpdate = existing == null ||
+            existing.shouldVibrate() != profile.vibrate ||
+            (profile.vibrate && !patternsMatch(existing.vibrationPattern, desiredPattern)) ||
+            existing.sound?.toString() != soundUri?.toString() ||
+            existing.canBypassDnd() != profile.breakThroughDnd
+
+        if (needsUpdate && existing != null) {
+            manager.deleteNotificationChannel(channelId)
+        }
+
+        if (!needsUpdate && existing != null) {
             validateChannel(existing, profile)
             return channelId
         }
@@ -107,14 +124,15 @@ class NotificationRegistrar @Inject constructor(
             .setUsage(usage)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
-        val soundUri = soundOption?.resolveUri(context)
-
         val channel = NotificationChannel(channelId, channelLabel, importance).apply {
             setGroup(GROUP_ALERTS)
             // On Android 15+ the interruption filter no longer disables global DND,
             // so channel-level bypass is the primary mechanism to punch through.
             setBypassDnd(profile.breakThroughDnd)
             enableVibration(profile.vibrate)
+            if (profile.vibrate && desiredPattern != null) {
+                vibrationPattern = desiredPattern
+            }
             setSound(soundUri, audioAttributes)
         }
         manager.createNotificationChannel(channel)
@@ -146,6 +164,11 @@ class NotificationRegistrar @Inject constructor(
         }
         val suffix = soundOption?.key ?: "default"
         return "${base}_$suffix"
+    }
+
+    private fun patternsMatch(existing: LongArray?, desired: LongArray?): Boolean {
+        if (desired == null) return existing == null
+        return existing?.contentEquals(desired) ?: false
     }
 
     private fun validateChannel(channel: NotificationChannel, profile: AlertProfile) {

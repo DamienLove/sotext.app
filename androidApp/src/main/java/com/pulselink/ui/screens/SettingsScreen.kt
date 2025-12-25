@@ -97,6 +97,12 @@ fun SettingsScreen(
     messageSoundLabel: String,
     messageVibrate: Boolean,
     onEditMessageSound: () -> Unit,
+    messageVibrationLabel: String,
+    onEditMessageVibration: () -> Unit,
+    emergencyVibrationLabel: String,
+    onEditEmergencyVibration: () -> Unit,
+    checkInVibrationLabel: String,
+    onEditCheckInVibration: () -> Unit,
     onToggleMessageVibrate: (Boolean) -> Unit,
     onReportBug: () -> Unit,
     onBetaTesters: () -> Unit,
@@ -180,9 +186,21 @@ fun SettingsScreen(
                     onAction = onEditEmergencyTone
                 )
                 SettingsActionRow(
+                    title = "Emergency vibration pattern",
+                    subtitle = emergencyVibrationLabel,
+                    actionLabel = "Edit",
+                    onAction = onEditEmergencyVibration
+                )
+                SettingsActionRow(
                     title = "Check-in alert tone",
                     actionLabel = "Edit",
                     onAction = onEditCheckInTone
+                )
+                SettingsActionRow(
+                    title = "Check-in vibration pattern",
+                    subtitle = checkInVibrationLabel,
+                    actionLabel = "Edit",
+                    onAction = onEditCheckInVibration
                 )
                 SettingsActionRow(
                     title = stringResource(R.string.settings_call_tone_title),
@@ -200,6 +218,12 @@ fun SettingsScreen(
                     subtitle = "Vibrate when new texts arrive.",
                     checked = messageVibrate,
                     onCheckedChange = onToggleMessageVibrate
+                )
+                SettingsActionRow(
+                    title = "Message vibration pattern",
+                    subtitle = messageVibrationLabel,
+                    actionLabel = "Edit",
+                    onAction = onEditMessageVibration
                 )
                 SettingsActionRow(
                     title = stringResource(R.string.dnd_override_title),

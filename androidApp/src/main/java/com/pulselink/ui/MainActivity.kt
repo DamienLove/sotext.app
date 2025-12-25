@@ -91,6 +91,7 @@ import com.pulselink.ui.screens.FaqScreen
 import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.MessageNotificationSoundScreen
+import com.pulselink.ui.screens.VibrationPatternPickerScreen
 import com.pulselink.ui.screens.MultiLineSetupDialog
 import com.pulselink.ui.screens.LineLimitDialog
 import com.pulselink.ui.screens.ProfileSettingsScreen
@@ -106,6 +107,7 @@ import com.pulselink.ui.state.SmsInboxViewModel
 import com.pulselink.ui.state.SmsLinesViewModel
 import com.pulselink.ui.state.SmsThreadViewModel
 import com.pulselink.ui.theme.PulseLinkTheme
+import com.pulselink.util.VibrationPatterns
 import com.pulselink.util.normalizeSmsAddress
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -1193,6 +1195,20 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() }
                         )
                     }
+                    composable("alerts/default/emergency_vibration") {
+                        VibrationPatternPickerScreen(
+                            title = "Emergency vibration pattern",
+                            subtitle = "Select the vibration style for emergency alerts.",
+                            options = VibrationPatterns.alertOptions,
+                            selectedKey = state.settings.emergencyProfile.vibrationPatternKey,
+                            onSelect = { key ->
+                                viewModel.updateEmergencyVibrationPattern(
+                                    key ?: VibrationPatterns.ALERT_DEFAULT
+                                )
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
                     composable("alerts/default/checkin") {
                         AlertTonePickerScreen(
                             title = "Check-in alert tone",
@@ -1200,6 +1216,20 @@ class MainActivity : AppCompatActivity() {
                             options = state.checkInSoundOptions,
                             selectedKey = state.settings.checkInProfile.soundKey,
                             onSelect = viewModel::updateCheckInSound,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("alerts/default/checkin_vibration") {
+                        VibrationPatternPickerScreen(
+                            title = "Check-in vibration pattern",
+                            subtitle = "Select the vibration style for check-in alerts.",
+                            options = VibrationPatterns.alertOptions,
+                            selectedKey = state.settings.checkInProfile.vibrationPatternKey,
+                            onSelect = { key ->
+                                viewModel.updateCheckInVibrationPattern(
+                                    key ?: VibrationPatterns.ALERT_DEFAULT
+                                )
+                            },
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -1254,6 +1284,15 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             "Custom audio"
                         }
+                        val messageVibrationLabel = VibrationPatterns
+                            .messageOption(state.settings.messageNotificationVibrationPattern)
+                            .label
+                        val emergencyVibrationLabel = VibrationPatterns
+                            .alertOption(state.settings.emergencyProfile.vibrationPatternKey)
+                            .label
+                        val checkInVibrationLabel = VibrationPatterns
+                            .alertOption(state.settings.checkInProfile.vibrationPatternKey)
+                            .label
                         val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
                         SettingsScreen(
                             settings = state.settings,
@@ -1283,6 +1322,18 @@ class MainActivity : AppCompatActivity() {
                             messageSoundLabel = messageSoundLabel,
                             messageVibrate = state.settings.messageNotificationVibrate,
                             onEditMessageSound = { navController.navigate("notifications/message_sound") },
+                            messageVibrationLabel = messageVibrationLabel,
+                            onEditMessageVibration = {
+                                navController.navigate("notifications/message_vibration")
+                            },
+                            emergencyVibrationLabel = emergencyVibrationLabel,
+                            onEditEmergencyVibration = {
+                                navController.navigate("alerts/default/emergency_vibration")
+                            },
+                            checkInVibrationLabel = checkInVibrationLabel,
+                            onEditCheckInVibration = {
+                                navController.navigate("alerts/default/checkin_vibration")
+                            },
                             onToggleMessageVibrate = viewModel::updateMessageNotificationVibrate,
                             onReportBug = { navController.navigate("bug_report") },
                             onBetaTesters = { navController.navigate("beta_testers") },
@@ -1331,6 +1382,41 @@ class MainActivity : AppCompatActivity() {
                                     viewModel.updateMessageNotificationOverride(addressArg, uri.toString())
                                 } else {
                                     viewModel.updateMessageNotificationSound(uri.toString())
+                                }
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(
+                        route = "notifications/message_vibration?address={address}",
+                        arguments = listOf(navArgument("address") {
+                            type = NavType.StringType
+                            defaultValue = ""
+                        })
+                    ) { entry ->
+                        val addressArg = entry.arguments?.getString("address")
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { Uri.decode(it) }
+                        val normalized = addressArg?.let { normalizeSmsAddress(it) }
+                        val overrideKey = normalized?.let { state.settings.messageNotificationVibrationOverrides[it] }
+                        val isContact = addressArg != null
+                        VibrationPatternPickerScreen(
+                            title = if (isContact) "Notification vibration" else "Message vibration pattern",
+                            subtitle = if (isContact) {
+                                "Overrides the global pattern for this conversation."
+                            } else {
+                                "Choose the vibration style for incoming texts."
+                            },
+                            options = VibrationPatterns.messageOptions,
+                            selectedKey = if (isContact) overrideKey else state.settings.messageNotificationVibrationPattern,
+                            defaultLabel = if (isContact) "Use global message pattern" else null,
+                            onSelect = { key ->
+                                if (addressArg != null) {
+                                    viewModel.updateMessageNotificationVibrationOverride(addressArg, key)
+                                } else {
+                                    viewModel.updateMessageNotificationVibrationPattern(
+                                        key ?: VibrationPatterns.MESSAGE_DEFAULT
+                                    )
                                 }
                             },
                             onBack = { navController.popBackStack() }
@@ -1486,6 +1572,9 @@ class MainActivity : AppCompatActivity() {
                             onCustomizeTheme = { navController.navigate("visual_settings") },
                             onEditNotificationSound = {
                                 navController.navigate("notifications/message_sound?address=${Uri.encode(decodedAddress)}")
+                            },
+                            onEditNotificationVibration = {
+                                navController.navigate("notifications/message_vibration?address=${Uri.encode(decodedAddress)}")
                             },
                             onSendMessage = { body, sendLineId ->
                                 threadViewModel.sendMessage(decodedAddress, body, sendLineId)

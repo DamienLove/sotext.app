@@ -17,10 +17,10 @@ import com.pulselink.R
 import com.pulselink.domain.model.PulseLinkSettings
 import com.pulselink.ui.BeaconInboxActivity
 import com.pulselink.util.normalizeSmsAddress
+import com.pulselink.util.VibrationPatterns
 
 object MessageNotificationManager {
     const val CHANNEL_MESSAGES = "beacon_messages"
-    private val DEFAULT_VIBRATION = longArrayOf(0, 250, 200, 250)
 
     const val EXTRA_THREAD_ID = "com.pulselink.extra.THREAD_ID"
     const val EXTRA_ADDRESS = "com.pulselink.extra.ADDRESS"
@@ -37,16 +37,25 @@ object MessageNotificationManager {
 
         val normalized = normalizeSmsAddress(address)
         val overrideSound = settings.messageNotificationSoundOverrides[normalized]
+        val overrideVibration = settings.messageNotificationVibrationOverrides[normalized]
         val soundUri = overrideSound ?: settings.messageNotificationSoundUri
-        val channelId = if (overrideSound != null) channelIdForContact(normalized) else CHANNEL_MESSAGES
+        val vibrationKey = overrideVibration ?: settings.messageNotificationVibrationPattern
+        val vibrationPattern = VibrationPatterns.messageOption(vibrationKey).pattern
+        val hasOverride = overrideSound != null || overrideVibration != null
+        val channelId = if (hasOverride) {
+            channelIdForContact(normalized)
+        } else {
+            CHANNEL_MESSAGES
+        }
         val title = resolveContactLabel(context, address).ifBlank { "New message" }
 
         ensureChannel(
             context = context,
             channelId = channelId,
-            channelName = if (overrideSound != null) "Messages from $title" else "Beacon messages",
+            channelName = if (hasOverride) "Messages from $title" else "Beacon messages",
             soundUri = soundUri,
-            vibrate = settings.messageNotificationVibrate
+            vibrate = settings.messageNotificationVibrate,
+            pattern = vibrationPattern
         )
 
         val contentIntent = buildContentIntent(context, threadId, address)
@@ -65,7 +74,7 @@ object MessageNotificationManager {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             builder.setSound(resolveSoundUri(soundUri))
             if (settings.messageNotificationVibrate) {
-                builder.setVibrate(DEFAULT_VIBRATION)
+                builder.setVibrate(vibrationPattern)
             }
         }
 
@@ -113,7 +122,8 @@ object MessageNotificationManager {
         channelId: String,
         channelName: String,
         soundUri: String?,
-        vibrate: Boolean
+        vibrate: Boolean,
+        pattern: LongArray
     ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
@@ -121,7 +131,8 @@ object MessageNotificationManager {
         val existing = manager.getNotificationChannel(channelId)
         val needsUpdate = existing == null ||
             (existing.sound?.toString() != desiredSound.toString()) ||
-            existing.shouldVibrate() != vibrate
+            existing.shouldVibrate() != vibrate ||
+            (vibrate && !patternsMatch(existing.vibrationPattern, pattern))
 
         if (needsUpdate && existing != null) {
             manager.deleteNotificationChannel(channelId)
@@ -136,7 +147,7 @@ object MessageNotificationManager {
                 description = "Beacon message notifications"
                 enableVibration(vibrate)
                 if (vibrate) {
-                    vibrationPattern = DEFAULT_VIBRATION
+                    vibrationPattern = pattern
                 }
                 setSound(
                     desiredSound,
@@ -170,6 +181,10 @@ object MessageNotificationManager {
 
     private fun channelIdForContact(key: String): String =
         "${CHANNEL_MESSAGES}.${Integer.toHexString(key.hashCode())}"
+
+    private fun patternsMatch(existing: LongArray?, desired: LongArray): Boolean {
+        return existing?.contentEquals(desired) ?: false
+    }
 
     private fun resolveContactLabel(context: Context, address: String): String {
         val normalized = normalizeSmsAddress(address)
