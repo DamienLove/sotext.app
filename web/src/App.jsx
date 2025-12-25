@@ -58,6 +58,8 @@ const MessageItem = memo(({ msg, showPreviews }) => (
 
 MessageItem.displayName = 'MessageItem';
 
+const defaultMapCenter = { lat: 39.5, lng: -98.35 };
+
 const defaultTheme = {
   primaryColor: "#6750A4",
   secondaryColor: "#625B71",
@@ -615,13 +617,8 @@ function App() {
   const mapInfoRef = useRef(null);
   const mapHomeMarkerRef = useRef(null);
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const defaultMapCenter = { lat: 39.5, lng: -98.35 };
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
 
-  // Fix for undefined function causing crash/lint error
-  const fetchAlertLocations = () => {
-    console.log("Refresh functionality not implemented");
-  };
   const filteredAlerts = useMemo(() => {
     return alertLocations.filter((alert) => {
       if (incomingOnly && !alert.incoming) return false;
@@ -946,11 +943,6 @@ function App() {
     });
     mapInstanceRef.current.fitBounds(bounds);
   }, [filteredAlerts, userLocation]);
-
-  const fetchAlertLocations = () => {
-    // Snapshot listener handles real-time updates.
-    console.log("Refreshing alerts...");
-  };
 
   const handleAlertFocus = (alert) => {
     setSelectedAlertId(alert.id);
@@ -1804,6 +1796,7 @@ function App() {
                 <input
                   className="login-input contact-search"
                   placeholder="Search by name, phone, or email"
+                  aria-label="Search contacts"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
                 />
@@ -1870,6 +1863,8 @@ function App() {
                   onClick={() => window.location.reload()}
                   aria-label="Reload page"
                 >
+                  Reload
+                </button>
                 <button className="ghost-btn" onClick={() => setActivePanel('home')}>
                   Back to Home
                 </button>
@@ -1984,6 +1979,7 @@ function App() {
                         value={themeSearch}
                         onChange={(e) => setThemeSearch(e.target.value)}
                         placeholder="Search by name or creator"
+                        aria-label="Search themes"
                       />
                     </label>
                     <button className="secondary-btn" type="button" onClick={() => setThemeSearch('')}>
@@ -2311,6 +2307,7 @@ function App() {
                   <textarea
                     className="composer-textarea"
                     placeholder="Type a message..."
+                    aria-label="Message body"
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
                   />
