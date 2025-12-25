@@ -2,6 +2,7 @@ package com.pulselink.domain.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.pulselink.domain.model.MessageStatus
 
 @Entity(tableName = "contact_messages")
 data class ContactMessage(
@@ -10,7 +11,8 @@ data class ContactMessage(
     val body: String,
     val direction: MessageDirection,
     val timestamp: Long = System.currentTimeMillis(),
-    val overrideSucceeded: Boolean = false
+    val overrideSucceeded: Boolean = false,
+    val status: MessageStatus = MessageStatus.SENT
 )
 
 enum class MessageDirection {
