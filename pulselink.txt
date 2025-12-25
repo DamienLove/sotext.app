@@ -521,3 +521,5 @@ Current ad behavior in app:
 - Web App.jsx build errors fixed; web build succeeded; Firebase deploy blocked by expired auth (needs firebase login --reauth).
 - Moved misc items (Pulse Link – Draft Patent Claims.pdf + Projects shortcut) to H:\Shared drives\PulseLink\misc\pulselink-cleanup-2025-12-25.
 - Synced Ds-work-suite-beta by merging Suite-Beta and pushing to origin/Ds-work-suite-beta.
+2025-12-25
+- Firebase Hosting deploy completed after reauth; web build ran during deploy and published to https://pulselink-24899.web.app.
