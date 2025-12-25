@@ -505,6 +505,6 @@ Current ad behavior in app:
 - Web app: added Contacts panel with search, tags, and quick edit jump, plus nav/home tiles for browsing trusted contacts.
 
 2025-12-25
-- Fixed vibration pattern wiring issues (duplicate settings mapping, channel params, nullable pattern updates, weight import) and rebuilt v81 AABs (free/pro/premium) to `disposable_aabs/pulselink-{free|pro|premium}-v81.aab`.
+- Fixed vibration pattern wiring issues (duplicate settings mapping, channel params, nullable pattern updates, weight import) and rebuilt v81 AABs (free/pro/premium, not submitted) to `disposable_aabs/pulselink-{free|pro|premium}-v81.aab`.
 - Updated `disposable_aabs/release-notes-v81.txt` with vibration patterns + web contacts; used ORG_GRADLE_JVMARGS="-Xmx6g -XX:MaxMetaspaceSize=2g" for bundle builds.
 - Committed/pushed Suite-Beta and synced Ds-work-suite-beta.
