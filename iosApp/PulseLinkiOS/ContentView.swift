@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(FirebaseAuth)
+import FirebaseAuth
+#endif
 
 struct ContentView: View {
     @ObservedObject var viewModel: AlertRelayViewModel
@@ -15,32 +18,38 @@ struct ContentView: View {
     }
 
     var body: some View {
-        TabView {
-            HomeTab(viewModel: viewModel,
-                    showCancelSheet: $showCancelSheet,
-                    pinInput: $pinInput,
-                    isPro: isPro)
-                .tabItem {
-                    Label("Home", systemImage: "shield.lefthalf.filled")
-                }
-                .badge(isPro ? "Pro" : nil)
+        if viewModel.isLoggedIn {
+            TabView {
+                HomeTab(viewModel: viewModel,
+                        showCancelSheet: $showCancelSheet,
+                        pinInput: $pinInput,
+                        isPro: isPro)
+                    .tabItem {
+                        Label("Home", systemImage: "shield.lefthalf.filled")
+                    }
+                    .badge(isPro ? "Pro" : nil)
 
-            ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
-                .tabItem {
-                    Label("Contacts", systemImage: "person.2.fill")
-                }
+                ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
+                    .tabItem {
+                        Label("Contacts", systemImage: "person.2.fill")
+                    }
 
-            SettingsTab(viewModel: viewModel)
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
+                SettingsTab(viewModel: viewModel)
+                    .tabItem {
+                        Label("Settings", systemImage: "gear")
+                    }
+            }
+            .sheet(isPresented: $showCancelSheet) {
+                CancelEmergencySheet(pinInput: $pinInput) { pin in
+                    if viewModel.cancelEmergency(withPin: pin) {
+                        pinInput = ""
+                        showCancelSheet = false
+                    }
                 }
-        }
-        .sheet(isPresented: $showCancelSheet) {
-            CancelEmergencySheet(pinInput: $pinInput) { pin in
-                if viewModel.cancelEmergency(withPin: pin) {
-                    pinInput = ""
-                    showCancelSheet = false
-                }
+            }
+        } else {
+            LoginView {
+                // Login success handled by Auth listener in ViewModel
             }
         }
     }
@@ -347,6 +356,13 @@ private struct SettingsTab: View {
             Section("Alerts") {
                 Toggle("Override Do Not Disturb", isOn: $viewModel.overrideDND)
                 Toggle("Max volume on urgent", isOn: $viewModel.maxVolumeOnUrgent)
+            }
+            Section("Account") {
+                Button("Sign Out", role: .destructive) {
+                    #if canImport(FirebaseAuth)
+                    try? FirebaseAuth.Auth.auth().signOut()
+                    #endif
+                }
             }
             Section("About") {
                 Label("Matches Android experience: emergency, trusted contacts, urgent chat", systemImage: "arrow.left.arrow.right")
