@@ -1,5 +1,10 @@
 package com.pulselink.ui.screens
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,12 +16,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -126,7 +132,7 @@ fun SmsThreadScreen(
     val lastInbound = remember(messages) { messages.lastOrNull { !it.outgoing }?.body }
     val backgroundImageUrl = effectiveTheme.backgroundImageUrl?.takeIf { it.isNotBlank() }
     val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
-    val listState = rememberLazyListState()
+    val listState = remember(address) { LazyListState() }
     val isNearBottom by remember {
         derivedStateOf {
             val layout = listState.layoutInfo
@@ -134,7 +140,7 @@ fun SmsThreadScreen(
             lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
         }
     }
-    var initialScrollDone by remember { mutableStateOf(false) }
+    var initialScrollDone by remember(address) { mutableStateOf(false) }
 
     val bgModifier = if (effectiveTheme.appBackgroundGradientStart != null && effectiveTheme.appBackgroundGradientEnd != null) {
         Modifier.background(
@@ -332,8 +338,17 @@ fun SmsThreadScreen(
                         )
                     }
                 }
-                items(messages, key = { it.id }) { msg ->
-                    MessageBubble(msg, dateFormatter, effectiveTheme, contact)
+                if (messages.isEmpty() && isDatabaseBusy) {
+                    items(6) { index ->
+                        MessageBubbleSkeleton(
+                            isOutgoing = index % 2 == 0,
+                            theme = effectiveTheme
+                        )
+                    }
+                } else {
+                    items(messages, key = { it.id }) { msg ->
+                        MessageBubble(msg, dateFormatter, effectiveTheme, contact)
+                    }
                 }
             }
         }
@@ -845,6 +860,52 @@ private fun MessageBubble(msg: SmsMessageItem, dateFormatter: (Long) -> String, 
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MessageBubbleSkeleton(
+    isOutgoing: Boolean,
+    theme: ThemePreferences
+) {
+    val transition = rememberInfiniteTransition(label = "messageSkeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "messageSkeletonAlpha"
+    )
+    val bubbleColor = parseColorOr(
+        MaterialTheme.colorScheme.surfaceVariant,
+        if (isOutgoing) theme.bubbleOutgoing else theme.bubbleIncoming
+    ).copy(alpha = alpha)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isOutgoing) Arrangement.End else Arrangement.Start
+    ) {
+        Column(
+            horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(if (isOutgoing) 0.65f else 0.75f)
+                    .height(18.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(bubbleColor)
+            )
+            Box(
+                modifier = Modifier
+                    .width(72.dp)
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(bubbleColor.copy(alpha = alpha * 0.7f))
+            )
         }
     }
 }

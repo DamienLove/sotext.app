@@ -618,8 +618,8 @@ function App() {
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [spotifyCreds, setSpotifyCreds] = useState({
-    clientId: localStorage.getItem('spotify_client_id') || '',
-    clientSecret: localStorage.getItem('spotify_client_secret') || ''
+    clientId: localStorage.getItem('spotify_client_id') || 'b846ea3c7e3440439c6a870be4de24ce',
+    clientSecret: localStorage.getItem('spotify_client_secret') || 'c228e27787164bdebec398c25fe40145'
   });
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
