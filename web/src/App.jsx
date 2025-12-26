@@ -27,6 +27,14 @@ import { httpsCallable } from "firebase/functions";
 import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
 import beaconLogo from './assets/beacon-logo.png';
+import ringersongLogo from './assets/ringersong-logo.png';
+
+// Icons
+const HomeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
+const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>;
+const ThemeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>;
+const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
+const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes.
@@ -1450,9 +1458,9 @@ function App() {
         <div className="sidebar">
           <div className="sidebar-header">
             <div className="sidebar-brand">
-              <img src={logo} alt="PulseLink Pro" className="brand-logo small" />
+              <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
               <div>
-                <div className="brand-title">PulseLink Pro</div>
+                <div className="brand-title">PulseLink Suite</div>
                 <div className="brand-subtitle">Web Command Center</div>
               </div>
             </div>
@@ -1479,50 +1487,66 @@ function App() {
             <button
               className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
               onClick={() => setActivePanel('home')}
-              aria-current={activePanel === 'home' ? 'page' : undefined}
+              title="Home"
             >
-              Home
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-              onClick={() => setActivePanel('beacon')}
-              aria-current={activePanel === 'beacon' ? 'page' : undefined}
-            >
-              Beacon Inbox
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
-              onClick={() => setActivePanel('map')}
-            >
-              Emergency Map
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
-              onClick={() => setActivePanel('themes')}
-              aria-current={activePanel === 'themes' ? 'page' : undefined}
-            >
-              Themes
+              <HomeIcon />
+              <span>Home</span>
             </button>
             <button
               className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
               onClick={() => setActivePanel('pulselink')}
-              aria-current={activePanel === 'pulselink' ? 'page' : undefined}
+              title="PulseLink"
             >
-              PulseLink
+              <img src={logo} alt="PulseLink" />
+              <span>PulseLink</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+              onClick={() => setActivePanel('beacon')}
+              title="Beacon"
+            >
+              <img src={beaconLogo} alt="Beacon" />
+              <span>Beacon</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
+              onClick={() => setActivePanel('ringersong')}
+              title="RingerSong"
+            >
+              <img src={ringersongLogo} alt="RingerSong" />
+              <span>RingerSong</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+              onClick={() => setActivePanel('map')}
+              title="Map"
+            >
+              <MapIcon />
+              <span>Map</span>
             </button>
             <button
               className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
               onClick={() => setActivePanel('contacts')}
-              aria-current={activePanel === 'contacts' ? 'page' : undefined}
+              title="Contacts"
             >
-              Contacts
+              <ContactIcon />
+              <span>Contacts</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+              onClick={() => setActivePanel('themes')}
+              title="Themes"
+            >
+              <ThemeIcon />
+              <span>Themes</span>
             </button>
             <button
               className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
               onClick={() => setActivePanel('settings')}
-              aria-current={activePanel === 'settings' ? 'page' : undefined}
+              title="Settings"
             >
-              Settings
+              <SettingsIcon />
+              <span>Settings</span>
             </button>
           </div>
           {activePanel === 'beacon' ? (
@@ -1578,6 +1602,13 @@ function App() {
                   </div>
                   <h3>Beacon Inbox</h3>
                   <p>View SMS synced from your phone.</p>
+                </button>
+                <button className="home-card" onClick={() => setActivePanel('ringersong')}>
+                  <div className="home-icon ringersong">
+                    <img src={ringersongLogo} alt="RingerSong" />
+                  </div>
+                  <h3>RingerSong</h3>
+                  <p>Manage ringtone progressions and streaming.</p>
                 </button>
                 <button className="home-card" onClick={() => setActivePanel('map')}>
                   <div className="home-icon pulselink">
@@ -1956,6 +1987,28 @@ function App() {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'ringersong' && (
+            <div className="pulselink-panel">
+              <div className="panel-header">
+                <h3>RingerSong</h3>
+                <p>Smart ringtone progression and streaming manager.</p>
+              </div>
+              <div className="settings-card">
+                <div className="empty-state">
+                  <div className="home-icon ringersong" style={{ width: 64, height: 64 }}>
+                    <img src={ringersongLogo} alt="RingerSong" style={{ width: 42, height: 42 }} />
+                  </div>
+                  <h3>Coming Soon to Web</h3>
+                  <p>
+                    Manage your RingerSong playlists, Spotify integration, and contact rules directly from your browser.
+                    <br />
+                    Syncing is currently available in the Android app.
+                  </p>
                 </div>
               </div>
             </div>
