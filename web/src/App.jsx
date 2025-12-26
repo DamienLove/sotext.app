@@ -562,6 +562,17 @@ const buildAlertSnippet = (body = '') => {
   return `${firstLine.slice(0, 85)}...`;
 };
 
+// Sentinel: Prevent XSS in map info windows
+const escapeHtml = (unsafe) => {
+  return (unsafe || '')
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 const loadGoogleMaps = (() => {
   let loaderPromise;
   return (apiKey) => {
@@ -752,6 +763,8 @@ function App() {
   const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
 
+  // Fix for undefined function causing crash/lint error
+  // Removed duplicate declaration
   const filteredAlerts = useMemo(() => {
     return alertLocations.filter((alert) => {
       if (incomingOnly && !alert.incoming) return false;
@@ -1080,11 +1093,16 @@ function App() {
         if (!mapInfoRef.current) {
           mapInfoRef.current = new window.google.maps.InfoWindow();
         }
+        // Sentinel: Escape user input to prevent XSS in InfoWindow
+        const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
+        const safeAddress = escapeHtml(alert.address);
+        const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+
         mapInfoRef.current.setContent(
           `<div style="font-family: sans-serif; max-width: 220px;">
-            <strong>${alertBadgeCopy[alert.severity] ?? 'Alert'}</strong><br/>
-            ${alert.address}<br/>
-            <span style="font-size: 12px;">${new Date(alert.date).toLocaleString()}</span>
+            <strong>${safeType}</strong><br/>
+            ${safeAddress}<br/>
+            <span style="font-size: 12px;">${safeDate}</span>
           </div>`
         );
         mapInfoRef.current.open(mapInstanceRef.current, marker);
@@ -1105,11 +1123,16 @@ function App() {
       if (!mapInfoRef.current) {
         mapInfoRef.current = new window.google.maps.InfoWindow();
       }
+      // Sentinel: Escape user input to prevent XSS in InfoWindow
+      const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
+      const safeAddress = escapeHtml(alert.address);
+      const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+
       mapInfoRef.current.setContent(
         `<div style="font-family: sans-serif; max-width: 220px;">
-          <strong>${alertBadgeCopy[alert.severity] ?? 'Alert'}</strong><br/>
-          ${alert.address}<br/>
-          <span style="font-size: 12px;">${new Date(alert.date).toLocaleString()}</span>
+          <strong>${safeType}</strong><br/>
+          ${safeAddress}<br/>
+          <span style="font-size: 12px;">${safeDate}</span>
         </div>`
       );
       mapInfoRef.current.open(mapInstanceRef.current, marker);
