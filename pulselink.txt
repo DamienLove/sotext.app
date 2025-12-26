@@ -536,3 +536,6 @@ Current ad behavior in app:
 - Cleaned firestore.indexes.json to remove unnecessary single-field indexes after deploy error.
 - GitHub: closed #233/#234/#229; set #231/#235/#55 to In review with verify comments.
 - Synced Ds-work-suite-beta from Suite-Beta.
+
+2025-12-26
+- Built v84 AABs (free/pro/premium) and saved release-notes-v84.txt.
