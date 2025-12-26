@@ -1656,7 +1656,12 @@ function App() {
             <div className="thread-list">
               {threads.length === 0 ? (
                 <div className="sidebar-placeholder">
-                  <div className="sidebar-tip muted">No conversations found.</div>
+                  <div className="sidebar-tip muted">
+                    No conversations found.
+                  </div>
+                  <div className="sidebar-tip muted">
+                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+                  </div>
                 </div>
               ) : (
                 threads.map(thread => (

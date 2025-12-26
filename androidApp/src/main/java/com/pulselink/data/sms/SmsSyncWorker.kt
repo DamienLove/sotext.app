@@ -64,52 +64,56 @@ class SmsSyncWorker @AssistedInject constructor(
             phoneNumber?.takeIf { it.isNotBlank() }?.let { devicePayload["phoneNumber"] = it }
             deviceRef.set(devicePayload, SetOptions.merge()).await()
 
-            val threads = smsRepository.listThreads(limit = 20)
-            val legacyThreadsRef = userRef.collection("synced_threads")
-            val lineThreadsRef = lineRef.collection("threads")
+            // Only sync messages if Remote Web Access is enabled by the user
+            if (settings.remoteWebAccessEnabled) {
+                val threads = smsRepository.listThreads(limit = 20)
+                val legacyThreadsRef = userRef.collection("synced_threads")
+                val lineThreadsRef = lineRef.collection("threads")
 
-            for (thread in threads) {
-                val threadDoc = legacyThreadsRef.document(thread.threadId.toString())
-                val lineThreadDoc = lineThreadsRef.document(thread.threadId.toString())
-                val threadData = mapOf(
-                    "address" to thread.address,
-                    "snippet" to thread.snippet,
-                    "date" to thread.timestamp,
-                    "unread" to thread.unread,
-                    "isFavorite" to thread.isFavorite,
-                    "isPrivate" to thread.isPrivate,
-                    "isTrusted" to thread.isTrusted
-                )
-                // Write thread data
-                threadDoc.set(threadData, SetOptions.merge()).await()
-                lineThreadDoc.set(threadData, SetOptions.merge()).await()
-
-                // Sync messages
-                val messages = smsRepository.messagesForThread(thread.threadId, limit = 50)
-                val messagesRef = threadDoc.collection("messages")
-                val lineMessagesRef = lineThreadDoc.collection("messages")
-
-                val batch = firestore.batch()
-                val lineBatch = firestore.batch()
-                var batchCount = 0
-
-                for (msg in messages) {
-                    val msgDoc = messagesRef.document(msg.id.toString())
-                    val lineMsgDoc = lineMessagesRef.document(msg.id.toString())
-                    val msgData = mapOf(
-                        "body" to msg.body,
-                        "date" to msg.timestamp,
-                        "type" to (if (msg.outgoing) 2 else 1)
+                for (thread in threads) {
+                    val threadDoc = legacyThreadsRef.document(thread.threadId.toString())
+                    val lineThreadDoc = lineThreadsRef.document(thread.threadId.toString())
+                    val threadData = mapOf(
+                        "address" to thread.address,
+                        "snippet" to thread.snippet,
+                        "date" to thread.timestamp,
+                        "unread" to thread.unread,
+                        "isFavorite" to thread.isFavorite,
+                        "isPrivate" to thread.isPrivate,
+                        "isTrusted" to thread.isTrusted
                     )
-                    batch.set(msgDoc, msgData, SetOptions.merge())
-                    lineBatch.set(lineMsgDoc, msgData, SetOptions.merge())
-                    batchCount++
-                }
-                if (batchCount > 0) {
-                    batch.commit().await()
-                    lineBatch.commit().await()
+                    // Write thread data
+                    threadDoc.set(threadData, SetOptions.merge()).await()
+                    lineThreadDoc.set(threadData, SetOptions.merge()).await()
+
+                    // Sync messages
+                    val messages = smsRepository.messagesForThread(thread.threadId, limit = 50)
+                    val messagesRef = threadDoc.collection("messages")
+                    val lineMessagesRef = lineThreadDoc.collection("messages")
+
+                    val batch = firestore.batch()
+                    val lineBatch = firestore.batch()
+                    var batchCount = 0
+
+                    for (msg in messages) {
+                        val msgDoc = messagesRef.document(msg.id.toString())
+                        val lineMsgDoc = lineMessagesRef.document(msg.id.toString())
+                        val msgData = mapOf(
+                            "body" to msg.body,
+                            "date" to msg.timestamp,
+                            "type" to (if (msg.outgoing) 2 else 1)
+                        )
+                        batch.set(msgDoc, msgData, SetOptions.merge())
+                        lineBatch.set(lineMsgDoc, msgData, SetOptions.merge())
+                        batchCount++
+                    }
+                    if (batchCount > 0) {
+                        batch.commit().await()
+                        lineBatch.commit().await()
+                    }
                 }
             }
+
             if (deviceContactsRepository.hasContactsPermission() && settings.remoteWebAccessEnabled) {
                 syncDeviceContacts(user.uid)
             }
