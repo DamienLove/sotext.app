@@ -640,6 +640,7 @@ function App() {
   const [settingsStatus, setSettingsStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [spotifyCreds, setSpotifyCreds] = useState({
@@ -1845,13 +1846,27 @@ function App() {
                           >
                             Edit
                           </button>
-                          <button
-                            className="ghost-btn"
-                            onClick={() => handleDeleteContact(contact.id)}
-                            aria-label={`Remove ${contact.displayName}`}
-                          >
-                            Remove
-                          </button>
+                          {confirmDeleteId === contact.id ? (
+                            <button
+                              className="secondary-btn"
+                              onClick={() => {
+                                handleDeleteContact(contact.id);
+                                setConfirmDeleteId(null);
+                              }}
+                              aria-label={`Confirm remove ${contact.displayName}`}
+                              onBlur={() => setConfirmDeleteId(null)}
+                            >
+                              Confirm?
+                            </button>
+                          ) : (
+                            <button
+                              className="ghost-btn"
+                              onClick={() => setConfirmDeleteId(contact.id)}
+                              aria-label={`Remove ${contact.displayName}`}
+                            >
+                              Remove
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
