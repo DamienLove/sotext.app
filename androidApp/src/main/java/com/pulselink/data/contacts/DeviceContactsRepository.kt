@@ -61,6 +61,23 @@ class DeviceContactsRepository @Inject constructor(
             android.Manifest.permission.READ_CONTACTS
         ) == PackageManager.PERMISSION_GRANTED
 
+    fun resolveContactName(phoneNumber: String): String? {
+        if (!hasContactsPermission()) return null
+        val uri = android.net.Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, android.net.Uri.encode(phoneNumber))
+        val projection = arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME)
+        runCatching {
+            context.contentResolver.query(uri, projection, null, null, null).use { cursor ->
+                if (cursor != null && cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(ContactsContract.PhoneLookup.DISPLAY_NAME)
+                    if (idx >= 0) {
+                        return cursor.getString(idx)
+                    }
+                }
+            }
+        }
+        return null
+    }
+
     private fun normalize(input: String): String {
         if (input.isBlank()) return ""
         val digits = buildString {
