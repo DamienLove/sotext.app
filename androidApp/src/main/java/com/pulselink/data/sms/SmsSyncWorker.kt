@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
+import com.pulselink.data.contacts.DeviceContactsRepository
 import com.pulselink.BuildConfig
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.assisted.Assisted
@@ -23,7 +24,8 @@ class SmsSyncWorker @AssistedInject constructor(
     private val smsRepository: SmsRepository,
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val deviceContactsRepository: DeviceContactsRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
@@ -108,10 +110,70 @@ class SmsSyncWorker @AssistedInject constructor(
                     lineBatch.commit().await()
                 }
             }
+            if (deviceContactsRepository.hasContactsPermission() && settings.remoteWebAccessEnabled) {
+                syncDeviceContacts(user.uid)
+            }
             Result.success()
         } catch (e: Exception) {
             e.printStackTrace()
             Result.retry()
         }
+    }
+
+    private suspend fun syncDeviceContacts(userId: String) {
+        val contacts = deviceContactsRepository.listPhoneContacts(limit = 500)
+        val contactsRef = firestore.collection("users")
+            .document(userId)
+            .collection("deviceContacts")
+        val existing = runCatching { contactsRef.get().await() }.getOrNull()
+        val existingIds = existing?.documents?.map { it.id } ?: emptyList()
+        val desiredIds = HashSet<String>()
+        var batch = firestore.batch()
+        var batchCount = 0
+
+        suspend fun commitBatch() {
+            if (batchCount == 0) return
+            batch.commit().await()
+            batch = firestore.batch()
+            batchCount = 0
+        }
+
+        contacts.forEach { contact ->
+            val normalized = normalizePhone(contact.phoneNumber)
+            val docId = if (normalized.isNotBlank()) normalized else "id_${contact.id}"
+            desiredIds.add(docId)
+            val payload = mapOf(
+                "displayName" to contact.displayName,
+                "phoneNumber" to contact.phoneNumber,
+                "normalizedPhone" to normalized,
+                "contactId" to contact.id,
+                "updatedAt" to FieldValue.serverTimestamp()
+            )
+            batch.set(contactsRef.document(docId), payload, SetOptions.merge())
+            batchCount++
+            if (batchCount >= 450) {
+                commitBatch()
+            }
+        }
+
+        existingIds.filterNot { desiredIds.contains(it) }.forEach { docId ->
+            batch.delete(contactsRef.document(docId))
+            batchCount++
+            if (batchCount >= 450) {
+                commitBatch()
+            }
+        }
+
+        commitBatch()
+    }
+
+    private fun normalizePhone(input: String?): String {
+        if (input.isNullOrBlank()) return ""
+        val digits = buildString {
+            input.forEach { ch ->
+                if (ch.isDigit()) append(ch)
+            }
+        }
+        return if (input.trim().startsWith("+")) "+$digits" else digits
     }
 }

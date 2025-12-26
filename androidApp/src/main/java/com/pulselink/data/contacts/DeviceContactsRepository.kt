@@ -55,7 +55,7 @@ class DeviceContactsRepository @Inject constructor(
         }
     }
 
-    private fun hasContactsPermission(): Boolean =
+    fun hasContactsPermission(): Boolean =
         ContextCompat.checkSelfPermission(
             context,
             android.Manifest.permission.READ_CONTACTS
