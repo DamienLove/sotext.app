@@ -36,8 +36,17 @@ const ThemeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="no
 const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 
+const areThreadsEqual = (prev, next) => {
+  return prev.isActive === next.isActive &&
+         prev.showPreviews === next.showPreviews &&
+         prev.onSelect === next.onSelect &&
+         prev.thread.id === next.thread.id &&
+         prev.thread.address === next.thread.address &&
+         prev.thread.snippet === next.thread.snippet;
+};
+
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
-// when only the selection state changes.
+// when only the selection state changes or when unrelated threads update.
 const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
   <button
     className={`thread-item ${isActive ? 'active' : ''}`}
@@ -48,11 +57,20 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
     <div className="thread-name">{thread.address}</div>
     <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
   </button>
-));
+), areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
 
+const areMessagesEqual = (prev, next) => {
+  return prev.showPreviews === next.showPreviews &&
+         prev.msg.id === next.msg.id &&
+         prev.msg.body === next.msg.body &&
+         prev.msg.date === next.msg.date &&
+         prev.msg.type === next.msg.type;
+};
+
 // Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
+// or when new messages arrive (which creates new object references).
 const MessageItem = memo(({ msg, showPreviews }) => (
   <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
     <div className="message-bubble">
@@ -62,7 +80,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
     </div>
   </div>
-));
+), areMessagesEqual);
 
 MessageItem.displayName = 'MessageItem';
 
