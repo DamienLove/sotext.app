@@ -1,5 +1,10 @@
 package com.pulselink.ui.screens
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -198,6 +203,7 @@ fun SmsInboxScreen(
     val showImportAll = filter == InboxFilter.ALL &&
         localDeviceId != null &&
         (activeLine == null || activeLine == localDeviceId)
+    val showSkeletons = isDatabaseBusy && threads.isEmpty()
 
     val colorScheme = MaterialTheme.colorScheme
     val iconSize = (24f * theme.iconSizeFactor).coerceIn(18f, 34f).dp
@@ -478,74 +484,82 @@ fun SmsInboxScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (filtered.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillParentMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.alpha(0.6f)
+                    if (showSkeletons) {
+                        items(6) {
+                            ThreadRowSkeleton(theme = theme)
+                        }
+                    } else {
+                        item {
+                            Box(
+                                modifier = Modifier.fillParentMaxSize(),
+                                contentAlignment = Alignment.Center
                             ) {
-                                ThemeIcon(
-                                    iconKey = ThemeIconKey.INBOX,
-                                    theme = theme,
-                                    imageVector = Icons.Filled.Inbox,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(largeIconSize),
-                                    tint = parseColorOr(
-                                        MaterialTheme.colorScheme.onSurfaceVariant,
-                                        theme.onBackground
-                                    )
-                                )
-                                Text(
-                                    text = "No messages here yet.",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = parseColorOr(
-                                        MaterialTheme.colorScheme.onSurfaceVariant,
-                                        theme.onBackground
-                                    )
-                                )
-                                if (showImportAll) {
-                                    OutlinedButton(onClick = onImportAll) {
-                                        ThemeIcon(
-                                            iconKey = ThemeIconKey.REFRESH,
-                                            theme = theme,
-                                            imageVector = Icons.Filled.Refresh,
-                                            contentDescription = null
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.alpha(0.6f)
+                                ) {
+                                    ThemeIcon(
+                                        iconKey = ThemeIconKey.INBOX,
+                                        theme = theme,
+                                        imageVector = Icons.Filled.Inbox,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(largeIconSize),
+                                        tint = parseColorOr(
+                                            MaterialTheme.colorScheme.onSurfaceVariant,
+                                            theme.onBackground
                                         )
-                                        Text("Import all messages", modifier = Modifier.padding(start = 6.dp))
+                                    )
+                                    Text(
+                                        text = "No messages here yet.",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = parseColorOr(
+                                            MaterialTheme.colorScheme.onSurfaceVariant,
+                                            theme.onBackground
+                                        )
+                                    )
+                                    if (showImportAll) {
+                                        OutlinedButton(onClick = onImportAll) {
+                                            ThemeIcon(
+                                                iconKey = ThemeIconKey.REFRESH,
+                                                theme = theme,
+                                                imageVector = Icons.Filled.Refresh,
+                                                contentDescription = null
+                                            )
+                                            Text("Import all messages", modifier = Modifier.padding(start = 6.dp))
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-                items(filtered, key = { threadKey(it) }) { thread ->
-                    val lineIndex = thread.lineId?.let { lineIndexMap[it] }
-                    val isLocalLine = localDeviceId == null ||
-                        thread.lineId.isNullOrBlank() ||
-                        thread.lineId == localDeviceId
-                    val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
-                    ThreadRow(
-                        thread = thread,
-                        onOpen = onOpenThread,
-                        onAvatarClick = onOpenContactForThread,
-                        onArchive = onArchiveThread,
-                        onUnarchive = onUnarchiveThread,
-                        onDelete = onDeleteThread,
-                        dateFormatter = dateFormatter,
-                        isArchived = archivedIds.contains(threadKey(thread)),
-                        isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
-                        onTogglePrivate = onTogglePrivate,
-                        theme = theme,
-                        contact = contact,
-                        lineIndex = lineIndex,
-                        lineColors = lineColors,
-                        lineCount = orderedLines.size,
-                        actionsEnabled = isLocalLine
-                    )
+                if (filtered.isNotEmpty()) {
+                    items(filtered, key = { threadKey(it) }) { thread ->
+                        val lineIndex = thread.lineId?.let { lineIndexMap[it] }
+                        val isLocalLine = localDeviceId == null ||
+                            thread.lineId.isNullOrBlank() ||
+                            thread.lineId == localDeviceId
+                        val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
+                        ThreadRow(
+                            thread = thread,
+                            onOpen = onOpenThread,
+                            onAvatarClick = onOpenContactForThread,
+                            onArchive = onArchiveThread,
+                            onUnarchive = onUnarchiveThread,
+                            onDelete = onDeleteThread,
+                            dateFormatter = dateFormatter,
+                            isArchived = archivedIds.contains(threadKey(thread)),
+                            isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
+                            onTogglePrivate = onTogglePrivate,
+                            theme = theme,
+                            contact = contact,
+                            lineIndex = lineIndex,
+                            lineColors = lineColors,
+                            lineCount = orderedLines.size,
+                            actionsEnabled = isLocalLine
+                        )
+                    }
                 }
             }
             }
@@ -745,6 +759,62 @@ private fun ThreadRow(
             }
         }
     )
+}
+
+@Composable
+private fun ThreadRowSkeleton(
+    theme: ThemePreferences
+) {
+    val transition = rememberInfiniteTransition(label = "threadSkeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "threadSkeletonAlpha"
+    )
+    val shimmer = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
+        .copy(alpha = alpha)
+
+    Surface(
+        tonalElevation = 1.dp,
+        shape = RoundedCornerShape(14.dp),
+        color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(shimmer)
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.6f)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(shimmer)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(shimmer.copy(alpha = alpha * 0.75f))
+                )
+            }
+        }
+    }
 }
 
 @Composable

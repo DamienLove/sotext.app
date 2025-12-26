@@ -26,8 +26,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -156,7 +156,7 @@ private fun ConversationBody(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf(TextFieldValue("")) }
-    val listState = rememberLazyListState()
+    val listState = remember(contact.id) { LazyListState() }
     val isNearBottom by remember {
         derivedStateOf {
             val layout = listState.layoutInfo
@@ -164,7 +164,7 @@ private fun ConversationBody(
             lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
         }
     }
-    var initialScrollDone by remember { mutableStateOf(false) }
+    var initialScrollDone by remember(contact.id) { mutableStateOf(false) }
     val voiceLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
