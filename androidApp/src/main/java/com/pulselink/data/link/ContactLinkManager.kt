@@ -104,6 +104,8 @@ class ContactLinkManager @Inject constructor(
     ): Boolean {
         val settings = settingsRepository.settings.first()
         val priority = settings.messagingChannelPriority // Default is [FIREBASE, SMS, EMAIL]
+        val skipSms = message is PulseLinkMessage.AlertPrepare &&
+            message.reason == PulseLinkMessage.AlertPrepareReason.MESSAGE
 
         for (channel in priority) {
             when (channel) {
@@ -124,15 +126,17 @@ class ContactLinkManager @Inject constructor(
                     }
                 }
                 MessageChannel.SMS -> {
-                     val targetPhone = contact.primaryPhone()
-                     if (!targetPhone.isNullOrBlank() && hasSmsPermission()) {
-                         messageDeliveryTracker.recordAttempt(contact.id, MessageChannel.SMS)
-                         val success = smsSender.sendSms(targetPhone, smsBody, awaitResult = awaitSmsResult)
-                         if (success) {
-                             messageDeliveryTracker.recordSuccess(contact.id, MessageChannel.SMS)
-                             return true
-                         } else {
-                             messageDeliveryTracker.recordFailure(contact.id, MessageChannel.SMS)
+                     if (!skipSms) {
+                         val targetPhone = contact.primaryPhone()
+                         if (!targetPhone.isNullOrBlank() && hasSmsPermission()) {
+                             messageDeliveryTracker.recordAttempt(contact.id, MessageChannel.SMS)
+                             val success = smsSender.sendSms(targetPhone, smsBody, awaitResult = awaitSmsResult)
+                             if (success) {
+                                 messageDeliveryTracker.recordSuccess(contact.id, MessageChannel.SMS)
+                                 return true
+                             } else {
+                                 messageDeliveryTracker.recordFailure(contact.id, MessageChannel.SMS)
+                             }
                          }
                      }
                 }

@@ -20,5 +20,13 @@ data class SmsMessageItem(
     val address: String,
     val body: String,
     val timestamp: Long,
-    val outgoing: Boolean
+    val outgoing: Boolean,
+    val status: SmsMessageStatus? = null
 )
+
+enum class SmsMessageStatus {
+    SENDING,
+    SENT,
+    RECEIVED,
+    READ
+}

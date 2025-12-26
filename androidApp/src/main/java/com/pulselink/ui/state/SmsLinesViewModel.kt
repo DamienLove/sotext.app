@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 
 @HiltViewModel
 class SmsLinesViewModel @Inject constructor(
@@ -25,6 +26,7 @@ class SmsLinesViewModel @Inject constructor(
     val lines: StateFlow<List<SmsLine>> = _lines
     private val _devices = MutableStateFlow<List<SmsLineDevice>>(emptyList())
     val devices: StateFlow<List<SmsLineDevice>> = _devices
+    private var latestLines: List<SmsLine> = emptyList()
     private val _deviceLineId = MutableStateFlow("")
     val deviceLineId: StateFlow<String> = _deviceLineId
     private val _activeLineId = MutableStateFlow<String?>(null)
@@ -42,11 +44,19 @@ class SmsLinesViewModel @Inject constructor(
 
     init {
         smsLineRepository.observeLines()
-            .onEach { _lines.value = it.filter { line -> !line.disabled } }
+            .onEach { lines ->
+                latestLines = lines
+                val deduped = dedupeForDisplay(lines)
+                _lines.value = deduped
+                scheduleDedupe(lines, _devices.value)
+            }
             .launchIn(viewModelScope)
 
         smsLineRepository.observeDevices()
-            .onEach { _devices.value = it }
+            .onEach { devices ->
+                _devices.value = devices
+                scheduleDedupe(latestLines, devices)
+            }
             .launchIn(viewModelScope)
 
         var lastRegisteredPhone: String? = null
@@ -79,6 +89,41 @@ class SmsLinesViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun scheduleDedupe(lines: List<SmsLine>, devices: List<SmsLineDevice>) {
+        if (lines.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val grouped = lines
+                .filter { it.phoneNumber.isNotBlank() }
+                .groupBy { normalizePhone(it.phoneNumber) }
+                .filterKeys { it.isNotBlank() }
+            grouped.values.forEach { group ->
+                if (group.size <= 1) return@forEach
+                val sorted = group.sortedBy { it.createdAt }
+                val canonical = sorted.first()
+                sorted.drop(1).forEach { duplicate ->
+                    if (!duplicate.disabled) {
+                        smsLineRepository.setLineDisabled(duplicate.id, true)
+                    }
+                    devices.filter { it.lineId == duplicate.id }.forEach { device ->
+                        smsLineRepository.updateDeviceLine(device.id, canonical.id)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun dedupeForDisplay(lines: List<SmsLine>): List<SmsLine> {
+        val active = lines.filter { !it.disabled }
+        val grouped = active.groupBy { normalizePhone(it.phoneNumber) }
+        return grouped.flatMap { (key, group) ->
+            if (key.isBlank()) group else listOf(group.minBy { it.createdAt })
+        }
+    }
+
+    private fun normalizePhone(input: String?): String {
+        return input.orEmpty().filter { it.isDigit() || it == '+' }.trim()
     }
 
     fun setInboxMode(mode: LineInboxMode) {
