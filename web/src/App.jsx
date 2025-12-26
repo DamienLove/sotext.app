@@ -639,6 +639,7 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
+  const [deleteAction, setDeleteAction] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [spotifyCreds, setSpotifyCreds] = useState({
@@ -1400,6 +1401,7 @@ function App() {
     if (!window.confirm("Delete your account and all cloud data? This cannot be undone.")) {
       return;
     }
+    setDeleteAction('account');
     setDeleteStatus("Requesting account deletion...");
     try {
       const callable = httpsCallable(functions, "deleteAccount");
@@ -1409,6 +1411,8 @@ function App() {
     } catch (error) {
       console.error("Delete account failed", error);
       setDeleteStatus(error?.message ?? "Delete account failed.");
+    } finally {
+      setDeleteAction(null);
     }
   };
 
@@ -1417,6 +1421,7 @@ function App() {
     if (!window.confirm("Clear synced messages, device contacts, and trusted contacts from the cloud?")) {
       return;
     }
+    setDeleteAction('data');
     setDeleteStatus("Deleting account data...");
     try {
       const batch = writeBatch(db);
@@ -1446,6 +1451,8 @@ function App() {
     } catch (error) {
       console.error("Delete data failed", error);
       setDeleteStatus(error?.message ?? "Delete data failed.");
+    } finally {
+      setDeleteAction(null);
     }
   };
 
@@ -2490,11 +2497,21 @@ function App() {
                     Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
                   </p>
                   <div className="contact-actions">
-                    <button className="secondary-btn" type="button" onClick={handleDeleteAccountData}>
-                      Clear cloud data
+                    <button
+                      className="secondary-btn"
+                      type="button"
+                      onClick={handleDeleteAccountData}
+                      disabled={!!deleteAction}
+                    >
+                      {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
                     </button>
-                    <button className="primary-btn" type="button" onClick={handleDeleteAccount}>
-                      Delete account
+                    <button
+                      className="primary-btn"
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      disabled={!!deleteAction}
+                    >
+                      {deleteAction === 'account' ? "Deleting..." : "Delete account"}
                     </button>
                   </div>
                   {deleteStatus && <div className="settings-status">{deleteStatus}</div>}
