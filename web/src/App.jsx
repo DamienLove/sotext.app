@@ -1615,6 +1615,7 @@ function App() {
               className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
               onClick={() => setActivePanel('home')}
               title="Home"
+              aria-current={activePanel === 'home' ? 'page' : undefined}
             >
               <HomeIcon />
               <span>Home</span>
@@ -1623,6 +1624,7 @@ function App() {
               className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
               onClick={() => setActivePanel('pulselink')}
               title="PulseLink"
+              aria-current={activePanel === 'pulselink' ? 'page' : undefined}
             >
               <img src={logo} alt="PulseLink" />
               <span>PulseLink</span>
@@ -1631,6 +1633,7 @@ function App() {
               className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
               onClick={() => setActivePanel('beacon')}
               title="Beacon"
+              aria-current={activePanel === 'beacon' ? 'page' : undefined}
             >
               <img src={beaconLogo} alt="Beacon" />
               <span>Beacon</span>
@@ -1639,6 +1642,7 @@ function App() {
               className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
               onClick={() => setActivePanel('ringersong')}
               title="RingerSong"
+              aria-current={activePanel === 'ringersong' ? 'page' : undefined}
             >
               <img src={ringersongLogo} alt="RingerSong" />
               <span>RingerSong</span>
@@ -1647,6 +1651,7 @@ function App() {
               className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
               onClick={() => setActivePanel('map')}
               title="Map"
+              aria-current={activePanel === 'map' ? 'page' : undefined}
             >
               <MapIcon />
               <span>Map</span>
@@ -1655,6 +1660,7 @@ function App() {
               className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
               onClick={() => setActivePanel('contacts')}
               title="Contacts"
+              aria-current={activePanel === 'contacts' ? 'page' : undefined}
             >
               <ContactIcon />
               <span>Contacts</span>
@@ -1663,6 +1669,7 @@ function App() {
               className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
               onClick={() => setActivePanel('themes')}
               title="Themes"
+              aria-current={activePanel === 'themes' ? 'page' : undefined}
             >
               <ThemeIcon />
               <span>Themes</span>
@@ -1671,6 +1678,7 @@ function App() {
               className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
               onClick={() => setActivePanel('settings')}
               title="Settings"
+              aria-current={activePanel === 'settings' ? 'page' : undefined}
             >
               <SettingsIcon />
               <span>Settings</span>
