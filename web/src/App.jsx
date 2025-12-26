@@ -84,6 +84,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
 
 MessageItem.displayName = 'MessageItem';
 
+const defaultMapCenter = { lat: 39.5, lng: -98.35 };
 // Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
 const DeviceContactItem = memo(({ contact }) => {
   const extraPhones = Array.isArray(contact.additionalPhones)
@@ -2029,6 +2030,7 @@ function App() {
                 <input
                   className="login-input contact-search"
                   placeholder="Search by name, phone, or email"
+                  aria-label="Search contacts"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
                   aria-label="Search contacts"
@@ -2274,6 +2276,7 @@ function App() {
                         value={themeSearch}
                         onChange={(e) => setThemeSearch(e.target.value)}
                         placeholder="Search by name or creator"
+                        aria-label="Search themes"
                       />
                     </label>
                     <button className="secondary-btn" type="button" onClick={() => setThemeSearch('')}>
@@ -2612,6 +2615,7 @@ function App() {
                   <textarea
                     className="composer-textarea"
                     placeholder="Type a message..."
+                    aria-label="Message body"
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
                     aria-label="Message body"
