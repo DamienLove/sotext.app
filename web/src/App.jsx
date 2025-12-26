@@ -616,6 +616,76 @@ function App() {
   const [deleteStatus, setDeleteStatus] = useState('');
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [spotifyQuery, setSpotifyQuery] = useState('');
+  const [spotifyResults, setSpotifyResults] = useState([]);
+  const [ringerPlaylist, setRingerPlaylist] = useState([]);
+  const [ringerStatus, setRingerStatus] = useState('');
+
+  const handleSpotifySearch = async () => {
+    if (!spotifyQuery.trim()) return;
+    setRingerStatus('Searching Spotify...');
+    try {
+      const clientId = "b846ea3c7e3440439c6a870be4de24ce";
+      const clientSecret = "c228e27787164bdebec398c25fe40145";
+      const auth = btoa(clientId + ":" + clientSecret);
+      const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        headers: {
+          "Authorization": "Basic " + auth,
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "grant_type=client_credentials"
+      });
+      const tokenData = await tokenRes.json();
+      if (!tokenData.access_token) throw new Error("Auth failed");
+
+      const searchRes = await fetch("https://api.spotify.com/v1/search?q=" + encodeURIComponent(spotifyQuery) + "&type=track&limit=10", {
+        headers: { "Authorization": "Bearer " + tokenData.access_token }
+      });
+      const searchData = await searchRes.json();
+      setSpotifyResults(searchData.tracks?.items || []);
+      setRingerStatus('');
+    } catch (e) {
+      console.error(e);
+      setRingerStatus('Search failed.');
+    }
+  };
+
+  const handleSaveTrack = async (track) => {
+    if (!user) return;
+    try {
+      const trackData = {
+        spotifyId: track.id,
+        uri: track.uri,
+        title: track.name,
+        artist: track.artists.map(a => a.name).join(', '),
+        durationMs: track.duration_ms,
+        addedAt: serverTimestamp()
+      };
+      await addDoc(collection(db, "users", user.uid, "ringer_playlist"), trackData);
+      setRingerStatus("Added " + track.name);
+    } catch (e) {
+      setRingerStatus('Failed to add track.');
+    }
+  };
+
+  const handleDeleteTrack = async (id) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "ringer_playlist", id));
+    } catch (e) {
+      setRingerStatus('Failed to remove track.');
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, "users", user.uid, "ringer_playlist"), orderBy("addedAt", "desc"));
+    const unsub = onSnapshot(q, (snap) => {
+      setRingerPlaylist(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsub();
+  }, [user]);
   const messagesEndRef = useRef(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -1998,19 +2068,77 @@ function App() {
                 <h3>RingerSong</h3>
                 <p>Smart ringtone progression and streaming manager.</p>
               </div>
+              
               <div className="settings-card">
-                <div className="empty-state">
-                  <div className="home-icon ringersong" style={{ width: 64, height: 64 }}>
-                    <img src={ringersongLogo} alt="RingerSong" style={{ width: 42, height: 42 }} />
-                  </div>
-                  <h3>Coming Soon to Web</h3>
-                  <p>
-                    Manage your RingerSong playlists, Spotify integration, and contact rules directly from your browser.
-                    <br />
-                    Syncing is currently available in the Android app.
-                  </p>
-                </div>
+                <h4>Push Track to Device</h4>
+                <p className="settings-label">
+                  Enter a Spotify Track URI (e.g., spotify:track:...) to send it to your RingerSong app.
+                  <br/>
+                  Ensure your app is open and connected.
+                </p>
+                
+                <label className="login-field">
+                  Target Device ID
+                  <input 
+                    className="login-input" 
+                    placeholder="Enter UID from RingerSong Settings"
+                    value={contactForm.targetUid || user?.uid || ''}
+                    onChange={(e) => setContactForm(prev => ({...prev, targetUid: e.target.value}))}
+                  />
+                  <span className="settings-note">Found in RingerSong App {'>'} Settings {'>'} Sync Status</span>
+                </label>
+
+                <label className="login-field">
+                  Spotify URI
+                  <input 
+                    className="login-input" 
+                    placeholder="spotify:track:4cOdK2wGLETKBW3PvgPWqT"
+                    value={contactForm.spotifyUri || ''}
+                    onChange={(e) => setContactForm(prev => ({...prev, spotifyUri: e.target.value}))}
+                  />
+                </label>
+                
+                <button 
+                  className="primary-btn"
+                  onClick={async () => {
+                    const target = contactForm.targetUid || user?.uid;
+                    const uri = contactForm.spotifyUri?.trim();
+                    if(!target || !uri) {
+                        setSettingsStatus("Target UID and URI required.");
+                        return;
+                    }
+                    if(!uri.startsWith("spotify:track:")) {
+                        setSettingsStatus("Invalid Spotify URI format.");
+                        return;
+                    }
+                    
+                    try {
+                        setSettingsStatus("Sending command...");
+                        await setDoc(doc(db, "users", target, "ringersong", "commands"), {
+                            command: "add_song",
+                            payload: uri,
+                            timestamp: Date.now()
+                        });
+                        setSettingsStatus("Sent! Check your app.");
+                        setContactForm(prev => ({...prev, spotifyUri: ''}));
+                    } catch(e) {
+                        setSettingsStatus("Error sending: " + e.message);
+                    }
+                  }}
+                >
+                  Send to Phone
+                </button>
+                {settingsStatus && <div className="settings-status">{settingsStatus}</div>}
               </div>
+              
+              <div className="settings-card">
+                 <h4>Search Spotify</h4>
+                 <div className="empty-state" style={{padding: 20}}>
+                    <p className="muted">Search integration coming in next update. Use URI for now.</p>
+                    <a href="https://open.spotify.com" target="_blank" rel="noreferrer" className="link-button">Open Spotify Web Player</a>
+                 </div>
+              </div>
+
             </div>
           )}
 
