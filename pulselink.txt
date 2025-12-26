@@ -539,3 +539,6 @@ Current ad behavior in app:
 
 2025-12-26
 - Built v84 AABs (free/pro/premium) and saved release-notes-v84.txt.
+
+2025-12-26
+- End of day: v84 AABs generated (free/pro/premium) with updated release notes; Suite-Beta + Ds-work-suite-beta synced.
