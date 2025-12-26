@@ -528,3 +528,11 @@ Current ad behavior in app:
 
 2025-12-25
 - Web contacts now read device contacts from users/{uid}/deviceContacts; SmsSyncWorker syncs device contacts to Firestore when remote web access is enabled and READ_CONTACTS is granted. Firestore rules updated. Rebuilt v83 AABs and refreshed release-notes-v83.txt.
+
+2025-12-26
+- SMS threads now show pending outgoing messages immediately (local + remote), and thread/contact views reset scroll on conversation change; added shimmer placeholders in inbox/thread loading states.
+- Web tablet layout now stacks the sidebar earlier (<=1100px); web build + Firebase Hosting/Firestore deploy completed.
+- Built v83 AABs (free/pro/premium) and refreshed release-notes-v83.txt.
+- Cleaned firestore.indexes.json to remove unnecessary single-field indexes after deploy error.
+- GitHub: closed #233/#234/#229; set #231/#235/#55 to In review with verify comments.
+- Synced Ds-work-suite-beta from Suite-Beta.
