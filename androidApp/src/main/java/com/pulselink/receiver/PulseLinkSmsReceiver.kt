@@ -124,10 +124,15 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
 
         if (contact == null && !(aiEnabled && includeUnknown)) return
 
+        val normalizedBody = body.lowercase()
+        val primaryPhrase = settings.primaryPhrase.trim().lowercase()
+        val hasPrimaryPhrase = primaryPhrase.isNotBlank() && normalizedBody.contains(primaryPhrase)
+
         val baseUrgency = contact?.let {
             when {
+                hasPrimaryPhrase -> MessageUrgency.EMERGENCY
                 OtpHelper.isUrgentBody(body) -> MessageUrgency.URGENT
-                it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
+                it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.URGENT
                 else -> MessageUrgency.STANDARD
             }
         } ?: MessageUrgency.STANDARD
@@ -152,7 +157,7 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
         if (contact == null && !aiUpgraded) return
 
         val tier = when {
-            effectiveUrgency == MessageUrgency.STANDARD -> EscalationTier.CHECK_IN
+            effectiveUrgency != MessageUrgency.EMERGENCY -> EscalationTier.CHECK_IN
             aiUpgraded && !settings.aiUrgencyBypassDnd -> EscalationTier.CHECK_IN
             else -> EscalationTier.EMERGENCY
         }

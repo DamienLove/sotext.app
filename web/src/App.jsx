@@ -559,7 +559,8 @@ function App() {
     email: '',
     phoneNumber: ''
   });
-  const [contacts, setContacts] = useState([]);
+  const [trustedContacts, setTrustedContacts] = useState([]);
+  const [deviceContacts, setDeviceContacts] = useState([]);
   const [contactSearch, setContactSearch] = useState('');
   const [contactForm, setContactForm] = useState({
     displayName: '',
@@ -616,6 +617,87 @@ function App() {
   const [deleteStatus, setDeleteStatus] = useState('');
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [spotifyCreds, setSpotifyCreds] = useState({
+    clientId: localStorage.getItem('spotify_client_id') || '',
+    clientSecret: localStorage.getItem('spotify_client_secret') || ''
+  });
+  const [spotifyToken, setSpotifyToken] = useState(null);
+  const [spotifySearch, setSpotifySearch] = useState('');
+  const [spotifyResults, setSpotifyResults] = useState([]);
+
+  useEffect(() => {
+    localStorage.setItem('spotify_client_id', spotifyCreds.clientId);
+    localStorage.setItem('spotify_client_secret', spotifyCreds.clientSecret);
+  }, [spotifyCreds]);
+
+  const getSpotifyToken = async () => {
+    if (!spotifyCreds.clientId || !spotifyCreds.clientSecret) {
+        throw new Error("Missing Client ID/Secret");
+    }
+    const response = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + btoa(spotifyCreds.clientId + ':' + spotifyCreds.clientSecret)
+      },
+      body: 'grant_type=client_credentials'
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error_description || "Token error");
+    setSpotifyToken(data.access_token);
+    return data.access_token;
+  };
+
+  const handleSpotifySearch = async () => {
+    if (!spotifySearch.trim()) return;
+    setSettingsStatus("Searching...");
+    try {
+        let token = spotifyToken;
+        if (!token) {
+            token = await getSpotifyToken();
+        }
+        
+        const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(spotifySearch)}&type=track&limit=5`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.status === 401) {
+            // Token expired, retry once
+            token = await getSpotifyToken();
+            const retry = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(spotifySearch)}&type=track&limit=5`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await retry.json();
+            setSpotifyResults(data.tracks?.items || []);
+        } else {
+            const data = await response.json();
+            setSpotifyResults(data.tracks?.items || []);
+        }
+        setSettingsStatus("");
+    } catch (e) {
+        setSettingsStatus("Search failed: " + e.message);
+    }
+  };
+
+  const handlePushSpotifyTrack = async (track) => {
+      const target = contactForm.targetUid || user?.uid;
+      if(!target) {
+          setSettingsStatus("Target Device ID required.");
+          return;
+      }
+      try {
+          setSettingsStatus(`Sending "${track.name}"...`);
+          await setDoc(doc(db, "users", target, "ringersong", "commands"), {
+              command: "add_song",
+              payload: track.uri,
+              timestamp: Date.now()
+          });
+          setSettingsStatus("Sent! Check your app.");
+      } catch(e) {
+          setSettingsStatus("Error sending: " + e.message);
+      }
+  };
+
   const messagesEndRef = useRef(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -645,10 +727,10 @@ function App() {
       return name.includes(term) || author.includes(term) || handle.includes(term);
     });
   }, [publicThemes, themeSearch]);
-  const filteredContacts = useMemo(() => {
+  const filteredDeviceContacts = useMemo(() => {
     const term = contactSearch.trim().toLowerCase();
-    if (!term) return contacts;
-    return contacts.filter((contact) => {
+    if (!term) return deviceContacts;
+    return deviceContacts.filter((contact) => {
       const values = [
         contact.displayName,
         contact.phoneNumber,
@@ -660,7 +742,7 @@ function App() {
         (value ?? '').toString().toLowerCase().includes(term)
       );
     });
-  }, [contacts, contactSearch]);
+  }, [deviceContacts, contactSearch]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -707,17 +789,35 @@ function App() {
 
   useEffect(() => {
     if (!user) {
-      setContacts([]);
+      setTrustedContacts([]);
+      setDeviceContacts([]);
       return;
     }
-    const contactsRef = collection(db, "users", user.uid, "trustedContacts");
-    const unsubscribe = onSnapshot(contactsRef, (snapshot) => {
+    const trustedRef = collection(db, "users", user.uid, "trustedContacts");
+    const unsubscribe = onSnapshot(trustedRef, (snapshot) => {
       const items = snapshot.docs.map(docSnap => ({
         id: docSnap.id,
         ...docSnap.data()
       }));
       items.sort((a, b) => (a.contactOrder ?? 0) - (b.contactOrder ?? 0));
-      setContacts(items);
+      setTrustedContacts(items);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setDeviceContacts([]);
+      return;
+    }
+    const deviceRef = collection(db, "users", user.uid, "deviceContacts");
+    const unsubscribe = onSnapshot(deviceRef, (snapshot) => {
+      const items = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+      items.sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''));
+      setDeviceContacts(items);
     });
     return () => unsubscribe();
   }, [user]);
@@ -1145,8 +1245,8 @@ function App() {
         allowRemoteOverride: contactForm.allowRemoteOverride,
         allowRemoteSoundChange: contactForm.allowRemoteSoundChange,
         contactOrder: editingContactId
-          ? contacts.find(c => c.id === editingContactId)?.contactOrder ?? contacts.length
-          : contacts.length,
+          ? trustedContacts.find(c => c.id === editingContactId)?.contactOrder ?? trustedContacts.length
+          : trustedContacts.length,
         updatedAt: serverTimestamp()
       };
 
@@ -1290,14 +1390,17 @@ function App() {
 
   const handleDeleteAccountData = async () => {
     if (!user) return;
-    if (!window.confirm("Clear synced messages and trusted contacts from the cloud?")) {
+    if (!window.confirm("Clear synced messages, device contacts, and trusted contacts from the cloud?")) {
       return;
     }
     setDeleteStatus("Deleting account data...");
     try {
       const batch = writeBatch(db);
-      const contactsSnap = await getDocs(collection(db, "users", user.uid, "trustedContacts"));
-      contactsSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
+      const trustedSnap = await getDocs(collection(db, "users", user.uid, "trustedContacts"));
+      trustedSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
+
+      const deviceSnap = await getDocs(collection(db, "users", user.uid, "deviceContacts"));
+      deviceSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
 
       const outboxSnap = await getDocs(collection(db, "users", user.uid, "outbox"));
       outboxSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
@@ -1594,7 +1697,7 @@ function App() {
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
                   <h3>Contacts</h3>
-                  <p>Browse every trusted contact at a glance.</p>
+                  <p>Browse all device contacts synced from your phone.</p>
                 </button>
                 <button className="home-card" onClick={() => setActivePanel('beacon')}>
                   <div className="home-icon beacon">
@@ -1682,7 +1785,7 @@ function App() {
                 <div className="settings-card">
                   <h4>Trusted contacts</h4>
                   <div className="contact-list">
-                    {contacts.map((contact) => (
+                    {trustedContacts.map((contact) => (
                       <div key={contact.id} className="contact-row">
                         <div className="contact-main">
                           <div className="contact-name">{contact.displayName}</div>
@@ -1708,7 +1811,7 @@ function App() {
                         </div>
                       </div>
                     ))}
-                    {contacts.length === 0 && (
+                    {trustedContacts.length === 0 && (
                       <div className="settings-note">No trusted contacts yet.</div>
                     )}
                   </div>
@@ -1817,11 +1920,11 @@ function App() {
             <div className="contacts-panel">
               <div className="panel-header">
                 <h3>Contacts</h3>
-                <p>Browse all trusted contacts synced from PulseLink.</p>
+                <p>Browse all device contacts synced from your phone.</p>
               </div>
               <div className="contacts-toolbar">
                 <div className="contact-count">
-                  {filteredContacts.length} contact{filteredContacts.length === 1 ? '' : 's'}
+                  {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
                 </div>
                 <input
                   className="login-input contact-search"
@@ -1831,7 +1934,7 @@ function App() {
                 />
               </div>
               <div className="contact-list contact-list--full">
-                {filteredContacts.map((contact) => {
+                {filteredDeviceContacts.map((contact) => {
                   const extraPhones = Array.isArray(contact.additionalPhones)
                     ? contact.additionalPhones
                     : [];
@@ -1839,7 +1942,6 @@ function App() {
                     ? contact.additionalEmails
                     : [];
                   const extras = [...extraPhones, ...extraEmails].filter(Boolean).join(' • ');
-                  const tierLabel = contact.escalationTier === 'CHECK_IN' ? 'Check-in' : 'Emergency';
                   return (
                     <div key={contact.id} className="contact-row contact-row--stacked">
                       <div className="contact-main">
@@ -1848,32 +1950,15 @@ function App() {
                           {contact.phoneNumber || contact.email || 'No phone or email'}
                         </div>
                         {extras && <div className="contact-extra">{extras}</div>}
-                        <div className="contact-tags">
-                          <span className="contact-tag">{tierLabel}</span>
-                          {contact.includeLocation && <span className="contact-tag">Location</span>}
-                          {contact.autoCall && <span className="contact-tag">Auto call</span>}
-                          {contact.allowRemoteOverride && <span className="contact-tag">DND override</span>}
-                        </div>
-                      </div>
-                      <div className="contact-actions">
-                        <button
-                          className="secondary-btn"
-                          onClick={() => {
-                            handleEditContact(contact);
-                            setActivePanel('pulselink');
-                          }}
-                        >
-                          Edit
-                        </button>
                       </div>
                     </div>
                   );
                 })}
-                {filteredContacts.length === 0 && (
+                {filteredDeviceContacts.length === 0 && (
                   <div className="settings-note">
                     {contactSearch.trim()
                       ? 'No contacts match that search.'
-                      : 'No trusted contacts yet.'}
+                      : 'No device contacts synced yet.'}
                   </div>
                 )}
               </div>
@@ -1998,19 +2083,91 @@ function App() {
                 <h3>RingerSong</h3>
                 <p>Smart ringtone progression and streaming manager.</p>
               </div>
+              
               <div className="settings-card">
-                <div className="empty-state">
-                  <div className="home-icon ringersong" style={{ width: 64, height: 64 }}>
-                    <img src={ringersongLogo} alt="RingerSong" style={{ width: 42, height: 42 }} />
-                  </div>
-                  <h3>Coming Soon to Web</h3>
-                  <p>
-                    Manage your RingerSong playlists, Spotify integration, and contact rules directly from your browser.
-                    <br />
-                    Syncing is currently available in the Android app.
-                  </p>
+                <h4>Push Track to Device</h4>
+                <p className="settings-label">
+                  Search Spotify and push to your connected RingerSong device.
+                </p>
+                
+                <label className="login-field">
+                  Target Device ID
+                  <input 
+                    className="login-input" 
+                    placeholder="Enter UID from RingerSong Settings"
+                    value={contactForm.targetUid || user?.uid || ''}
+                    onChange={(e) => setContactForm(prev => ({...prev, targetUid: e.target.value}))}
+                  />
+                  <span className="settings-note">Found in RingerSong App {'>'} Settings {'>'} Sync Status</span>
+                </label>
+
+                <div style={{marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12}}>
+                    <h4>Spotify Search</h4>
+                    
+                    {!spotifyToken && !spotifyCreds.clientId && (
+                        <div className="settings-note" style={{marginBottom: 12}}>
+                            Enter Spotify API Credentials (from developer.spotify.com) to enable search.
+                        </div>
+                    )}
+
+                    <div className="composer-row" style={{marginBottom: 12}}>
+                        <input 
+                            className="login-input" 
+                            placeholder="Client ID"
+                            value={spotifyCreds.clientId}
+                            onChange={(e) => setSpotifyCreds(prev => ({...prev, clientId: e.target.value}))}
+                            style={{fontSize: '0.8em'}}
+                        />
+                        <input 
+                            className="login-input" 
+                            placeholder="Client Secret"
+                            type="password"
+                            value={spotifyCreds.clientSecret}
+                            onChange={(e) => setSpotifyCreds(prev => ({...prev, clientSecret: e.target.value}))}
+                            style={{fontSize: '0.8em'}}
+                        />
+                    </div>
+
+                    <div className="composer-row">
+                        <input 
+                            className="login-input" 
+                            placeholder="Search for a song..."
+                            value={spotifySearch}
+                            onChange={(e) => setSpotifySearch(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
+                        />
+                        <button className="secondary-btn" onClick={handleSpotifySearch}>Search</button>
+                    </div>
                 </div>
+
+                {spotifyResults.length > 0 && (
+                    <div className="contact-list" style={{marginTop: 12, maxHeight: 300, overflowY: 'auto'}}>
+                        {spotifyResults.map(track => (
+                            <div key={track.id} className="contact-row" style={{alignItems: 'center'}}>
+                                <img src={track.album?.images[2]?.url} alt="" style={{width: 40, height: 40, borderRadius: 4}} />
+                                <div className="contact-main" style={{flex: 1, marginLeft: 10}}>
+                                    <div className="contact-name" style={{fontSize: '0.9em'}}>{track.name}</div>
+                                    <div className="contact-meta">{track.artists.map(a => a.name).join(', ')}</div>
+                                </div>
+                                <button className="primary-btn" style={{padding: '4px 10px', fontSize: '0.8em'}} onClick={() => handlePushSpotifyTrack(track)}>
+                                    Push
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                
+                {settingsStatus && <div className="settings-status" style={{marginTop: 12}}>{settingsStatus}</div>}
               </div>
+              
+              <div className="settings-card">
+                 <h4>Manual URI Push</h4>
+                 <div className="empty-state" style={{padding: 20}}>
+                    <p className="muted">Search integration coming in next update. Use URI for now.</p>
+                    <a href="https://open.spotify.com" target="_blank" rel="noreferrer" className="link-button">Open Spotify Web Player</a>
+                 </div>
+              </div>
+
             </div>
           )}
 

@@ -525,3 +525,6 @@ Current ad behavior in app:
 - Firebase Hosting deploy completed after reauth; web build ran during deploy and published to https://pulselink-24899.web.app.
 2025-12-25
 - Deferred RingerSong B2B subscription service task; need follow-up requirements from Damien later.
+
+2025-12-25
+- Web contacts now read device contacts from users/{uid}/deviceContacts; SmsSyncWorker syncs device contacts to Firestore when remote web access is enabled and READ_CONTACTS is granted. Firestore rules updated. Rebuilt v83 AABs and refreshed release-notes-v83.txt.
