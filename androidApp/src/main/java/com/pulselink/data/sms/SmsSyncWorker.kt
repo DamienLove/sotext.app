@@ -71,8 +71,10 @@ class SmsSyncWorker @AssistedInject constructor(
             for (thread in threads) {
                 val threadDoc = legacyThreadsRef.document(thread.threadId.toString())
                 val lineThreadDoc = lineThreadsRef.document(thread.threadId.toString())
+                val displayName = deviceContactsRepository.resolveContactName(thread.address)
                 val threadData = mapOf(
                     "address" to thread.address,
+                    "display_name" to displayName,
                     "snippet" to thread.snippet,
                     "date" to thread.timestamp,
                     "unread" to thread.unread,

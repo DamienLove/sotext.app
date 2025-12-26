@@ -55,8 +55,10 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
                 group.addTask {
                     let data = threadDoc.data()
                     let address = data["address"] as? String ?? "Unknown"
+                    // Use display name if available, otherwise fall back to address
+                    let name = data["display_name"] as? String ?? address
                     let contact = BeaconContactCard(
-                        name: address,
+                        name: name,
                         address: address,
                         role: "Contact",
                         presence: .offline,
