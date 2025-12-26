@@ -542,3 +542,10 @@ Current ad behavior in app:
 
 2025-12-26
 - End of day: v84 AABs generated (free/pro/premium) with updated release notes; Suite-Beta + Ds-work-suite-beta synced.
+
+2025-12-26
+- Fixed critical SMS alert bugs: PulseLinkSmsReceiver now only triggers attention tones for URGENT/EMERGENCY messages, not STANDARD (fixes #251: Beacon texts sending check-in alerts).
+- Increased AI urgency confidence threshold from 0.6 to 0.75 to reduce false positives (fixes #243: Emergency alarm triggered by innocuous messages like "miss you").
+- Reviewed and closed GitHub issues #247, #246, #231 (all fixed in v83).
+- Added verification notes to issues #55, #235, #228, #248.
+- Release v85 (free/pro/premium): versionCode/Name bumped to 85; rebuilt AABs copied to disposable_aabs/pulselink-{free|pro|premium}-v85.aab; release notes saved at disposable_aabs/release-notes-v85.txt.
