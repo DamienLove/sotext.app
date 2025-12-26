@@ -7,7 +7,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 @Singleton
 class CallerIdCacheRepository @Inject constructor(
@@ -15,19 +17,19 @@ class CallerIdCacheRepository @Inject constructor(
 ) {
     private val memoryCache = ConcurrentHashMap<String, CacheEntry>()
 
-    suspend fun lookupUserMapping(phoneNumber: String): CallerIdLookupResult? {
-        if (FirebaseAuth.getInstance().currentUser == null) return null
+    suspend fun lookupUserMapping(phoneNumber: String): CallerIdLookupResult? = withContext(Dispatchers.IO) {
+        if (FirebaseAuth.getInstance().currentUser == null) return@withContext null
         val cached = memoryCache[cacheKey(USER_COLLECTION, phoneNumber)]
-        if (cached != null && !cached.isExpired()) return cached.result
+        if (cached != null && !cached.isExpired()) return@withContext cached.result
         val snapshot = runCatching {
             firestore.collection(USER_COLLECTION)
                 .document(phoneNumber)
                 .get()
                 .await()
-        }.getOrNull() ?: return null
-        if (!snapshot.exists()) return null
+        }.getOrNull() ?: return@withContext null
+        if (!snapshot.exists()) return@withContext null
         val displayName = snapshot.getString("displayName")?.trim().orEmpty()
-        if (displayName.isBlank()) return null
+        if (displayName.isBlank()) return@withContext null
         val summary = buildString {
             append(phoneNumber)
             append(" | ")
@@ -45,32 +47,32 @@ class CallerIdCacheRepository @Inject constructor(
             summary = summary
         )
         memoryCache[cacheKey(USER_COLLECTION, phoneNumber)] = CacheEntry(result, System.currentTimeMillis() + TTL_MS)
-        return result
+        result
     }
 
-    suspend fun getCached(phoneNumber: String): CallerIdLookupResult? {
-        if (FirebaseAuth.getInstance().currentUser == null) return null
+    suspend fun getCached(phoneNumber: String): CallerIdLookupResult? = withContext(Dispatchers.IO) {
+        if (FirebaseAuth.getInstance().currentUser == null) return@withContext null
         val cached = memoryCache[cacheKey(CACHE_COLLECTION, phoneNumber)]
-        if (cached != null && !cached.isExpired()) return cached.result
+        if (cached != null && !cached.isExpired()) return@withContext cached.result
         val snapshot = runCatching {
             firestore.collection(CACHE_COLLECTION)
                 .document(phoneNumber)
                 .get()
                 .await()
-        }.getOrNull() ?: return null
-        if (!snapshot.exists()) return null
-        val data = snapshot.data ?: return null
+        }.getOrNull() ?: return@withContext null
+        if (!snapshot.exists()) return@withContext null
+        val data = snapshot.data ?: return@withContext null
         val cachedAt = (data["updatedAtEpochMs"] as? Number)?.toLong()
             ?: snapshot.getTimestamp("updatedAt")?.toDate()?.time
-            ?: return null
-        if (System.currentTimeMillis() - cachedAt > TTL_MS) return null
-        val result = decodeResult(data) ?: return null
+            ?: return@withContext null
+        if (System.currentTimeMillis() - cachedAt > TTL_MS) return@withContext null
+        val result = decodeResult(data) ?: return@withContext null
         memoryCache[cacheKey(CACHE_COLLECTION, phoneNumber)] = CacheEntry(result, cachedAt + TTL_MS)
-        return result
+        result
     }
 
-    suspend fun store(phoneNumber: String, result: CallerIdLookupResult) {
-        if (FirebaseAuth.getInstance().currentUser == null) return
+    suspend fun store(phoneNumber: String, result: CallerIdLookupResult) = withContext(Dispatchers.IO) {
+        if (FirebaseAuth.getInstance().currentUser == null) return@withContext
         val now = System.currentTimeMillis()
         val payload = mapOf(
             "number" to result.number,

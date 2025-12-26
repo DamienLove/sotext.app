@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,7 +45,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -153,6 +156,15 @@ private fun ConversationBody(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf(TextFieldValue("")) }
+    val listState = remember(contact.id) { LazyListState() }
+    val isNearBottom by remember {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+        }
+    }
+    var initialScrollDone by remember(contact.id) { mutableStateOf(false) }
     val voiceLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -281,11 +293,18 @@ private fun ConversationBody(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
+            state = listState,
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
             items(messages, key = { it.id }) { message ->
                 MessageBubble(message = message)
+            }
+        }
+        LaunchedEffect(messages.size) {
+            if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
+                listState.animateScrollToItem(messages.lastIndex)
+                initialScrollDone = true
             }
         }
 

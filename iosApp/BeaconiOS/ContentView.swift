@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(FirebaseAuth)
+import FirebaseAuth
+#endif
 
 struct ContentView: View {
     @ObservedObject var viewModel: BeaconViewModel
@@ -12,32 +15,38 @@ struct ContentView: View {
     }
 
     var body: some View {
-        TabView {
-            BeaconTab(viewModel: viewModel, filter: .inbox)
-                .tabItem {
-                    Label("Inbox", systemImage: "bubble.left.and.bubble.right.fill")
-                }
-                .badge(isPro ? "Pro" : nil)
+        if viewModel.isLoggedIn {
+            TabView {
+                BeaconTab(viewModel: viewModel, filter: .inbox)
+                    .tabItem {
+                        Label("Inbox", systemImage: "bubble.left.and.bubble.right.fill")
+                    }
+                    .badge(isPro ? "Pro" : nil)
 
-            BeaconTab(viewModel: viewModel, filter: .trusted)
-                .tabItem {
-                    Label("Trusted", systemImage: "shield.fill")
-                }
+                BeaconTab(viewModel: viewModel, filter: .trusted)
+                    .tabItem {
+                        Label("Trusted", systemImage: "shield.fill")
+                    }
 
-            BeaconTab(viewModel: viewModel, filter: .favorites)
-                .tabItem {
-                    Label("Favorites", systemImage: "star.fill")
-                }
+                BeaconTab(viewModel: viewModel, filter: .favorites)
+                    .tabItem {
+                        Label("Favorites", systemImage: "star.fill")
+                    }
 
-            BeaconTab(viewModel: viewModel, filter: .private)
-                .tabItem {
-                    Label("Private", systemImage: "lock.fill")
-                }
+                BeaconTab(viewModel: viewModel, filter: .private)
+                    .tabItem {
+                        Label("Private", systemImage: "lock.fill")
+                    }
 
-            SettingsTab()
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
-                }
+                SettingsTab(viewModel: viewModel)
+                    .tabItem {
+                        Label("Settings", systemImage: "gear")
+                    }
+            }
+        } else {
+            LoginView {
+                // Auth listener will handle transition
+            }
         }
     }
 }
@@ -246,11 +255,20 @@ private struct ConversationView: View {
 }
 
 private struct SettingsTab: View {
+    @ObservedObject var viewModel: BeaconViewModel
+
     var body: some View {
         NavigationStack {
             Form {
                 Section("Appearance") {
                     Text("Theme settings coming soon")
+                }
+                Section("Account") {
+                    Button("Sign Out", role: .destructive) {
+                        #if canImport(FirebaseAuth)
+                        try? FirebaseAuth.Auth.auth().signOut()
+                        #endif
+                    }
                 }
                 Section("About") {
                     Text("Beacon iOS")

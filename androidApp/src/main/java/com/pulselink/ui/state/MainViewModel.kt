@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
@@ -797,6 +798,10 @@ class MainViewModel @Inject constructor(
             "updatedAt" to FieldValue.serverTimestamp()
         )
         avatarUrl?.takeIf { it.isNotBlank() }?.let { payload["avatarUrl"] = it }
+        user.email?.takeIf { it.isNotBlank() }?.let { email ->
+            payload["email"] = email
+            payload["emailLowercase"] = email.lowercase()
+        }
         runCatching {
             firestore.collection("users_by_phone")
                 .document(normalized)
@@ -987,6 +992,23 @@ class MainViewModel @Inject constructor(
             else -> contact.displayName.lowercase().replace("\\s+".toRegex(), "_")
                 .ifBlank { contact.displayName.hashCode().toString() }
         }
+    }
+
+    suspend fun lookupPublicProfileByPhone(phone: String): PublicProfile? = withContext(Dispatchers.IO) {
+        val normalized = normalizePhone(phone)
+        if (normalized.isBlank()) return@withContext null
+        val snapshot = runCatching {
+            firestore.collection("users_by_phone")
+                .document(normalized)
+                .get()
+                .await()
+        }.getOrNull() ?: return@withContext null
+        if (!snapshot.exists()) return@withContext null
+        PublicProfile(
+            displayName = snapshot.getString("displayName"),
+            avatarUrl = snapshot.getString("avatarUrl"),
+            email = snapshot.getString("email")
+        )
     }
 
     private fun normalizePhone(input: String): String {
@@ -1495,3 +1517,9 @@ class MainViewModel @Inject constructor(
         const val BUG_REPORT_PAGE_URL = "https://pulselink.app/bug-report/"
     }
 }
+
+data class PublicProfile(
+    val displayName: String?,
+    val avatarUrl: String?,
+    val email: String?
+)

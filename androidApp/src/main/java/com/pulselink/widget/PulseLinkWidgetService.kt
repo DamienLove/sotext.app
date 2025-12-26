@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.net.Uri
+import android.view.View
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import androidx.core.content.ContextCompat
@@ -19,7 +20,11 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -43,27 +48,51 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
     private lateinit var smsRepository: SmsRepository
     private lateinit var contactRepository: ContactRepository
     private var items: List<SmsThreadItem> = emptyList()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         val entryPoint = EntryPointAccessors.fromApplication(context, WidgetFactoryEntryPoint::class.java)
         smsRepository = entryPoint.smsRepository()
         contactRepository = entryPoint.contactRepository()
+        items = WidgetCache.readThreads(context).map { it.toSmsThreadItem() }
     }
 
     override fun onDataSetChanged() {
-        val identityToken = android.os.Binder.clearCallingIdentity()
-        try {
-            items = runBlocking { smsRepository.listThreads(limit = 50) }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            items = emptyList()
-        } finally {
-            android.os.Binder.restoreCallingIdentity(identityToken)
+        items = WidgetCache.readThreads(context).map { it.toSmsThreadItem() }
+        if (WidgetCache.hasThreadsCache(context) && !WidgetCache.shouldRefreshThreads(context)) {
+            return
+        }
+        scope.launch {
+            val identityToken = android.os.Binder.clearCallingIdentity()
+            try {
+                val fresh = runCatching { smsRepository.listThreads(limit = 50) }
+                    .getOrDefault(emptyList())
+                items = fresh
+                WidgetCache.writeThreads(
+                    context,
+                    fresh.map { thread ->
+                        WidgetThread(
+                            threadId = thread.threadId,
+                            address = thread.address,
+                            snippet = thread.snippet,
+                            timestamp = thread.timestamp,
+                            unread = thread.unread
+                        )
+                    }
+                )
+                notifyWidgetDataChanged()
+                requestWidgetUpdate()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                android.os.Binder.restoreCallingIdentity(identityToken)
+            }
         }
     }
 
     override fun onDestroy() {
         items = emptyList()
+        scope.cancel()
     }
 
     override fun getCount(): Int = items.size
@@ -155,8 +184,47 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
         return bitmap
     }
 
-    override fun getLoadingView(): RemoteViews? = null
+    override fun getLoadingView(): RemoteViews? {
+        if (WidgetCache.hasThreadsCache(context)) return null
+        val views = RemoteViews(context.packageName, R.layout.widget_list_item)
+        views.setTextViewText(R.id.widget_item_title, "Loading...")
+        views.setTextViewText(R.id.widget_item_snippet, "Fetching messages")
+        views.setTextViewText(R.id.widget_item_time, "")
+        views.setViewVisibility(R.id.widget_unread_indicator, View.GONE)
+        views.setImageViewBitmap(R.id.widget_item_avatar, generateAvatar("..."))
+        return views
+    }
     override fun getViewTypeCount(): Int = 1
     override fun getItemId(position: Int): Long = items.getOrNull(position)?.threadId ?: position.toLong()
     override fun hasStableIds(): Boolean = true
+
+    private fun WidgetThread.toSmsThreadItem(): SmsThreadItem {
+        return SmsThreadItem(
+            threadId = threadId,
+            address = address,
+            snippet = snippet,
+            timestamp = timestamp,
+            unread = unread
+        )
+    }
+
+    private fun notifyWidgetDataChanged() {
+        val manager = android.appwidget.AppWidgetManager.getInstance(context)
+        val ids = manager.getAppWidgetIds(
+            android.content.ComponentName(context, PulseLinkWidgetProvider::class.java)
+        )
+        manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
+    }
+
+    private fun requestWidgetUpdate() {
+        val ids = android.appwidget.AppWidgetManager.getInstance(context)
+            .getAppWidgetIds(
+                android.content.ComponentName(context, PulseLinkWidgetProvider::class.java)
+            )
+        val intent = Intent(context, PulseLinkWidgetProvider::class.java).apply {
+            action = android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+        }
+        context.sendBroadcast(intent)
+    }
 }

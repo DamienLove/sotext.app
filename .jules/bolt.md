@@ -1,7 +1,3 @@
-# Bolt's Journal - Critical Learnings
-
-This journal records critical performance learnings, anti-patterns, and surprises specific to this codebase.
-
-## 2024-05-23 - [Initial Setup]
-**Learning:** Performance journal initialized.
-**Action:** Record significant performance discoveries here.
+## 2024-05-23 - React List Virtualization & Memoization
+**Learning:** Large lists in React (like contact lists) that are rendered inline within a complex parent component (`App.jsx`) will strictly re-render every item whenever the parent re-renders, even if the list data hasn't changed.
+**Action:** Extract list items into separate `memo`ized components. This allows React to skip re-rendering individual rows if their props (data) haven't changed, significantly reducing the main thread blocking time during interactions with other parts of the UI (like typing in inputs).

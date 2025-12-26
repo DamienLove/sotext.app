@@ -3,6 +3,7 @@ package com.pulselink.data.settings
 import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -16,9 +17,11 @@ import com.pulselink.domain.model.MessageChannel
 import com.pulselink.domain.model.PulseLinkSettings
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -89,6 +92,22 @@ class SettingsRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val dataStore: DataStore<Preferences>
 ) : SettingsRepository {
+    private suspend fun editOnIo(block: suspend (MutablePreferences) -> Unit) {
+        withContext(Dispatchers.IO) {
+            dataStore.edit { prefs -> block(prefs) }
+        }
+    }
+
+    private suspend fun <T> decodeJsonOrNull(raw: String?, decoder: (String) -> T): T? {
+        if (raw.isNullOrBlank()) return null
+        return withContext(Dispatchers.IO) {
+            runCatching { decoder(raw) }.getOrNull()
+        }
+    }
+
+    private suspend fun encodeJson(encoder: () -> String): String {
+        return withContext(Dispatchers.IO) { encoder() }
+    }
 
     override val settings: Flow<PulseLinkSettings> = dataStore.data.map { prefs ->
         PulseLinkSettings(
@@ -99,23 +118,29 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().autoAllowRemoteSoundChange,
             assistantShortcutsDismissed = prefs[ASSISTANT_HINT_DISMISSED]
                 ?: PulseLinkSettings().assistantShortcutsDismissed,
-            emergencyProfile = prefs[EMERGENCY_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
+            emergencyProfile = decodeJsonOrNull(prefs[EMERGENCY_PROFILE]) {
+                json.decodeFromString(AlertProfile.serializer(), it)
+            }
                 ?: PulseLinkSettings().emergencyProfile,
-            checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
+            checkInProfile = decodeJsonOrNull(prefs[CHECKIN_PROFILE]) {
+                json.decodeFromString(AlertProfile.serializer(), it)
+            }
                 ?: PulseLinkSettings().checkInProfile,
             callSoundKey = prefs[CALL_SOUND] ?: PulseLinkSettings().callSoundKey,
             messageNotificationSoundUri = prefs[MESSAGE_NOTIFICATION_SOUND]     
                 ?: PulseLinkSettings().messageNotificationSoundUri,
             messageNotificationVibrate = prefs[MESSAGE_NOTIFICATION_VIBRATE]    
                 ?: PulseLinkSettings().messageNotificationVibrate,
-            messageNotificationSoundOverrides = prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES]?.let {
-                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
-            } ?: PulseLinkSettings().messageNotificationSoundOverrides,
+            messageNotificationSoundOverrides = decodeJsonOrNull(
+                prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES]
+            ) { json.decodeFromString<Map<String, String>>(it) }
+                ?: PulseLinkSettings().messageNotificationSoundOverrides,
             messageNotificationVibrationPattern = prefs[MESSAGE_NOTIFICATION_VIBRATION_PATTERN]
                 ?: PulseLinkSettings().messageNotificationVibrationPattern,
-            messageNotificationVibrationOverrides = prefs[MESSAGE_NOTIFICATION_VIBRATION_OVERRIDES]?.let {
-                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
-            } ?: PulseLinkSettings().messageNotificationVibrationOverrides,
+            messageNotificationVibrationOverrides = decodeJsonOrNull(
+                prefs[MESSAGE_NOTIFICATION_VIBRATION_OVERRIDES]
+            ) { json.decodeFromString<Map<String, String>>(it) }
+                ?: PulseLinkSettings().messageNotificationVibrationOverrides,
             betaAgreementAccepted = prefs[BETA_AGREEMENT_ACCEPTED] ?: PulseLinkSettings().betaAgreementAccepted,
             betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
@@ -128,22 +153,22 @@ class SettingsRepositoryImpl @Inject constructor(
             autoUpdateContactInfo = prefs[AUTO_UPDATE_CONTACT_INFO] ?: PulseLinkSettings().autoUpdateContactInfo,
             timeFormat = prefs[TIME_FORMAT]?.let { runCatching { com.pulselink.domain.model.TimeFormat.valueOf(it) }.getOrNull() }
                 ?: PulseLinkSettings().timeFormat,
-            themePreferences = prefs[THEME_PREFERENCES]?.let {
-                runCatching { json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it) }.getOrNull()
+            themePreferences = decodeJsonOrNull(prefs[THEME_PREFERENCES]) {
+                json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it)
             } ?: PulseLinkSettings().themePreferences,
             remoteWebAccessEnabled = prefs[REMOTE_WEB_ACCESS] ?: PulseLinkSettings().remoteWebAccessEnabled,
             otpCleanupEnabled = prefs[OTP_CLEANUP_ENABLED] ?: PulseLinkSettings().otpCleanupEnabled,
             otpCleanupDays = prefs[OTP_CLEANUP_DAYS] ?: PulseLinkSettings().otpCleanupDays,
             privatePinHash = prefs[PRIVATE_PIN_HASH],
-            privateThreadIds = prefs[PRIVATE_THREADS]?.let {
-                runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
+            privateThreadIds = decodeJsonOrNull(prefs[PRIVATE_THREADS]) {
+                json.decodeFromString<List<Long>>(it)
             } ?: PulseLinkSettings().privateThreadIds,
             beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled,
             beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed,
             firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
             emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
-            messagingChannelPriority = prefs[MESSAGING_CHANNEL_PRIORITY]?.let {
-                runCatching { json.decodeFromString<List<MessageChannel>>(it) }.getOrNull()
+            messagingChannelPriority = decodeJsonOrNull(prefs[MESSAGING_CHANNEL_PRIORITY]) {
+                json.decodeFromString<List<MessageChannel>>(it)
             } ?: PulseLinkSettings().messagingChannelPriority,
             crashDetectionEnabled = prefs[CRASH_DETECTION_ENABLED] ?: PulseLinkSettings().crashDetectionEnabled,
             aiSummariesEnabled = prefs[AI_SUMMARIES_ENABLED] ?: PulseLinkSettings().aiSummariesEnabled,
@@ -160,15 +185,15 @@ class SettingsRepositoryImpl @Inject constructor(
             lineSendPreference = prefs[LINE_SEND_PREFERENCE]?.let {
                 runCatching { LineSendPreference.valueOf(it) }.getOrNull()
             } ?: PulseLinkSettings().lineSendPreference,
-            threadLineOverrides = prefs[THREAD_LINE_OVERRIDES]?.let {
-                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
+            threadLineOverrides = decodeJsonOrNull(prefs[THREAD_LINE_OVERRIDES]) {
+                json.decodeFromString<Map<String, String>>(it)
             } ?: PulseLinkSettings().threadLineOverrides,
             devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER]
         )
     }
 
     override suspend fun update(transform: (PulseLinkSettings) -> PulseLinkSettings) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             val current = settingsValue(prefs)
             val updated = transform(current)
             prefs[PRIMARY_PHRASE] = updated.primaryPhrase
@@ -176,18 +201,24 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[INCLUDE_LOCATION] = updated.includeLocation
             prefs[AUTO_ALLOW_REMOTE_SOUND] = updated.autoAllowRemoteSoundChange
             prefs[ASSISTANT_HINT_DISMISSED] = updated.assistantShortcutsDismissed
-            prefs[EMERGENCY_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.emergencyProfile)
-            prefs[CHECKIN_PROFILE] = json.encodeToString(AlertProfile.serializer(), updated.checkInProfile)
+            prefs[EMERGENCY_PROFILE] = encodeJson {
+                json.encodeToString(AlertProfile.serializer(), updated.emergencyProfile)
+            }
+            prefs[CHECKIN_PROFILE] = encodeJson {
+                json.encodeToString(AlertProfile.serializer(), updated.checkInProfile)
+            }
             updated.callSoundKey?.let { prefs[CALL_SOUND] = it } ?: prefs.remove(CALL_SOUND)
             updated.messageNotificationSoundUri?.let { prefs[MESSAGE_NOTIFICATION_SOUND] = it }
                 ?: prefs.remove(MESSAGE_NOTIFICATION_SOUND)
             prefs[MESSAGE_NOTIFICATION_VIBRATE] = updated.messageNotificationVibrate
-            prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES] =
+            prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES] = encodeJson {
                 json.encodeToString(updated.messageNotificationSoundOverrides)
+            }
             prefs[MESSAGE_NOTIFICATION_VIBRATION_PATTERN] =
                 updated.messageNotificationVibrationPattern
-            prefs[MESSAGE_NOTIFICATION_VIBRATION_OVERRIDES] =
+            prefs[MESSAGE_NOTIFICATION_VIBRATION_OVERRIDES] = encodeJson {
                 json.encodeToString(updated.messageNotificationVibrationOverrides)
+            }
             prefs[BETA_AGREEMENT_ACCEPTED] = updated.betaAgreementAccepted
             updated.betaAgreementVersion?.let { prefs[BETA_AGREEMENT_VERSION] = it } ?: prefs.remove(BETA_AGREEMENT_VERSION)
             prefs[AUTO_CALL] = updated.autoCallAfterAlert
@@ -199,17 +230,26 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[IS_BETA_TESTER] = updated.isBetaTester
             prefs[AUTO_UPDATE_CONTACT_INFO] = updated.autoUpdateContactInfo
             prefs[TIME_FORMAT] = updated.timeFormat.name
-            prefs[THEME_PREFERENCES] = json.encodeToString(com.pulselink.domain.model.ThemePreferences.serializer(), updated.themePreferences)
+            prefs[THEME_PREFERENCES] = encodeJson {
+                json.encodeToString(
+                    com.pulselink.domain.model.ThemePreferences.serializer(),
+                    updated.themePreferences
+                )
+            }
             prefs[REMOTE_WEB_ACCESS] = updated.remoteWebAccessEnabled
             prefs[OTP_CLEANUP_ENABLED] = updated.otpCleanupEnabled
             prefs[OTP_CLEANUP_DAYS] = updated.otpCleanupDays
             updated.privatePinHash?.let { prefs[PRIVATE_PIN_HASH] = it } ?: prefs.remove(PRIVATE_PIN_HASH)
-            prefs[PRIVATE_THREADS] = json.encodeToString(updated.privateThreadIds)
+            prefs[PRIVATE_THREADS] = encodeJson {
+                json.encodeToString(updated.privateThreadIds)
+            }
             prefs[BEACON_LAUNCHER_ENABLED] = updated.beaconLauncherEnabled
             prefs[BEACON_HINT_DISMISSED] = updated.beaconHintDismissed
             prefs[FIREBASE_MESSAGING_ENABLED] = updated.firebaseMessagingEnabled
             prefs[EMAIL_FALLBACK_ENABLED] = updated.emailFallbackEnabled
-            prefs[MESSAGING_CHANNEL_PRIORITY] = json.encodeToString(updated.messagingChannelPriority)
+            prefs[MESSAGING_CHANNEL_PRIORITY] = encodeJson {
+                json.encodeToString(updated.messagingChannelPriority)
+            }
             prefs[CRASH_DETECTION_ENABLED] = updated.crashDetectionEnabled
             prefs[AI_SUMMARIES_ENABLED] = updated.aiSummariesEnabled
             prefs[AI_COMPOSE_ENABLED] = updated.aiComposeEnabled
@@ -221,112 +261,114 @@ class SettingsRepositoryImpl @Inject constructor(
             updated.activeLineId?.let { prefs[ACTIVE_LINE_ID] = it } ?: prefs.remove(ACTIVE_LINE_ID)
             updated.defaultSendLineId?.let { prefs[DEFAULT_SEND_LINE_ID] = it } ?: prefs.remove(DEFAULT_SEND_LINE_ID)
             prefs[LINE_SEND_PREFERENCE] = updated.lineSendPreference.name
-            prefs[THREAD_LINE_OVERRIDES] = json.encodeToString(updated.threadLineOverrides)
+            prefs[THREAD_LINE_OVERRIDES] = encodeJson {
+                json.encodeToString(updated.threadLineOverrides)
+            }
             updated.devicePhoneNumber?.let { prefs[DEVICE_PHONE_NUMBER] = it } ?: prefs.remove(DEVICE_PHONE_NUMBER)
         }
     }
 
     override suspend fun setCrashDetectionEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[CRASH_DETECTION_ENABLED] = enabled
         }
     }
 
     override suspend fun setAiSummariesEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[AI_SUMMARIES_ENABLED] = enabled
         }
     }
 
     override suspend fun setAiComposeEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[AI_COMPOSE_ENABLED] = enabled
         }
     }
 
     override suspend fun setAiUrgencyEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[AI_URGENCY_ENABLED] = enabled
         }
     }
 
     override suspend fun setAiUrgencyBypassDnd(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[AI_URGENCY_BYPASS_DND] = enabled
         }
     }
 
     override suspend fun setAiUrgencyIncludeUnknown(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[AI_URGENCY_INCLUDE_UNKNOWN] = enabled
         }
     }
 
     override suspend fun setLineInboxMode(mode: LineInboxMode, chosen: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[LINE_INBOX_MODE] = mode.name
             prefs[LINE_INBOX_MODE_CHOSEN] = chosen
         }
     }
 
     override suspend fun setActiveLineId(lineId: String?) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             lineId?.let { prefs[ACTIVE_LINE_ID] = it } ?: prefs.remove(ACTIVE_LINE_ID)
         }
     }
 
     override suspend fun setDefaultSendLineId(lineId: String?) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             lineId?.let { prefs[DEFAULT_SEND_LINE_ID] = it } ?: prefs.remove(DEFAULT_SEND_LINE_ID)
         }
     }
 
     override suspend fun setLineSendPreference(preference: LineSendPreference) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[LINE_SEND_PREFERENCE] = preference.name
         }
     }
 
     override suspend fun setThreadLineOverrides(overrides: Map<String, String>) {
-        dataStore.edit { prefs ->
-            prefs[THREAD_LINE_OVERRIDES] = json.encodeToString(overrides)
+        editOnIo { prefs ->
+            prefs[THREAD_LINE_OVERRIDES] = encodeJson { json.encodeToString(overrides) }
         }
     }
 
     override suspend fun setThreadLineOverride(threadKey: String, lineId: String?) {
-        dataStore.edit { prefs ->
-            val current = prefs[THREAD_LINE_OVERRIDES]?.let {
-                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
+        editOnIo { prefs ->
+            val current = decodeJsonOrNull(prefs[THREAD_LINE_OVERRIDES]) {
+                json.decodeFromString<Map<String, String>>(it)
             } ?: emptyMap()
             val updated = if (lineId == null) {
                 current - threadKey
             } else {
                 current + (threadKey to lineId)
             }
-            prefs[THREAD_LINE_OVERRIDES] = json.encodeToString(updated)
+            prefs[THREAD_LINE_OVERRIDES] = encodeJson { json.encodeToString(updated) }
         }
     }
 
     override suspend fun setDevicePhoneNumber(phone: String?) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             phone?.let { prefs[DEVICE_PHONE_NUMBER] = it } ?: prefs.remove(DEVICE_PHONE_NUMBER)
         }
     }
 
     override suspend fun setProUnlocked(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[PRO_UNLOCKED] = enabled
         }
     }
 
     override suspend fun setPremiumUnlocked(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[PREMIUM_UNLOCKED] = enabled
         }
     }
 
     override suspend fun setOnboardingComplete() {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[ONBOARDING_COMPLETE] = true
         }
     }
@@ -335,38 +377,38 @@ class SettingsRepositoryImpl @Inject constructor(
         val existing = dataStore.data.map { it[DEVICE_ID] }.first()
         if (!existing.isNullOrBlank()) return existing
         val generated = UUID.randomUUID().toString()
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[DEVICE_ID] = generated
         }
         return generated
     }
 
     override suspend fun setOwnerName(name: String) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[OWNER_NAME] = name
         }
     }
 
     override suspend fun setAutoAllowRemoteSoundChange(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[AUTO_ALLOW_REMOTE_SOUND] = enabled
         }
     }
 
     override suspend fun setBetaTesterStatus(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[IS_BETA_TESTER] = enabled
         }
     }
 
     override suspend fun setAssistantShortcutsDismissed(dismissed: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[ASSISTANT_HINT_DISMISSED] = dismissed
         }
     }
 
     override suspend fun setBetaAgreementAcceptance(version: String) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[BETA_AGREEMENT_ACCEPTED] = true
             prefs[BETA_AGREEMENT_VERSION] = version
         }
@@ -377,13 +419,13 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateLastWidgetCheckTimestamp(timestamp: Long) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[WIDGET_LAST_CHECK_TIMESTAMP] = timestamp
         }
     }
 
     override suspend fun setEmergencyActive(active: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[EMERGENCY_ACTIVE] = active
         }
     }
@@ -393,7 +435,7 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setLastKnownPhone(phone: String?) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             phone?.let { prefs[LAST_KNOWN_PHONE] = it } ?: prefs.remove(LAST_KNOWN_PHONE)
         }
     }
@@ -403,7 +445,7 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setLastKnownEmail(email: String?) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             email?.let { prefs[LAST_KNOWN_EMAIL] = it } ?: prefs.remove(LAST_KNOWN_EMAIL)
         }
     }
@@ -413,55 +455,57 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setAutoUpdateContactInfo(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[AUTO_UPDATE_CONTACT_INFO] = enabled
         }
     }
 
     override suspend fun setTimeFormat(format: com.pulselink.domain.model.TimeFormat) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[TIME_FORMAT] = format.name
         }
     }
 
     override suspend fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences) {
-        dataStore.edit { prefs ->
-            prefs[THEME_PREFERENCES] = json.encodeToString(com.pulselink.domain.model.ThemePreferences.serializer(), theme)
+        editOnIo { prefs ->
+            prefs[THEME_PREFERENCES] = encodeJson {
+                json.encodeToString(com.pulselink.domain.model.ThemePreferences.serializer(), theme)
+            }
         }
     }
 
     override suspend fun setRemoteWebAccessEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[REMOTE_WEB_ACCESS] = enabled
         }
     }
 
     override suspend fun setOtpCleanupEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[OTP_CLEANUP_ENABLED] = enabled
         }
     }
 
     override suspend fun setOtpCleanupDays(days: Int) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[OTP_CLEANUP_DAYS] = days.coerceAtLeast(1)
         }
     }
 
     override suspend fun setPrivatePinHash(hash: String?) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             hash?.let { prefs[PRIVATE_PIN_HASH] = it } ?: prefs.remove(PRIVATE_PIN_HASH)
         }
     }
 
     override suspend fun setPrivateThreads(threadIds: List<Long>) {
-        dataStore.edit { prefs ->
-            prefs[PRIVATE_THREADS] = json.encodeToString(threadIds.distinct())
+        editOnIo { prefs ->
+            prefs[PRIVATE_THREADS] = encodeJson { json.encodeToString(threadIds.distinct()) }
         }
     }
 
     override suspend fun setBeaconLauncherEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[BEACON_LAUNCHER_ENABLED] = enabled
         }
         runCatching {
@@ -473,30 +517,30 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setBeaconHintDismissed(dismissed: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[BEACON_HINT_DISMISSED] = dismissed
         }
     }
 
     override suspend fun setFirebaseMessagingEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[FIREBASE_MESSAGING_ENABLED] = enabled
         }
     }
 
     override suspend fun setEmailFallbackEnabled(enabled: Boolean) {
-        dataStore.edit { prefs ->
+        editOnIo { prefs ->
             prefs[EMAIL_FALLBACK_ENABLED] = enabled
         }
     }
 
     override suspend fun setMessagingChannelPriority(priority: List<MessageChannel>) {
-        dataStore.edit { prefs ->
-            prefs[MESSAGING_CHANNEL_PRIORITY] = json.encodeToString(priority)
+        editOnIo { prefs ->
+            prefs[MESSAGING_CHANNEL_PRIORITY] = encodeJson { json.encodeToString(priority) }
         }
     }
 
-    private fun settingsValue(prefs: Preferences): PulseLinkSettings {
+    private suspend fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
             secondaryPhrase = prefs[SECONDARY_PHRASE] ?: PulseLinkSettings().secondaryPhrase,
@@ -505,18 +549,23 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().autoAllowRemoteSoundChange,
             assistantShortcutsDismissed = prefs[ASSISTANT_HINT_DISMISSED]
                 ?: PulseLinkSettings().assistantShortcutsDismissed,
-            emergencyProfile = prefs[EMERGENCY_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
+            emergencyProfile = decodeJsonOrNull(prefs[EMERGENCY_PROFILE]) {
+                json.decodeFromString(AlertProfile.serializer(), it)
+            }
                 ?: PulseLinkSettings().emergencyProfile,
-            checkInProfile = prefs[CHECKIN_PROFILE]?.let { json.decodeFromString(AlertProfile.serializer(), it) }
+            checkInProfile = decodeJsonOrNull(prefs[CHECKIN_PROFILE]) {
+                json.decodeFromString(AlertProfile.serializer(), it)
+            }
                 ?: PulseLinkSettings().checkInProfile,
             callSoundKey = prefs[CALL_SOUND] ?: PulseLinkSettings().callSoundKey,
             messageNotificationSoundUri = prefs[MESSAGE_NOTIFICATION_SOUND]
                 ?: PulseLinkSettings().messageNotificationSoundUri,
             messageNotificationVibrate = prefs[MESSAGE_NOTIFICATION_VIBRATE]
                 ?: PulseLinkSettings().messageNotificationVibrate,
-            messageNotificationSoundOverrides = prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES]?.let {
-                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
-            } ?: PulseLinkSettings().messageNotificationSoundOverrides,
+            messageNotificationSoundOverrides = decodeJsonOrNull(
+                prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES]
+            ) { json.decodeFromString<Map<String, String>>(it) }
+                ?: PulseLinkSettings().messageNotificationSoundOverrides,
             betaAgreementAccepted = prefs[BETA_AGREEMENT_ACCEPTED] ?: PulseLinkSettings().betaAgreementAccepted,
             betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
@@ -529,22 +578,22 @@ class SettingsRepositoryImpl @Inject constructor(
             autoUpdateContactInfo = prefs[AUTO_UPDATE_CONTACT_INFO] ?: PulseLinkSettings().autoUpdateContactInfo,
             timeFormat = prefs[TIME_FORMAT]?.let { runCatching { com.pulselink.domain.model.TimeFormat.valueOf(it) }.getOrNull() }
                 ?: PulseLinkSettings().timeFormat,
-            themePreferences = prefs[THEME_PREFERENCES]?.let {
-                runCatching { json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it) }.getOrNull()
+            themePreferences = decodeJsonOrNull(prefs[THEME_PREFERENCES]) {
+                json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it)
             } ?: PulseLinkSettings().themePreferences,
             remoteWebAccessEnabled = prefs[REMOTE_WEB_ACCESS] ?: PulseLinkSettings().remoteWebAccessEnabled,
             otpCleanupEnabled = prefs[OTP_CLEANUP_ENABLED] ?: PulseLinkSettings().otpCleanupEnabled,
             otpCleanupDays = prefs[OTP_CLEANUP_DAYS] ?: PulseLinkSettings().otpCleanupDays,
             privatePinHash = prefs[PRIVATE_PIN_HASH],
-            privateThreadIds = prefs[PRIVATE_THREADS]?.let {
-                runCatching { json.decodeFromString<List<Long>>(it) }.getOrNull()
+            privateThreadIds = decodeJsonOrNull(prefs[PRIVATE_THREADS]) {
+                json.decodeFromString<List<Long>>(it)
             } ?: PulseLinkSettings().privateThreadIds,
             beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled,
             beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed,
             firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
             emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
-            messagingChannelPriority = prefs[MESSAGING_CHANNEL_PRIORITY]?.let {
-                runCatching { json.decodeFromString<List<MessageChannel>>(it) }.getOrNull()
+            messagingChannelPriority = decodeJsonOrNull(prefs[MESSAGING_CHANNEL_PRIORITY]) {
+                json.decodeFromString<List<MessageChannel>>(it)
             } ?: PulseLinkSettings().messagingChannelPriority,
             lineInboxMode = prefs[LINE_INBOX_MODE]?.let { runCatching { LineInboxMode.valueOf(it) }.getOrNull() }
                 ?: PulseLinkSettings().lineInboxMode,
@@ -554,8 +603,8 @@ class SettingsRepositoryImpl @Inject constructor(
             lineSendPreference = prefs[LINE_SEND_PREFERENCE]?.let {
                 runCatching { LineSendPreference.valueOf(it) }.getOrNull()
             } ?: PulseLinkSettings().lineSendPreference,
-            threadLineOverrides = prefs[THREAD_LINE_OVERRIDES]?.let {
-                runCatching { json.decodeFromString<Map<String, String>>(it) }.getOrNull()
+            threadLineOverrides = decodeJsonOrNull(prefs[THREAD_LINE_OVERRIDES]) {
+                json.decodeFromString<Map<String, String>>(it)
             } ?: PulseLinkSettings().threadLineOverrides,
             devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER]
         )
