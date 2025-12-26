@@ -1960,6 +1960,7 @@ function App() {
                   placeholder="Search by name, phone, or email"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
+                  aria-label="Search contacts"
                 />
               </div>
               <div className="contact-list contact-list--full">
@@ -2129,6 +2130,7 @@ function App() {
                             value={spotifyCreds.clientId}
                             onChange={(e) => setSpotifyCreds(prev => ({...prev, clientId: e.target.value}))}
                             style={{fontSize: '0.8em'}}
+                            aria-label="Spotify Client ID"
                         />
                         <input 
                             className="login-input" 
@@ -2137,6 +2139,7 @@ function App() {
                             value={spotifyCreds.clientSecret}
                             onChange={(e) => setSpotifyCreds(prev => ({...prev, clientSecret: e.target.value}))}
                             style={{fontSize: '0.8em'}}
+                            aria-label="Spotify Client Secret"
                         />
                     </div>
 
@@ -2147,6 +2150,7 @@ function App() {
                             value={spotifySearch}
                             onChange={(e) => setSpotifySearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
+                            aria-label="Search for a song"
                         />
                         <button className="secondary-btn" onClick={handleSpotifySearch}>Search</button>
                     </div>
