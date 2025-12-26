@@ -1,13 +1,18 @@
 package com.pulselink.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -56,75 +61,103 @@ fun MultiLineSetupDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("Choose how you want your inbox organized and which line to use by default.")
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Inbox mode")
+                Text("Inbox mode", style = MaterialTheme.typography.titleSmall)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     modeLabels.forEach { (mode, label) ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(
-                                selected = selectedMode == mode,
-                                onClick = { onModeChange(mode) }
-                            )
-                            Text(label)
-                        }
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Default line")
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(selectedLine.phoneNumber.ifBlank { "Line" }, modifier = Modifier.weight(1f))
-                        TextButton(onClick = { dropdownExpanded.value = true }) {
-                            Text("Change")
-                        }
-                        DropdownMenu(
-                            expanded = dropdownExpanded.value,
-                            onDismissRequest = { dropdownExpanded.value = false }
-                        ) {
-                            safeLines.forEachIndexed { index, line ->
-                                val label = if (line.phoneNumber.isNotBlank()) {
-                                    "Line ${index + 1} | ${line.phoneNumber}"
+                        val selected = selectedMode == mode
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onModeChange(mode) },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (selected) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                                 } else {
-                                    "Line ${index + 1}"
+                                    MaterialTheme.colorScheme.surfaceVariant
                                 }
-                                DropdownMenuItem(
-                                    text = { Text(label) },
-                                    onClick = {
-                                        dropdownExpanded.value = false
-                                        onDefaultLineChange(line.id)
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Send preference")
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(preferenceLabels[lineSendPreference].orEmpty(), modifier = Modifier.weight(1f))
-                        TextButton(onClick = { preferenceExpanded.value = true }) {
-                            Text("Change")
-                        }
-                        DropdownMenu(
-                            expanded = preferenceExpanded.value,
-                            onDismissRequest = { preferenceExpanded.value = false }
+                            )
                         ) {
-                            preferenceLabels.forEach { (pref, label) ->
-                                DropdownMenuItem(
-                                    text = { Text(label) },
-                                    onClick = {
-                                        preferenceExpanded.value = false
-                                        onLineSendPreferenceChange(pref)
-                                    }
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                RadioButton(
+                                    selected = selected,
+                                    onClick = { onModeChange(mode) }
                                 )
+                                Column {
+                                    Text(label, style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        text = if (mode == LineInboxMode.COMBINED) {
+                                            "All messages together with line badges."
+                                        } else {
+                                            "Switch between lines to focus your inbox."
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
                 }
+                HorizontalDivider()
+                Text("Default line", style = MaterialTheme.typography.titleSmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(selectedLine.phoneNumber.ifBlank { "Line" }, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { dropdownExpanded.value = true }) {
+                        Text("Change")
+                    }
+                    DropdownMenu(
+                        expanded = dropdownExpanded.value,
+                        onDismissRequest = { dropdownExpanded.value = false }
+                    ) {
+                        safeLines.forEachIndexed { index, line ->
+                            val label = if (line.phoneNumber.isNotBlank()) {
+                                "Line ${index + 1} | ${line.phoneNumber}"
+                            } else {
+                                "Line ${index + 1}"
+                            }
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    dropdownExpanded.value = false
+                                    onDefaultLineChange(line.id)
+                                }
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider()
+                Text("Send preference", style = MaterialTheme.typography.titleSmall)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(preferenceLabels[lineSendPreference].orEmpty(), modifier = Modifier.weight(1f))
+                    TextButton(onClick = { preferenceExpanded.value = true }) {
+                        Text("Change")
+                    }
+                    DropdownMenu(
+                        expanded = preferenceExpanded.value,
+                        onDismissRequest = { preferenceExpanded.value = false }
+                    ) {
+                        preferenceLabels.forEach { (pref, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    preferenceExpanded.value = false
+                                    onLineSendPreferenceChange(pref)
+                                }
+                            )
+                        }
+                    }
+                }
+                HorizontalDivider()
                 OutlinedTextField(
                     value = devicePhoneInput,
                     onValueChange = onDevicePhoneChange,
@@ -153,33 +186,48 @@ fun LineLimitDialog(
     onDisableLine: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val canAddLine = lines.size < 2
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add another line") },
+        title = { Text("Manage your lines") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Your plan includes 2 lines. To add more, upgrade your subscription or remove an existing line.")
+                Text("Your plan includes 2 lines. Disable a line to free a slot.")
+                Text(
+                    text = "Disabling a line will not delete messages.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 lines.forEachIndexed { index, line ->
                     val label = if (line.phoneNumber.isNotBlank()) {
                         "Line ${index + 1} | ${line.phoneNumber}"
                     } else {
                         "Line ${index + 1}"
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(label, modifier = Modifier.weight(1f))
-                        TextButton(onClick = { onDisableLine(line.id) }) {
-                            Text("Remove")
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(label, modifier = Modifier.weight(1f))
+                            TextButton(onClick = { onDisableLine(line.id) }) {
+                                Text("Disable line")
+                            }
                         }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Add another line")
+            if (canAddLine) {
+                TextButton(onClick = onDismiss) {
+                    Text("Add another line")
+                }
             }
         },
         dismissButton = {

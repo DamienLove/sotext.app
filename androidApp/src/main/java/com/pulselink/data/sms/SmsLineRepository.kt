@@ -98,14 +98,33 @@ class SmsLineRepository @Inject constructor(
     suspend fun ensureDeviceLine(phoneNumber: String?): String? {
         val user = auth.currentUser ?: return null
         val deviceId = settingsRepository.ensureDeviceId()
-        val lineId = deviceId
+        val normalized = phoneNumber?.let { normalizePhone(it) }.orEmpty()
+        val linesRef = firestore.collection("users").document(user.uid).collection("lines")
+        val existingLineId = if (normalized.isNotBlank()) {
+            val normalizedSnapshot = runCatching {
+                linesRef.whereEqualTo("phoneNumberNormalized", normalized).get().await()
+            }.getOrNull()
+            normalizedSnapshot?.documents?.firstOrNull()?.id
+                ?: runCatching {
+                    linesRef.whereEqualTo("phoneNumber", phoneNumber).get().await()
+                }.getOrNull()?.documents?.firstOrNull()?.id
+        } else {
+            null
+        }
+        val lineId = existingLineId ?: if (normalized.isNotBlank()) linesRef.document().id else deviceId
         return try {
             val linePayload = mutableMapOf<String, Any>(
                 "primaryDeviceId" to deviceId,
                 "updatedAt" to FieldValue.serverTimestamp()
             )
             phoneNumber?.takeIf { it.isNotBlank() }?.let { linePayload["phoneNumber"] = it }
-            val lineRef = firestore.collection("users").document(user.uid).collection("lines").document(lineId)
+            if (normalized.isNotBlank()) {
+                linePayload["phoneNumberNormalized"] = normalized
+            }
+            if (existingLineId == null) {
+                linePayload["createdAt"] = FieldValue.serverTimestamp()
+            }
+            val lineRef = linesRef.document(lineId)
             lineRef.set(linePayload, SetOptions.merge()).await()
 
             val devicePayload = mutableMapOf<String, Any>(
@@ -115,12 +134,33 @@ class SmsLineRepository @Inject constructor(
                 "deviceName" to "${Build.MANUFACTURER} ${Build.MODEL}".trim()
             )
             phoneNumber?.takeIf { it.isNotBlank() }?.let { devicePayload["phoneNumber"] = it }
+            if (normalized.isNotBlank()) {
+                devicePayload["phoneNumberNormalized"] = normalized
+            }
             val deviceRef = firestore.collection("users").document(user.uid).collection("devices").document(deviceId)
             deviceRef.set(devicePayload, SetOptions.merge()).await()
             lineId
         } catch (e: Exception) {
             Log.e(TAG, "Failed to ensure device line", e)
             null
+        }
+    }
+
+    suspend fun updateDeviceLine(deviceId: String, lineId: String) {
+        val user = auth.currentUser ?: return
+        try {
+            firestore.collection("users").document(user.uid)
+                .collection("devices").document(deviceId)
+                .set(
+                    mapOf(
+                        "lineId" to lineId,
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    ),
+                    SetOptions.merge()
+                )
+                .await()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to update device line for $deviceId", e)
         }
     }
 
@@ -152,5 +192,9 @@ class SmsLineRepository @Inject constructor(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to set line disabled", e)
         }
+    }
+
+    private fun normalizePhone(input: String): String {
+        return input.filter { it.isDigit() || it == '+' }.trim()
     }
 }

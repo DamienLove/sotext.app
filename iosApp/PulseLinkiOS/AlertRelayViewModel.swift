@@ -58,30 +58,48 @@ final class AlertRelayViewModel: ObservableObject {
     }
 
     private let client: AlertRelayClient
-    private let conversationProvider: ConversationProvider
+    // conversationProvider needs to be var to be updated. (Removed duplicate 'let' declaration that was here)
+    private var conversationProvider: ConversationProvider
     private var armingTask: Task<Void, Never>?
     private let pinCode = "1234" // demo PIN; replace with secure storage
     private let emergencyLocationService = EmergencyLocationService()
 
+    @Published var isLoggedIn: Bool = false
+
     init(baseUrl: String = AlertRelay.shared.DEFAULT_BASE_URL) {
         self.baseUrl = baseUrl
         client = AlertRelayFactory.shared.build(baseUrl: baseUrl)
-        if FirebaseBootstrap.isConfigured {
-            FirebaseBootstrap.ensureAnonymousAuth()
-            #if canImport(FirebaseAuth)
-            if let uid = Auth.auth().currentUser?.uid {
-                conversationProvider = FirestoreConversationProvider(userId: uid)
-            } else {
-                conversationProvider = InMemoryConversationProvider()
-            }
-            #else
-            conversationProvider = InMemoryConversationProvider()
-            #endif
-        } else {
-            conversationProvider = InMemoryConversationProvider()
-        }
 
+        // Initial provider setup (placeholder)
+        conversationProvider = InMemoryConversationProvider()
+
+        setupAuthListener()
+    }
+
+    private func setupAuthListener() {
+        #if canImport(FirebaseAuth)
+        if FirebaseBootstrap.isConfigured {
+            Auth.auth().addStateDidChangeListener { [weak self] _, user in
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    if let uid = user?.uid {
+                        self.isLoggedIn = true
+                        self.conversationProvider = FirestoreConversationProvider(userId: uid)
+                        await self.loadConversations()
+                    } else {
+                        self.isLoggedIn = false
+                        self.conversationProvider = InMemoryConversationProvider()
+                        self.contacts = []
+                        self.conversations = [:]
+                    }
+                }
+            }
+        }
+        #else
+        // In preview/mock mode, simulate login or stay logged out
+        self.isLoggedIn = true // Assume logged in for previews if desired, or false to test login
         Task { await loadConversations() }
+        #endif
     }
 
     // MARK: - Relay

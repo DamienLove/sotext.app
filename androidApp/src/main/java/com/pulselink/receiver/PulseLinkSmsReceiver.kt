@@ -124,10 +124,15 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
 
         if (contact == null && !(aiEnabled && includeUnknown)) return
 
+        val normalizedBody = body.lowercase()
+        val primaryPhrase = settings.primaryPhrase.trim().lowercase()
+        val hasPrimaryPhrase = primaryPhrase.isNotBlank() && normalizedBody.contains(primaryPhrase)
+
         val baseUrgency = contact?.let {
             when {
+                hasPrimaryPhrase -> MessageUrgency.EMERGENCY
                 OtpHelper.isUrgentBody(body) -> MessageUrgency.URGENT
-                it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
+                it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.URGENT
                 else -> MessageUrgency.STANDARD
             }
         } ?: MessageUrgency.STANDARD
@@ -151,8 +156,11 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
 
         if (contact == null && !aiUpgraded) return
 
+        // Only play attention tone for urgent or emergency messages, not standard messages
+        if (effectiveUrgency == MessageUrgency.STANDARD) return
+
         val tier = when {
-            effectiveUrgency == MessageUrgency.STANDARD -> EscalationTier.CHECK_IN
+            effectiveUrgency != MessageUrgency.EMERGENCY -> EscalationTier.CHECK_IN
             aiUpgraded && !settings.aiUrgencyBypassDnd -> EscalationTier.CHECK_IN
             else -> EscalationTier.EMERGENCY
         }
@@ -195,6 +203,6 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
     companion object {
         private const val TAG = "PulseLinkSmsReceiver"
         private const val AI_CLASSIFY_TIMEOUT_MS = 4_000L
-        private const val AI_CONFIDENCE_THRESHOLD = 0.6f
+        private const val AI_CONFIDENCE_THRESHOLD = 0.75f  // Increased from 0.6 to reduce false positives
     }
 }

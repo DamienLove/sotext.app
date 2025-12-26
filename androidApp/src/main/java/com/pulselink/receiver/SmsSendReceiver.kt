@@ -33,11 +33,7 @@ class SmsSendReceiver : BroadcastReceiver() {
             Log.d(TAG, "SMS action $action succeeded for request $requestId")
         }
 
-        if (action == SmsSender.ACTION_SMS_SENT) {
-            smsSender.completeSmsRequest(requestId, success)
-        } else if (action == SmsSender.ACTION_SMS_DELIVERED && success) {
-            smsSender.completeSmsRequest(requestId, true)
-        }
+        smsSender.handleSendResult(requestId, action, success)
     }
 
     companion object {

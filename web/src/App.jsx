@@ -27,6 +27,14 @@ import { httpsCallable } from "firebase/functions";
 import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
 import beaconLogo from './assets/beacon-logo.png';
+import ringersongLogo from './assets/ringersong-logo.png';
+
+// Icons
+const HomeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
+const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>;
+const ThemeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>;
+const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
+const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes.
@@ -59,6 +67,29 @@ const MessageItem = memo(({ msg, showPreviews }) => (
 MessageItem.displayName = 'MessageItem';
 
 const defaultMapCenter = { lat: 39.5, lng: -98.35 };
+// Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
+const DeviceContactItem = memo(({ contact }) => {
+  const extraPhones = Array.isArray(contact.additionalPhones)
+    ? contact.additionalPhones
+    : [];
+  const extraEmails = Array.isArray(contact.additionalEmails)
+    ? contact.additionalEmails
+    : [];
+  const extras = [...extraPhones, ...extraEmails].filter(Boolean).join(' • ');
+  return (
+    <div className="contact-row contact-row--stacked">
+      <div className="contact-main">
+        <div className="contact-name">{contact.displayName || 'Unnamed contact'}</div>
+        <div className="contact-meta">
+          {contact.phoneNumber || contact.email || 'No phone or email'}
+        </div>
+        {extras && <div className="contact-extra">{extras}</div>}
+      </div>
+    </div>
+  );
+});
+
+DeviceContactItem.displayName = 'DeviceContactItem';
 
 const defaultTheme = {
   primaryColor: "#6750A4",
@@ -553,7 +584,8 @@ function App() {
     email: '',
     phoneNumber: ''
   });
-  const [contacts, setContacts] = useState([]);
+  const [trustedContacts, setTrustedContacts] = useState([]);
+  const [deviceContacts, setDeviceContacts] = useState([]);
   const [contactSearch, setContactSearch] = useState('');
   const [contactForm, setContactForm] = useState({
     displayName: '',
@@ -608,8 +640,91 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
+  const [deleteAction, setDeleteAction] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [spotifyCreds, setSpotifyCreds] = useState({
+    clientId: localStorage.getItem('spotify_client_id') || 'b846ea3c7e3440439c6a870be4de24ce',
+    clientSecret: localStorage.getItem('spotify_client_secret') || 'c228e27787164bdebec398c25fe40145'
+  });
+  const [spotifyToken, setSpotifyToken] = useState(null);
+  const [spotifySearch, setSpotifySearch] = useState('');
+  const [spotifyResults, setSpotifyResults] = useState([]);
+
+  useEffect(() => {
+    localStorage.setItem('spotify_client_id', spotifyCreds.clientId);
+    localStorage.setItem('spotify_client_secret', spotifyCreds.clientSecret);
+  }, [spotifyCreds]);
+
+  const getSpotifyToken = async () => {
+    if (!spotifyCreds.clientId || !spotifyCreds.clientSecret) {
+        throw new Error("Missing Client ID/Secret");
+    }
+    const response = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + btoa(spotifyCreds.clientId + ':' + spotifyCreds.clientSecret)
+      },
+      body: 'grant_type=client_credentials'
+    });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error_description || "Token error");
+    setSpotifyToken(data.access_token);
+    return data.access_token;
+  };
+
+  const handleSpotifySearch = async () => {
+    if (!spotifySearch.trim()) return;
+    setSettingsStatus("Searching...");
+    try {
+        let token = spotifyToken;
+        if (!token) {
+            token = await getSpotifyToken();
+        }
+        
+        const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(spotifySearch)}&type=track&limit=5`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.status === 401) {
+            // Token expired, retry once
+            token = await getSpotifyToken();
+            const retry = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(spotifySearch)}&type=track&limit=5`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await retry.json();
+            setSpotifyResults(data.tracks?.items || []);
+        } else {
+            const data = await response.json();
+            setSpotifyResults(data.tracks?.items || []);
+        }
+        setSettingsStatus("");
+    } catch (e) {
+        setSettingsStatus("Search failed: " + e.message);
+    }
+  };
+
+  const handlePushSpotifyTrack = async (track) => {
+      const target = contactForm.targetUid || user?.uid;
+      if(!target) {
+          setSettingsStatus("Target Device ID required.");
+          return;
+      }
+      try {
+          setSettingsStatus(`Sending "${track.name}"...`);
+          await setDoc(doc(db, "users", target, "ringersong", "commands"), {
+              command: "add_song",
+              payload: track.uri,
+              timestamp: Date.now()
+          });
+          setSettingsStatus("Sent! Check your app.");
+      } catch(e) {
+          setSettingsStatus("Error sending: " + e.message);
+      }
+  };
+
   const messagesEndRef = useRef(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -617,6 +732,7 @@ function App() {
   const mapInfoRef = useRef(null);
   const mapHomeMarkerRef = useRef(null);
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
 
   const filteredAlerts = useMemo(() => {
@@ -638,10 +754,10 @@ function App() {
       return name.includes(term) || author.includes(term) || handle.includes(term);
     });
   }, [publicThemes, themeSearch]);
-  const filteredContacts = useMemo(() => {
+  const filteredDeviceContacts = useMemo(() => {
     const term = contactSearch.trim().toLowerCase();
-    if (!term) return contacts;
-    return contacts.filter((contact) => {
+    if (!term) return deviceContacts;
+    return deviceContacts.filter((contact) => {
       const values = [
         contact.displayName,
         contact.phoneNumber,
@@ -653,7 +769,7 @@ function App() {
         (value ?? '').toString().toLowerCase().includes(term)
       );
     });
-  }, [contacts, contactSearch]);
+  }, [deviceContacts, contactSearch]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -700,17 +816,35 @@ function App() {
 
   useEffect(() => {
     if (!user) {
-      setContacts([]);
+      setTrustedContacts([]);
+      setDeviceContacts([]);
       return;
     }
-    const contactsRef = collection(db, "users", user.uid, "trustedContacts");
-    const unsubscribe = onSnapshot(contactsRef, (snapshot) => {
+    const trustedRef = collection(db, "users", user.uid, "trustedContacts");
+    const unsubscribe = onSnapshot(trustedRef, (snapshot) => {
       const items = snapshot.docs.map(docSnap => ({
         id: docSnap.id,
         ...docSnap.data()
       }));
       items.sort((a, b) => (a.contactOrder ?? 0) - (b.contactOrder ?? 0));
-      setContacts(items);
+      setTrustedContacts(items);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setDeviceContacts([]);
+      return;
+    }
+    const deviceRef = collection(db, "users", user.uid, "deviceContacts");
+    const unsubscribe = onSnapshot(deviceRef, (snapshot) => {
+      const items = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+      items.sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''));
+      setDeviceContacts(items);
     });
     return () => unsubscribe();
   }, [user]);
@@ -854,7 +988,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, mapsApiKey]);
+  }, [activePanel, mapsApiKey, defaultMapCenter]);
 
   useEffect(() => {
     if (activePanel !== 'map') return;
@@ -942,7 +1076,7 @@ function App() {
       bounds.extend({ lat: alert.lat, lng: alert.lng });
     });
     mapInstanceRef.current.fitBounds(bounds);
-  }, [filteredAlerts, userLocation]);
+  }, [filteredAlerts, userLocation, defaultMapCenter]);
 
   const handleAlertFocus = (alert) => {
     setSelectedAlertId(alert.id);
@@ -1138,8 +1272,8 @@ function App() {
         allowRemoteOverride: contactForm.allowRemoteOverride,
         allowRemoteSoundChange: contactForm.allowRemoteSoundChange,
         contactOrder: editingContactId
-          ? contacts.find(c => c.id === editingContactId)?.contactOrder ?? contacts.length
-          : contacts.length,
+          ? trustedContacts.find(c => c.id === editingContactId)?.contactOrder ?? trustedContacts.length
+          : trustedContacts.length,
         updatedAt: serverTimestamp()
       };
 
@@ -1269,6 +1403,7 @@ function App() {
     if (!window.confirm("Delete your account and all cloud data? This cannot be undone.")) {
       return;
     }
+    setDeleteAction('account');
     setDeleteStatus("Requesting account deletion...");
     try {
       const callable = httpsCallable(functions, "deleteAccount");
@@ -1278,19 +1413,25 @@ function App() {
     } catch (error) {
       console.error("Delete account failed", error);
       setDeleteStatus(error?.message ?? "Delete account failed.");
+    } finally {
+      setDeleteAction(null);
     }
   };
 
   const handleDeleteAccountData = async () => {
     if (!user) return;
-    if (!window.confirm("Clear synced messages and trusted contacts from the cloud?")) {
+    if (!window.confirm("Clear synced messages, device contacts, and trusted contacts from the cloud?")) {
       return;
     }
+    setDeleteAction('data');
     setDeleteStatus("Deleting account data...");
     try {
       const batch = writeBatch(db);
-      const contactsSnap = await getDocs(collection(db, "users", user.uid, "trustedContacts"));
-      contactsSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
+      const trustedSnap = await getDocs(collection(db, "users", user.uid, "trustedContacts"));
+      trustedSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
+
+      const deviceSnap = await getDocs(collection(db, "users", user.uid, "deviceContacts"));
+      deviceSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
 
       const outboxSnap = await getDocs(collection(db, "users", user.uid, "outbox"));
       outboxSnap.docs.forEach(docSnap => batch.delete(docSnap.ref));
@@ -1312,6 +1453,8 @@ function App() {
     } catch (error) {
       console.error("Delete data failed", error);
       setDeleteStatus(error?.message ?? "Delete data failed.");
+    } finally {
+      setDeleteAction(null);
     }
   };
 
@@ -1451,9 +1594,9 @@ function App() {
         <div className="sidebar">
           <div className="sidebar-header">
             <div className="sidebar-brand">
-              <img src={logo} alt="PulseLink Pro" className="brand-logo small" />
+              <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
               <div>
-                <div className="brand-title">PulseLink Pro</div>
+                <div className="brand-title">PulseLink Suite</div>
                 <div className="brand-subtitle">Web Command Center</div>
               </div>
             </div>
@@ -1480,57 +1623,86 @@ function App() {
             <button
               className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
               onClick={() => setActivePanel('home')}
+              title="Home"
               aria-current={activePanel === 'home' ? 'page' : undefined}
             >
-              Home
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-              onClick={() => setActivePanel('beacon')}
-              aria-current={activePanel === 'beacon' ? 'page' : undefined}
-            >
-              Beacon Inbox
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
-              onClick={() => setActivePanel('map')}
-            >
-              Emergency Map
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
-              onClick={() => setActivePanel('themes')}
-              aria-current={activePanel === 'themes' ? 'page' : undefined}
-            >
-              Themes
+              <HomeIcon />
+              <span>Home</span>
             </button>
             <button
               className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
               onClick={() => setActivePanel('pulselink')}
+              title="PulseLink"
               aria-current={activePanel === 'pulselink' ? 'page' : undefined}
             >
-              PulseLink
+              <img src={logo} alt="PulseLink" />
+              <span>PulseLink</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+              onClick={() => setActivePanel('beacon')}
+              title="Beacon"
+              aria-current={activePanel === 'beacon' ? 'page' : undefined}
+            >
+              <img src={beaconLogo} alt="Beacon" />
+              <span>Beacon</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
+              onClick={() => setActivePanel('ringersong')}
+              title="RingerSong"
+              aria-current={activePanel === 'ringersong' ? 'page' : undefined}
+            >
+              <img src={ringersongLogo} alt="RingerSong" />
+              <span>RingerSong</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+              onClick={() => setActivePanel('map')}
+              title="Map"
+              aria-current={activePanel === 'map' ? 'page' : undefined}
+            >
+              <MapIcon />
+              <span>Map</span>
             </button>
             <button
               className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
               onClick={() => setActivePanel('contacts')}
+              title="Contacts"
               aria-current={activePanel === 'contacts' ? 'page' : undefined}
             >
-              Contacts
+              <ContactIcon />
+              <span>Contacts</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+              onClick={() => setActivePanel('themes')}
+              title="Themes"
+              aria-current={activePanel === 'themes' ? 'page' : undefined}
+            >
+              <ThemeIcon />
+              <span>Themes</span>
             </button>
             <button
               className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
               onClick={() => setActivePanel('settings')}
+              title="Settings"
               aria-current={activePanel === 'settings' ? 'page' : undefined}
             >
-              Settings
+              <SettingsIcon />
+              <span>Settings</span>
             </button>
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
               {threads.length === 0 ? (
                 <div className="sidebar-placeholder">
-                  <div className="sidebar-tip muted">No conversations found.</div>
+                  <div className="sidebar-tip muted">
+                    No conversations found.
+                  </div>
+                  <div className="sidebar-tip muted">
+                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+                  </div>
                 </div>
               ) : (
                 threads.map(thread => (
@@ -1571,7 +1743,7 @@ function App() {
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
                   <h3>Contacts</h3>
-                  <p>Browse every trusted contact at a glance.</p>
+                  <p>Browse all device contacts synced from your phone.</p>
                 </button>
                 <button className="home-card" onClick={() => setActivePanel('beacon')}>
                   <div className="home-icon beacon">
@@ -1579,6 +1751,13 @@ function App() {
                   </div>
                   <h3>Beacon Inbox</h3>
                   <p>View SMS synced from your phone.</p>
+                </button>
+                <button className="home-card" onClick={() => setActivePanel('ringersong')}>
+                  <div className="home-icon ringersong">
+                    <img src={ringersongLogo} alt="RingerSong" />
+                  </div>
+                  <h3>RingerSong</h3>
+                  <p>Manage ringtone progressions and streaming.</p>
                 </button>
                 <button className="home-card" onClick={() => setActivePanel('map')}>
                   <div className="home-icon pulselink">
@@ -1652,7 +1831,7 @@ function App() {
                 <div className="settings-card">
                   <h4>Trusted contacts</h4>
                   <div className="contact-list">
-                    {contacts.map((contact) => (
+                    {trustedContacts.map((contact) => (
                       <div key={contact.id} className="contact-row">
                         <div className="contact-main">
                           <div className="contact-name">{contact.displayName}</div>
@@ -1668,17 +1847,31 @@ function App() {
                           >
                             Edit
                           </button>
-                          <button
-                            className="ghost-btn"
-                            onClick={() => handleDeleteContact(contact.id)}
-                            aria-label={`Remove ${contact.displayName}`}
-                          >
-                            Remove
-                          </button>
+                          {confirmDeleteId === contact.id ? (
+                            <button
+                              className="secondary-btn"
+                              onClick={() => {
+                                handleDeleteContact(contact.id);
+                                setConfirmDeleteId(null);
+                              }}
+                              aria-label={`Confirm remove ${contact.displayName}`}
+                              onBlur={() => setConfirmDeleteId(null)}
+                            >
+                              Confirm?
+                            </button>
+                          ) : (
+                            <button
+                              className="ghost-btn"
+                              onClick={() => setConfirmDeleteId(contact.id)}
+                              aria-label={`Remove ${contact.displayName}`}
+                            >
+                              Remove
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
-                    {contacts.length === 0 && (
+                    {trustedContacts.length === 0 && (
                       <div className="settings-note">No trusted contacts yet.</div>
                     )}
                   </div>
@@ -1787,11 +1980,11 @@ function App() {
             <div className="contacts-panel">
               <div className="panel-header">
                 <h3>Contacts</h3>
-                <p>Browse all trusted contacts synced from PulseLink.</p>
+                <p>Browse all device contacts synced from your phone.</p>
               </div>
               <div className="contacts-toolbar">
                 <div className="contact-count">
-                  {filteredContacts.length} contact{filteredContacts.length === 1 ? '' : 's'}
+                  {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
                 </div>
                 <input
                   className="login-input contact-search"
@@ -1799,52 +1992,18 @@ function App() {
                   aria-label="Search contacts"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
+                  aria-label="Search contacts"
                 />
               </div>
               <div className="contact-list contact-list--full">
-                {filteredContacts.map((contact) => {
-                  const extraPhones = Array.isArray(contact.additionalPhones)
-                    ? contact.additionalPhones
-                    : [];
-                  const extraEmails = Array.isArray(contact.additionalEmails)
-                    ? contact.additionalEmails
-                    : [];
-                  const extras = [...extraPhones, ...extraEmails].filter(Boolean).join(' • ');
-                  const tierLabel = contact.escalationTier === 'CHECK_IN' ? 'Check-in' : 'Emergency';
-                  return (
-                    <div key={contact.id} className="contact-row contact-row--stacked">
-                      <div className="contact-main">
-                        <div className="contact-name">{contact.displayName || 'Unnamed contact'}</div>
-                        <div className="contact-meta">
-                          {contact.phoneNumber || contact.email || 'No phone or email'}
-                        </div>
-                        {extras && <div className="contact-extra">{extras}</div>}
-                        <div className="contact-tags">
-                          <span className="contact-tag">{tierLabel}</span>
-                          {contact.includeLocation && <span className="contact-tag">Location</span>}
-                          {contact.autoCall && <span className="contact-tag">Auto call</span>}
-                          {contact.allowRemoteOverride && <span className="contact-tag">DND override</span>}
-                        </div>
-                      </div>
-                      <div className="contact-actions">
-                        <button
-                          className="secondary-btn"
-                          onClick={() => {
-                            handleEditContact(contact);
-                            setActivePanel('pulselink');
-                          }}
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-                {filteredContacts.length === 0 && (
+                {filteredDeviceContacts.map((contact) => (
+                  <DeviceContactItem key={contact.id} contact={contact} />
+                ))}
+                {filteredDeviceContacts.length === 0 && (
                   <div className="settings-note">
                     {contactSearch.trim()
                       ? 'No contacts match that search.'
-                      : 'No trusted contacts yet.'}
+                      : 'No device contacts synced yet.'}
                   </div>
                 )}
               </div>
@@ -1963,6 +2122,103 @@ function App() {
             </div>
           )}
 
+          {activePanel === 'ringersong' && (
+            <div className="pulselink-panel">
+              <div className="panel-header">
+                <h3>RingerSong</h3>
+                <p>Smart ringtone progression and streaming manager.</p>
+              </div>
+              
+              <div className="settings-card">
+                <h4>Push Track to Device</h4>
+                <p className="settings-label">
+                  Search Spotify and push to your connected RingerSong device.
+                </p>
+                
+                <label className="login-field">
+                  Target Device ID
+                  <input 
+                    className="login-input" 
+                    placeholder="Enter UID from RingerSong Settings"
+                    value={contactForm.targetUid || user?.uid || ''}
+                    onChange={(e) => setContactForm(prev => ({...prev, targetUid: e.target.value}))}
+                  />
+                  <span className="settings-note">Found in RingerSong App {'>'} Settings {'>'} Sync Status</span>
+                </label>
+
+                <div style={{marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12}}>
+                    <h4>Spotify Search</h4>
+                    
+                    {!spotifyToken && !spotifyCreds.clientId && (
+                        <div className="settings-note" style={{marginBottom: 12}}>
+                            Enter Spotify API Credentials (from developer.spotify.com) to enable search.
+                        </div>
+                    )}
+
+                    <div className="composer-row" style={{marginBottom: 12}}>
+                        <input 
+                            className="login-input" 
+                            placeholder="Client ID"
+                            value={spotifyCreds.clientId}
+                            onChange={(e) => setSpotifyCreds(prev => ({...prev, clientId: e.target.value}))}
+                            style={{fontSize: '0.8em'}}
+                            aria-label="Spotify Client ID"
+                        />
+                        <input 
+                            className="login-input" 
+                            placeholder="Client Secret"
+                            type="password"
+                            value={spotifyCreds.clientSecret}
+                            onChange={(e) => setSpotifyCreds(prev => ({...prev, clientSecret: e.target.value}))}
+                            style={{fontSize: '0.8em'}}
+                            aria-label="Spotify Client Secret"
+                        />
+                    </div>
+
+                    <div className="composer-row">
+                        <input 
+                            className="login-input" 
+                            placeholder="Search for a song..."
+                            value={spotifySearch}
+                            onChange={(e) => setSpotifySearch(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
+                            aria-label="Search for a song"
+                        />
+                        <button className="secondary-btn" onClick={handleSpotifySearch}>Search</button>
+                    </div>
+                </div>
+
+                {spotifyResults.length > 0 && (
+                    <div className="contact-list" style={{marginTop: 12, maxHeight: 300, overflowY: 'auto'}}>
+                        {spotifyResults.map(track => (
+                            <div key={track.id} className="contact-row" style={{alignItems: 'center'}}>
+                                <img src={track.album?.images[2]?.url} alt="" style={{width: 40, height: 40, borderRadius: 4}} />
+                                <div className="contact-main" style={{flex: 1, marginLeft: 10}}>
+                                    <div className="contact-name" style={{fontSize: '0.9em'}}>{track.name}</div>
+                                    <div className="contact-meta">{track.artists.map(a => a.name).join(', ')}</div>
+                                </div>
+                                <button className="primary-btn" style={{padding: '4px 10px', fontSize: '0.8em'}} onClick={() => handlePushSpotifyTrack(track)}>
+                                    Push
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                
+                {settingsStatus && <div className="settings-status" style={{marginTop: 12}}>{settingsStatus}</div>}
+              </div>
+              
+              <div className="settings-card">
+                 <h4>Manual URI Push</h4>
+                 <div className="empty-state" style={{padding: 20}}>
+                    <p className="muted">Search integration coming in next update. Use URI for now.</p>
+                    <a href="https://open.spotify.com" target="_blank" rel="noreferrer" className="link-button">Open Spotify Web Player</a>
+                 </div>
+              </div>
+
+            </div>
+          )}
+
           {activePanel === 'themes' && (
             <div className="themes-panel">
               <div className="panel-header">
@@ -2004,6 +2260,7 @@ function App() {
                             className="primary-btn"
                             type="button"
                             onClick={() => handleImportPublicTheme(themeDoc)}
+                            aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
                           >
                             Import
                           </button>
@@ -2070,56 +2327,8 @@ function App() {
                   </button>
                   {themePublishStatus && <div className="settings-status">{themePublishStatus}</div>}
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activePanel === 'settings' && (
-            <div className="settings-panel">
-              <div className="settings-header">
-                <h3>Settings</h3>
-                <p>Manage account, theme sync, and shared preferences.</p>
-              </div>
-              <div className="settings-grid">
-                <div className="settings-card">
-                  <h4>Account</h4>
-                  <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
-                    <span className="settings-value">{user.email || 'Unknown'}</span>
-                  </div>
-                  <div className="settings-row">
-                    <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">{user.uid}</span>
-                  </div>
-                  <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
-                    Send password reset email
-                  </button>
-                  {settingsStatus && <div className="settings-status">{settingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>Web preferences</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={showPreviews}
-                      onChange={(e) => setShowPreviews(e.target.checked)}
-                    />
-                    Show message previews
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={autoScroll}
-                      onChange={(e) => setAutoScroll(e.target.checked)}
-                    />
-                    Auto-scroll to latest message
-                  </label>
-                  <p className="settings-note">
-                    Preferences apply to this browser only.
-                  </p>
-                </div>
-                <div className="settings-card">
-                  <h4>Theme sync</h4>
+                <div className="settings-card themes-card">
+                  <h4>Quick presets</h4>
                   <div className="theme-grid">
                     {themePresets.map((preset) => (
                       <button
@@ -2218,6 +2427,54 @@ function App() {
                   </button>
                   {themeStatus && <div className="settings-status">{themeStatus}</div>}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'settings' && (
+            <div className="settings-panel">
+              <div className="settings-header">
+                <h3>Settings</h3>
+                <p>Manage account details and shared preferences.</p>
+              </div>
+              <div className="settings-grid">
+                <div className="settings-card">
+                  <h4>Account</h4>
+                  <div className="settings-row">
+                    <span className="settings-label">Signed in as</span>
+                    <span className="settings-value">{user.email || 'Unknown'}</span>
+                  </div>
+                  <div className="settings-row">
+                    <span className="settings-label">User ID</span>
+                    <span className="settings-value mono">{user.uid}</span>
+                  </div>
+                  <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
+                    Send password reset email
+                  </button>
+                  {settingsStatus && <div className="settings-status">{settingsStatus}</div>}
+                </div>
+                <div className="settings-card">
+                  <h4>Web preferences</h4>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={showPreviews}
+                      onChange={(e) => setShowPreviews(e.target.checked)}
+                    />
+                    Show message previews
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={autoScroll}
+                      onChange={(e) => setAutoScroll(e.target.checked)}
+                    />
+                    Auto-scroll to latest message
+                  </label>
+                  <p className="settings-note">
+                    Preferences apply to this browser only.
+                  </p>
+                </div>
                 <div className="settings-card">
                   <h4>PulseLink settings</h4>
                   <label className="settings-toggle">
@@ -2258,11 +2515,21 @@ function App() {
                     Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
                   </p>
                   <div className="contact-actions">
-                    <button className="secondary-btn" type="button" onClick={handleDeleteAccountData}>
-                      Clear cloud data
+                    <button
+                      className="secondary-btn"
+                      type="button"
+                      onClick={handleDeleteAccountData}
+                      disabled={!!deleteAction}
+                    >
+                      {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
                     </button>
-                    <button className="primary-btn" type="button" onClick={handleDeleteAccount}>
-                      Delete account
+                    <button
+                      className="primary-btn"
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      disabled={!!deleteAction}
+                    >
+                      {deleteAction === 'account' ? "Deleting..." : "Delete account"}
                     </button>
                   </div>
                   {deleteStatus && <div className="settings-status">{deleteStatus}</div>}
@@ -2310,6 +2577,7 @@ function App() {
                     aria-label="Message body"
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
+                    aria-label="Message body"
                   />
                   <button
                     onClick={handleSendMessage}

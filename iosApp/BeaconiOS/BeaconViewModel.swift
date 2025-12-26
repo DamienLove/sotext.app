@@ -10,25 +10,39 @@ final class BeaconViewModel: ObservableObject {
     @Published private(set) var conversations: [UUID: [BeaconConversationMessage]] = [:]
     @Published var statusText: String? = nil
 
-    private let provider: BeaconConversationProvider
+    @Published var isLoggedIn: Bool = false
+    private var provider: BeaconConversationProvider
 
     init() {
-        if FirebaseBootstrap.isConfigured {
-            FirebaseBootstrap.ensureAnonymousAuth()
-            #if canImport(FirebaseAuth)
-            if let uid = Auth.auth().currentUser?.uid {
-                provider = FirestoreBeaconConversationProvider(userId: uid)
-            } else {
-                provider = MockBeaconConversationProvider()
-            }
-            #else
-            provider = MockBeaconConversationProvider()
-            #endif
-        } else {
-            provider = MockBeaconConversationProvider()
-        }
+        // Initial provider setup
+        provider = MockBeaconConversationProvider()
 
+        setupAuthListener()
+    }
+
+    private func setupAuthListener() {
+        #if canImport(FirebaseAuth)
+        if FirebaseBootstrap.isConfigured {
+            Auth.auth().addStateDidChangeListener { [weak self] _, user in
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    if let uid = user?.uid {
+                        self.isLoggedIn = true
+                        self.provider = FirestoreBeaconConversationProvider(userId: uid)
+                        await self.loadData()
+                    } else {
+                        self.isLoggedIn = false
+                        self.provider = MockBeaconConversationProvider()
+                        self.contacts = []
+                        self.conversations = [:]
+                    }
+                }
+            }
+        }
+        #else
+        self.isLoggedIn = true
         Task { await loadData() }
+        #endif
     }
 
     private func loadData() async {

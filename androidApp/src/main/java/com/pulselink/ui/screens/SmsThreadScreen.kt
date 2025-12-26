@@ -1,6 +1,12 @@
 package com.pulselink.ui.screens
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,10 +16,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +35,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,6 +48,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,10 +74,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.pulselink.data.sms.SmsMessageItem
+import com.pulselink.data.sms.SmsMessageStatus
 import com.pulselink.data.ai.AiComposeAction
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ThemePreferences
@@ -98,6 +111,7 @@ fun SmsThreadScreen(
     onSelectLine: (String) -> Unit = {},
     isArchived: Boolean,
     onToggleArchive: () -> Unit,
+    isDatabaseBusy: Boolean = false,
     aiSummaryState: AiSummaryState = AiSummaryState.Idle,
     onRequestSummary: () -> Unit = {},
     onClearSummary: () -> Unit = {},
@@ -118,6 +132,15 @@ fun SmsThreadScreen(
     val lastInbound = remember(messages) { messages.lastOrNull { !it.outgoing }?.body }
     val backgroundImageUrl = effectiveTheme.backgroundImageUrl?.takeIf { it.isNotBlank() }
     val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
+    val listState = remember(address) { LazyListState() }
+    val isNearBottom by remember {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+        }
+    }
+    var initialScrollDone by remember(address) { mutableStateOf(false) }
 
     val bgModifier = if (effectiveTheme.appBackgroundGradientStart != null && effectiveTheme.appBackgroundGradientEnd != null) {
         Modifier.background(
@@ -292,8 +315,16 @@ fun SmsThreadScreen(
                 )
             }
             Box(modifier = Modifier.fillMaxSize().then(bgModifier))
+            if (isDatabaseBusy) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                )
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
+                state = listState,
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -307,10 +338,27 @@ fun SmsThreadScreen(
                         )
                     }
                 }
-                items(messages, key = { it.id }) { msg ->
-                    MessageBubble(msg, dateFormatter, effectiveTheme, contact)
+                if (messages.isEmpty() && isDatabaseBusy) {
+                    items(6) { index ->
+                        MessageBubbleSkeleton(
+                            isOutgoing = index % 2 == 0,
+                            theme = effectiveTheme
+                        )
+                    }
+                } else {
+                    items(messages, key = { it.id }) { msg ->
+                        MessageBubble(msg, dateFormatter, effectiveTheme, contact)
+                    }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(messages.size) {
+        if (messages.isEmpty()) return@LaunchedEffect
+        if (!initialScrollDone || isNearBottom) {
+            listState.animateScrollToItem(messages.lastIndex)
+            initialScrollDone = true
         }
     }
 
@@ -512,7 +560,10 @@ private fun MessageInput(
                     Spacer(modifier = Modifier.width(8.dp))
                     var expanded by remember { mutableStateOf(false) }
                     val ordered = remember(lineOptions) {
-                        lineOptions.sortedBy { it.createdAt }
+                        lineOptions.sortedWith(
+                            compareBy<com.pulselink.domain.model.SmsLine> { it.phoneNumber.ifBlank { "~" } }
+                                .thenBy { it.createdAt }
+                        )
                     }
                     val selectedIndex = ordered.indexOfFirst { it.id == selectedLineId }
                         .takeIf { it >= 0 } ?: 0
@@ -523,7 +574,6 @@ private fun MessageInput(
                         parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleIncoming)
                     )
                     val badgeColor = palette[selectedIndex % palette.size]
-                    val label = (selectedIndex + 1).toString()
                     val isOnline = ordered.getOrNull(selectedIndex)?.id?.let { lineStatus[it] != false } ?: true
 
                     Box {
@@ -534,24 +584,16 @@ private fun MessageInput(
                             color = Color.Transparent
                         ) {
                             Box(contentAlignment = Alignment.Center) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .background(badgeColor, RoundedCornerShape(8.dp)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = label,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
+                                LineIndicatorBadge(
+                                    index = selectedIndex,
+                                    color = badgeColor,
+                                    isActive = true,
+                                    size = 18.dp
+                                )
                                 if (!isOnline) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .background(Color.Red, shape = CircleShape)
-                                            .align(Alignment.TopEnd)
+                                    LineStatusDot(
+                                        modifier = Modifier.align(Alignment.TopEnd),
+                                        color = Color.Red
                                     )
                                 }
                             }
@@ -565,25 +607,28 @@ private fun MessageInput(
                                 val numberLabel = line.phoneNumber.takeIf { it.isNotBlank() }
                                 val itemLabel = if (numberLabel != null) "Line ${index + 1} | $numberLabel" else "Line ${index + 1}"
                                 val online = lineStatus[line.id] != false
+                                val isSelected = index == selectedIndex
                                 DropdownMenuItem(
                                     text = {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(18.dp)
-                                                    .background(itemColor, RoundedCornerShape(4.dp)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
+                                            LineIndicatorBadge(
+                                                index = index,
+                                                color = itemColor,
+                                                isActive = isSelected,
+                                                size = 16.dp
+                                            )
+                                            Text(itemLabel)
+                                            Spacer(modifier = Modifier.weight(1f))
+                                            if (isSelected) {
                                                 Text(
-                                                    text = (index + 1).toString(),
-                                                    color = Color.White,
-                                                    fontSize = MaterialTheme.typography.labelSmall.fontSize
+                                                    text = "Active",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = itemColor
                                                 )
                                             }
-                                            Text(itemLabel)
                                             if (!online) {
                                                 Text("(offline)", style = MaterialTheme.typography.labelSmall)
                                             }
@@ -753,9 +798,17 @@ private fun MessageBubble(msg: SmsMessageItem, dateFormatter: (Long) -> String, 
                      .background(Color.Gray),
                  contentAlignment = Alignment.Center
              ) {
-                 if (contact?.avatarUrl != null) {
-                     // Placeholder for image loading. Ideally use Coil/Glide
-                     Text("IMG", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                 val avatarUrl = contact?.avatarUrl
+                 if (!avatarUrl.isNullOrBlank()) {
+                     AsyncImage(
+                         model = ImageRequest.Builder(LocalContext.current)
+                             .data(avatarUrl)
+                             .crossfade(true)
+                             .build(),
+                         contentDescription = null,
+                         contentScale = ContentScale.Crop,
+                         modifier = Modifier.fillMaxSize()
+                     )
                  } else {
                      Text(
                         text = contact?.displayName?.take(1)?.uppercase() ?: "?",
@@ -767,26 +820,130 @@ private fun MessageBubble(msg: SmsMessageItem, dateFormatter: (Long) -> String, 
              Spacer(modifier = Modifier.width(8.dp))
         }
 
-        Surface(
-            color = bubbleColor,
-            shape = shape
+        Column(
+            horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            val statusLabel = when (msg.status) {
+                SmsMessageStatus.SENDING -> "Sending"
+                SmsMessageStatus.SENT -> "Sent"
+                SmsMessageStatus.RECEIVED -> "Received"
+                SmsMessageStatus.READ -> "Read"
+                null -> null
+            }
+            if (statusLabel != null && (isOutgoing || msg.status == SmsMessageStatus.READ)) {
                 Text(
-                    text = msg.body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    fontFamily = font,
-                    color = textColor,
-                    fontSize = fontSize
-                )
-                Text(
-                    text = dateFormatter(msg.timestamp),
+                    text = statusLabel,
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = font,
-                    color = parseColorOr(textColor.copy(alpha = 0.7f), theme.timestampColor) // Override if specific timestamp color
+                    color = textColor.copy(alpha = 0.6f)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+            Surface(
+                color = bubbleColor,
+                shape = shape
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = msg.body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = font,
+                        color = textColor,
+                        fontSize = fontSize
+                    )
+                    Text(
+                        text = dateFormatter(msg.timestamp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = font,
+                        color = parseColorOr(textColor.copy(alpha = 0.7f), theme.timestampColor) // Override if specific timestamp color
+                    )
+                }
             }
         }
     }
+}
+
+@Composable
+private fun MessageBubbleSkeleton(
+    isOutgoing: Boolean,
+    theme: ThemePreferences
+) {
+    val transition = rememberInfiniteTransition(label = "messageSkeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "messageSkeletonAlpha"
+    )
+    val bubbleColor = parseColorOr(
+        MaterialTheme.colorScheme.surfaceVariant,
+        if (isOutgoing) theme.bubbleOutgoing else theme.bubbleIncoming
+    ).copy(alpha = alpha)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isOutgoing) Arrangement.End else Arrangement.Start
+    ) {
+        Column(
+            horizontalAlignment = if (isOutgoing) Alignment.End else Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(if (isOutgoing) 0.65f else 0.75f)
+                    .height(18.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(bubbleColor)
+            )
+            Box(
+                modifier = Modifier
+                    .width(72.dp)
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(bubbleColor.copy(alpha = alpha * 0.7f))
+            )
+        }
+    }
+}
+
+@Composable
+private fun LineIndicatorBadge(
+    index: Int,
+    color: Color,
+    isActive: Boolean,
+    size: Dp
+) {
+    val shape = RoundedCornerShape(3.dp)
+    val borderColor = if (isActive) color else color.copy(alpha = 0.45f)
+    val backgroundColor = if (isActive) color else color.copy(alpha = 0.12f)
+    Box(
+        modifier = Modifier
+            .size(size)
+            .border(width = if (isActive) 2.dp else 1.dp, color = borderColor, shape = shape)
+            .background(backgroundColor, shape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = (index + 1).toString(),
+            color = if (isActive) Color.White else borderColor,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun LineStatusDot(
+    modifier: Modifier = Modifier,
+    color: Color
+) {
+    Box(
+        modifier = modifier
+            .size(8.dp)
+            .background(color, shape = CircleShape)
+    )
 }

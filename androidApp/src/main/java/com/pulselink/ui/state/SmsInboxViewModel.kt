@@ -8,6 +8,7 @@ import com.pulselink.data.ai.AiComposeAction
 import com.pulselink.data.sms.RemoteSmsRepository
 import com.pulselink.data.sms.SmsLineRepository
 import com.pulselink.data.sms.SmsMessageItem
+import com.pulselink.data.sms.SmsMessageStatus
 import com.pulselink.data.sms.SmsOutboxService
 import com.pulselink.data.sms.SmsRepository
 import com.pulselink.data.sms.SmsSender
@@ -35,6 +36,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlin.math.abs
 
 sealed class SearchResultState {
     object Idle : SearchResultState()
@@ -70,6 +72,8 @@ class SmsInboxViewModel @Inject constructor(
     val activeLineId: StateFlow<String?> = _activeLineId
     private val _inboxMode = MutableStateFlow(LineInboxMode.COMBINED)
     val inboxMode: StateFlow<LineInboxMode> = _inboxMode
+    private val _isDatabaseBusy = MutableStateFlow(false)
+    val isDatabaseBusy: StateFlow<Boolean> = _isDatabaseBusy
     private val deviceLineId = MutableStateFlow("")
     private var refreshJob: Job? = null
     private var lastRefreshAt = 0L
@@ -104,18 +108,20 @@ class SmsInboxViewModel @Inject constructor(
 
     fun importAllMessages() {
         viewModelScope.launch {
-            val deviceId = deviceLineId.value.ifBlank {
-                settingsRepository.ensureDeviceId().also { deviceLineId.value = it }
+            runDatabaseAction {
+                val deviceId = deviceLineId.value.ifBlank {
+                    settingsRepository.ensureDeviceId().also { deviceLineId.value = it }
+                }
+                val (threads, archived) = withContext(Dispatchers.IO) {
+                    smsRepository.listThreadsAndArchived(
+                        limit = THREAD_LIMIT,
+                        fromSmsOnly = true,
+                        forceRefresh = true
+                    )
+                }
+                localThreads.value = threads.map { it.copy(lineId = deviceId) }
+                localArchived.value = archived.map { it.copy(lineId = deviceId) }
             }
-            val (threads, archived) = withContext(Dispatchers.IO) {
-                smsRepository.listThreadsAndArchived(
-                    limit = THREAD_LIMIT,
-                    fromSmsOnly = true,
-                    forceRefresh = true
-                )
-            }
-            localThreads.value = threads.map { it.copy(lineId = deviceId) }
-            localArchived.value = archived.map { it.copy(lineId = deviceId) }
         }
     }
 
@@ -150,27 +156,42 @@ class SmsInboxViewModel @Inject constructor(
 
     fun archive(threadId: Long) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                smsRepository.markThreadRead(threadId)
-                smsRepository.archiveThread(threadId)
+            runDatabaseAction {
+                withContext(Dispatchers.IO) {
+                    smsRepository.markThreadRead(threadId)
+                    smsRepository.archiveThread(threadId)
+                }
+                refresh(force = true)
             }
-            refresh(force = true)
         }
     }
 
     fun unarchive(threadId: Long) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                smsRepository.unarchiveThread(threadId)
+            runDatabaseAction {
+                withContext(Dispatchers.IO) {
+                    smsRepository.unarchiveThread(threadId)
+                }
+                refresh(force = true)
             }
-            refresh(force = true)
         }
     }
 
     fun delete(threadId: Long) {
-        viewModelScope.launch {
-            smsRepository.deleteThread(threadId)
-            refresh()
+        viewModelScope.launch(Dispatchers.IO) {
+            runDatabaseAction {
+                smsRepository.deleteThread(threadId)
+                refresh()
+            }
+        }
+    }
+
+    private suspend fun runDatabaseAction(block: suspend () -> Unit) {
+        _isDatabaseBusy.value = true
+        try {
+            block()
+        } finally {
+            _isDatabaseBusy.value = false
         }
     }
 
@@ -262,6 +283,7 @@ class SmsThreadViewModel @Inject constructor(
 ) : ViewModel() {
     private companion object {
         const val MESSAGE_LIMIT = Int.MAX_VALUE
+        const val PENDING_MATCH_WINDOW_MS = 20_000L
     }
     private val _messages = MutableStateFlow<List<SmsMessageItem>>(emptyList())
     val messages: StateFlow<List<SmsMessageItem>> = _messages
@@ -273,6 +295,8 @@ class SmsThreadViewModel @Inject constructor(
     val summaryState: StateFlow<AiSummaryState> = _summaryState
     private val _composeState = MutableStateFlow<AiComposeState>(AiComposeState.Idle)
     val composeState: StateFlow<AiComposeState> = _composeState
+    private val _isDatabaseBusy = MutableStateFlow(false)
+    val isDatabaseBusy: StateFlow<Boolean> = _isDatabaseBusy
     private var activeThreadId: Long? = null
     private var activeAddress: String = ""
     private var activeLineId: String? = null
@@ -280,10 +304,14 @@ class SmsThreadViewModel @Inject constructor(
     private var lastSummaryMessageId: Long? = null
     private var remoteMessagesJob: Job? = null
     private var localMessagesJob: Job? = null
+    private val pendingMessages = mutableListOf<SmsMessageItem>()
+    private val pendingLock = Any()
+    private var loadedMessages: List<SmsMessageItem> = emptyList()
 
     fun load(threadId: Long, address: String, lineId: String? = null) {
         activeThreadId = threadId.takeIf { it > 0 }
         activeAddress = address
+        resetMessages()
         viewModelScope.launch {
             deviceLineId = settingsRepository.ensureDeviceId()
             activeLineId = lineId ?: deviceLineId
@@ -297,7 +325,7 @@ class SmsThreadViewModel @Inject constructor(
             if (!activeLineId.isNullOrBlank() && activeLineId != deviceLineId && activeThreadId != null) {
                 remoteMessagesJob = remoteSmsRepository
                     .observeMessages(activeLineId!!, activeThreadId!!)
-                    .onEach { _messages.value = it }
+                    .onEach { updateMessages(it) }
                     .launchIn(viewModelScope)
                 _isArchived.value = false
             } else {
@@ -326,43 +354,51 @@ class SmsThreadViewModel @Inject constructor(
         val msgs = result.first
         val contact = result.second
         val archived = result.third
-        _messages.value = msgs
-        val latestMessageId = msgs.firstOrNull()?.id
-        if (latestMessageId != lastSummaryMessageId) {
-            lastSummaryMessageId = null
-            if (_summaryState.value !is AiSummaryState.Loading) {
-                _summaryState.value = AiSummaryState.Idle
-            }
-        }
+        updateMessages(msgs)
         _contact.value = contact
         _isArchived.value = archived
     }
 
     fun toggleArchive() {
         viewModelScope.launch {
-            if (activeThreadId == null && activeAddress.isNotBlank()) {
-                activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
-            }
-            val threadId = activeThreadId ?: return@launch
-            val updatedArchived = withContext(Dispatchers.IO) {
-                if (_isArchived.value) {
-                    smsRepository.unarchiveThread(threadId)
-                } else {
-                    smsRepository.archiveThread(threadId)
+            runDatabaseAction {
+                if (activeThreadId == null && activeAddress.isNotBlank()) {
+                    activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
                 }
-                smsRepository.isThreadArchived(threadId)
+                val threadId = activeThreadId ?: return@runDatabaseAction
+                val updatedArchived = withContext(Dispatchers.IO) {
+                    if (_isArchived.value) {
+                        smsRepository.unarchiveThread(threadId)
+                    } else {
+                        smsRepository.archiveThread(threadId)
+                    }
+                    smsRepository.isThreadArchived(threadId)
+                }
+                _isArchived.value = updatedArchived
             }
-            _isArchived.value = updatedArchived
         }
     }
 
     fun setContactTheme(theme: ThemePreferences?) {
-        viewModelScope.launch {
-            _contact.value?.let { currentContact ->
-                val updated = currentContact.copy(themeOverride = theme)
-                contactRepository.upsert(updated)
-                _contact.value = updated
+        viewModelScope.launch(Dispatchers.IO) {
+            runDatabaseAction {
+                _contact.value?.let { currentContact ->
+                    val updated = currentContact.copy(themeOverride = theme)
+                    contactRepository.upsert(updated)
+                    withContext(Dispatchers.Main) {
+                        _contact.value = updated
+                    }
+                }
             }
+        }
+    }
+
+    private suspend fun runDatabaseAction(block: suspend () -> Unit) {
+        _isDatabaseBusy.value = true
+        try {
+            block()
+        } finally {
+            _isDatabaseBusy.value = false
         }
     }
 
@@ -372,6 +408,19 @@ class SmsThreadViewModel @Inject constructor(
             val targetAddress = address.ifBlank { activeAddress }
             if (targetAddress.isBlank()) return@launch
             activeAddress = targetAddress
+            val sendTimestamp = System.currentTimeMillis()
+            val pendingId = -sendTimestamp
+            addPendingMessage(
+                SmsMessageItem(
+                    id = pendingId,
+                    threadId = activeThreadId ?: pendingId,
+                    address = targetAddress,
+                    body = body,
+                    timestamp = sendTimestamp,
+                    outgoing = true,
+                    status = SmsMessageStatus.SENDING
+                )
+            )
             val destinations = targetAddress.split(';', ',')
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
@@ -400,13 +449,70 @@ class SmsThreadViewModel @Inject constructor(
             }
         }
     }
+
+    private fun updateMessages(messages: List<SmsMessageItem>) {
+        withPendingLock {
+            loadedMessages = messages
+            _messages.value = mergeMessages(messages)
+        }
+        val latestMessageId = messages.firstOrNull()?.id
+        if (latestMessageId != lastSummaryMessageId) {
+            lastSummaryMessageId = null
+            if (_summaryState.value !is AiSummaryState.Loading) {
+                _summaryState.value = AiSummaryState.Idle
+            }
+        }
+    }
+
+    private fun resetMessages() {
+        withPendingLock {
+            pendingMessages.clear()
+            loadedMessages = emptyList()
+            _messages.value = emptyList()
+        }
+    }
+
+    private fun addPendingMessage(message: SmsMessageItem) {
+        withPendingLock {
+            pendingMessages.add(message)
+            _messages.value = mergeMessages(loadedMessages)
+        }
+    }
+
+    private fun mergeMessages(messages: List<SmsMessageItem>): List<SmsMessageItem> {
+        if (pendingMessages.isEmpty()) return messages
+        val pendingRemaining = pendingMessages.filterNot { pending ->
+            messages.any { loaded -> isSameMessage(loaded, pending) }
+        }
+        pendingMessages.clear()
+        pendingMessages.addAll(pendingRemaining)
+        return (messages + pendingRemaining).sortedBy { it.timestamp }
+    }
+
+    private fun isSameMessage(loaded: SmsMessageItem, pending: SmsMessageItem): Boolean {
+        if (loaded.outgoing != pending.outgoing) return false
+        if (loaded.body != pending.body) return false
+        val timeDelta = abs(loaded.timestamp - pending.timestamp)
+        if (timeDelta > PENDING_MATCH_WINDOW_MS) return false
+        val loadedAddress = normalizeSmsAddress(loaded.address)
+        val pendingAddress = normalizeSmsAddress(pending.address)
+        if (loadedAddress.isNotBlank() && pendingAddress.isNotBlank()) {
+            return loadedAddress == pendingAddress
+        }
+        return true
+    }
+
+    private fun <T> withPendingLock(block: () -> T): T = synchronized(pendingLock) {
+        block()
+    }
+
     fun requestSummary(force: Boolean = false) {
         viewModelScope.launch {
             val settings = settingsRepository.settings.first()
             val premium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
             if (!premium || !settings.aiSummariesEnabled) return@launch
 
-            val messages = _messages.value
+            val messages = loadedMessages
             if (messages.isEmpty()) return@launch
             val latestMessageId = messages.firstOrNull()?.id
             if (!force && latestMessageId != null && latestMessageId == lastSummaryMessageId) {
