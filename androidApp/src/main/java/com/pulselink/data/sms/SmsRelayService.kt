@@ -84,10 +84,11 @@ class SmsRelayService @Inject constructor(
                         .collection("outbox").document(docId).delete()
                 } else {
                     Log.w(TAG, "Failed to send SMS via relay to $address")
-                    // Optional: Write error status back to document or increment retry count?
-                    // For now, we leave it in outbox or maybe delete it to prevent infinite loop if it's a permanent error?
-                    // To be safe and prevent loops, we could delete it or mark it as failed.
-                    // For this iteration, we leave it, but retry logic isn't implemented here.
+                    // Mark as failed and delete from outbox to prevent infinite loops.
+                    // Ideally, we would update status to 'failed', but for now, we remove it
+                    // to keep the queue clear.
+                    firestore.collection("users").document(uid)
+                        .collection("outbox").document(docId).delete()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception during SMS relay", e)

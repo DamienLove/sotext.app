@@ -66,6 +66,30 @@ const MessageItem = memo(({ msg, showPreviews }) => (
 
 MessageItem.displayName = 'MessageItem';
 
+// Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
+const DeviceContactItem = memo(({ contact }) => {
+  const extraPhones = Array.isArray(contact.additionalPhones)
+    ? contact.additionalPhones
+    : [];
+  const extraEmails = Array.isArray(contact.additionalEmails)
+    ? contact.additionalEmails
+    : [];
+  const extras = [...extraPhones, ...extraEmails].filter(Boolean).join(' • ');
+  return (
+    <div className="contact-row contact-row--stacked">
+      <div className="contact-main">
+        <div className="contact-name">{contact.displayName || 'Unnamed contact'}</div>
+        <div className="contact-meta">
+          {contact.phoneNumber || contact.email || 'No phone or email'}
+        </div>
+        {extras && <div className="contact-extra">{extras}</div>}
+      </div>
+    </div>
+  );
+});
+
+DeviceContactItem.displayName = 'DeviceContactItem';
+
 const defaultTheme = {
   primaryColor: "#6750A4",
   secondaryColor: "#625B71",
@@ -615,6 +639,7 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
+  const [deleteAction, setDeleteAction] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [spotifyCreds, setSpotifyCreds] = useState({
@@ -1376,6 +1401,7 @@ function App() {
     if (!window.confirm("Delete your account and all cloud data? This cannot be undone.")) {
       return;
     }
+    setDeleteAction('account');
     setDeleteStatus("Requesting account deletion...");
     try {
       const callable = httpsCallable(functions, "deleteAccount");
@@ -1385,6 +1411,8 @@ function App() {
     } catch (error) {
       console.error("Delete account failed", error);
       setDeleteStatus(error?.message ?? "Delete account failed.");
+    } finally {
+      setDeleteAction(null);
     }
   };
 
@@ -1393,6 +1421,7 @@ function App() {
     if (!window.confirm("Clear synced messages, device contacts, and trusted contacts from the cloud?")) {
       return;
     }
+    setDeleteAction('data');
     setDeleteStatus("Deleting account data...");
     try {
       const batch = writeBatch(db);
@@ -1422,6 +1451,8 @@ function App() {
     } catch (error) {
       console.error("Delete data failed", error);
       setDeleteStatus(error?.message ?? "Delete data failed.");
+    } finally {
+      setDeleteAction(null);
     }
   };
 
@@ -1591,6 +1622,7 @@ function App() {
               className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
               onClick={() => setActivePanel('home')}
               title="Home"
+              aria-current={activePanel === 'home' ? 'page' : undefined}
             >
               <HomeIcon />
               <span>Home</span>
@@ -1599,6 +1631,7 @@ function App() {
               className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
               onClick={() => setActivePanel('pulselink')}
               title="PulseLink"
+              aria-current={activePanel === 'pulselink' ? 'page' : undefined}
             >
               <img src={logo} alt="PulseLink" />
               <span>PulseLink</span>
@@ -1607,6 +1640,7 @@ function App() {
               className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
               onClick={() => setActivePanel('beacon')}
               title="Beacon"
+              aria-current={activePanel === 'beacon' ? 'page' : undefined}
             >
               <img src={beaconLogo} alt="Beacon" />
               <span>Beacon</span>
@@ -1615,6 +1649,7 @@ function App() {
               className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
               onClick={() => setActivePanel('ringersong')}
               title="RingerSong"
+              aria-current={activePanel === 'ringersong' ? 'page' : undefined}
             >
               <img src={ringersongLogo} alt="RingerSong" />
               <span>RingerSong</span>
@@ -1623,6 +1658,7 @@ function App() {
               className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
               onClick={() => setActivePanel('map')}
               title="Map"
+              aria-current={activePanel === 'map' ? 'page' : undefined}
             >
               <MapIcon />
               <span>Map</span>
@@ -1631,6 +1667,7 @@ function App() {
               className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
               onClick={() => setActivePanel('contacts')}
               title="Contacts"
+              aria-current={activePanel === 'contacts' ? 'page' : undefined}
             >
               <ContactIcon />
               <span>Contacts</span>
@@ -1639,6 +1676,7 @@ function App() {
               className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
               onClick={() => setActivePanel('themes')}
               title="Themes"
+              aria-current={activePanel === 'themes' ? 'page' : undefined}
             >
               <ThemeIcon />
               <span>Themes</span>
@@ -1647,6 +1685,7 @@ function App() {
               className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
               onClick={() => setActivePanel('settings')}
               title="Settings"
+              aria-current={activePanel === 'settings' ? 'page' : undefined}
             >
               <SettingsIcon />
               <span>Settings</span>
@@ -1656,7 +1695,12 @@ function App() {
             <div className="thread-list">
               {threads.length === 0 ? (
                 <div className="sidebar-placeholder">
-                  <div className="sidebar-tip muted">No conversations found.</div>
+                  <div className="sidebar-tip muted">
+                    No conversations found.
+                  </div>
+                  <div className="sidebar-tip muted">
+                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+                  </div>
                 </div>
               ) : (
                 threads.map(thread => (
@@ -1931,29 +1975,13 @@ function App() {
                   placeholder="Search by name, phone, or email"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
+                  aria-label="Search contacts"
                 />
               </div>
               <div className="contact-list contact-list--full">
-                {filteredDeviceContacts.map((contact) => {
-                  const extraPhones = Array.isArray(contact.additionalPhones)
-                    ? contact.additionalPhones
-                    : [];
-                  const extraEmails = Array.isArray(contact.additionalEmails)
-                    ? contact.additionalEmails
-                    : [];
-                  const extras = [...extraPhones, ...extraEmails].filter(Boolean).join(' • ');
-                  return (
-                    <div key={contact.id} className="contact-row contact-row--stacked">
-                      <div className="contact-main">
-                        <div className="contact-name">{contact.displayName || 'Unnamed contact'}</div>
-                        <div className="contact-meta">
-                          {contact.phoneNumber || contact.email || 'No phone or email'}
-                        </div>
-                        {extras && <div className="contact-extra">{extras}</div>}
-                      </div>
-                    </div>
-                  );
-                })}
+                {filteredDeviceContacts.map((contact) => (
+                  <DeviceContactItem key={contact.id} contact={contact} />
+                ))}
                 {filteredDeviceContacts.length === 0 && (
                   <div className="settings-note">
                     {contactSearch.trim()
@@ -2117,6 +2145,7 @@ function App() {
                             value={spotifyCreds.clientId}
                             onChange={(e) => setSpotifyCreds(prev => ({...prev, clientId: e.target.value}))}
                             style={{fontSize: '0.8em'}}
+                            aria-label="Spotify Client ID"
                         />
                         <input 
                             className="login-input" 
@@ -2125,6 +2154,7 @@ function App() {
                             value={spotifyCreds.clientSecret}
                             onChange={(e) => setSpotifyCreds(prev => ({...prev, clientSecret: e.target.value}))}
                             style={{fontSize: '0.8em'}}
+                            aria-label="Spotify Client Secret"
                         />
                     </div>
 
@@ -2135,6 +2165,7 @@ function App() {
                             value={spotifySearch}
                             onChange={(e) => setSpotifySearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
+                            aria-label="Search for a song"
                         />
                         <button className="secondary-btn" onClick={handleSpotifySearch}>Search</button>
                     </div>
@@ -2466,11 +2497,21 @@ function App() {
                     Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
                   </p>
                   <div className="contact-actions">
-                    <button className="secondary-btn" type="button" onClick={handleDeleteAccountData}>
-                      Clear cloud data
+                    <button
+                      className="secondary-btn"
+                      type="button"
+                      onClick={handleDeleteAccountData}
+                      disabled={!!deleteAction}
+                    >
+                      {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
                     </button>
-                    <button className="primary-btn" type="button" onClick={handleDeleteAccount}>
-                      Delete account
+                    <button
+                      className="primary-btn"
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      disabled={!!deleteAction}
+                    >
+                      {deleteAction === 'account' ? "Deleting..." : "Delete account"}
                     </button>
                   </div>
                   {deleteStatus && <div className="settings-status">{deleteStatus}</div>}
