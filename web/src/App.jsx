@@ -66,6 +66,30 @@ const MessageItem = memo(({ msg, showPreviews }) => (
 
 MessageItem.displayName = 'MessageItem';
 
+// Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
+const DeviceContactItem = memo(({ contact }) => {
+  const extraPhones = Array.isArray(contact.additionalPhones)
+    ? contact.additionalPhones
+    : [];
+  const extraEmails = Array.isArray(contact.additionalEmails)
+    ? contact.additionalEmails
+    : [];
+  const extras = [...extraPhones, ...extraEmails].filter(Boolean).join(' • ');
+  return (
+    <div className="contact-row contact-row--stacked">
+      <div className="contact-main">
+        <div className="contact-name">{contact.displayName || 'Unnamed contact'}</div>
+        <div className="contact-meta">
+          {contact.phoneNumber || contact.email || 'No phone or email'}
+        </div>
+        {extras && <div className="contact-extra">{extras}</div>}
+      </div>
+    </div>
+  );
+});
+
+DeviceContactItem.displayName = 'DeviceContactItem';
+
 const defaultTheme = {
   primaryColor: "#6750A4",
   secondaryColor: "#625B71",
@@ -1939,26 +1963,9 @@ function App() {
                 />
               </div>
               <div className="contact-list contact-list--full">
-                {filteredDeviceContacts.map((contact) => {
-                  const extraPhones = Array.isArray(contact.additionalPhones)
-                    ? contact.additionalPhones
-                    : [];
-                  const extraEmails = Array.isArray(contact.additionalEmails)
-                    ? contact.additionalEmails
-                    : [];
-                  const extras = [...extraPhones, ...extraEmails].filter(Boolean).join(' • ');
-                  return (
-                    <div key={contact.id} className="contact-row contact-row--stacked">
-                      <div className="contact-main">
-                        <div className="contact-name">{contact.displayName || 'Unnamed contact'}</div>
-                        <div className="contact-meta">
-                          {contact.phoneNumber || contact.email || 'No phone or email'}
-                        </div>
-                        {extras && <div className="contact-extra">{extras}</div>}
-                      </div>
-                    </div>
-                  );
-                })}
+                {filteredDeviceContacts.map((contact) => (
+                  <DeviceContactItem key={contact.id} contact={contact} />
+                ))}
                 {filteredDeviceContacts.length === 0 && (
                   <div className="settings-note">
                     {contactSearch.trim()
