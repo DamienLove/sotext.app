@@ -1,6 +1,7 @@
 package com.pulselink.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -74,6 +75,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -85,10 +87,12 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.pulselink.R
 import com.pulselink.data.sms.SmsThreadItem
+import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.MessageUrgency
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.ui.components.ThemeIcon
 import com.pulselink.ui.components.ThemeIconKey
+import com.pulselink.util.normalizeSmsAddress
 import com.pulselink.util.parseColorOr
 import com.pulselink.util.splitSmsDisplayAddress
 import com.pulselink.ui.state.SearchResultState
@@ -100,6 +104,7 @@ fun SmsInboxScreen(
     threads: List<SmsThreadItem>,
     archivedThreads: List<SmsThreadItem>,
     onOpenThread: (SmsThreadItem) -> Unit,
+    onOpenContactForThread: (SmsThreadItem) -> Unit = {},
     onBack: () -> Unit,
     onArchiveThread: (SmsThreadItem) -> Unit = {},
     onUnarchiveThread: (SmsThreadItem) -> Unit = {},
@@ -118,6 +123,7 @@ fun SmsInboxScreen(
     showFilterTabs: Boolean = true,
     banner: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
+    contactsByNumber: Map<String, Contact> = emptyMap(),
     showSearchBar: Boolean = false,
     searchState: SearchResultState = SearchResultState.Idle,
     onSearch: (String) -> Unit = {},
@@ -198,7 +204,12 @@ fun SmsInboxScreen(
     val largeIconSize = (64f * theme.iconSizeFactor).coerceIn(48f, 86f).dp
     val beaconCollapsedIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 26f).dp
     val beaconExpandedIconSize = (52f * theme.iconSizeFactor).coerceIn(40f, 72f).dp
-    val orderedLines = remember(lineOptions) { lineOptions.sortedBy { it.createdAt } }
+    val orderedLines = remember(lineOptions) {
+        lineOptions.sortedWith(
+            compareBy<com.pulselink.domain.model.SmsLine> { it.phoneNumber.ifBlank { "~" } }
+                .thenBy { it.createdAt }
+        )
+    }
     val lineIndexMap = remember(orderedLines) { orderedLines.mapIndexed { index, line -> line.id to index }.toMap() }
     val lineColors = remember(theme, colorScheme) {
         listOf(
@@ -513,13 +524,14 @@ fun SmsInboxScreen(
                 }
                 items(filtered, key = { threadKey(it) }) { thread ->
                     val lineIndex = thread.lineId?.let { lineIndexMap[it] }
-                    val lineColor = lineIndex?.let { lineColors[it % lineColors.size] }
                     val isLocalLine = localDeviceId == null ||
                         thread.lineId.isNullOrBlank() ||
                         thread.lineId == localDeviceId
+                    val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
                     ThreadRow(
                         thread = thread,
                         onOpen = onOpenThread,
+                        onAvatarClick = onOpenContactForThread,
                         onArchive = onArchiveThread,
                         onUnarchive = onUnarchiveThread,
                         onDelete = onDeleteThread,
@@ -528,8 +540,10 @@ fun SmsInboxScreen(
                         isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
                         onTogglePrivate = onTogglePrivate,
                         theme = theme,
+                        contact = contact,
                         lineIndex = lineIndex,
-                        lineColor = lineColor,
+                        lineColors = lineColors,
+                        lineCount = orderedLines.size,
                         actionsEnabled = isLocalLine
                     )
                 }
@@ -551,6 +565,7 @@ fun SmsInboxScreen(
 private fun ThreadRow(
     thread: SmsThreadItem,
     onOpen: (SmsThreadItem) -> Unit,
+    onAvatarClick: (SmsThreadItem) -> Unit,
     onArchive: (SmsThreadItem) -> Unit,
     onUnarchive: (SmsThreadItem) -> Unit,
     onDelete: (SmsThreadItem) -> Unit,
@@ -559,11 +574,17 @@ private fun ThreadRow(
     isPrivate: Boolean,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit,
     theme: ThemePreferences,
+    contact: Contact? = null,
     lineIndex: Int? = null,
-    lineColor: Color? = null,
+    lineColors: List<Color> = emptyList(),
+    lineCount: Int = 0,
     actionsEnabled: Boolean = true
 ) {
     val (displayName, number) = splitDisplay(thread.address)
+    val resolvedName = contact?.displayName?.takeIf { it.isNotBlank() }
+        ?: contact?.remoteDisplayName?.takeIf { it.isNotBlank() }
+        ?: displayName
+    val avatarText = resolvedName.ifBlank { number ?: "Unknown" }
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (!actionsEnabled) return@rememberSwipeToDismissBoxState false
@@ -637,76 +658,88 @@ private fun ThreadRow(
                 // If the user sets BG to Black, Tonal Elevation 1.dp will make it Dark Grey. That is good.
                 // But we need to ensure text color matches onBackground.
             ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (lineIndex != null && lineColor != null) {
-                        LineBadge(
-                            index = lineIndex,
-                            color = lineColor,
-                            theme = theme
-                        )
-                    }
-                    AvatarCircle(text = displayName, theme = theme)
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                Box {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Box(modifier = Modifier.clickable { onAvatarClick(thread) }) {
+                            AvatarCircle(
+                                text = avatarText,
+                                theme = theme,
+                                avatarUrl = contact?.avatarUrl
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = resolvedName.ifBlank { number ?: "Unknown" },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
+                                )
+                                Text(
+                                    text = dateFormatter(thread.timestamp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground).copy(alpha = 0.7f)
+                                )
+                            }
+                            if (!number.isNullOrBlank() && number != resolvedName) {
+                                Text(
+                                    text = number,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                             Text(
-                                text = displayName.ifBlank { number ?: "Unknown" },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
-                                maxLines = 1,
+                                text = thread.snippet.ifBlank { "No preview available." },
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
-                            fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
+                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f),
+                            fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
                             )
-                            Text(
-                                text = dateFormatter(thread.timestamp),
-                                style = MaterialTheme.typography.labelSmall,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground).copy(alpha = 0.7f)
-                            )
+                            if (thread.unread) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                UnreadPill()
+                            }
+                            if (thread.isTrusted && thread.trustedUrgency != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                TrustedPill(thread.trustedUrgency)
+                            }
+                            if (thread.isOtp) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                OtpPill()
+                            }
+                            if (isPrivate) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                PrivatePill()
+                            }
                         }
-                        if (!number.isNullOrBlank() && number != displayName) {
-                            Text(
-                                text = number,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Text(
-                            text = thread.snippet.ifBlank { "No preview available." },
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f),
-                        fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
+                    }
+                    if (lineIndex != null && lineCount > 1 && lineColors.isNotEmpty()) {
+                        MultiLineIndicator(
+                            lineCount = lineCount,
+                            activeIndex = lineIndex,
+                            lineColors = lineColors,
+                            theme = theme,
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 10.dp, bottom = 10.dp)
                         )
-                        if (thread.unread) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            UnreadPill()
-                        }
-                        if (thread.isTrusted && thread.trustedUrgency != null) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            TrustedPill(thread.trustedUrgency)
-                        }
-                        if (thread.isOtp) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            OtpPill()
-                        }
-                        if (isPrivate) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            PrivatePill()
-                        }
                     }
                 }
             }
@@ -718,21 +751,53 @@ private fun ThreadRow(
 private fun LineBadge(
     index: Int,
     color: Color,
-    theme: ThemePreferences
+    theme: ThemePreferences,
+    isActive: Boolean = false,
+    size: Dp = (16f * theme.iconSizeFactor).coerceIn(12f, 20f).dp
 ) {
-    val size = (22f * theme.iconSizeFactor).coerceIn(16f, 28f).dp
+    val shape = RoundedCornerShape(3.dp)
+    val borderColor = if (isActive) color else color.copy(alpha = 0.45f)
+    val backgroundColor = if (isActive) color else color.copy(alpha = 0.12f)
     Box(
         modifier = Modifier
             .size(size)
-            .background(color, RoundedCornerShape(6.dp)),
+            .border(width = if (isActive) 2.dp else 1.dp, color = borderColor, shape = shape)
+            .background(backgroundColor, shape),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = (index + 1).toString(),
-            color = Color.White,
+            color = if (isActive) Color.White else borderColor,
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
         )
+    }
+}
+
+@Composable
+private fun MultiLineIndicator(
+    lineCount: Int,
+    activeIndex: Int?,
+    lineColors: List<Color>,
+    theme: ThemePreferences,
+    modifier: Modifier = Modifier
+) {
+    if (lineCount <= 0 || lineColors.isEmpty()) return
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(lineCount) { index ->
+            val color = lineColors[index % lineColors.size]
+            LineBadge(
+                index = index,
+                color = color,
+                theme = theme,
+                isActive = activeIndex == index,
+                size = (14f * theme.iconSizeFactor).coerceIn(12f, 18f).dp
+            )
+        }
     }
 }
 
@@ -767,12 +832,31 @@ private fun LinePickerRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                LineBadge(index = selectedIndex, color = badgeColor, theme = theme)
+                LineBadge(
+                    index = selectedIndex,
+                    color = badgeColor,
+                    theme = theme,
+                    isActive = true,
+                    size = (18f * theme.iconSizeFactor).coerceIn(14f, 22f).dp
+                )
                 Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Active line",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = onBackground.copy(alpha = 0.7f)
+                    )
                     Text(label, fontWeight = FontWeight.SemiBold, color = onBackground)
                     if (subtitle.isNotBlank()) {
                         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = onBackground.copy(alpha = 0.7f))
                     }
+                }
+                if (lines.size > 1) {
+                    MultiLineIndicator(
+                        lineCount = lines.size,
+                        activeIndex = selectedIndex,
+                        lineColors = lineColors,
+                        theme = theme
+                    )
                 }
                 ThemeIcon(
                     iconKey = ThemeIconKey.ARROW_DOWN,
@@ -790,18 +874,33 @@ private fun LinePickerRow(
             lines.forEachIndexed { index, line ->
                 val itemColor = lineColors[index % lineColors.size]
                 val itemLabel = "Line ${index + 1}"
+                val isActive = index == selectedIndex
                 DropdownMenuItem(
                     text = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            LineBadge(index = index, color = itemColor, theme = theme)
+                            LineBadge(
+                                index = index,
+                                color = itemColor,
+                                theme = theme,
+                                isActive = isActive,
+                                size = (16f * theme.iconSizeFactor).coerceIn(12f, 20f).dp
+                            )
                             Column {
                                 Text(itemLabel)
                                 if (line.phoneNumber.isNotBlank()) {
                                     Text(line.phoneNumber, style = MaterialTheme.typography.bodySmall)
                                 }
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            if (isActive) {
+                                Text(
+                                    text = "Active",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = itemColor
+                                )
                             }
                         }
                     },
@@ -816,21 +915,37 @@ private fun LinePickerRow(
 }
 
 @Composable
-private fun AvatarCircle(text: String, theme: ThemePreferences) {
+private fun AvatarCircle(
+    text: String,
+    theme: ThemePreferences,
+    avatarUrl: String? = null
+) {
     val initial = text.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     Box(
         modifier = Modifier
             .size(44.dp)
             .clip(CircleShape)
-            .background(parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)), // Reuse outgoing bubble color for avatar bg? Or Primary?
+            .background(parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = initial.toString(),
-            style = MaterialTheme.typography.titleMedium,
-            color = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
-            fontWeight = FontWeight.Bold
-        )
+        if (!avatarUrl.isNullOrBlank()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(avatarUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(
+                text = initial,
+                style = MaterialTheme.typography.titleMedium,
+                color = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 

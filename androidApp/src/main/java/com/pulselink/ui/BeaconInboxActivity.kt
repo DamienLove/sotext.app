@@ -140,7 +140,12 @@ class BeaconInboxActivity : ComponentActivity() {
                 var pinInput by remember { mutableStateOf("") }
                 var lineSetupDismissed by remember { mutableStateOf(false) }
                 var lineLimitDismissed by remember { mutableStateOf(false) }
-                val orderedLines = remember(lines) { lines.sortedBy { it.createdAt } }
+                val orderedLines = remember(lines) {
+                    lines.sortedWith(
+                        compareBy<com.pulselink.domain.model.SmsLine> { it.phoneNumber.ifBlank { "~" } }
+                            .thenBy { it.createdAt }
+                    )
+                }
                 val maxLines = 2
                 val showLineLimit = isPremium && orderedLines.size > maxLines && !lineLimitDismissed
                 val showLineSetup = isPremium && orderedLines.size > 1 &&
@@ -254,6 +259,19 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
                                     val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
                                     val searchState by smsInboxViewModel.searchState.collectAsStateWithLifecycle()
+                                    val contactsByNumber = remember(state.contacts) {
+                                        val map = mutableMapOf<String, com.pulselink.domain.model.Contact>()
+                                        state.contacts.forEach { contact ->
+                                            val numbers = listOf(contact.phoneNumber) + contact.additionalPhones
+                                            numbers.filter { it.isNotBlank() }.forEach { number ->
+                                                val normalized = com.pulselink.util.normalizeSmsAddress(number)
+                                                if (normalized.isNotBlank()) {
+                                                    map.putIfAbsent(normalized, contact)
+                                                }
+                                            }
+                                        }
+                                        map.toMap()
+                                    }
                                     LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
                                     LaunchedEffect(isDefaultSms, hasSmsPermissions) {
                                         if (isDefaultSms || hasSmsPermissions) {
@@ -332,6 +350,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onSearch = { smsInboxViewModel.search(it) },
                                             onClearSearch = { smsInboxViewModel.clearSearch() },
                                             archivedOnly = currentRoute == BeaconNavRoute.Archived,
+                                            contactsByNumber = contactsByNumber,
                                             banner = {
                                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                                     if (!notificationsEnabled || notificationsSilent) {

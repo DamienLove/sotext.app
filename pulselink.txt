@@ -523,3 +523,5 @@ Current ad behavior in app:
 - Synced Ds-work-suite-beta by merging Suite-Beta and pushing to origin/Ds-work-suite-beta.
 2025-12-25
 - Firebase Hosting deploy completed after reauth; web build ran during deploy and published to https://pulselink-24899.web.app.
+2025-12-25
+- Deferred RingerSong B2B subscription service task; need follow-up requirements from Damien later.

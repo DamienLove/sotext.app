@@ -63,6 +63,8 @@ import kotlin.random.Random
 @Composable
 fun ProfileSettingsScreen(
     settings: PulseLinkSettings,
+    ownerEmail: String? = null,
+    ownerPhone: String? = null,
     deleteAccountState: DeleteAccountState,
     onSaveName: (String) -> Unit,
     onSaveAvatar: (String?) -> Unit,
@@ -282,6 +284,20 @@ fun ProfileSettingsScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            ownerPhone?.takeIf { it.isNotBlank() }?.let { phone ->
+                                Text(
+                                    text = phone,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            ownerEmail?.takeIf { it.isNotBlank() }?.let { email ->
+                                Text(
+                                    text = email,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }

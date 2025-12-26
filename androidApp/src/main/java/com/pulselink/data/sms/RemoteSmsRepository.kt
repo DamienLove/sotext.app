@@ -89,13 +89,15 @@ class RemoteSmsRepository @Inject constructor(
                 val body = doc.getString("body") ?: return@mapNotNull null
                 val ts = doc.getLong("date") ?: 0L
                 val type = doc.getLong("type")?.toInt() ?: 1
+                val outgoing = type == 2
                 SmsMessageItem(
                     id = msgId,
                     threadId = threadId,
                     address = "",
                     body = body,
                     timestamp = ts,
-                    outgoing = type == 2
+                    outgoing = outgoing,
+                    status = if (outgoing) SmsMessageStatus.SENT else SmsMessageStatus.RECEIVED
                 )
             } ?: emptyList()
             trySend(messages.sortedBy { it.timestamp })

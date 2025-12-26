@@ -82,6 +82,7 @@ import com.pulselink.ui.screens.BetaAgreementFullScreen
 import com.pulselink.ui.screens.BetaAgreementScreen
 import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.ContactConversationScreen
+import com.pulselink.ui.screens.ContactCreateScreen
 import com.pulselink.ui.screens.LoginScreen
 import com.pulselink.ui.screens.OnboardingScreen
 import com.pulselink.ui.screens.OnboardingPermissionState
@@ -106,6 +107,7 @@ import com.pulselink.ui.state.MainViewModel.CallInitiationResult
 import com.pulselink.ui.state.SmsInboxViewModel
 import com.pulselink.ui.state.SmsLinesViewModel
 import com.pulselink.ui.state.SmsThreadViewModel
+import com.pulselink.ui.state.PublicProfile
 import com.pulselink.ui.theme.PulseLinkTheme
 import com.pulselink.util.VibrationPatterns
 import com.pulselink.util.normalizeSmsAddress
@@ -153,6 +155,7 @@ import com.pulselink.util.DefaultSmsHelper
 import com.pulselink.util.BeaconIconManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import com.pulselink.util.splitSmsDisplayAddress
 
 private data class BeaconAssistState(
     val iconEnabled: Boolean = false,
@@ -234,7 +237,12 @@ class MainActivity : AppCompatActivity() {
                 val lifecycleOwner = LocalLifecycleOwner.current
                 var lineSetupDismissed by remember { mutableStateOf(false) }
                 var lineLimitDismissed by remember { mutableStateOf(false) }
-                val orderedLines = remember(lines) { lines.sortedBy { it.createdAt } }
+                val orderedLines = remember(lines) {
+                    lines.sortedWith(
+                        compareBy<com.pulselink.domain.model.SmsLine> { it.phoneNumber.ifBlank { "~" } }
+                            .thenBy { it.createdAt }
+                    )
+                }
                 val maxLines = 2
                 val showLineLimit = isPremium && orderedLines.size > maxLines && !lineLimitDismissed
                 val showLineSetup = isPremium && orderedLines.size > 1 &&
@@ -1185,6 +1193,61 @@ class MainActivity : AppCompatActivity() {
                             }
                         )
                     }
+                    composable(
+                        route = "contact/new?phone={phone}&name={name}",
+                        arguments = listOf(
+                            navArgument("phone") { type = NavType.StringType; nullable = true; defaultValue = "" },
+                            navArgument("name") { type = NavType.StringType; nullable = true; defaultValue = "" }
+                        )
+                    ) { entry ->
+                        val phoneArg = entry.arguments?.getString("phone").orEmpty()
+                        val nameArg = entry.arguments?.getString("name").orEmpty()
+                        var publicProfile by remember { mutableStateOf<PublicProfile?>(null) }
+                        var profileLoading by remember { mutableStateOf(false) }
+                        var pendingNavigatePhone by remember { mutableStateOf<String?>(null) }
+
+                        LaunchedEffect(phoneArg) {
+                            if (phoneArg.isBlank()) return@LaunchedEffect
+                            profileLoading = true
+                            publicProfile = viewModel.lookupPublicProfileByPhone(phoneArg)
+                            profileLoading = false
+                        }
+
+                        LaunchedEffect(state.contacts, pendingNavigatePhone) {
+                            val pending = pendingNavigatePhone ?: return@LaunchedEffect
+                            val resolved = state.contacts.firstOrNull { contact ->
+                                normalizeSmsAddress(contact.phoneNumber) == pending ||
+                                    contact.additionalPhones.any { normalizeSmsAddress(it) == pending }
+                            }
+                            if (resolved != null) {
+                                pendingNavigatePhone = null
+                                navController.navigate("contact/${resolved.id}/settings") {
+                                    popUpTo("contact/new?phone={phone}&name={name}") { inclusive = true }
+                                }
+                            }
+                        }
+
+                        val suggestedName = publicProfile?.displayName?.takeIf { it.isNotBlank() } ?: nameArg
+                        ContactCreateScreen(
+                            initialName = suggestedName,
+                            initialPhone = phoneArg,
+                            initialEmail = publicProfile?.email,
+                            initialAvatarUrl = publicProfile?.avatarUrl,
+                            profileLoading = profileLoading,
+                            onSave = { newName, newPhone, newEmail, avatarUrl ->
+                                val contact = Contact(
+                                    displayName = newName,
+                                    phoneNumber = newPhone,
+                                    email = newEmail,
+                                    avatarUrl = avatarUrl,
+                                    remoteDisplayName = publicProfile?.displayName
+                                )
+                                viewModel.saveContact(contact)
+                                pendingNavigatePhone = normalizeSmsAddress(newPhone)
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
                     composable("alerts/default/emergency") {
                         AlertTonePickerScreen(
                             title = "Emergency alert tone",
@@ -1424,8 +1487,13 @@ class MainActivity : AppCompatActivity() {
                     }
                     composable("profile_settings") {
                         val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
+                        val authenticated = authState as? AuthState.Authenticated
+                        val ownerEmail = authenticated?.user?.email
+                        val ownerPhone = authenticated?.user?.phoneNumber ?: state.settings.devicePhoneNumber
                         ProfileSettingsScreen(
                             settings = state.settings,
+                            ownerEmail = ownerEmail,
+                            ownerPhone = ownerPhone,
                             deleteAccountState = deleteAccountState,
                             onSaveName = viewModel::setOwnerName,
                             onSaveAvatar = viewModel::setOwnerAvatarUrl,
@@ -1439,6 +1507,16 @@ class MainActivity : AppCompatActivity() {
                         val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
                         val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
                         val inboxBusy by smsInboxViewModel.isDatabaseBusy.collectAsStateWithLifecycle()
+                        val contactsByNumber = remember(state.contacts) {
+                            val map = mutableMapOf<String, Contact>()
+                            state.contacts.forEach { contact ->
+                                val numbers = listOf(contact.phoneNumber) + contact.additionalPhones
+                                numbers.filter { it.isNotBlank() }.forEach { number ->
+                                    map.putIfAbsent(normalizeSmsAddress(number), contact)
+                                }
+                            }
+                            map.toMap()
+                        }
                         val lifecycleOwner = LocalLifecycleOwner.current
                         var notificationsEnabled by remember {
                             mutableStateOf(MessageNotificationManager.areNotificationsEnabled(context))
@@ -1471,6 +1549,21 @@ class MainActivity : AppCompatActivity() {
                                     "sms/thread/${thread.threadId}/${Uri.encode(thread.address)}?lineId=$lineSuffix"
                                 )
                             },
+                            onOpenContactForThread = { thread ->
+                                val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
+                                if (contact != null) {
+                                    navController.navigate("contact/${contact.id}/settings")
+                                } else {
+                                    val (displayName, number) = splitSmsDisplayAddress(thread.address)
+                                    val phone = (number ?: displayName).trim()
+                                    val encodedPhone = Uri.encode(phone)
+                                    val encodedName = displayName
+                                        .takeIf { it.isNotBlank() && it != phone }
+                                        ?.let { Uri.encode(it) }
+                                        .orEmpty()
+                                    navController.navigate("contact/new?phone=$encodedPhone&name=$encodedName")
+                                }
+                            },
                             onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
                             onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
                             onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
@@ -1488,6 +1581,7 @@ class MainActivity : AppCompatActivity() {
                             hideOtpInAll = true,
                             onImportAll = { smsInboxViewModel.importAllMessages() },
                             isDatabaseBusy = inboxBusy,
+                            contactsByNumber = contactsByNumber,
                             banner = {
                                 if (!notificationsEnabled || notificationsSilent) {
                                     Surface(

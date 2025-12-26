@@ -129,7 +129,9 @@ class SmsRepository @Inject constructor(
             Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
             Telephony.Sms.DATE,
-            Telephony.Sms.TYPE
+            Telephony.Sms.TYPE,
+            Telephony.Sms.STATUS,
+            Telephony.Sms.READ
         )
         val cursor = runCatching {
             context.contentResolver.query(
@@ -148,6 +150,8 @@ class SmsRepository @Inject constructor(
             val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
             val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
             val typeIdx = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
+            val statusIdx = c.getColumnIndexOrThrow(Telephony.Sms.STATUS)
+            val readIdx = c.getColumnIndexOrThrow(Telephony.Sms.READ)
             val hits = mutableListOf<SmsMessageItem>()
             var count = 0
             while (c.moveToNext() && count < limit) {
@@ -157,14 +161,18 @@ class SmsRepository @Inject constructor(
                     continue
                 }
                 val outgoing = c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_SENT ||
-                    c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_OUTBOX
+                    c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_OUTBOX ||
+                    c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_QUEUED
+                val statusValue = c.getInt(statusIdx)
+                val isRead = c.getInt(readIdx) != 0
                 hits += SmsMessageItem(
                     id = c.getLong(idIdx),
                     threadId = c.getLong(threadIdx),
                     address = resolveAddress(c.getString(addrIdx)),
                     body = body,
                     timestamp = c.getLong(dateIdx),
-                    outgoing = outgoing
+                    outgoing = outgoing,
+                    status = resolveMessageStatus(c.getInt(typeIdx), statusValue, isRead)
                 )
                 count++
             }
@@ -181,7 +189,9 @@ class SmsRepository @Inject constructor(
             Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
             Telephony.Sms.DATE,
-            Telephony.Sms.TYPE
+            Telephony.Sms.TYPE,
+            Telephony.Sms.STATUS,
+            Telephony.Sms.READ
         )
         val cursor = runCatching {
             context.contentResolver.query(
@@ -200,6 +210,8 @@ class SmsRepository @Inject constructor(
             val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
             val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
             val typeIdx = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
+            val statusIdx = c.getColumnIndexOrThrow(Telephony.Sms.STATUS)
+            val readIdx = c.getColumnIndexOrThrow(Telephony.Sms.READ)
             val items = mutableListOf<SmsMessageItem>()
             var count = 0
             while (c.moveToNext() && count < limit) {
@@ -212,14 +224,19 @@ class SmsRepository @Inject constructor(
                 }
                 val ts = c.getLong(dateIdx)
                 val type = c.getInt(typeIdx)
-                val outgoing = type == Telephony.Sms.MESSAGE_TYPE_SENT || type == Telephony.Sms.MESSAGE_TYPE_OUTBOX
+                val outgoing = type == Telephony.Sms.MESSAGE_TYPE_SENT ||
+                    type == Telephony.Sms.MESSAGE_TYPE_OUTBOX ||
+                    type == Telephony.Sms.MESSAGE_TYPE_QUEUED
+                val statusValue = c.getInt(statusIdx)
+                val isRead = c.getInt(readIdx) != 0
                 items += SmsMessageItem(
                     id = id,
                     threadId = c.getLong(threadIdx),
                     address = addr,
                     body = body,
                     timestamp = ts,
-                    outgoing = outgoing
+                    outgoing = outgoing,
+                    status = resolveMessageStatus(type, statusValue, isRead)
                 )
                 count++
             }
@@ -235,7 +252,9 @@ class SmsRepository @Inject constructor(
             Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
             Telephony.Sms.DATE,
-            Telephony.Sms.TYPE
+            Telephony.Sms.TYPE,
+            Telephony.Sms.STATUS,
+            Telephony.Sms.READ
         )
         val candidates = addressCandidates(address)
         if (candidates.isEmpty()) return emptyList()
@@ -257,6 +276,8 @@ class SmsRepository @Inject constructor(
                 val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
                 val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
                 val typeIdx = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
+                val statusIdx = c.getColumnIndexOrThrow(Telephony.Sms.STATUS)
+                val readIdx = c.getColumnIndexOrThrow(Telephony.Sms.READ)
                 var count = 0
                 while (c.moveToNext() && count < limit) {
                     val body = c.getString(bodyIdx) ?: ""
@@ -265,20 +286,43 @@ class SmsRepository @Inject constructor(
                         continue
                     }
                     val outgoing = c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_SENT ||
-                        c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_OUTBOX
+                        c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_OUTBOX ||
+                        c.getInt(typeIdx) == Telephony.Sms.MESSAGE_TYPE_QUEUED
+                    val statusValue = c.getInt(statusIdx)
+                    val isRead = c.getInt(readIdx) != 0
                     items += SmsMessageItem(
                         id = c.getLong(idIdx),
                         threadId = c.getLong(threadIdx),
                         address = resolveAddress(c.getString(addrIdx)),
                         body = body,
                         timestamp = c.getLong(dateIdx),
-                        outgoing = outgoing
+                        outgoing = outgoing,
+                        status = resolveMessageStatus(c.getInt(typeIdx), statusValue, isRead)
                     )
                     count++
                 }
             }
         }
         return items.distinctBy { it.id }.sortedBy { it.timestamp }.takeLast(limit)
+    }
+
+    private fun resolveMessageStatus(type: Int, status: Int, isRead: Boolean): SmsMessageStatus? {
+        val outgoing = type == Telephony.Sms.MESSAGE_TYPE_SENT ||
+            type == Telephony.Sms.MESSAGE_TYPE_OUTBOX ||
+            type == Telephony.Sms.MESSAGE_TYPE_QUEUED
+        return if (outgoing) {
+            when (type) {
+                Telephony.Sms.MESSAGE_TYPE_OUTBOX,
+                Telephony.Sms.MESSAGE_TYPE_QUEUED -> SmsMessageStatus.SENDING
+                Telephony.Sms.MESSAGE_TYPE_SENT -> when (status) {
+                    Telephony.TextBasedSmsColumns.STATUS_COMPLETE -> SmsMessageStatus.RECEIVED
+                    else -> SmsMessageStatus.SENT
+                }
+                else -> SmsMessageStatus.SENT
+            }
+        } else {
+            if (isRead) SmsMessageStatus.READ else SmsMessageStatus.RECEIVED
+        }
     }
 
     fun resolveThreadIdForAddress(address: String): Long? {

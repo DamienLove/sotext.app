@@ -2121,56 +2121,8 @@ function App() {
                   </button>
                   {themePublishStatus && <div className="settings-status">{themePublishStatus}</div>}
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activePanel === 'settings' && (
-            <div className="settings-panel">
-              <div className="settings-header">
-                <h3>Settings</h3>
-                <p>Manage account, theme sync, and shared preferences.</p>
-              </div>
-              <div className="settings-grid">
-                <div className="settings-card">
-                  <h4>Account</h4>
-                  <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
-                    <span className="settings-value">{user.email || 'Unknown'}</span>
-                  </div>
-                  <div className="settings-row">
-                    <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">{user.uid}</span>
-                  </div>
-                  <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
-                    Send password reset email
-                  </button>
-                  {settingsStatus && <div className="settings-status">{settingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>Web preferences</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={showPreviews}
-                      onChange={(e) => setShowPreviews(e.target.checked)}
-                    />
-                    Show message previews
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={autoScroll}
-                      onChange={(e) => setAutoScroll(e.target.checked)}
-                    />
-                    Auto-scroll to latest message
-                  </label>
-                  <p className="settings-note">
-                    Preferences apply to this browser only.
-                  </p>
-                </div>
-                <div className="settings-card">
-                  <h4>Theme sync</h4>
+                <div className="settings-card themes-card">
+                  <h4>Quick presets</h4>
                   <div className="theme-grid">
                     {themePresets.map((preset) => (
                       <button
@@ -2268,6 +2220,54 @@ function App() {
                     Save theme
                   </button>
                   {themeStatus && <div className="settings-status">{themeStatus}</div>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'settings' && (
+            <div className="settings-panel">
+              <div className="settings-header">
+                <h3>Settings</h3>
+                <p>Manage account details and shared preferences.</p>
+              </div>
+              <div className="settings-grid">
+                <div className="settings-card">
+                  <h4>Account</h4>
+                  <div className="settings-row">
+                    <span className="settings-label">Signed in as</span>
+                    <span className="settings-value">{user.email || 'Unknown'}</span>
+                  </div>
+                  <div className="settings-row">
+                    <span className="settings-label">User ID</span>
+                    <span className="settings-value mono">{user.uid}</span>
+                  </div>
+                  <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
+                    Send password reset email
+                  </button>
+                  {settingsStatus && <div className="settings-status">{settingsStatus}</div>}
+                </div>
+                <div className="settings-card">
+                  <h4>Web preferences</h4>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={showPreviews}
+                      onChange={(e) => setShowPreviews(e.target.checked)}
+                    />
+                    Show message previews
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={autoScroll}
+                      onChange={(e) => setAutoScroll(e.target.checked)}
+                    />
+                    Auto-scroll to latest message
+                  </label>
+                  <p className="settings-note">
+                    Preferences apply to this browser only.
+                  </p>
                 </div>
                 <div className="settings-card">
                   <h4>PulseLink settings</h4>

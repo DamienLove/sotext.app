@@ -734,7 +734,7 @@
 
 .themes-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -792,6 +792,25 @@
 .theme-empty {
   color: var(--muted);
   padding: 12px;
+}
+
+@media (max-width: 1200px) {
+  .app-container {
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .sidebar {
+    width: 260px;
+  }
+
+  .nav-item {
+    flex: 1 1 100%;
+  }
+
+  .themes-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 960px) {
