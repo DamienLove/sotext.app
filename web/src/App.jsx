@@ -101,7 +101,6 @@ const MessageItem = memo(({ msg, showPreviews }) => (
 
 MessageItem.displayName = 'MessageItem';
 
-const defaultMapCenter = { lat: 39.5, lng: -98.35 };
 // Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
 const DeviceContactItem = memo(({ contact }) => {
   const extraPhones = Array.isArray(contact.additionalPhones)
@@ -855,7 +854,7 @@ function App() {
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
   const [themeStatus, setThemeStatus] = useState('');
   const [publicThemes, setPublicThemes] = useState([]);
-  const [unlockedThemes, setUnlockedThemes] = useState([]);
+  // const [unlockedThemes, setUnlockedThemes] = useState([]); // Removed unused state
   const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
   const [themeSearch, setThemeSearch] = useState('');
   const [themePublishForm, setThemePublishForm] = useState({
@@ -1141,7 +1140,7 @@ function App() {
       if (newUnlocks.length > 0) {
         updates.unlockedThemeIds = [...currentUnlockedIds, ...newUnlocks];
       } else {
-        setUnlockedThemes(specialThemePresets.filter(p => currentUnlockedIds.includes(p.id)));
+        // setUnlockedThemes(specialThemePresets.filter(p => currentUnlockedIds.includes(p.id)));
       }
 
       if (newAvatarUnlocks.length > 0) {
@@ -1917,7 +1916,7 @@ function App() {
                   </button>
                 </div>
               </div>
-              {authError && <div className="auth-error">{authError}</div>}
+              {authError && <div className="auth-error" role="alert">{authError}</div>}
               <div className="login-actions">
                 <button
                   onClick={() => handleEmailAuth('signin')}
@@ -2237,7 +2236,7 @@ function App() {
                   >
                     {isSavingProfile ? 'Saving...' : 'Save profile'}
                   </button>
-                  {profileStatus && <div className="settings-status">{profileStatus}</div>}
+                  {profileStatus && <div className="settings-status" role="status" aria-live="polite">{profileStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Trusted contacts</h4>
@@ -2286,7 +2285,7 @@ function App() {
                       <div className="settings-note">No trusted contacts yet.</div>
                     )}
                   </div>
-                  {contactStatus && <div className="settings-status">{contactStatus}</div>}
+                  {contactStatus && <div className="settings-status" role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
@@ -2381,7 +2380,7 @@ function App() {
                       Clear
                     </button>
                   </div>
-                  {contactStatus && <div className="settings-status">{contactStatus}</div>}
+                  {contactStatus && <div className="settings-status" role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
               </div>
             </div>
@@ -2403,7 +2402,6 @@ function App() {
                   aria-label="Search contacts"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
-                  aria-label="Search contacts"
                 />
               </div>
               <div className="contact-list contact-list--full">
@@ -2658,7 +2656,7 @@ function App() {
                         </div>
                     )}
                     
-                    {settingsStatus && <div className="settings-status" style={{marginTop: 12}}>{settingsStatus}</div>}
+                    {settingsStatus && <div className="settings-status" style={{marginTop: 12}} role="status" aria-live="polite">{settingsStatus}</div>}
                 </div>
               </div>
             </div>
@@ -2716,7 +2714,7 @@ function App() {
                       <div className="theme-empty">No themes yet. Be the first to publish!</div>
                     )}
                   </div>
-                  {themeGalleryStatus && <div className="settings-status">{themeGalleryStatus}</div>}
+                  {themeGalleryStatus && <div className="settings-status" role="status" aria-live="polite">{themeGalleryStatus}</div>}
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Publish your theme</h4>
@@ -2770,7 +2768,7 @@ function App() {
                   <button className="primary-btn" type="button" onClick={handlePublishTheme}>
                     Publish theme
                   </button>
-                  {themePublishStatus && <div className="settings-status">{themePublishStatus}</div>}
+                  {themePublishStatus && <div className="settings-status" role="status" aria-live="polite">{themePublishStatus}</div>}
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Quick presets</h4>
@@ -2870,7 +2868,7 @@ function App() {
                   <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
                     Save theme
                   </button>
-                  {themeStatus && <div className="settings-status">{themeStatus}</div>}
+                  {themeStatus && <div className="settings-status" role="status" aria-live="polite">{themeStatus}</div>}
                 </div>
               </div>
             </div>
@@ -2896,7 +2894,7 @@ function App() {
                   <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                     Send password reset email
                   </button>
-                  {settingsStatus && <div className="settings-status">{settingsStatus}</div>}
+                  {settingsStatus && <div className="settings-status" role="status" aria-live="polite">{settingsStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Web preferences</h4>
@@ -2977,7 +2975,7 @@ function App() {
                       {deleteAction === 'account' ? "Deleting..." : "Delete account"}
                     </button>
                   </div>
-                  {deleteStatus && <div className="settings-status">{deleteStatus}</div>}
+                  {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
                 </div>
               </div>
             </div>
@@ -3022,7 +3020,6 @@ function App() {
                     aria-label="Message body"
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
-                    aria-label="Message body"
                   />
                   <button
                     onClick={handleSendMessage}
@@ -3032,7 +3029,7 @@ function App() {
                     {isSending ? "Sending..." : "Send"}
                   </button>
                 </div>
-                {sendStatus && <div className="compose-status">{sendStatus}</div>}
+                {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
                 <div className="compose-hint">
                   Messages are sent from your phone when it&apos;s online and signed in.
                 </div>
