@@ -2,6 +2,7 @@ package com.pulselink.data.db
 
 import androidx.room.TypeConverter
 import com.pulselink.domain.model.MessageDirection
+import com.pulselink.domain.model.MessageStatus
 import com.pulselink.domain.model.ThemePreferences
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -22,6 +23,12 @@ class Converters {
 
     @TypeConverter
     fun toDirection(value: String): MessageDirection = MessageDirection.valueOf(value)
+
+    @TypeConverter
+    fun fromStatus(status: MessageStatus): String = status.name
+
+    @TypeConverter
+    fun toStatus(value: String): MessageStatus = MessageStatus.valueOf(value)
 
     @TypeConverter
     fun fromStringList(list: List<String>?): String? =

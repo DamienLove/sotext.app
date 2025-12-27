@@ -35,7 +35,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -70,6 +73,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.layout.widthIn
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pulselink.R
 import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.domain.model.Contact
@@ -77,23 +81,31 @@ import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.MessageDirection
+import com.pulselink.domain.model.MessageStatus
+import com.pulselink.ui.state.ContactConversationViewModel
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun ContactConversationScreen(
     contact: Contact?,
-    messages: List<ContactMessage>,
     isProUser: Boolean,
     showAds: Boolean,
+    viewModel: ContactConversationViewModel,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
     onCallContact: suspend (Contact) -> Unit,
-    onSendMessage: suspend (String) -> ManualMessageResult,
     onPing: suspend () -> Boolean,
     onVoiceCommand: suspend (String) -> VoiceCommandResult,
     onUpgradeClick: () -> Unit
 ) {
+    val messages by viewModel.messages.collectAsStateWithLifecycle()
+    LaunchedEffect(contact?.id) {
+        viewModel.markMessagesAsRead()
+    }
+    LaunchedEffect(messages) {
+        viewModel.markMessagesAsRead()
+    }
     val gradient = Brush.verticalGradient(
         colors = listOf(Color(0xFF0B0E1A), Color(0xFF151826))
     )
@@ -115,7 +127,7 @@ fun ContactConversationScreen(
                 onBack = onBack,
                 onOpenSettings = onOpenSettings,
                 onCallContact = onCallContact,
-                onSendMessage = onSendMessage,
+                onSendMessage = { body -> viewModel.sendMessage(body) },
                 onPing = onPing,
                 onVoiceCommand = onVoiceCommand,
                 onUpgradeClick = onUpgradeClick
@@ -297,13 +309,16 @@ private fun ConversationBody(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
-            items(messages, key = { it.id }) { message ->
-                MessageBubble(message = message)
+            items(messages, key = { it.messageId.ifBlank { it.id.toString() } }) { message ->
+                MessageBubble(
+                    message = message,
+                    isOwnMessage = message.direction == MessageDirection.OUTBOUND
+                )
             }
         }
         LaunchedEffect(messages.size) {
             if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
-                listState.animateScrollToItem(messages.lastIndex)
+                listState.animateScrollToItem(0)  // Scroll to index 0 (most recent message)
                 initialScrollDone = true
             }
         }
@@ -444,23 +459,21 @@ private fun ComposerRow(
 }
 
 @Composable
-private fun MessageBubble(message: ContactMessage) {
-    val isOutbound = message.direction == MessageDirection.OUTBOUND
-    val alignment = if (isOutbound) Alignment.End else Alignment.Start
-    val bubbleBrush = if (isOutbound) {
+private fun MessageBubble(message: ContactMessage, isOwnMessage: Boolean) {
+    val bubbleBrush = if (isOwnMessage) {
         Brush.horizontalGradient(listOf(Color(0xFF2563EB), Color(0xFF60A5FA)))
     } else {
         null
     }
-    val bubbleColor = if (isOutbound) Color.Transparent else Color(0x33212533)
-    val textColor = if (isOutbound) Color.White else Color(0xFFE2E8F0)
+    val bubbleColor = if (isOwnMessage) Color.Transparent else Color(0x33212533)
+    val textColor = if (isOwnMessage) Color.White else Color(0xFFE2E8F0)
     val timestamp = remember(message.timestamp) {
         android.text.format.DateFormat.format("h:mm a", message.timestamp).toString()
     }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = alignment
+        horizontalAlignment = if (isOwnMessage) Alignment.End else Alignment.Start
     ) {
         Box(
             modifier = Modifier
@@ -475,13 +488,45 @@ private fun MessageBubble(message: ContactMessage) {
             Text(text = message.body, color = textColor, fontSize = 16.sp)
         }
         Spacer(modifier = Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (isOutbound) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (isOwnMessage) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = when (message.status) {
+                            MessageStatus.SENDING -> "Sending…"
+                            MessageStatus.SENT -> "Sent"
+                            MessageStatus.DELIVERED -> "Delivered"
+                            MessageStatus.READ -> "Read"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Icon(
+                        imageVector = when (message.status) {
+                            MessageStatus.SENDING -> Icons.Filled.Schedule
+                            MessageStatus.SENT -> Icons.Filled.Done
+                            MessageStatus.DELIVERED -> Icons.Filled.DoneAll
+                            MessageStatus.READ -> Icons.Filled.DoneAll
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = if (message.status == MessageStatus.READ) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
                 Text(
                     text = if (message.overrideSucceeded) "override ready" else "may be silenced",
                     color = if (message.overrideSucceeded) Color(0xFF67DBA0) else Color(0xFFFFB74D),
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(end = 8.dp)
+                    fontSize = 12.sp
                 )
             }
             Text(text = timestamp, color = Color(0xFF94A3B8), fontSize = 12.sp)

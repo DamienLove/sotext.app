@@ -673,7 +673,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                                     .mapValues { (_, devices) ->
                                                         devices.any { device ->
                                                             device.lastSeen?.let { last ->
-                                                                now - last < 2 * 60 * 1000
+                                                                now - last < 5 * 60 * 1000  // 5 minute threshold (increased from 2 min)
                                                             } == true
                                                         }
                                                     }

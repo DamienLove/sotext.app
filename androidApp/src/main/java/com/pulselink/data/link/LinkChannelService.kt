@@ -41,7 +41,12 @@ class LinkChannelService @Inject constructor(
     fun start() {
         if (!started.compareAndSet(false, true)) return
         scope.launch {
-            authManager.ensureSignedIn()
+            // Attempt to ensure authentication, but don't block service startup if it fails
+            runCatching {
+                authManager.ensureSignedIn()
+            }.onFailure {
+                Log.w(TAG, "Failed to authenticate on LinkChannelService start, service will continue with limited functionality", it)
+            }
             val deviceId = settingsRepository.ensureDeviceId()
             localDeviceId = deviceId
             contactRepository.observeContacts().collect { contacts ->
@@ -52,7 +57,20 @@ class LinkChannelService @Inject constructor(
 
     suspend fun sendMessage(message: PulseLinkMessage): Boolean {
         start()
-        authManager.ensureSignedIn()
+
+        // Attempt authentication, but don't fail the entire message send if auth fails
+        // This allows SMS fallback to work even when Firebase auth is unavailable
+        val isAuthenticated = runCatching {
+            authManager.ensureSignedIn()
+            true
+        }.onFailure {
+            Log.w(TAG, "Authentication failed during message send, will rely on fallback channels", it)
+        }.getOrDefault(false)
+
+        if (!isAuthenticated) {
+            // Skip Firebase channel if authentication failed
+            return false
+        }
 
         // We need to find the remote device ID. Ideally, the message should have it, or we look it up.
         // PulseLinkMessage has senderId (which is us) and code.
@@ -69,7 +87,8 @@ class LinkChannelService @Inject constructor(
             FIELD_ID to UUID.randomUUID().toString(),
             FIELD_SENDER_ID to senderId,
             FIELD_RECEIVER_ID to remoteDeviceId,
-            FIELD_TIMESTAMP to System.currentTimeMillis()
+            FIELD_TIMESTAMP to System.currentTimeMillis(),
+            FIELD_STATUS to "SENT"
         )
 
         // Add message specific fields
@@ -231,6 +250,7 @@ class LinkChannelService @Inject constructor(
         private const val FIELD_TIMESTAMP = "timestamp"
         private const val FIELD_TYPE = "type"
         private const val FIELD_PHONE = "phoneNumber"
+        private const val FIELD_STATUS = "status"
 
         // Message Types
         private const val TYPE_MANUAL = "manual"

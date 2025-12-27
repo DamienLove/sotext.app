@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -143,6 +144,9 @@ fun HomeScreen(
     onBeaconHintDisable: () -> Unit = {},
     showAddLoginPrompt: Boolean = false,
     onAddLoginClick: () -> Unit = {},
+    showWebAccessHint: Boolean = false,
+    onWebAccessHintDismiss: () -> Unit = {},
+    onWebAccessHintAction: () -> Unit = {},
     onUpgradeClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -203,6 +207,13 @@ fun HomeScreen(
                     onDismiss = onBeaconHintDismiss,
                     onUse = onBeaconHintUse,
                     onDisable = onBeaconHintDisable
+                )
+            }
+            if (showWebAccessHint) {
+                WebAccessHintCard(
+                    onDismiss = onWebAccessHintDismiss,
+                    onLearnMore = onWebAccessHintAction,
+                    isPremiumActive = state.isPremiumUser || state.isProUser
                 )
             }
             if (showAddLoginPrompt) {
@@ -590,6 +601,63 @@ private fun BeaconHintCard(
                 }
                 Button(onClick = onUse, modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.beacon_hint_action_use))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WebAccessHintCard(
+    onDismiss: () -> Unit,
+    onLearnMore: () -> Unit,
+    isPremiumActive: Boolean
+) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.8f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Language,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+                Text(
+                    text = "Access messages on the web",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) {
+                    Icon(imageVector = Icons.Filled.Close, contentDescription = "Dismiss")
+                }
+            }
+            Text(
+                text = if (isPremiumActive) {
+                    "Visit app.damiennichols.com to securely read your messages from any browser. Enable Web Access in Beacon Settings to get started."
+                } else {
+                    "Upgrade to Premium to access your messages from app.damiennichols.com. Read messages, manage contacts, and stay connected from any browser."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                    Text("Dismiss")
+                }
+                Button(onClick = onLearnMore, modifier = Modifier.weight(1f)) {
+                    Text(if (isPremiumActive) "Settings" else "Learn More")
                 }
             }
         }

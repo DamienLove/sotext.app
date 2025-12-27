@@ -14,6 +14,7 @@ import com.pulselink.domain.model.BlockedContact
 import com.pulselink.domain.model.ArchivedThread
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
+import com.pulselink.domain.model.MessageStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -87,6 +88,9 @@ interface ContactMessageDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(message: ContactMessage)
 
+    @Query("UPDATE contact_messages SET status = :status WHERE messageId = :messageId")
+    suspend fun updateStatus(messageId: String, status: MessageStatus)
+
     @Query("DELETE FROM contact_messages WHERE contactId = :contactId")
     suspend fun clear(contactId: Long)
 
@@ -141,7 +145,7 @@ interface ArchivedThreadDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class],
-    version = 14,
+    version = 15,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -237,6 +241,23 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE contact_messages ADD COLUMN messageId TEXT NOT NULL DEFAULT ''"
+                )
+                database.execSQL(
+                    "ALTER TABLE contact_messages ADD COLUMN status TEXT NOT NULL DEFAULT 'SENT'"
+                )
+                database.execSQL(
+                    "UPDATE contact_messages SET messageId = CASE WHEN messageId = '' THEN CAST(id AS TEXT) ELSE messageId END"
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_contact_messages_messageId ON contact_messages(messageId)"
+                )
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_3_4,
             MIGRATION_4_5,
@@ -248,7 +269,8 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             MIGRATION_10_11,
             MIGRATION_11_12,
             MIGRATION_12_13,
-            MIGRATION_13_14
+            MIGRATION_13_14,
+            MIGRATION_14_15
         )
 
         private fun addColumnIfMissing(
@@ -277,5 +299,6 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             }
             return false
         }
+
     }
 }
