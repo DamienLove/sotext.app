@@ -2232,6 +2232,7 @@ function App() {
                     type="button"
                     onClick={handleProfileSave}
                     disabled={isSavingProfile}
+                    aria-busy={isSavingProfile}
                   >
                     {isSavingProfile ? <span className="spinner" aria-hidden="true" /> : null}
                     {isSavingProfile ? 'Saving...' : 'Save profile'}
@@ -3025,6 +3026,7 @@ function App() {
                     onClick={handleSendMessage}
                     disabled={isSending || isLoggingIn}
                     className="primary-btn"
+                    aria-busy={isSending}
                   >
                     {isSending ? <span className="spinner" aria-hidden="true" /> : null}
                     {isSending ? "Sending..." : "Send"}
