@@ -1,6 +1,7 @@
 Branch: Suite-Beta (based on Beta)
 
 Recent work
+- 2025-12-26: Release v86 (free/pro/premium): Fixed 6 critical bugs (#218, #228, #236, #248, #251, #260). Message scroll now shows most recent (not oldest). Multi-line presence threshold increased 2min→5min. Added web access hint card for premium users. Emergency map sizing fixed in web app. Auth errors no longer block emergency SMS fallback. AI threshold increased 0.6→0.75 to reduce false alerts. Added 6 new Beacon theme icons. Migration 14→15 adds messageId/status to contact_messages.
 - 2025-12-26: UI/Theme Polishing: Added Glassmorphism effects (backdrop-filter: blur(12px)) and dynamic color-mixing to Web App for better readability over custom backgrounds.
 - 2025-12-26: Generated custom SVG background assets for primary themes (Aurora, Midnight OLED, Sunset Fade, Forest Trail, Neon Noir) and special tier-based themes.
 - 2025-12-26: Cross-Platform Theme Sync: Implemented Real-time theme synchronization between Web, React Native (PulseLink), and Native Android (Beacon) using Firestore. PulseLink now features an ImageBackground layer that reacts to Firestore theme updates.
@@ -49,4 +50,4 @@ Current SMS features
 - Trusted contacts/emergency controls: ensure emergency actions (ringer/volume/siren override) are exposed in SMS app for trusted contacts.
 - Premium web access: design secure relay (likely Firebase Functions + Firestore) for remote message access, add device opt-in, auth, and audit logging.
 - Billing: replace placeholder product IDs, add server-side validation, handle subscription states, and add premium google-services file.
-- Tests: device tests for default SMS role, call screening, and PIN flows.
+- Tests: device tests for default SMS role, call screening, and PIN flows.- Attempted toolchain realignment: downgraded Kotlin plugins to 2.0.21 and Compose compiler to 1.7.0-beta02, added lint disables for Compose flow detectors; build still blocked by metadata version mismatch (deps emit 2.2.0 metadata).
