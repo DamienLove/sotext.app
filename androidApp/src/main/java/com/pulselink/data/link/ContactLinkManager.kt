@@ -22,6 +22,7 @@ import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.MessageChannel
 import com.pulselink.domain.model.MessageDirection
+import com.pulselink.domain.model.MessageStatus
 import com.pulselink.domain.model.RemotePresence
 import com.pulselink.domain.model.SoundCategory
 import com.pulselink.domain.repository.AlertRepository
@@ -710,15 +711,16 @@ class ContactLinkManager @Inject constructor(
         val title = context.getString(R.string.manual_message_title, contact.displayName)
         if (isAutoAlertBody(rawBody)) {
             withContext(Dispatchers.IO) {
-                messageRepository.record(
-                    ContactMessage(
-                        contactId = contact.id,
-                        body = body,
-                        direction = MessageDirection.INBOUND,
-                        overrideSucceeded = overrideApplied
-                    )
+            messageRepository.record(
+                ContactMessage(
+                    contactId = contact.id,
+                    body = body,
+                    direction = MessageDirection.INBOUND,
+                    overrideSucceeded = overrideApplied,
+                    status = MessageStatus.READ
                 )
-            }
+            )
+        }
             return
         }
         val tier = when (urgency) {
@@ -741,7 +743,8 @@ class ContactLinkManager @Inject constructor(
                     contactId = contact.id,
                     body = body,
                     direction = MessageDirection.INBOUND,
-                    overrideSucceeded = overrideApplied
+                    overrideSucceeded = overrideApplied,
+                    status = MessageStatus.READ
                 )
             )
             if (contact.escalationTier == EscalationTier.EMERGENCY) {
@@ -784,7 +787,8 @@ class ContactLinkManager @Inject constructor(
                         contactId = contact.id,
                         body = body,
                         direction = MessageDirection.OUTBOUND,
-                        overrideSucceeded = false
+                        overrideSucceeded = false,
+                        status = MessageStatus.SENT
                     )
                 )
             }
@@ -1030,7 +1034,8 @@ class ContactLinkManager @Inject constructor(
                     contactId = contact.id,
                     body = message,
                     direction = MessageDirection.OUTBOUND,
-                    overrideSucceeded = ready
+                    overrideSucceeded = ready,
+                    status = MessageStatus.SENT
                 )
             )
             return ManualMessageResult.Success(overrideApplied = ready)

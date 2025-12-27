@@ -23,12 +23,14 @@ import kotlinx.coroutines.launch
 class ThemeViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = ThemePreferencesRepository(app.applicationContext)
+    private val syncManager = com.pulselink.beacon.data.ThemeSyncManager(repo)
     private var lastLauncherVariant: InboxIconVariant? = null
 
     var themeState by mutableStateOf(ThemeState())
         private set
 
     init {
+        syncManager.startSync(viewModelScope)
         viewModelScope.launch {
             repo.flow.collect { state ->
                 themeState = state

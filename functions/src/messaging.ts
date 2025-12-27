@@ -9,6 +9,9 @@ export const onMessageCreated = functions.firestore
     const senderId = message.senderId;
     const type = message.type || "manual";
 
+    // Ensure newly created messages carry an initial SENT status for clients.
+    await snapshot.ref.set({ status: "SENT" }, { merge: true });
+
     if (!receiverId) {
       console.log("No receiverId found in message");
       return;

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="pro-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00BCD4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#006064;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="45" fill="#E0F7FA" stroke="#00BCD4" stroke-width="4" />
+  <path d="M55 20 L35 50 H50 L45 80 L65 50 H50 Z" fill="url(#pro-grad)" stroke="#004D40" stroke-width="1" />
+</svg>

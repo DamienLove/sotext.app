@@ -37,6 +37,21 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
 
         // Ensure LinkChannelService is running to process the message via Firestore listeners
         linkChannelService.start()
+
+        val messageId = message.data["messageId"]
+        val channelId = message.data["channelId"]
+        if (!messageId.isNullOrBlank() && !channelId.isNullOrBlank()) {
+            scope.launch {
+                firestore.collection("linkChannels")
+                    .document(channelId)
+                    .collection("messages")
+                    .document(messageId)
+                    .update("status", "DELIVERED")
+                    .addOnFailureListener { e ->
+                        Log.w(TAG, "Failed to mark message delivered", e)
+                    }
+            }
+        }
     }
 
     private fun updateToken(token: String) {

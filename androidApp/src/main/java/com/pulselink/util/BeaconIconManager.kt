@@ -17,7 +17,13 @@ object BeaconIconManager {
         "forest_trail" to "com.pulselink.BeaconInboxThemeForestTrail",
         "lavender_haze" to "com.pulselink.BeaconInboxThemeLavenderHaze",
         "slate_mono" to "com.pulselink.BeaconInboxThemeSlateMono",
-        "aurora" to "com.pulselink.BeaconInboxThemeAurora"
+        "aurora" to "com.pulselink.BeaconInboxThemeAurora",
+        "desert_clay" to "com.pulselink.BeaconInboxThemeDesertClay",
+        "nord_frost" to "com.pulselink.BeaconInboxThemeNordFrost",
+        "neon_noir" to "com.pulselink.BeaconInboxThemeNeonNoir",
+        "paperback" to "com.pulselink.BeaconInboxThemePaperback",
+        "mint_breeze" to "com.pulselink.BeaconInboxThemeMintBreeze",
+        "amethyst_night" to "com.pulselink.BeaconInboxThemeAmethystNight"
     )
 
     private fun normalizeVariant(raw: String): String {

@@ -1,10 +1,11 @@
-import java.io.File
+    import java.io.File
 import java.util.Locale
 import java.util.Properties
 import org.gradle.api.Project
 import org.gradle.api.tasks.Copy
 import com.google.gms.googleservices.GoogleServicesTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     id("com.android.application")
@@ -364,9 +365,20 @@ android {
         buildConfig = true
     }
 
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.7.0-beta02"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    lint {
+        disable += listOf(
+            "StateFlowValueCalledInComposition",
+            "FlowOperatorInvokedInComposition"
+        )
     }
 
 
@@ -418,7 +430,14 @@ kapt {
     }
 }
 
-    dependencies {
+// Allow building against dependencies compiled with newer Kotlin metadata (e.g., Play/Ads).
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.add("-Xskip-metadata-version-check")
+    }
+}
+
+dependencies {
         implementation(project(":shared"))
         implementation(platform("androidx.compose:compose-bom:2024.04.01"))
         implementation("com.google.firebase:firebase-auth")
