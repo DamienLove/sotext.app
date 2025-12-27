@@ -44,10 +44,6 @@ class ContactConversationViewModel @Inject constructor(
         val filteredPending = pending.filter { pendingMessage ->
             stored.none { existing -> isSameMessage(existing, pendingMessage) }
         }
-        // Sort messages newest-first so conversations open to most recent message (fixes #265, #261)
-        // QA TEST: Open any conversation with multiple messages
-        // EXPECTED: Should see the newest/most recent message at the top (not oldest)
-        // EXPECTED: User should NOT have to scroll through old messages to see recent ones
         (stored + filteredPending).sortedByDescending { it.timestamp }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
