@@ -1191,7 +1191,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
+    if (user && isPremiumUser) {
       // Listen to threads
       // Assuming structure: users/{uid}/synced_threads/{threadId}
       const threadsRef = collection(db, "users", user.uid, "synced_threads");
@@ -1207,7 +1207,7 @@ function App() {
     } else {
       setThreads([]);
     }
-  }, [user]);
+  }, [user, isPremiumUser]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -1230,7 +1230,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (user && selectedThread) {
+    if (user && selectedThread && isPremiumUser) {
       // Listen to messages
       const messagesRef = collection(db, "users", user.uid, "synced_threads", selectedThread.id, "messages");
       const q = query(messagesRef, orderBy("date", "asc"));
@@ -1245,7 +1245,7 @@ function App() {
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread]);
+  }, [user, selectedThread, isPremiumUser]);
 
   useEffect(() => {
     if (selectedThread?.address) {
@@ -2064,7 +2064,7 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {!isPremiumUser && threads.length === 0 ? (
+              {!isPremiumUser ? (
                  <div className="sidebar-placeholder">
                    <div className="sidebar-tip muted">
                      Premium Required

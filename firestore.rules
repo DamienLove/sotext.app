@@ -34,10 +34,19 @@ service cloud.firestore {
       }
 
       match /synced_threads/{threadId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        // Enforce Premium status for reading threads
+        allow read: if request.auth != null && request.auth.uid == userId && (
+          get(/databases/$(database)/documents/users/$(userId)).data.subscriptionStatus == 'premium' ||
+          get(/databases/$(database)/documents/users/$(userId)).data.hasPremiumHistory == true
+        );
+        allow write: if request.auth != null && request.auth.uid == userId;
 
         match /messages/{messageId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId;
+          allow read: if request.auth != null && request.auth.uid == userId && (
+            get(/databases/$(database)/documents/users/$(userId)).data.subscriptionStatus == 'premium' ||
+            get(/databases/$(database)/documents/users/$(userId)).data.hasPremiumHistory == true
+          );
+          allow write: if request.auth != null && request.auth.uid == userId;
         }
       }
 
