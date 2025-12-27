@@ -36,6 +36,7 @@ interface SettingsRepository {
     suspend fun setPrivateThreads(threadIds: List<Long>)
     suspend fun setBeaconLauncherEnabled(enabled: Boolean)
     suspend fun setBeaconHintDismissed(dismissed: Boolean)
+    suspend fun setWebAccessHintDismissed(dismissed: Boolean)
     suspend fun setFirebaseMessagingEnabled(enabled: Boolean)
     suspend fun setEmailFallbackEnabled(enabled: Boolean)
     suspend fun setMessagingChannelPriority(priority: List<MessageChannel>)

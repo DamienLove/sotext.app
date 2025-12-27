@@ -27,6 +27,8 @@ data class SmsMessageItem(
 enum class SmsMessageStatus {
     SENDING,
     SENT,
+    DELIVERED,
     RECEIVED,
-    READ
+    READ,
+    FAILED
 }

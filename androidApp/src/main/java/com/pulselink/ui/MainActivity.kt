@@ -102,6 +102,7 @@ import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.state.LoginViewModel
+import com.pulselink.ui.state.ContactConversationViewModel
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.MainViewModel.CallInitiationResult
 import com.pulselink.ui.state.SmsInboxViewModel
@@ -749,20 +750,6 @@ class MainActivity : AppCompatActivity() {
                     context.stopService(intent)
                 }
 
-                val sendMessageHandler: suspend (Long, String) -> ManualMessageResult = { contactId, body ->
-                    if (!defaultSmsHelper.isDefaultSms()) {
-                        requestDefaultSms()
-                        ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED)
-                    } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
-                        permissionLauncher.launch(arrayOf(Manifest.permission.SEND_SMS))
-                        ManualMessageResult.Failure(ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED)
-                    } else {
-                        withContext(Dispatchers.IO) {
-                            viewModel.sendManualMessage(contactId, body)
-                        }
-                    }
-                }
-
                 val startDestination = remember(initialInboxShortcut) {
                     if (initialInboxShortcut) "sms/inbox" else "splash"
                 }
@@ -1070,6 +1057,18 @@ class MainActivity : AppCompatActivity() {
                                 viewModel.setBeaconHintDismissed(true)
                                 requestDefaultSms()
                             },
+                            showWebAccessHint = !state.settings.webAccessHintDismissed && isPremium,
+                            onWebAccessHintDismiss = { viewModel.setWebAccessHintDismissed(true) },
+                            onWebAccessHintAction = {
+                                viewModel.setWebAccessHintDismissed(true)
+                                if (isPremium) {
+                                    // Navigate to Beacon settings
+                                    launchBeaconInbox()
+                                } else {
+                                    // Navigate to upgrade screen
+                                    navController.navigate("account_settings")
+                                }
+                            },
                             onAddContact = viewModel::saveContact,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
@@ -1124,16 +1123,15 @@ class MainActivity : AppCompatActivity() {
                     ) { entry ->
                         val contactId = entry.arguments?.getLong("contactId") ?: return@composable
                         val contact = state.contacts.firstOrNull { it.id == contactId }
-                        val messages by viewModel.messagesForContact(contactId).collectAsStateWithLifecycle(initialValue = emptyList())
+                        val conversationViewModel: ContactConversationViewModel = hiltViewModel()
                         ContactConversationScreen(
                             contact = contact,
-                            messages = messages,
                             isProUser = state.isProUser,
                             showAds = state.showAds,
+                            viewModel = conversationViewModel,
                             onBack = { navController.popBackStack() },
                             onOpenSettings = { navController.navigate("contact/$contactId/settings") },
                             onCallContact = callContactHandler,
-                            onSendMessage = { body -> sendMessageHandler(contactId, body) },
                             onPing = { viewModel.sendPing(contactId) },
                             onVoiceCommand = { query -> viewModel.processVoiceCommand(query) },
                             onUpgradeClick = {
@@ -1686,7 +1684,7 @@ class MainActivity : AppCompatActivity() {
                                     .mapValues { (_, devices) ->
                                         devices.any { device ->
                                             device.lastSeen?.let { last ->
-                                                now - last < 2 * 60 * 1000
+                                                now - last < 5 * 60 * 1000  // 5 minute threshold (increased from 2 min)
                                             } == true
                                         }
                                     }

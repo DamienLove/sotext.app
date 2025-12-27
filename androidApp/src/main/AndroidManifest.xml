@@ -232,6 +232,90 @@
         </activity-alias>
 
         <activity-alias
+            android:name="com.pulselink.BeaconInboxThemeDesertClay"
+            android:enabled="false"
+            android:icon="@drawable/ic_beacon_theme_desert_clay"
+            android:label="Beacon Inbox"
+            android:roundIcon="@drawable/ic_beacon_theme_desert_clay"
+            android:exported="true"
+            android:targetActivity=".ui.InboxLauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.pulselink.BeaconInboxThemeNordFrost"
+            android:enabled="false"
+            android:icon="@drawable/ic_beacon_theme_nord_frost"
+            android:label="Beacon Inbox"
+            android:roundIcon="@drawable/ic_beacon_theme_nord_frost"
+            android:exported="true"
+            android:targetActivity=".ui.InboxLauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.pulselink.BeaconInboxThemeNeonNoir"
+            android:enabled="false"
+            android:icon="@drawable/ic_beacon_theme_neon_noir"
+            android:label="Beacon Inbox"
+            android:roundIcon="@drawable/ic_beacon_theme_neon_noir"
+            android:exported="true"
+            android:targetActivity=".ui.InboxLauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.pulselink.BeaconInboxThemePaperback"
+            android:enabled="false"
+            android:icon="@drawable/ic_beacon_theme_paperback"
+            android:label="Beacon Inbox"
+            android:roundIcon="@drawable/ic_beacon_theme_paperback"
+            android:exported="true"
+            android:targetActivity=".ui.InboxLauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.pulselink.BeaconInboxThemeMintBreeze"
+            android:enabled="false"
+            android:icon="@drawable/ic_beacon_theme_mint_breeze"
+            android:label="Beacon Inbox"
+            android:roundIcon="@drawable/ic_beacon_theme_mint_breeze"
+            android:exported="true"
+            android:targetActivity=".ui.InboxLauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.pulselink.BeaconInboxThemeAmethystNight"
+            android:enabled="false"
+            android:icon="@drawable/ic_beacon_theme_amethyst_night"
+            android:label="Beacon Inbox"
+            android:roundIcon="@drawable/ic_beacon_theme_amethyst_night"
+            android:exported="true"
+            android:targetActivity=".ui.InboxLauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
             android:name="com.pulselink.BeaconInboxThemeAurora"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_aurora"

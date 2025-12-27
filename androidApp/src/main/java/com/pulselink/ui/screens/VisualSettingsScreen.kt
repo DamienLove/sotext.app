@@ -738,14 +738,14 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 onBackground = "#7C2D12",
                 topBarColor = "#FFEDD5",
                 onTopBarColor = "#7C2D12",
-                bubbleOutgoing = "#FB923C",
+                bubbleOutgoing = "#EA580C",
                 onBubbleOutgoing = "#FFFFFF",
                 bubbleIncoming = "#FED7AA",
                 onBubbleIncoming = "#7C2D12",
                 primaryColor = "#EA580C",
                 secondaryColor = "#FDBA74",
                 dividerColor = "#FED7AA",
-                inboxIconVariant = "sunset_fade"
+                inboxIconVariant = "desert_clay"
             )
         ),
         ThemePreset(
@@ -758,13 +758,13 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 topBarColor = "#E5E9F0",
                 onTopBarColor = "#2E3440",
                 bubbleOutgoing = "#81A1C1",
-                onBubbleOutgoing = "#ECEFF4",
+                onBubbleOutgoing = "#2E3440",
                 bubbleIncoming = "#D8DEE9",
                 onBubbleIncoming = "#2E3440",
                 primaryColor = "#5E81AC",
                 secondaryColor = "#88C0D0",
                 dividerColor = "#D8DEE9",
-                inboxIconVariant = "default_light"
+                inboxIconVariant = "nord_frost"
             )
         ),
         ThemePreset(
@@ -777,13 +777,13 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 topBarColor = "#111827",
                 onTopBarColor = "#E2E8F0",
                 bubbleOutgoing = "#22D3EE",
-                onBubbleOutgoing = "#0B0F14",
+                onBubbleOutgoing = "#000000",
                 bubbleIncoming = "#1F2937",
                 onBubbleIncoming = "#E2E8F0",
                 primaryColor = "#22D3EE",
                 secondaryColor = "#F472B6",
                 dividerColor = "#1F2937",
-                inboxIconVariant = "midnight_oled"
+                inboxIconVariant = "neon_noir"
             )
         ),
         ThemePreset(
@@ -791,7 +791,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
             theme = ThemePreferences(
                 fontStyle = "Serif",
                 bubbleCornerRadius = 14,
-                backgroundColor = "#FFFBEB",
+                backgroundColor = "#FDF6E3",
                 onBackground = "#3F2D1C",
                 topBarColor = "#FEF3C7",
                 onTopBarColor = "#3F2D1C",
@@ -802,7 +802,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#B45309",
                 secondaryColor = "#D97706",
                 dividerColor = "#FDE68A",
-                inboxIconVariant = "default_light"
+                inboxIconVariant = "paperback"
             )
         ),
         ThemePreset(
@@ -821,7 +821,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#10B981",
                 secondaryColor = "#34D399",
                 dividerColor = "#A7F3D0",
-                inboxIconVariant = "forest_trail"
+                inboxIconVariant = "mint_breeze"
             )
         ),
         ThemePreset(
@@ -841,7 +841,7 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
                 primaryColor = "#8B5CF6",
                 secondaryColor = "#6366F1",
                 dividerColor = "#312E81",
-                inboxIconVariant = "lavender_haze"
+                inboxIconVariant = "amethyst_night"
             )
         )
     )

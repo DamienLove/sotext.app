@@ -354,6 +354,9 @@ class SmsThreadViewModel @Inject constructor(
         val msgs = result.first
         val contact = result.second
         val archived = result.third
+        activeThreadId?.let { threadId ->
+            withContext(Dispatchers.IO) { smsRepository.markThreadRead(threadId) }
+        }
         updateMessages(msgs)
         _contact.value = contact
         _isArchived.value = archived
@@ -426,6 +429,7 @@ class SmsThreadViewModel @Inject constructor(
                 .filter { it.isNotBlank() }
             val resolvedLineId = lineId ?: activeLineId ?: deviceLineId
             val isRemoteLine = resolvedLineId.isNotBlank() && resolvedLineId != deviceLineId
+            var anySuccess = false
 
             withContext(Dispatchers.IO) {
                 destinations.forEach { dest ->
@@ -434,9 +438,11 @@ class SmsThreadViewModel @Inject constructor(
                         try {
                             if (isRemoteLine) {
                                 smsOutboxService.queueMessage(rawNumber, body, resolvedLineId, activeThreadId)
+                                anySuccess = true
                             } else {
                                 // awaitResult = false to parallelize if multiple
-                                smsSender.sendSms(rawNumber, body, awaitResult = false)
+                                val sent = smsSender.sendSms(rawNumber, body, awaitResult = false)
+                                anySuccess = anySuccess || sent
                             }
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -446,6 +452,9 @@ class SmsThreadViewModel @Inject constructor(
             }
             if (!isRemoteLine) {
                 refreshMessages()
+            }
+            if (!anySuccess) {
+                markPendingFailed(pendingId)
             }
         }
     }
@@ -475,6 +484,15 @@ class SmsThreadViewModel @Inject constructor(
     private fun addPendingMessage(message: SmsMessageItem) {
         withPendingLock {
             pendingMessages.add(message)
+            _messages.value = mergeMessages(loadedMessages)
+        }
+    }
+
+    private fun markPendingFailed(pendingId: Long) {
+        withPendingLock {
+            pendingMessages.replaceAll { msg ->
+                if (msg.id == pendingId) msg.copy(status = SmsMessageStatus.FAILED) else msg
+            }
             _messages.value = mergeMessages(loadedMessages)
         }
     }

@@ -50,6 +50,7 @@ data class PulseLinkSettings(
     val privateThreadIds: List<Long> = emptyList(),
     val beaconLauncherEnabled: Boolean = true,
     val beaconHintDismissed: Boolean = false,
+    val webAccessHintDismissed: Boolean = false,
     val firebaseMessagingEnabled: Boolean = true,
     val emailFallbackEnabled: Boolean = false,
     val messagingChannelPriority: List<MessageChannel> = listOf(MessageChannel.FIREBASE, MessageChannel.SMS, MessageChannel.EMAIL),

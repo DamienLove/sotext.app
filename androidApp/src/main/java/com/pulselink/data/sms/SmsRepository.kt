@@ -314,14 +314,16 @@ class SmsRepository @Inject constructor(
             when (type) {
                 Telephony.Sms.MESSAGE_TYPE_OUTBOX,
                 Telephony.Sms.MESSAGE_TYPE_QUEUED -> SmsMessageStatus.SENDING
+                Telephony.Sms.MESSAGE_TYPE_FAILED -> SmsMessageStatus.FAILED
                 Telephony.Sms.MESSAGE_TYPE_SENT -> when (status) {
-                    Telephony.TextBasedSmsColumns.STATUS_COMPLETE -> SmsMessageStatus.RECEIVED
+                    Telephony.TextBasedSmsColumns.STATUS_COMPLETE -> SmsMessageStatus.DELIVERED
+                    Telephony.TextBasedSmsColumns.STATUS_FAILED -> SmsMessageStatus.FAILED
                     else -> SmsMessageStatus.SENT
                 }
                 else -> SmsMessageStatus.SENT
             }
         } else {
-            if (isRead) SmsMessageStatus.READ else SmsMessageStatus.RECEIVED
+            if (isRead) SmsMessageStatus.READ else SmsMessageStatus.RECEIVED    
         }
     }
 

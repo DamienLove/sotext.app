@@ -347,7 +347,13 @@ fun SmsThreadScreen(
                     }
                 } else {
                     items(messages, key = { it.id }) { msg ->
-                        MessageBubble(msg, dateFormatter, effectiveTheme, contact)
+                        MessageBubble(
+                            msg = msg,
+                            dateFormatter = dateFormatter,
+                            theme = effectiveTheme,
+                            contact = contact,
+                            onRetry = { failed -> onSendMessage(failed.body, selectedLineId ?: deviceLineId) }
+                        )
                     }
                 }
             }
@@ -357,7 +363,7 @@ fun SmsThreadScreen(
     LaunchedEffect(messages.size) {
         if (messages.isEmpty()) return@LaunchedEffect
         if (!initialScrollDone || isNearBottom) {
-            listState.animateScrollToItem(messages.lastIndex)
+            listState.animateScrollToItem(0)  // Scroll to index 0 (most recent message, since messages are sorted DESC by date)
             initialScrollDone = true
         }
     }
@@ -744,7 +750,13 @@ private fun AiSummaryCard(
 }
 
 @Composable
-private fun MessageBubble(msg: SmsMessageItem, dateFormatter: (Long) -> String, theme: ThemePreferences, contact: Contact?) {
+private fun MessageBubble(
+    msg: SmsMessageItem,
+    dateFormatter: (Long) -> String,
+    theme: ThemePreferences,
+    contact: Contact?,
+    onRetry: (SmsMessageItem) -> Unit = {}
+) {
     val isOutgoing = msg.outgoing
     val bubbleColor = if (isOutgoing) {
         parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)
@@ -826,17 +838,36 @@ private fun MessageBubble(msg: SmsMessageItem, dateFormatter: (Long) -> String, 
             val statusLabel = when (msg.status) {
                 SmsMessageStatus.SENDING -> "Sending"
                 SmsMessageStatus.SENT -> "Sent"
+                SmsMessageStatus.DELIVERED -> "Delivered"
                 SmsMessageStatus.RECEIVED -> "Received"
                 SmsMessageStatus.READ -> "Read"
+                SmsMessageStatus.FAILED -> "Failed"
                 null -> null
             }
             if (statusLabel != null && (isOutgoing || msg.status == SmsMessageStatus.READ)) {
-                Text(
-                    text = statusLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = font,
-                    color = textColor.copy(alpha = 0.6f)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = statusLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = font,
+                        color = textColor.copy(alpha = 0.6f)
+                    )
+                    if (isOutgoing && msg.status == SmsMessageStatus.FAILED) {
+                        TextButton(
+                            onClick = { onRetry(msg) },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = "Retry",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = font
+                            )
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
             }
             Surface(

@@ -1443,6 +1443,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setWebAccessHintDismissed(dismissed: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setWebAccessHintDismissed(dismissed)
+        }
+    }
+
     fun setFirebaseMessagingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setFirebaseMessagingEnabled(enabled)

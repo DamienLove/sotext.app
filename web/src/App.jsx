@@ -28,6 +28,23 @@ import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
 import beaconLogo from './assets/beacon-logo.png';
 import ringersongLogo from './assets/ringersong-logo.png';
+import auroraBg from './assets/themes/aurora.svg';
+import midnightBg from './assets/themes/midnight_oled.svg';
+import sunsetBg from './assets/themes/sunset_fade.svg';
+import forestBg from './assets/themes/forest_trail.svg';
+import neonBg from './assets/themes/neon_noir.svg';
+import goldBg from './assets/themes/gold_standard.svg';
+import diamondBg from './assets/themes/diamond_dust.svg';
+import obsidianBg from './assets/themes/obsidian_pro.svg';
+import titaniumBg from './assets/themes/titanium_flow.svg';
+import blueprintBg from './assets/themes/blueprint.svg';
+import glitchBg from './assets/themes/glitch_stream.svg';
+import oakBg from './assets/themes/legacy_oak.svg';
+import eternalBg from './assets/themes/eternal_sky.svg';
+import premiumAvatar from './assets/avatars/premium_crown.svg';
+import proAvatar from './assets/avatars/pro_spark.svg';
+import betaAvatar from './assets/avatars/beta_flask.svg';
+import loyalAvatar from './assets/avatars/loyal_star.svg';
 
 // Icons
 const HomeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
@@ -36,8 +53,17 @@ const ThemeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="no
 const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 
+const areThreadsEqual = (prev, next) => {
+  return prev.isActive === next.isActive &&
+         prev.showPreviews === next.showPreviews &&
+         prev.onSelect === next.onSelect &&
+         prev.thread.id === next.thread.id &&
+         prev.thread.address === next.thread.address &&
+         prev.thread.snippet === next.thread.snippet;
+};
+
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
-// when only the selection state changes.
+// when only the selection state changes or when unrelated threads update.
 const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
   <button
     className={`thread-item ${isActive ? 'active' : ''}`}
@@ -48,11 +74,20 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
     <div className="thread-name">{thread.address}</div>
     <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
   </button>
-));
+), areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
 
+const areMessagesEqual = (prev, next) => {
+  return prev.showPreviews === next.showPreviews &&
+         prev.msg.id === next.msg.id &&
+         prev.msg.body === next.msg.body &&
+         prev.msg.date === next.msg.date &&
+         prev.msg.type === next.msg.type;
+};
+
 // Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
+// or when new messages arrive (which creates new object references).
 const MessageItem = memo(({ msg, showPreviews }) => (
   <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
     <div className="message-bubble">
@@ -62,10 +97,11 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
     </div>
   </div>
-));
+), areMessagesEqual);
 
 MessageItem.displayName = 'MessageItem';
 
+const defaultMapCenter = { lat: 39.5, lng: -98.35 };
 // Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
 const DeviceContactItem = memo(({ contact }) => {
   const extraPhones = Array.isArray(contact.additionalPhones)
@@ -155,7 +191,8 @@ const themePresets = [
       secondaryColor: "#22D3EE",
       timestampColor: "#94A3B8",
       dividerColor: "#1F2937",
-      inboxIconVariant: "midnight_oled"
+      inboxIconVariant: "midnight_oled",
+      backgroundImageUrl: midnightBg
     }
   },
   {
@@ -215,7 +252,8 @@ const themePresets = [
       dividerColor: "#FED7AA",
       inboxIconVariant: "sunset_fade",
       bubbleCornerRadiusTopStart: 0,
-      bubbleCornerRadiusBottomEnd: 0
+      bubbleCornerRadiusBottomEnd: 0,
+      backgroundImageUrl: sunsetBg
     }
   },
   {
@@ -253,7 +291,8 @@ const themePresets = [
       primaryColor: "#10B981",
       secondaryColor: "#059669",
       dividerColor: "#A7F3D0",
-      inboxIconVariant: "forest_trail"
+      inboxIconVariant: "forest_trail",
+      backgroundImageUrl: forestBg
     }
   },
   {
@@ -314,7 +353,8 @@ const themePresets = [
       secondaryColor: "#6366F1",
       dividerColor: "#5EEAD4",
       inboxIconVariant: "aurora",
-      iconSizeFactor: 1.15
+      iconSizeFactor: 1.15,
+      backgroundImageUrl: auroraBg
     }
   },
   {
@@ -371,7 +411,8 @@ const themePresets = [
       primaryColor: "#22D3EE",
       secondaryColor: "#F472B6",
       dividerColor: "#1F2937",
-      inboxIconVariant: "midnight_oled"
+      inboxIconVariant: "midnight_oled",
+      backgroundImageUrl: neonBg
     }
   },
   {
@@ -434,6 +475,196 @@ const themePresets = [
   }
 ];
 
+const specialThemePresets = [
+  // Premium Themes
+  {
+    id: "gold_standard",
+    name: "Gold Standard",
+    condition: "premium",
+    theme: {
+      fontStyle: "Serif",
+      bubbleCornerRadius: 16,
+      backgroundColor: "#332200",
+      onBackground: "#FFD700",
+      topBarColor: "#4B3621",
+      onTopBarColor: "#FFD700",
+      bubbleOutgoing: "#FFD700",
+      onBubbleOutgoing: "#332200",
+      bubbleIncoming: "#B8860B",
+      onBubbleIncoming: "#FFFFFF",
+      primaryColor: "#FFD700",
+      secondaryColor: "#DAA520",
+      dividerColor: "#B8860B",
+      inboxIconVariant: "shield",
+      backgroundImageUrl: goldBg
+    }
+  },
+  {
+    id: "diamond_dust",
+    name: "Diamond Dust",
+    condition: "premium",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 20,
+      backgroundColor: "#F0F4F8",
+      onBackground: "#263238",
+      topBarColor: "#FFFFFF",
+      onTopBarColor: "#263238",
+      bubbleOutgoing: "#E0F7FA",
+      onBubbleOutgoing: "#006064",
+      bubbleIncoming: "#FFFFFF",
+      onBubbleIncoming: "#263238",
+      primaryColor: "#00BCD4",
+      secondaryColor: "#0097A7",
+      dividerColor: "#B2EBF2",
+      inboxIconVariant: "bubble",
+      backgroundImageUrl: diamondBg
+    }
+  },
+  // Pro Themes
+  {
+    id: "obsidian_pro",
+    name: "Obsidian Pro",
+    condition: "pro",
+    theme: {
+      fontStyle: "Monospace",
+      bubbleCornerRadius: 4,
+      backgroundColor: "#000000",
+      onBackground: "#E0E0E0",
+      topBarColor: "#121212",
+      onTopBarColor: "#FFFFFF",
+      bubbleOutgoing: "#212121",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#121212",
+      onBubbleIncoming: "#BDBDBD",
+      primaryColor: "#616161",
+      secondaryColor: "#424242",
+      dividerColor: "#333333",
+      inboxIconVariant: "minimal",
+      backgroundImageUrl: obsidianBg
+    }
+  },
+  {
+    id: "titanium_flow",
+    name: "Titanium Flow",
+    condition: "pro",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 24,
+      backgroundColor: "#2c3e50",
+      onBackground: "#ecf0f1",
+      topBarColor: "#34495e",
+      onTopBarColor: "#ecf0f1",
+      bubbleOutgoing: "#95a5a6",
+      onBubbleOutgoing: "#2c3e50",
+      bubbleIncoming: "#34495e",
+      onBubbleIncoming: "#bdc3c7",
+      primaryColor: "#bdc3c7",
+      secondaryColor: "#7f8c8d",
+      dividerColor: "#7f8c8d",
+      inboxIconVariant: "shield",
+      backgroundImageUrl: titaniumBg
+    }
+  },
+  // Beta Themes
+  {
+    id: "blueprint",
+    name: "Blueprint",
+    condition: "beta",
+    theme: {
+      fontStyle: "Monospace",
+      bubbleCornerRadius: 0,
+      backgroundColor: "#002b36",
+      onBackground: "#839496",
+      topBarColor: "#073642",
+      onTopBarColor: "#93a1a1",
+      bubbleOutgoing: "#2aa198",
+      onBubbleOutgoing: "#002b36",
+      bubbleIncoming: "#073642",
+      onBubbleIncoming: "#2aa198",
+      primaryColor: "#2aa198",
+      secondaryColor: "#268bd2",
+      dividerColor: "#586e75",
+      inboxIconVariant: "beacon",
+      backgroundImageUrl: blueprintBg
+    }
+  },
+  {
+    id: "glitch_stream",
+    name: "Glitch Stream",
+    condition: "beta",
+    theme: {
+      fontStyle: "Monospace",
+      bubbleCornerRadius: 8,
+      backgroundColor: "#0f0f0f",
+      onBackground: "#00ff00",
+      topBarColor: "#000000",
+      onTopBarColor: "#00ff00",
+      bubbleOutgoing: "#003300",
+      onBubbleOutgoing: "#00ff00",
+      bubbleIncoming: "#001100",
+      onBubbleIncoming: "#00cc00",
+      primaryColor: "#00ff00",
+      secondaryColor: "#ff00ff",
+      dividerColor: "#004400",
+      inboxIconVariant: "minimal",
+      backgroundImageUrl: glitchBg
+    }
+  },
+  // Loyalty Themes
+  {
+    id: "legacy_oak",
+    name: "Legacy Oak",
+    condition: "loyal",
+    theme: {
+      fontStyle: "Serif",
+      bubbleCornerRadius: 12,
+      backgroundColor: "#3E2723",
+      onBackground: "#D7CCC8",
+      topBarColor: "#4E342E",
+      onTopBarColor: "#D7CCC8",
+      bubbleOutgoing: "#5D4037",
+      onBubbleOutgoing: "#EFEBE9",
+      bubbleIncoming: "#4E342E",
+      onBubbleIncoming: "#D7CCC8",
+      primaryColor: "#8D6E63",
+      secondaryColor: "#A1887F",
+      dividerColor: "#5D4037",
+      inboxIconVariant: "default_light",
+      backgroundImageUrl: oakBg
+    }
+  },
+  {
+    id: "eternal_sky",
+    name: "Eternal Sky",
+    condition: "loyal",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 28,
+      backgroundColor: "#000033",
+      onBackground: "#E0E0FF",
+      topBarColor: "#191970",
+      onTopBarColor: "#FFFFFF",
+      bubbleOutgoing: "#483D8B",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#000080",
+      onBubbleIncoming: "#E0E0FF",
+      primaryColor: "#8A2BE2",
+      secondaryColor: "#9370DB",
+      dividerColor: "#191970",
+      inboxIconVariant: "beacon",
+      backgroundImageUrl: eternalBg
+    }
+  }
+];
+
+const avatarPresets = [
+  { id: "premium_crown", name: "Premium Crown", condition: "premium", src: premiumAvatar },
+  { id: "pro_spark", name: "Pro Spark", condition: "pro", src: proAvatar },
+  { id: "beta_flask", name: "Beta Flask", condition: "beta", src: betaAvatar },
+  { id: "loyal_star", name: "Loyal Star", condition: "loyal", src: loyalAvatar },
+];
+
 const iconOverrideKeys = [
   { key: "icon.back", label: "Back" },
   { key: "icon.settings", label: "Settings" },
@@ -469,7 +700,7 @@ const normalizeTheme = (input = {}) => ({
 
 const buildThemeVars = (theme) => {
   const active = normalizeTheme(theme);
-  return {
+  const vars = {
     "--accent": active.primaryColor,
     "--accent-strong": active.secondaryColor,
     "--bg": active.appBackgroundGradientEnd ?? active.backgroundColor,
@@ -486,6 +717,13 @@ const buildThemeVars = (theme) => {
     "--app-gradient-start": active.appBackgroundGradientStart ?? active.backgroundColor,
     "--app-gradient-end": active.appBackgroundGradientEnd ?? active.backgroundColor
   };
+  if (active.backgroundImageUrl) {
+    vars["backgroundImage"] = `url(${active.backgroundImageUrl})`;
+    vars["backgroundSize"] = 'cover';
+    vars["backgroundPosition"] = 'center';
+    vars["backgroundAttachment"] = 'fixed'; // nice parallax effect
+  }
+  return vars;
 };
 
 const buildThemePreviewStyle = (theme) => {
@@ -544,6 +782,17 @@ const buildAlertSnippet = (body = '') => {
   return `${firstLine.slice(0, 85)}...`;
 };
 
+// Sentinel: Prevent XSS in map info windows
+const escapeHtml = (unsafe) => {
+  return (unsafe || '')
+    .toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 const loadGoogleMaps = (() => {
   let loaderPromise;
   return (apiKey) => {
@@ -580,12 +829,14 @@ function App() {
   const [profile, setProfile] = useState({
     ownerName: '',
     avatarUrl: '',
+    avatarId: '',
     email: '',
     phoneNumber: ''
   });
   const [trustedContacts, setTrustedContacts] = useState([]);
   const [deviceContacts, setDeviceContacts] = useState([]);
   const [contactSearch, setContactSearch] = useState('');
+  const [unlockedAvatars, setUnlockedAvatars] = useState([]);
   const [contactForm, setContactForm] = useState({
     displayName: '',
     phoneNumber: '',
@@ -604,6 +855,7 @@ function App() {
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
   const [themeStatus, setThemeStatus] = useState('');
   const [publicThemes, setPublicThemes] = useState([]);
+  const [unlockedThemes, setUnlockedThemes] = useState([]);
   const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
   const [themeSearch, setThemeSearch] = useState('');
   const [themePublishForm, setThemePublishForm] = useState({
@@ -640,20 +892,40 @@ function App() {
   const [settingsStatus, setSettingsStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [spotifyCreds, setSpotifyCreds] = useState({
-    clientId: localStorage.getItem('spotify_client_id') || 'b846ea3c7e3440439c6a870be4de24ce',
-    clientSecret: localStorage.getItem('spotify_client_secret') || 'c228e27787164bdebec398c25fe40145'
-  });
+  const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
   const [spotifyResults, setSpotifyResults] = useState([]);
+  const [ringerPlaylist, setRingerPlaylist] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem('spotify_client_id', spotifyCreds.clientId);
-    localStorage.setItem('spotify_client_secret', spotifyCreds.clientSecret);
-  }, [spotifyCreds]);
+    if (!user) {
+      setRingerPlaylist([]);
+      return;
+    }
+    const playlistRef = collection(db, "users", user.uid, "ringer_playlist");
+    const q = query(playlistRef, orderBy("addedAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setRingerPlaylist(items);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  const handleDeleteRingerSong = async (songId) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "ringer_playlist", songId));
+    } catch (e) {
+      console.error("Failed to delete song", e);
+    }
+  };
 
   const getSpotifyToken = async () => {
     if (!spotifyCreds.clientId || !spotifyCreds.clientSecret) {
@@ -705,21 +977,32 @@ function App() {
   };
 
   const handlePushSpotifyTrack = async (track) => {
-      const target = contactForm.targetUid || user?.uid;
+      const target = user?.uid;
       if(!target) {
-          setSettingsStatus("Target Device ID required.");
+          setSettingsStatus("Please sign in to push tracks.");
           return;
       }
       try {
-          setSettingsStatus(`Sending "${track.name}"...`);
-          await setDoc(doc(db, "users", target, "ringersong", "commands"), {
-              command: "add_song",
-              payload: track.uri,
-              timestamp: Date.now()
-          });
-          setSettingsStatus("Sent! Check your app.");
+          setSettingsStatus(`Adding "${track.name}"...`);
+          const trackData = {
+              spotifyId: track.id,
+              uri: track.uri,
+              title: track.name,
+              artist: track.artists?.map(a => a.name).join(', ') || "Unknown Artist",
+              durationMs: track.duration_ms || 0,
+              albumArtUrl: track.album?.images?.[0]?.url || null,
+              addedAt: serverTimestamp()
+          };
+          
+          // Use addDoc to let Firestore generate the ID, or use track.id as doc ID to prevent duplicates
+          // The Android app uses add(), so we should probably mimic that or just use setDoc with track.id
+          // Using setDoc with track.id prevents duplicates better.
+          await setDoc(doc(db, "users", target, "ringer_playlist", track.id), trackData);
+          
+          setSettingsStatus("Added to playlist!");
+          // Clear search results after adding? Maybe not, user might want to add multiple.
       } catch(e) {
-          setSettingsStatus("Error sending: " + e.message);
+          setSettingsStatus("Error adding: " + e.message);
       }
   };
 
@@ -733,6 +1016,8 @@ function App() {
   const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
 
+  // Fix for undefined function causing crash/lint error
+  // Removed duplicate declaration
   const filteredAlerts = useMemo(() => {
     return alertLocations.filter((alert) => {
       if (incomingOnly && !alert.incoming) return false;
@@ -795,6 +1080,7 @@ function App() {
       setProfile({
         ownerName: data.ownerName ?? user.displayName ?? '',
         avatarUrl: data.avatarUrl ?? '',
+        avatarId: data.avatarId ?? '',
         email: data.email ?? user.email ?? '',
         phoneNumber: data.phoneNumber ?? ''
       });
@@ -808,6 +1094,65 @@ function App() {
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO'
       });
+
+      // Check for theme and avatar unlocks
+      const currentUnlockedIds = data.unlockedThemeIds || [];
+      const currentUnlockedAvatars = data.unlockedAvatarIds || [];
+      const newUnlocks = [];
+      const newAvatarUnlocks = [];
+      const tenureDays = data.createdAt ? (Date.now() - toMillis(data.createdAt)) / (1000 * 60 * 60 * 24) : 0;
+      
+      // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
+      // In production, these flags would be set by payment/backend logic
+      const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
+      const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
+      const isBeta = data.isBetaTester === true;
+      const isLoyal = tenureDays > 365;
+
+      specialThemePresets.forEach(preset => {
+        if (currentUnlockedIds.includes(preset.id)) return;
+        
+        let unlocked = false;
+        if (preset.condition === 'premium' && isPremium) unlocked = true;
+        if (preset.condition === 'pro' && isPro) unlocked = true;
+        if (preset.condition === 'beta' && isBeta) unlocked = true;
+        if (preset.condition === 'loyal' && isLoyal) unlocked = true;
+
+        if (unlocked) {
+          newUnlocks.push(preset.id);
+        }
+      });
+
+      avatarPresets.forEach(preset => {
+        if (currentUnlockedAvatars.includes(preset.id)) return;
+        
+        let unlocked = false;
+        if (preset.condition === 'premium' && isPremium) unlocked = true;
+        if (preset.condition === 'pro' && isPro) unlocked = true;
+        if (preset.condition === 'beta' && isBeta) unlocked = true;
+        if (preset.condition === 'loyal' && isLoyal) unlocked = true;
+
+        if (unlocked) {
+          newAvatarUnlocks.push(preset.id);
+        }
+      });
+
+      const updates = {};
+      if (newUnlocks.length > 0) {
+        updates.unlockedThemeIds = [...currentUnlockedIds, ...newUnlocks];
+      } else {
+        setUnlockedThemes(specialThemePresets.filter(p => currentUnlockedIds.includes(p.id)));
+      }
+
+      if (newAvatarUnlocks.length > 0) {
+        updates.unlockedAvatarIds = [...currentUnlockedAvatars, ...newAvatarUnlocks];
+      } else {
+        setUnlockedAvatars(avatarPresets.filter(p => currentUnlockedAvatars.includes(p.id)));
+      }
+
+      if (Object.keys(updates).length > 0) {
+        setDoc(doc(db, "users", user.uid), updates, { merge: true });
+      }
     });
     return () => unsubscribe();
   }, [user]);
@@ -1061,11 +1406,16 @@ function App() {
         if (!mapInfoRef.current) {
           mapInfoRef.current = new window.google.maps.InfoWindow();
         }
+        // Sentinel: Escape user input to prevent XSS in InfoWindow
+        const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
+        const safeAddress = escapeHtml(alert.address);
+        const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+
         mapInfoRef.current.setContent(
           `<div style="font-family: sans-serif; max-width: 220px;">
-            <strong>${alertBadgeCopy[alert.severity] ?? 'Alert'}</strong><br/>
-            ${alert.address}<br/>
-            <span style="font-size: 12px;">${new Date(alert.date).toLocaleString()}</span>
+            <strong>${safeType}</strong><br/>
+            ${safeAddress}<br/>
+            <span style="font-size: 12px;">${safeDate}</span>
           </div>`
         );
         mapInfoRef.current.open(mapInstanceRef.current, marker);
@@ -1086,11 +1436,16 @@ function App() {
       if (!mapInfoRef.current) {
         mapInfoRef.current = new window.google.maps.InfoWindow();
       }
+      // Sentinel: Escape user input to prevent XSS in InfoWindow
+      const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
+      const safeAddress = escapeHtml(alert.address);
+      const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+
       mapInfoRef.current.setContent(
         `<div style="font-family: sans-serif; max-width: 220px;">
-          <strong>${alertBadgeCopy[alert.severity] ?? 'Alert'}</strong><br/>
-          ${alert.address}<br/>
-          <span style="font-size: 12px;">${new Date(alert.date).toLocaleString()}</span>
+          <strong>${safeType}</strong><br/>
+          ${safeAddress}<br/>
+          <span style="font-size: 12px;">${safeDate}</span>
         </div>`
       );
       mapInfoRef.current.open(mapInstanceRef.current, marker);
@@ -1199,6 +1554,7 @@ function App() {
       const payload = {
         ownerName: profile.ownerName || '',
         avatarUrl: profile.avatarUrl || '',
+        avatarId: profile.avatarId || null,
         phoneNumber: profile.phoneNumber || '',
         email: profile.email || user.email || ''
       };
@@ -1206,6 +1562,16 @@ function App() {
         payload.emailLowercase = payload.email.toLowerCase();
       }
       await setDoc(doc(db, "users", user.uid), payload, { merge: true });
+      
+      // Sync to public profile
+      await setDoc(doc(db, "public_profiles", user.uid), {
+        ownerName: payload.ownerName,
+        avatarUrl: payload.avatarUrl,
+        avatarId: payload.avatarId,
+        themePreferences: themePrefs, // Include current theme
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
       setProfileStatus("Profile updated.");
     } catch (error) {
       console.error("Profile update failed", error);
@@ -1310,6 +1676,13 @@ function App() {
         { themePreferences: normalized, themeUpdatedAt: serverTimestamp() },
         { merge: true }
       );
+
+      // Sync theme to public profile
+      await setDoc(doc(db, "public_profiles", user.uid), {
+        themePreferences: normalized,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
       setThemePrefs(normalized);
       setThemeStatus("Theme synced.");
     } catch (error) {
@@ -1784,6 +2157,46 @@ function App() {
               <div className="pulselink-grid">
                 <div className="settings-card">
                   <h4>Public profile</h4>
+                  <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'center' }}>
+                    <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'var(--surface-alt)', border: '2px solid var(--border)' }}>
+                      {profile.avatarId ? (
+                        <img 
+                          src={avatarPresets.find(p => p.id === profile.avatarId)?.src} 
+                          alt="Avatar" 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        />
+                      ) : (
+                        profile.avatarUrl ? (
+                          <img src={profile.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>?</div>
+                        )
+                      )}
+                    </div>
+                    {unlockedAvatars.length > 0 && (
+                      <div className="theme-grid">
+                        {unlockedAvatars.map(av => (
+                          <button
+                            key={av.id}
+                            onClick={() => setProfile(prev => ({ ...prev, avatarId: av.id }))}
+                            className={`theme-chip ${profile.avatarId === av.id ? 'active' : ''}`}
+                            style={{ padding: 4, borderRadius: '50%', width: 40, height: 40, border: profile.avatarId === av.id ? '2px solid var(--accent)' : '1px solid var(--border)' }}
+                            title={av.name}
+                          >
+                            <img src={av.src} alt={av.name} style={{ width: '100%', height: '100%' }} />
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => setProfile(prev => ({ ...prev, avatarId: '' }))}
+                          className={`theme-chip`}
+                          style={{ padding: 0, borderRadius: '50%', width: 40, height: 40, justifyContent: 'center' }}
+                          title="Use Custom URL"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <label className="login-field">
                     Display name
                     <input
@@ -1845,13 +2258,27 @@ function App() {
                           >
                             Edit
                           </button>
-                          <button
-                            className="ghost-btn"
-                            onClick={() => handleDeleteContact(contact.id)}
-                            aria-label={`Remove ${contact.displayName}`}
-                          >
-                            Remove
-                          </button>
+                          {confirmDeleteId === contact.id ? (
+                            <button
+                              className="secondary-btn"
+                              onClick={() => {
+                                handleDeleteContact(contact.id);
+                                setConfirmDeleteId(null);
+                              }}
+                              aria-label={`Confirm remove ${contact.displayName}`}
+                              onBlur={() => setConfirmDeleteId(null)}
+                            >
+                              Confirm?
+                            </button>
+                          ) : (
+                            <button
+                              className="ghost-btn"
+                              onClick={() => setConfirmDeleteId(contact.id)}
+                              aria-label={`Remove ${contact.displayName}`}
+                            >
+                              Remove
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1973,6 +2400,7 @@ function App() {
                 <input
                   className="login-input contact-search"
                   placeholder="Search by name, phone, or email"
+                  aria-label="Search contacts"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
                   aria-label="Search contacts"
@@ -2108,97 +2536,131 @@ function App() {
           {activePanel === 'ringersong' && (
             <div className="pulselink-panel">
               <div className="panel-header">
-                <h3>RingerSong</h3>
-                <p>Smart ringtone progression and streaming manager.</p>
-              </div>
-              
-              <div className="settings-card">
-                <h4>Push Track to Device</h4>
-                <p className="settings-label">
-                  Search Spotify and push to your connected RingerSong device.
-                </p>
-                
-                <label className="login-field">
-                  Target Device ID
-                  <input 
-                    className="login-input" 
-                    placeholder="Enter UID from RingerSong Settings"
-                    value={contactForm.targetUid || user?.uid || ''}
-                    onChange={(e) => setContactForm(prev => ({...prev, targetUid: e.target.value}))}
+                <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
+                  <img 
+                    src={ringersongLogo} 
+                    alt="RingerSong" 
+                    className="ringersong-logo-tint"
+                    style={{
+                      width: 48, 
+                      height: 48,
+                      // Tint logic: make it monochrome and take accent color
+                      filter: 'grayscale(100%) sepia(100%) hue-rotate(var(--hue-rotate, 0deg)) saturate(1000%)',
+                      // Fallback or enhancement if we can calculate the hue rotation from the theme accent. 
+                      // Since we can't easily do calc(accent) in CSS filter without HSL, let's use a mask approach for better results
+                      // assuming the image has transparency.
+                      maskImage: `url(${ringersongLogo})`,
+                      maskSize: 'cover',
+                      WebkitMaskImage: `url(${ringersongLogo})`,
+                      WebkitMaskSize: 'cover',
+                      backgroundColor: 'var(--accent)',
+                      objectFit: 'cover' // This might conflict with mask if it's an img tag. 
+                                         // Better approach for img tag tinting:
+                    }} 
                   />
-                  <span className="settings-note">Found in RingerSong App {'>'} Settings {'>'} Sync Status</span>
-                </label>
+                  {/* Actually, let's just use a wrapper div for the mask approach to be safe */}
+                  <div 
+                    className="ringersong-logo-mask"
+                    style={{
+                        width: 48, height: 48,
+                        backgroundColor: 'var(--accent)',
+                        maskImage: `url(${ringersongLogo})`,
+                        maskSize: 'contain',
+                        maskRepeat: 'no-repeat',
+                        maskPosition: 'center',
+                        WebkitMaskImage: `url(${ringersongLogo})`,
+                        WebkitMaskSize: 'contain',
+                        WebkitMaskRepeat: 'no-repeat',
+                        WebkitMaskPosition: 'center'
+                    }}
+                  />
+                </div>
+                <div>
+                    <h3>RingerSong</h3>
+                    <p>Smart ringtone progression and streaming manager.</p>
+                </div>
+              </div>
 
-                <div style={{marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12}}>
-                    <h4>Spotify Search</h4>
+              <div className="pulselink-grid">
+                <div className="settings-card">
+                    <div className="card-header-row" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
+                        <h4>Current Playlist</h4>
+                        <span className="badge">{ringerPlaylist.length} songs</span>
+                    </div>
                     
-                    {!spotifyToken && !spotifyCreds.clientId && (
-                        <div className="settings-note" style={{marginBottom: 12}}>
-                            Enter Spotify API Credentials (from developer.spotify.com) to enable search.
+                    {ringerPlaylist.length === 0 ? (
+                        <div className="empty-state">
+                            <p className="muted">Your playlist is empty. Add songs below.</p>
+                        </div>
+                    ) : (
+                        <div className="contact-list">
+                            {ringerPlaylist.map(song => (
+                                <div key={song.id} className="contact-row" style={{alignItems: 'center'}}>
+                                    <div style={{
+                                        width: 48, height: 48, borderRadius: 8, overflow: 'hidden', 
+                                        backgroundColor: 'var(--surface-alt)', marginRight: 12, flexShrink: 0
+                                    }}>
+                                        {song.albumArtUrl ? (
+                                            <img src={song.albumArtUrl} alt="" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                                        ) : (
+                                            <div style={{display: 'grid', placeItems: 'center', width: '100%', height: '100%', color: 'var(--muted)'}}>♫</div>
+                                        )}
+                                    </div>
+                                    <div className="contact-main">
+                                        <div className="contact-name">{song.title}</div>
+                                        <div className="contact-meta">{song.artist}</div>
+                                    </div>
+                                    <button 
+                                        className="ghost-btn icon-only" 
+                                        onClick={() => handleDeleteRingerSong(song.id)}
+                                        title="Remove from playlist"
+                                        style={{color: 'var(--muted)'}}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
                         </div>
                     )}
-
-                    <div className="composer-row" style={{marginBottom: 12}}>
-                        <input 
-                            className="login-input" 
-                            placeholder="Client ID"
-                            value={spotifyCreds.clientId}
-                            onChange={(e) => setSpotifyCreds(prev => ({...prev, clientId: e.target.value}))}
-                            style={{fontSize: '0.8em'}}
-                            aria-label="Spotify Client ID"
-                        />
-                        <input 
-                            className="login-input" 
-                            placeholder="Client Secret"
-                            type="password"
-                            value={spotifyCreds.clientSecret}
-                            onChange={(e) => setSpotifyCreds(prev => ({...prev, clientSecret: e.target.value}))}
-                            style={{fontSize: '0.8em'}}
-                            aria-label="Spotify Client Secret"
-                        />
-                    </div>
+                </div>
+              
+                <div className="settings-card">
+                    <h4>Add Music</h4>
+                    <p className="settings-note" style={{marginBottom: 16}}>
+                        Search Spotify for tracks to add to your progressive ringtone playlist.
+                    </p>
 
                     <div className="composer-row">
                         <input 
                             className="login-input" 
-                            placeholder="Search for a song..."
+                            placeholder="Search by song or artist..."
                             value={spotifySearch}
                             onChange={(e) => setSpotifySearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
-                            aria-label="Search for a song"
                         />
-                        <button className="secondary-btn" onClick={handleSpotifySearch}>Search</button>
+                        <button className="primary-btn" onClick={handleSpotifySearch}>Search</button>
                     </div>
-                </div>
 
-                {spotifyResults.length > 0 && (
-                    <div className="contact-list" style={{marginTop: 12, maxHeight: 300, overflowY: 'auto'}}>
-                        {spotifyResults.map(track => (
-                            <div key={track.id} className="contact-row" style={{alignItems: 'center'}}>
-                                <img src={track.album?.images[2]?.url} alt="" style={{width: 40, height: 40, borderRadius: 4}} />
-                                <div className="contact-main" style={{flex: 1, marginLeft: 10}}>
-                                    <div className="contact-name" style={{fontSize: '0.9em'}}>{track.name}</div>
-                                    <div className="contact-meta">{track.artists.map(a => a.name).join(', ')}</div>
+                    {spotifyResults.length > 0 && (
+                        <div className="contact-list" style={{marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16}}>
+                            {spotifyResults.map(track => (
+                                <div key={track.id} className="contact-row" style={{alignItems: 'center'}}>
+                                    <img src={track.album?.images[2]?.url || track.album?.images[0]?.url} alt="" style={{width: 40, height: 40, borderRadius: 4}} />
+                                    <div className="contact-main" style={{flex: 1, marginLeft: 10}}>
+                                        <div className="contact-name" style={{fontSize: '0.9em'}}>{track.name}</div>
+                                        <div className="contact-meta">{track.artists.map(a => a.name).join(', ')}</div>
+                                    </div>
+                                    <button className="secondary-btn" style={{padding: '4px 12px', fontSize: '0.8em'}} onClick={() => handlePushSpotifyTrack(track)}>
+                                        Add
+                                    </button>
                                 </div>
-                                <button className="primary-btn" style={{padding: '4px 10px', fontSize: '0.8em'}} onClick={() => handlePushSpotifyTrack(track)}>
-                                    Push
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                
-                {settingsStatus && <div className="settings-status" style={{marginTop: 12}}>{settingsStatus}</div>}
+                            ))}
+                        </div>
+                    )}
+                    
+                    {settingsStatus && <div className="settings-status" style={{marginTop: 12}}>{settingsStatus}</div>}
+                </div>
               </div>
-              
-              <div className="settings-card">
-                 <h4>Manual URI Push</h4>
-                 <div className="empty-state" style={{padding: 20}}>
-                    <p className="muted">Search integration coming in next update. Use URI for now.</p>
-                    <a href="https://open.spotify.com" target="_blank" rel="noreferrer" className="link-button">Open Spotify Web Player</a>
-                 </div>
-              </div>
-
             </div>
           )}
 
@@ -2218,6 +2680,7 @@ function App() {
                         value={themeSearch}
                         onChange={(e) => setThemeSearch(e.target.value)}
                         placeholder="Search by name or creator"
+                        aria-label="Search themes"
                       />
                     </label>
                     <button className="secondary-btn" type="button" onClick={() => setThemeSearch('')}>
@@ -2556,6 +3019,7 @@ function App() {
                   <textarea
                     className="composer-textarea"
                     placeholder="Type a message..."
+                    aria-label="Message body"
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
                     aria-label="Message body"
