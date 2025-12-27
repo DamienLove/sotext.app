@@ -101,7 +101,6 @@ const MessageItem = memo(({ msg, showPreviews }) => (
 
 MessageItem.displayName = 'MessageItem';
 
-const defaultMapCenter = { lat: 39.5, lng: -98.35 };
 // Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
 const DeviceContactItem = memo(({ contact }) => {
   const extraPhones = Array.isArray(contact.additionalPhones)
@@ -855,7 +854,6 @@ function App() {
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
   const [themeStatus, setThemeStatus] = useState('');
   const [publicThemes, setPublicThemes] = useState([]);
-  const [unlockedThemes, setUnlockedThemes] = useState([]);
   const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
   const [themeSearch, setThemeSearch] = useState('');
   const [themePublishForm, setThemePublishForm] = useState({
@@ -866,6 +864,7 @@ function App() {
     backgroundImageUrl: ''
   });
   const [themePublishStatus, setThemePublishStatus] = useState('');
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
@@ -1105,6 +1104,7 @@ function App() {
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
       const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
+      setIsPremiumUser(isPremium);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
       const isLoyal = tenureDays > 365;
@@ -1140,8 +1140,6 @@ function App() {
       const updates = {};
       if (newUnlocks.length > 0) {
         updates.unlockedThemeIds = [...currentUnlockedIds, ...newUnlocks];
-      } else {
-        setUnlockedThemes(specialThemePresets.filter(p => currentUnlockedIds.includes(p.id)));
       }
 
       if (newAvatarUnlocks.length > 0) {
@@ -2066,13 +2064,22 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
+              {!isPremiumUser && threads.length === 0 ? (
+                 <div className="sidebar-placeholder">
+                   <div className="sidebar-tip muted">
+                     Premium Required
+                   </div>
+                   <div className="sidebar-tip muted">
+                     Upgrade to Premium to access your messages on the web.
+                   </div>
+                 </div>
+              ) : threads.length === 0 ? (
                 <div className="sidebar-placeholder">
                   <div className="sidebar-tip muted">
                     No conversations found.
                   </div>
                   <div className="sidebar-tip muted">
-                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings.
                   </div>
                 </div>
               ) : (
@@ -2400,7 +2407,6 @@ function App() {
                 <input
                   className="login-input contact-search"
                   placeholder="Search by name, phone, or email"
-                  aria-label="Search contacts"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
                   aria-label="Search contacts"
@@ -3019,7 +3025,6 @@ function App() {
                   <textarea
                     className="composer-textarea"
                     placeholder="Type a message..."
-                    aria-label="Message body"
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
                     aria-label="Message body"
