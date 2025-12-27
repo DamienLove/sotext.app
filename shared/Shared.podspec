@@ -1,4 +1,4 @@
-Pod::Spec.new do |spec|
+ePod::Spec.new do |spec|
     spec.name                     = 'Shared'
     spec.version                  = '0.1.0'
     spec.homepage                 = 'https://github.com/DamienLove/pulselink'
