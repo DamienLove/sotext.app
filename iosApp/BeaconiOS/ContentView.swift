@@ -153,7 +153,9 @@ private struct BeaconTab: View {
                     messages: viewModel.messages(for: contact),
                     onSend: { text in
                         viewModel.sendMessage(to: contact, text: text)
-                    }
+                    },
+                    onAppear: { viewModel.startListeningToConversation(contact: contact) },
+                    onDisappear: { viewModel.stopListeningToConversation() }
                 )
             }
             .navigationTitle(isPro && filter == .inbox ? "\(filter.title) Pro" : filter.title)
@@ -203,6 +205,8 @@ private struct ConversationView: View {
     let contact: BeaconContactCard
     let messages: [BeaconConversationMessage]
     let onSend: (String) -> Void
+    var onAppear: (() -> Void)? = nil
+    var onDisappear: (() -> Void)? = nil
 
     @State private var draft = ""
     @AppStorage("themeColor") private var themeColor: ThemeColor = .blue
@@ -237,6 +241,8 @@ private struct ConversationView: View {
                     if let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
             }
+            .onAppear { onAppear?() }
+            .onDisappear { onDisappear?() }
 
             HStack {
                 TextField("Message", text: $draft)

@@ -261,7 +261,9 @@ private struct ContactsTab: View {
                     messages: viewModel.messages(for: contact),
                     onSend: { text, urgent in
                         viewModel.sendMessage(to: contact, text: text, urgent: urgent)
-                    }
+                    },
+                    onAppear: { viewModel.startListeningToConversation(contact: contact) },
+                    onDisappear: { viewModel.stopListeningToConversation() }
                 )
             }
             .navigationTitle("Contacts")
@@ -273,6 +275,8 @@ private struct ConversationView: View {
     let contact: ContactCard
     let messages: [ConversationMessage]
     let onSend: (String, Bool) -> Void
+    var onAppear: (() -> Void)? = nil
+    var onDisappear: (() -> Void)? = nil
 
     @State private var draft = ""
     @State private var urgent = true
@@ -306,6 +310,8 @@ private struct ConversationView: View {
                     if let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
             }
+            .onAppear { onAppear?() }
+            .onDisappear { onDisappear?() }
 
             VStack(spacing: 8) {
                 Toggle("Mark urgent (override DND, boost volume)", isOn: $urgent)
