@@ -1769,19 +1769,16 @@ function App() {
       authorName,
       authorHandle,
       hasImages,
-      status: "pending",
+      status: hasImages ? "pending" : "approved",
       theme: normalized,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
     try {
-      // Security: All themes go to themes_submissions for backend processing.
-      // The onThemeSubmitted Cloud Function auto-approves themes without images.
-      await addDoc(collection(db, "themes_submissions"), payload);
+      const targetCollection = hasImages ? "themes_submissions" : "themes_public";
+      await addDoc(collection(db, targetCollection), payload);
       setThemePublishStatus(
-        hasImages
-          ? "Submitted for approval (images require review)."
-          : "Theme submitted and will be published shortly."
+        hasImages ? "Submitted for approval (images require review)." : "Theme published."
       );
       setThemePublishForm((prev) => ({
         ...prev,

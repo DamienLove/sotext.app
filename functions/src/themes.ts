@@ -1,72 +1,96 @@
-import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
+
 /**
- * Cloud Function that monitors theme submissions and automatically approves
- * themes without images (which don't require moderation).
+ * A callable Cloud Function to approve a theme submission.
  *
- * Security: This function acts as the trusted backend that can write to
- * themes_public. Clients cannot write directly to themes_public per Firestore rules.
+ * This function is protected and can only be successfully called by a user
+ * who has the `admin: true` custom claim.
  *
- * Workflow:
- * 1. User submits theme to themes_submissions (via web app)
- * 2. This function triggers on new submission
- * 3. If theme has no images (hasImages = false), auto-approve and copy to themes_public
- * 4. If theme has images (hasImages = true), leave in themes_submissions for manual review
+ * @param {object} data The data passed to the function.
+ * @param {string} data.themeId The ID of the theme in themes_submissions.
+ * @param {functions.https.CallableContext} context The context of the call.
  */
-export const onThemeSubmitted = onDocumentCreated(
-  "themes_submissions/{themeId}",
-  async (event) => {
-    const snapshot = event.data;
-    if (!snapshot) {
-      console.log("No data associated with the event");
-      return;
+export const approveTheme = functions.https.onCall(async (data, context) => {
+  // 1. Authentication Check
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+        "unauthenticated",
+        "You must be authenticated to call this function.",
+    );
+  }
+
+  // 2. Admin Check
+  const callerClaims = context.auth.token;
+  if (callerClaims.admin !== true) {
+    throw new functions.https.HttpsError(
+        "permission-denied",
+        "You must be an admin to approve themes.",
+    );
+  }
+
+  // 3. Data Validation
+  const themeId = data.themeId;
+  if (!themeId || typeof themeId !== "string") {
+    throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Please provide a valid themeId.",
+    );
+  }
+
+  const db = admin.firestore();
+
+  try {
+    // 4. Get the submission
+    const submissionRef = db.collection("themes_submissions").doc(themeId);
+    const submissionSnap = await submissionRef.get();
+
+    if (!submissionSnap.exists) {
+      throw new functions.https.HttpsError(
+          "not-found",
+          `Theme submission '${themeId}' not found.`,
+      );
     }
 
-    const themeData = snapshot.data();
-    const themeId = event.params.themeId;
+    const themeData = submissionSnap.data();
+    if (!themeData) {
+      throw new functions.https.HttpsError("internal", "Theme data is empty.");
+    }
 
-    console.log(`Theme submitted: ${themeId}`, {
-      hasImages: themeData.hasImages,
-      status: themeData.status,
-      ownerUid: themeData.ownerUid,
+    // 5. Promote to public
+    const publicRef = db.collection("themes_public").doc(themeId);
+
+    // Sanitize/Update status
+    const publicData = {
+      ...themeData,
+      status: "approved",
+      approvedBy: context.auth.uid,
+      approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.runTransaction(async (t) => {
+      t.set(publicRef, publicData);
+      t.delete(submissionRef);
     });
 
-    // Only auto-approve themes without images
-    if (!themeData.hasImages && themeData.status === "pending") {
-      try {
-        const db = admin.firestore();
+    console.log(`Admin ${context.auth.uid} approved theme ${themeId}`);
 
-        // Prepare the approved theme data
-        const approvedThemeData = {
-          ...themeData,
-          status: "approved",
-          approvedAt: admin.firestore.FieldValue.serverTimestamp(),
-          approvedBy: "auto", // Indicates automatic approval
-        };
-
-        // Copy to themes_public collection
-        await db.collection("themes_public").doc(themeId).set(approvedThemeData);
-
-        // Update the submission status
-        await snapshot.ref.update({
-          status: "approved",
-          approvedAt: admin.firestore.FieldValue.serverTimestamp(),
-          approvedBy: "auto",
-        });
-
-        console.log(`Theme ${themeId} auto-approved and published`);
-      } catch (error) {
-        console.error(`Error auto-approving theme ${themeId}:`, error);
-        // Update submission with error status
-        await snapshot.ref.update({
-          status: "error",
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-      }
-    } else if (themeData.hasImages) {
-      console.log(`Theme ${themeId} requires manual review (has images)`);
-      // Theme with images stays in pending status for manual review
+    return {
+      status: "success",
+      message: `Theme ${themeId} approved and published.`,
+    };
+  } catch (error: unknown) {
+    console.error("Error approving theme:", error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
     }
+    throw new functions.https.HttpsError(
+        "internal",
+        "An unexpected error occurred while approving the theme.",
+    );
   }
-);
+});
