@@ -2009,7 +2009,7 @@ function App() {
               <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
               <div>
                 <div className="brand-title">PulseLink Suite</div>
-                <div className="brand-subtitle">Web Command Center</div>
+                <div className="brand-subtitle">Premium Web Access</div>
               </div>
             </div>
             <div className="sidebar-actions">
