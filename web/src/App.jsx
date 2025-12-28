@@ -108,7 +108,6 @@ const areDeviceContactsEqual = (prev, next) => {
   const p = prev.contact;
   const n = next.contact;
   if (p === n) return true; // Reference equality
-  if (!p || !n) return false; // Handle null/undefined
 
   // Shallow checks for simple props
   if (p.id !== n.id) return false;
@@ -160,47 +159,47 @@ DeviceContactItem.displayName = 'DeviceContactItem';
 
 // Bolt: Optimized TrustedContactRow to avoid re-rendering list on parent state changes
 const TrustedContactRow = memo(({ contact, isConfirmingDelete, onEdit, onDeleteRequest, onDeleteConfirm, onDeleteCancel }) => (
-  <div className="contact-row">
+    <div className="contact-row">
     <div className="contact-main">
-      <div className="contact-name">{contact.displayName}</div>
-      <div className="contact-meta">
+        <div className="contact-name">{contact.displayName}</div>
+        <div className="contact-meta">
         {contact.phoneNumber || contact.email || 'No phone or email'}
-      </div>
+        </div>
     </div>
     <div className="contact-actions">
-      <button
+        <button
         className="secondary-btn"
         onClick={() => onEdit(contact)}
         aria-label={`Edit ${contact.displayName}`}
-      >
+        >
         Edit
-      </button>
-      {isConfirmingDelete ? (
-        <button
-          className="secondary-btn"
-          onClick={() => onDeleteConfirm(contact.id)}
-          aria-label={`Confirm remove ${contact.displayName}`}
-          onBlur={onDeleteCancel}
-        >
-          Confirm?
         </button>
-      ) : (
+        {isConfirmingDelete ? (
         <button
-          className="ghost-btn"
-          onClick={() => onDeleteRequest(contact.id)}
-          aria-label={`Remove ${contact.displayName}`}
+            className="secondary-btn"
+            onClick={() => onDeleteConfirm(contact.id)}
+            aria-label={`Confirm remove ${contact.displayName}`}
+            onBlur={onDeleteCancel}
         >
-          Remove
+            Confirm?
         </button>
-      )}
+        ) : (
+        <button
+            className="ghost-btn"
+            onClick={() => onDeleteRequest(contact.id)}
+            aria-label={`Remove ${contact.displayName}`}
+        >
+            Remove
+        </button>
+        )}
     </div>
-  </div>
+    </div>
 ), (prev, next) => {
-  return prev.isConfirmingDelete === next.isConfirmingDelete &&
-         prev.contact.id === next.contact.id &&
-         prev.contact.displayName === next.contact.displayName &&
-         prev.contact.phoneNumber === next.contact.phoneNumber &&
-         prev.contact.email === next.contact.email;
+    return prev.isConfirmingDelete === next.isConfirmingDelete &&
+           prev.contact.id === next.contact.id &&
+           prev.contact.displayName === next.contact.displayName &&
+           prev.contact.phoneNumber === next.contact.phoneNumber &&
+           prev.contact.email === next.contact.email;
 });
 
 TrustedContactRow.displayName = 'TrustedContactRow';
@@ -225,51 +224,50 @@ const buildAlertSnippet = (body = '') => {
 
 // Bolt: Optimized MapAlertItem to prevent re-renders of the alert list
 const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
-  <div
-    className={`map-item ${isActive ? 'active' : ''}`}
-    onClick={() => onFocus(alert)}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onFocus(alert);
-      }
-    }}
-  >
-    <div className="map-item-header">
-      <div className="map-item-title">{alert.address}</div>
-      <span
-        className="map-badge"
-        style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-      >
-        {alertBadgeCopy[alert.severity] ?? 'Alert'}
-      </span>
-    </div>
-    <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-    <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-    <div className="map-item-actions">
-      <button
-        className="secondary-btn"
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onClear(alert.id);
+    <div
+        className={`map-item ${isActive ? 'active' : ''}`}
+        onClick={() => onFocus(alert)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onFocus(alert);
+        }
         }}
-      >
-        Clear
-      </button>
+    >
+        <div className="map-item-header">
+        <div className="map-item-title">{alert.address}</div>
+        <span
+            className="map-badge"
+            style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+        >
+            {alertBadgeCopy[alert.severity] ?? 'Alert'}
+        </span>
+        </div>
+        <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+        <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+        <div className="map-item-actions">
+        <button
+            className="secondary-btn"
+            type="button"
+            onClick={(event) => {
+            event.stopPropagation();
+            onClear(alert.id);
+            }}
+        >
+            Clear
+        </button>
+        </div>
     </div>
-  </div>
 ), (prev, next) => {
-  return prev.isActive === next.isActive &&
-         prev.alert.id === next.alert.id &&
-         prev.alert.address === next.alert.address &&
-         prev.alert.severity === next.alert.severity &&
-         prev.alert.date === next.alert.date &&
-         prev.alert.body === next.alert.body;
+    return prev.isActive === next.isActive &&
+           prev.alert.id === next.alert.id &&
+           prev.alert.address === next.alert.address &&
+           prev.alert.severity === next.alert.severity &&
+           prev.alert.date === next.alert.date &&
+           prev.alert.body === next.alert.body;
 });
-
 MapAlertItem.displayName = 'MapAlertItem';
 
 const defaultTheme = {
@@ -1594,6 +1592,7 @@ function App() {
     mapInstanceRef.current.fitBounds(bounds);
   }, [filteredAlerts, userLocation, defaultMapCenter]);
 
+  // Bolt: Wrap handlers in useCallback to ensure stable references for React.memo
   const handleAlertFocus = useCallback((alert) => {
     setSelectedAlertId(alert.id);
     if (!mapInstanceRef.current || !window.google?.maps) return;
@@ -1624,7 +1623,8 @@ function App() {
   }, []);
 
   const handleClearAlert = useCallback(async (alertId) => {
-    if (!user) return;
+    if (!user) return; // user is in closure, but user.uid might change. Actually, user ref might change.
+    // To be safe, add user as dependency.
     try {
       await setDoc(
         doc(db, "users", user.uid, "emergencyLocations", alertId),
@@ -1834,6 +1834,7 @@ function App() {
     }
   }, [user]);
 
+  // Stable handlers for TrustedContactRow
   const handleDeleteConfirm = useCallback((id) => {
     handleDeleteContact(id);
     setConfirmDeleteId(null);
@@ -2041,6 +2042,12 @@ function App() {
       setIsSending(false);
     }
   };
+
+  // Bolt: Stable handler to prevent ghost content when switching threads
+  const handleThreadSelect = useCallback((thread) => {
+    setMessages([]); // Clear previous messages immediately
+    setSelectedThread(thread);
+  }, []);
 
   if (!user) {
     return (
@@ -2258,7 +2265,7 @@ function App() {
                     key={thread.id}
                     thread={thread}
                     isActive={selectedThread?.id === thread.id}
-                    onSelect={setSelectedThread}
+                    onSelect={handleThreadSelect}
                     showPreviews={showPreviews}
                   />
                 ))
