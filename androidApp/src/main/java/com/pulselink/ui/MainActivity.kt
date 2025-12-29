@@ -763,7 +763,7 @@ class MainActivity : AppCompatActivity() {
                     ) {
                         NavHost(navController = navController, startDestination = startDestination) {
                     composable("splash") {
-                        SplashScreen()
+                        SplashScreen(useProBranding = state.isProUser)
                         LaunchedEffect(authState, state.onboardingComplete) {
                             if (authState is AuthState.Loading) return@LaunchedEffect
                             delay(1200)
@@ -813,15 +813,16 @@ class MainActivity : AppCompatActivity() {
 
                         LoginScreen(
                             state = loginUiState,
-                            onEmailChange = loginViewModel::updateEmail,
-                            onPasswordChange = loginViewModel::updatePassword,
+                            onEmailChange = loginViewModel::updateEmail,        
+                            onPasswordChange = loginViewModel::updatePassword,  
                             onConfirmPasswordChange = loginViewModel::updateConfirmPassword,
                             onSubmit = loginViewModel::submit,
                             onToggleMode = loginViewModel::toggleMode,
                             onForgotPassword = loginViewModel::sendPasswordReset,
                             onSmsOnlyClick = loginViewModel::signInSmsOnly,
                             onGoogleClick = { googleLauncher.launch(googleClient.signInIntent) },
-                            onMessageConsumed = loginViewModel::clearTransientMessages
+                            onMessageConsumed = loginViewModel::clearTransientMessages,
+                            useProBranding = state.isProUser
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
                             val authenticated = authState as? AuthState.Authenticated
