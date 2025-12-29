@@ -940,6 +940,7 @@ function App() {
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
+  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
 
@@ -989,6 +990,7 @@ function App() {
 
   const handleSpotifySearch = async () => {
     if (!spotifySearch.trim()) return;
+    setIsSearchingSpotify(true);
     setSettingsStatus("Searching...");
     try {
         let token = spotifyToken;
@@ -1015,6 +1017,8 @@ function App() {
         setSettingsStatus("");
     } catch (e) {
         setSettingsStatus("Search failed: " + e.message);
+    } finally {
+        setIsSearchingSpotify(false);
     }
   };
 
@@ -2666,11 +2670,19 @@ function App() {
                             <input
                                 className="login-input"
                                 placeholder="Search Spotify for songs..."
+                                aria-label="Search Spotify for songs"
                                 value={spotifySearch}
                                 onChange={(e) => setSpotifySearch(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
                             />
-                            <button className="primary-btn" onClick={handleSpotifySearch}>Search</button>
+                            <button
+                                className="primary-btn"
+                                onClick={handleSpotifySearch}
+                                disabled={isSearchingSpotify}
+                                aria-busy={isSearchingSpotify}
+                            >
+                                {isSearchingSpotify ? "Searching..." : "Search"}
+                            </button>
                         </div>
                     </div>
 
