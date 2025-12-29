@@ -142,7 +142,8 @@ fun SmsInboxScreen(
     showLinePicker: Boolean = false,
     onImportAll: () -> Unit = {},
     archivedOnly: Boolean = false,
-    isDatabaseBusy: Boolean = false
+    isDatabaseBusy: Boolean = false,
+    onLoadMore: () -> Unit = {}
 ) {
     var filter by rememberSaveable(archivedOnly) {
         mutableStateOf(if (archivedOnly) InboxFilter.ARCHIVED else InboxFilter.ALL)
@@ -559,6 +560,18 @@ fun SmsInboxScreen(
                             lineCount = orderedLines.size,
                             actionsEnabled = isLocalLine
                         )
+                    }
+                    if (filtered.size >= 50) {
+                         item {
+                             Box(
+                                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                 contentAlignment = Alignment.Center
+                             ) {
+                                 OutlinedButton(onClick = onLoadMore) {
+                                     Text("Load more conversations")
+                                 }
+                             }
+                         }
                     }
                 }
             }

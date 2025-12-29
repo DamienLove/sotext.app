@@ -119,7 +119,8 @@ fun SmsThreadScreen(
     onRequestCompose: (AiComposeAction, String?, String?) -> Unit = { _, _, _ -> },
     onClearCompose: () -> Unit = {},
     aiSummaryEnabled: Boolean = false,
-    aiComposeEnabled: Boolean = false
+    aiComposeEnabled: Boolean = false,
+    onLoadMore: () -> Unit = {}
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -325,19 +326,10 @@ fun SmsThreadScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
+                reverseLayout = true,
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (aiSummaryEnabled) {
-                    item {
-                        AiSummaryCard(
-                            state = aiSummaryState,
-                            onGenerate = onRequestSummary,
-                            onClear = onClearSummary,
-                            theme = effectiveTheme
-                        )
-                    }
-                }
                 if (messages.isEmpty() && isDatabaseBusy) {
                     items(6) { index ->
                         MessageBubbleSkeleton(
@@ -356,6 +348,28 @@ fun SmsThreadScreen(
                         )
                     }
                 }
+                if (messages.size >= 50) {
+                     item {
+                         Box(
+                             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                             contentAlignment = Alignment.Center
+                         ) {
+                             OutlinedButton(onClick = onLoadMore) {
+                                 Text("Load older messages")
+                             }
+                         }
+                     }
+                }
+                if (aiSummaryEnabled) {
+                    item {
+                        AiSummaryCard(
+                            state = aiSummaryState,
+                            onGenerate = onRequestSummary,
+                            onClear = onClearSummary,
+                            theme = effectiveTheme
+                        )
+                    }
+                }
             }
         }
     }
@@ -363,7 +377,7 @@ fun SmsThreadScreen(
     LaunchedEffect(messages.size) {
         if (messages.isEmpty()) return@LaunchedEffect
         if (!initialScrollDone || isNearBottom) {
-            listState.animateScrollToItem(0)  // Scroll to index 0 (most recent message, since messages are sorted DESC by date)
+            listState.animateScrollToItem(0)
             initialScrollDone = true
         }
     }
