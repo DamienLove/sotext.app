@@ -14,6 +14,7 @@ final class BeaconViewModel: ObservableObject {
     private var provider: BeaconConversationProvider
     private var threadsListener: ListenerRegistration?
     private var activeMessageListener: ListenerRegistration?
+    private var currentListeningUserId: String?
 
     init() {
         // Initial provider setup
@@ -35,15 +36,24 @@ final class BeaconViewModel: ObservableObject {
                     guard let self = self else { return }
                     if let uid = user?.uid {
                         self.isLoggedIn = true
-                        self.provider = FirestoreBeaconConversationProvider(userId: uid)
-                        self.startListeningToThreads()
+                        // Only update provider and restart listeners if user changed
+                        if self.currentListeningUserId != uid {
+                            self.currentListeningUserId = uid
+                            self.provider = FirestoreBeaconConversationProvider(userId: uid)
+                            self.startListeningToThreads()
+                        }
                     } else {
                         self.isLoggedIn = false
+                        self.currentListeningUserId = nil
                         self.threadsListener?.remove()
+                        self.threadsListener = nil
                         self.activeMessageListener?.remove()
+                        self.activeMessageListener = nil
                         self.provider = MockBeaconConversationProvider()
                         self.contacts = []
                         self.conversations = [:]
+                        // Restart listening with mock provider to keep UI consistent
+                        self.startListeningToThreads()
                     }
                 }
             }
@@ -57,8 +67,10 @@ final class BeaconViewModel: ObservableObject {
     private func startListeningToThreads() {
         threadsListener?.remove()
         threadsListener = provider.listenToConversations { [weak self] newContacts in
+            // Sort on background queue to avoid blocking UI
+            let sorted = newContacts.sorted(by: { $0.unread > $1.unread })
             DispatchQueue.main.async {
-                self?.contacts = newContacts.sorted(by: { $0.unread > $1.unread })
+                self?.contacts = sorted
             }
         }
     }
@@ -86,9 +98,26 @@ final class BeaconViewModel: ObservableObject {
     }
 
     func sendMessage(to contact: BeaconContactCard, text: String) {
+        // Validate message content
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else {
+            statusText = "Cannot send empty message"
+            return
+        }
+
+        // Limit message length (10,000 chars for safety)
+        let maxLength = 10000
+        let finalText = trimmedText.count > maxLength
+            ? String(trimmedText.prefix(maxLength))
+            : trimmedText
+
+        if trimmedText.count > maxLength {
+            print("⚠️ Message truncated from \(trimmedText.count) to \(maxLength) characters")
+        }
+
         let message = BeaconConversationMessage(
             sender: "You",
-            text: text,
+            text: finalText,
             timestamp: Date(),
             isIncoming: false,
             isUrgent: false
@@ -97,18 +126,13 @@ final class BeaconViewModel: ObservableObject {
         Task {
             do {
                 try await provider.send(message: message, to: contact)
-                // Only optimistic update if send didn't throw
+                // Rely entirely on listener for UI updates (no optimistic update)
+                // This prevents race conditions and duplicate messages
                 await MainActor.run {
-                    if activeMessageListener == nil {
-                        var msgs = conversations[contact.id] ?? []
-                        msgs.append(message)
-                        conversations[contact.id] = msgs
-                    }
                     statusText = nil
                 }
             } catch {
                 await MainActor.run {
-                    // For now we just log, or bind this to a UI alert if ContentView supports it
                     statusText = "Error sending: \(error.localizedDescription)"
                     print("Error sending message: \(error)")
                 }

@@ -28,8 +28,8 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
     private var store: [BeaconContactCard: [BeaconConversationMessage]] = [:]
 
     init() {
-        let c1 = BeaconContactCard(threadId: "1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false)
-        let c2 = BeaconContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
+        let c1 = BeaconContactCard(threadId: "mock-thread-1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false)
+        let c2 = BeaconContactCard(threadId: "mock-thread-2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
 
         store[c1] = [
             BeaconConversationMessage(sender: "Alex", text: "Hey, how are you?", timestamp: Date().addingTimeInterval(-3600), isIncoming: true, isUrgent: false),
@@ -128,7 +128,15 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
 
     func listenToConversations(onChange: @escaping ([BeaconContactCard]) -> Void) -> ListenerRegistration? {
         return threadsCollection.addSnapshotListener { snapshot, error in
-            guard let documents = snapshot?.documents else { return }
+            if let error = error {
+                print("❌ Error listening to threads: \(error.localizedDescription)")
+                return
+            }
+
+            guard let documents = snapshot?.documents else {
+                print("⚠️ No documents in threads snapshot")
+                return
+            }
 
             let contacts = documents.compactMap { doc -> BeaconContactCard? in
                 let data = doc.data()
@@ -157,17 +165,38 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
             .order(by: "date", descending: false)
             .limit(to: 50)
             .addSnapshotListener { snapshot, error in
-                guard let documents = snapshot?.documents else { return }
+                if let error = error {
+                    print("❌ Error listening to messages for \(contact.name): \(error.localizedDescription)")
+                    return
+                }
+
+                guard let documents = snapshot?.documents else {
+                    print("⚠️ No documents in messages snapshot for \(contact.name)")
+                    return
+                }
 
                 let messages = documents.compactMap { doc -> BeaconConversationMessage? in
                     let data = doc.data()
+
+                    // Validate required fields
+                    guard let timestamp = data["date"] as? Int64,
+                          timestamp > 0 else {
+                        print("⚠️ Skipping message with invalid/missing timestamp in doc: \(doc.documentID)")
+                        return nil
+                    }
+
+                    guard let body = data["body"] as? String,
+                          !body.isEmpty else {
+                        print("⚠️ Skipping message with invalid/missing body in doc: \(doc.documentID)")
+                        return nil
+                    }
+
                     let type = data["type"] as? Int ?? 1
-                    let timestamp = data["date"] as? Int64 ?? 0
                     let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
 
                     return BeaconConversationMessage(
                         sender: type == 1 ? contact.address : "You",
-                        text: data["body"] as? String ?? "",
+                        text: body,
                         timestamp: date,
                         isIncoming: type == 1,
                         isUrgent: false

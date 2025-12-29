@@ -35,8 +35,8 @@ final class InMemoryConversationProvider: ConversationProvider {
     init(seed: [ContactCard: [ConversationMessage]] = [:]) {
         // If seed is empty, provide some mock data compatible with new fields
         if seed.isEmpty {
-            let c1 = ContactCard(threadId: "1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false)
-            let c2 = ContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
+            let c1 = ContactCard(threadId: "mock-thread-1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false)
+            let c2 = ContactCard(threadId: "mock-thread-2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
             store = [
                 c1: [],
                 c2: []
@@ -141,8 +141,13 @@ final class FirestoreConversationProvider: ConversationProvider {
 
     func listenToConversations(onChange: @escaping ([ContactCard]) -> Void) -> ListenerRegistration? {
         return threadsCollection.addSnapshotListener { snapshot, error in
+            if let error = error {
+                print("❌ Error listening to threads: \(error.localizedDescription)")
+                return
+            }
+
             guard let documents = snapshot?.documents else {
-                print("Error listening to threads: \(error?.localizedDescription ?? "Unknown")")
+                print("⚠️ No documents in threads snapshot")
                 return
             }
 
@@ -173,20 +178,38 @@ final class FirestoreConversationProvider: ConversationProvider {
             .order(by: "date", descending: false)
             .limit(to: 50)
             .addSnapshotListener { snapshot, error in
+                if let error = error {
+                    print("❌ Error listening to messages for \(contact.name): \(error.localizedDescription)")
+                    return
+                }
+
                 guard let documents = snapshot?.documents else {
-                    print("Error listening to messages: \(error?.localizedDescription ?? "Unknown")")
+                    print("⚠️ No documents in messages snapshot for \(contact.name)")
                     return
                 }
 
                 let messages = documents.compactMap { doc -> ConversationMessage? in
                     let data = doc.data()
+
+                    // Validate required fields
+                    guard let timestamp = data["date"] as? Int64,
+                          timestamp > 0 else {
+                        print("⚠️ Skipping message with invalid/missing timestamp in doc: \(doc.documentID)")
+                        return nil
+                    }
+
+                    guard let body = data["body"] as? String,
+                          !body.isEmpty else {
+                        print("⚠️ Skipping message with invalid/missing body in doc: \(doc.documentID)")
+                        return nil
+                    }
+
                     let type = data["type"] as? Int ?? 1
-                    let timestamp = data["date"] as? Int64 ?? 0
                     let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
 
                     return ConversationMessage(
                         sender: type == 1 ? contact.address : "You",
-                        text: data["body"] as? String ?? "",
+                        text: body,
                         timestamp: date,
                         isIncoming: type == 1,
                         isUrgent: false
