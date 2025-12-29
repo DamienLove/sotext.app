@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2025-12-29: Trimmed Spotify SDK sample/docs from RingerSong to shrink repo; kept only spotify-app-remote-release-0.8.0.aar and added libs/README with re-download steps. Added runtime pro-branding toggle so free users with active premium sub see Pro (gold) logo and styling in splash/login; branding follows premiumUnlocked/proUnlocked state.
 - 2025-12-29: Deployed billing functions verifySubscription/getPremiumStatus/handlePlayStoreRTDN with Play config (package com.free.pulselink, service account key pulselink-24899-3c6465ae9de2.json) set via firebase functions:config. Build succeeded after excluding test files from TS compile.
 - 2025-12-29: Bumped PulseLink versionCode/Name to 90 (free/pro/premium) and Ring-erSong versionCode/Name to 18; built new bundles: androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab, androidApp/build/outputs/bundle/proRelease/androidApp-pro-release.aab, ringersong/build/outputs/bundle/release/ringersong-release.aab. Hosted web app redeployed via firebase deploy --only hosting (pulselink-24899.web.app).
 - 2025-12-29: Web app switched from mock login to real App.jsx; fixed map alert list render error and redeployed hosting (pulselink-24899.web.app).
