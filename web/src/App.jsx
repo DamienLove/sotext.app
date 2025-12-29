@@ -41,6 +41,8 @@ import blueprintBg from './assets/themes/blueprint.svg';
 import glitchBg from './assets/themes/glitch_stream.svg';
 import oakBg from './assets/themes/legacy_oak.svg';
 import eternalBg from './assets/themes/eternal_sky.svg';
+import cyberMistBg from './assets/themes/cyber_mist.svg';
+import deepOceanBg from './assets/themes/deep_ocean.svg';
 import premiumAvatar from './assets/avatars/premium_crown.svg';
 import proAvatar from './assets/avatars/pro_spark.svg';
 import betaAvatar from './assets/avatars/beta_flask.svg';
@@ -472,6 +474,46 @@ const themePresets = [
       secondaryColor: "#6366F1",
       dividerColor: "#312E81",
       inboxIconVariant: "lavender_haze"
+    }
+  },
+  {
+    name: "Cyber Mist",
+    theme: {
+      fontStyle: "Monospace",
+      bubbleCornerRadius: 18,
+      backgroundColor: "#1e1b4b",
+      onBackground: "#e879f9",
+      topBarColor: "#2e1065",
+      onTopBarColor: "#e879f9",
+      bubbleOutgoing: "#d946ef",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#4c1d95",
+      onBubbleIncoming: "#e879f9",
+      primaryColor: "#d946ef",
+      secondaryColor: "#06b6d4",
+      dividerColor: "#4c1d95",
+      inboxIconVariant: "midnight_oled",
+      backgroundImageUrl: cyberMistBg
+    }
+  },
+  {
+    name: "Deep Ocean",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 24,
+      backgroundColor: "#0f172a",
+      onBackground: "#e0f2fe",
+      topBarColor: "#1e3a8a",
+      onTopBarColor: "#e0f2fe",
+      bubbleOutgoing: "#0ea5e9",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#172554",
+      onBubbleIncoming: "#38bdf8",
+      primaryColor: "#0ea5e9",
+      secondaryColor: "#38bdf8",
+      dividerColor: "#1e3a8a",
+      inboxIconVariant: "ocean_deep",
+      backgroundImageUrl: deepOceanBg
     }
   }
 ];
