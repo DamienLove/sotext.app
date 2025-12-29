@@ -45,17 +45,16 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
-      // Allow syncing lines data which contains thread backups as well
-      // This supports device/line-based organization for premium web access
+      // Allow syncing lines data which contains thread backups as well (Supports both legacy and new sync architectures)
       match /lines/{lineId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
 
         match /threads/{threadId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId;
+           allow read, write: if request.auth != null && request.auth.uid == userId;
 
-          match /messages/{messageId} {
-            allow read, write: if request.auth != null && request.auth.uid == userId;
-          }
+           match /messages/{messageId} {
+             allow read, write: if request.auth != null && request.auth.uid == userId;
+           }
         }
       }
     }
