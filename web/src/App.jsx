@@ -907,6 +907,7 @@ function App() {
     backgroundImageUrl: ''
   });
   const [themePublishStatus, setThemePublishStatus] = useState('');
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
@@ -1146,6 +1147,7 @@ function App() {
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
       const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
+      setIsPremiumUser(isPremium);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
       const isLoyal = tenureDays > 365;
@@ -1234,7 +1236,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
+    if (user && isPremiumUser) {
       // Listen to threads
       // Assuming structure: users/{uid}/synced_threads/{threadId}
       const threadsRef = collection(db, "users", user.uid, "synced_threads");
@@ -1250,7 +1252,7 @@ function App() {
     } else {
       setThreads([]);
     }
-  }, [user]);
+  }, [user, isPremiumUser]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -1273,7 +1275,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (user && selectedThread) {
+    if (user && selectedThread && isPremiumUser) {
       // Listen to messages
       const messagesRef = collection(db, "users", user.uid, "synced_threads", selectedThread.id, "messages");
       const q = query(messagesRef, orderBy("date", "asc"));
@@ -1288,7 +1290,7 @@ function App() {
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread]);
+  }, [user, selectedThread, isPremiumUser]);
 
   useEffect(() => {
     if (selectedThread?.address) {
@@ -2107,13 +2109,22 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
+              {!isPremiumUser ? (
+                 <div className="sidebar-placeholder">
+                   <div className="sidebar-tip muted">
+                     Premium Required
+                   </div>
+                   <div className="sidebar-tip muted">
+                     Upgrade to Premium to access your messages on the web.
+                   </div>
+                 </div>
+              ) : threads.length === 0 ? (
                 <div className="sidebar-placeholder">
                   <div className="sidebar-tip muted">
                     No conversations found.
                   </div>
                   <div className="sidebar-tip muted">
-                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings.
                   </div>
                 </div>
               ) : (
@@ -2451,7 +2462,6 @@ function App() {
                 <input
                   className="login-input contact-search"
                   placeholder="Search by name, phone, or email"
-                  aria-label="Search contacts"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
                 />
@@ -3038,7 +3048,6 @@ function App() {
                   <textarea
                     className="composer-textarea"
                     placeholder="Type a message..."
-                    aria-label="Message body"
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
                   />
