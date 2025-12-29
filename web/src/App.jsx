@@ -54,6 +54,8 @@ const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none
 const ThemeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>;
 const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
+const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
 
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
@@ -896,7 +898,6 @@ function App() {
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
   const [themeStatus, setThemeStatus] = useState('');
   const [publicThemes, setPublicThemes] = useState([]);
-  // const [unlockedThemes, setUnlockedThemes] = useState([]); // Removed unused state
   const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
   const [themeSearch, setThemeSearch] = useState('');
   const [themePublishForm, setThemePublishForm] = useState({
@@ -907,7 +908,6 @@ function App() {
     backgroundImageUrl: ''
   });
   const [themePublishStatus, setThemePublishStatus] = useState('');
-  const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
@@ -1059,6 +1059,7 @@ function App() {
   const mapInfoRef = useRef(null);
   const mapHomeMarkerRef = useRef(null);
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
 
   // Fix for undefined function causing crash/lint error
@@ -1150,7 +1151,6 @@ function App() {
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
       const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
-      setIsPremiumUser(isPremium);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
       const isLoyal = tenureDays > 365;
@@ -1186,9 +1186,8 @@ function App() {
       const updates = {};
       if (newUnlocks.length > 0) {
         updates.unlockedThemeIds = [...currentUnlockedIds, ...newUnlocks];
-      } else {
-        // setUnlockedThemes(specialThemePresets.filter(p => currentUnlockedIds.includes(p.id)));
       }
+      // Removed unused setUnlockedThemes call
 
       if (newAvatarUnlocks.length > 0) {
         updates.unlockedAvatarIds = [...currentUnlockedAvatars, ...newAvatarUnlocks];
@@ -1239,7 +1238,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    if (user && isPremiumUser) {
+    if (user) {
       // Listen to threads
       // Assuming structure: users/{uid}/synced_threads/{threadId}
       const threadsRef = collection(db, "users", user.uid, "synced_threads");
@@ -1255,7 +1254,7 @@ function App() {
     } else {
       setThreads([]);
     }
-  }, [user, isPremiumUser]);
+  }, [user]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -1278,7 +1277,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (user && selectedThread && isPremiumUser) {
+    if (user && selectedThread) {
       // Listen to messages
       const messagesRef = collection(db, "users", user.uid, "synced_threads", selectedThread.id, "messages");
       const q = query(messagesRef, orderBy("date", "asc"));
@@ -1293,7 +1292,7 @@ function App() {
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread, isPremiumUser]);
+  }, [user, selectedThread]);
 
   useEffect(() => {
     if (selectedThread?.address) {
@@ -1377,7 +1376,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, mapsApiKey]);
+  }, [activePanel, mapsApiKey, defaultMapCenter]);
 
   useEffect(() => {
     if (activePanel !== 'map') return;
@@ -1470,7 +1469,7 @@ function App() {
       bounds.extend({ lat: alert.lat, lng: alert.lng });
     });
     mapInstanceRef.current.fitBounds(bounds);
-  }, [filteredAlerts, userLocation]);
+  }, [filteredAlerts, userLocation, defaultMapCenter]);
 
   const handleAlertFocus = (alert) => {
     setSelectedAlertId(alert.id);
@@ -1972,7 +1971,6 @@ function App() {
                   aria-busy={isLoggingIn}
                   className="primary-btn"
                 >
-                  {isLoggingIn ? <span className="spinner" aria-hidden="true" /> : null}
                   {isLoggingIn ? 'Signing in...' : 'Sign in'}
                 </button>
                 <button
@@ -1998,7 +1996,6 @@ function App() {
                 aria-busy={isLoggingIn}
                 className="primary-btn"
               >
-                {isLoggingIn ? <span className="spinner" aria-hidden="true" /> : null}
                 {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
               </button>
             </div>
@@ -2116,22 +2113,13 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {!isPremiumUser ? (
-                 <div className="sidebar-placeholder">
-                   <div className="sidebar-tip muted">
-                     Premium Required
-                   </div>
-                   <div className="sidebar-tip muted">
-                     Upgrade to Premium to access your messages on the web.
-                   </div>
-                 </div>
-              ) : threads.length === 0 ? (
+              {threads.length === 0 ? (
                 <div className="sidebar-placeholder">
                   <div className="sidebar-tip muted">
                     No conversations found.
                   </div>
                   <div className="sidebar-tip muted">
-                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings.
+                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
                   </div>
                 </div>
               ) : (
@@ -2260,8 +2248,9 @@ function App() {
                           className={`theme-chip`}
                           style={{ padding: 0, borderRadius: '50%', width: 40, height: 40, justifyContent: 'center' }}
                           title="Use Custom URL"
+                          aria-label="Use custom avatar URL"
                         >
-                          ❌
+                          <LinkIcon />
                         </button>
                       </div>
                     )}
@@ -2304,7 +2293,6 @@ function App() {
                     onClick={handleProfileSave}
                     disabled={isSavingProfile}
                   >
-                    {isSavingProfile ? <span className="spinner" aria-hidden="true" /> : null}
                     {isSavingProfile ? 'Saving...' : 'Save profile'}
                   </button>
                   {profileStatus && <div className="settings-status" role="status" aria-live="polite">{profileStatus}</div>}
@@ -2470,6 +2458,7 @@ function App() {
                 <input
                   className="login-input contact-search"
                   placeholder="Search by name, phone, or email"
+                  aria-label="Search contacts"
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
                 />
@@ -2650,14 +2639,14 @@ function App() {
                                         <div className="song-title">{song.title}</div>
                                         <div className="song-artist">{song.artist}</div>
                                     </div>
-                                    <button 
-                                        className="ghost-btn icon-only" 
+                                    <button
+                                        className="ghost-btn icon-only"
                                         onClick={() => handleDeleteRingerSong(song.id)}
                                         title="Remove from playlist"
                                         aria-label={`Remove ${song.title} from playlist`}
                                         style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
                                     >
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        <TrashIcon />
                                     </button>
                                 </div>
                             ))}
@@ -3066,6 +3055,7 @@ function App() {
                   <textarea
                     className="composer-textarea"
                     placeholder="Type a message..."
+                    aria-label="Message body"
                     value={composeBody}
                     onChange={(e) => setComposeBody(e.target.value)}
                   />
@@ -3074,7 +3064,6 @@ function App() {
                     disabled={isSending || isLoggingIn}
                     className="primary-btn"
                   >
-                    {isSending ? <span className="spinner" aria-hidden="true" /> : null}
                     {isSending ? "Sending..." : "Send"}
                   </button>
                 </div>
