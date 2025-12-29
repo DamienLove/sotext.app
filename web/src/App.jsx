@@ -1914,7 +1914,8 @@ function App() {
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
-        <div className="container login-container">
+        <a href="#main-content" className="skip-link">Skip to main content</a>
+        <div className="container login-container" id="main-content">
           <div className="login-card">
             <img src={logo} alt="PulseLink Pro" className="brand-logo" />
             <h1>PulseLink Web</h1>
@@ -2009,6 +2010,7 @@ function App() {
 
   return (
     <div className="app-shell" style={themeVars}>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
         <div className="sidebar">
           <div className="sidebar-header">
@@ -2151,7 +2153,7 @@ function App() {
             </div>
           )}
         </div>
-        <div className="main-content">
+        <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
               <div className="home-hero">
