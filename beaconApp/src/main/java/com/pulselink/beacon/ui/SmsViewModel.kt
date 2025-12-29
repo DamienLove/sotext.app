@@ -46,16 +46,24 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var currentFilter by mutableStateOf(InboxFilter.ALL)
         private set
 
+    // Track inbox state locally to pass to sync methods
+    private var inboxState = InboxState()
+
     init {
-        refreshThreads()
+        // Collect inbox state and trigger refresh
+        viewModelScope.launch {
+            repo.inboxStateFlow.collectLatest { state ->
+                inboxState = state
+                refreshThreads()
+            }
+        }
+
+        // Listen for DB changes
         viewModelScope.launch {
             repo.changes().collectLatest {
                 refreshThreads()
                 currentThreadId?.let { refreshThread(it, refreshRead = false) }
             }
-        }
-        viewModelScope.launch {
-            repo.collectInboxState()
         }
     }
 
@@ -66,9 +74,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshThreads() {
         threads = if (currentFilter == InboxFilter.ARCHIVED) {
-            runCatching { repo.listArchivedThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+            runCatching { repo.listArchivedThreads(limit = THREAD_LIMIT, state = inboxState) }.getOrElse { emptyList() }
         } else {
-            runCatching { repo.listInboxThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+            runCatching { repo.listInboxThreads(limit = THREAD_LIMIT, state = inboxState) }.getOrElse { emptyList() }
         }
     }
 
