@@ -1055,7 +1055,6 @@ function App() {
   const mapInfoRef = useRef(null);
   const mapHomeMarkerRef = useRef(null);
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
   const themeVars = useMemo(() => buildThemeVars(themePrefs), [themePrefs]);
 
   // Fix for undefined function causing crash/lint error
@@ -1374,7 +1373,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [activePanel, mapsApiKey, defaultMapCenter]);
+  }, [activePanel, mapsApiKey]);
 
   useEffect(() => {
     if (activePanel !== 'map') return;
@@ -1467,7 +1466,7 @@ function App() {
       bounds.extend({ lat: alert.lat, lng: alert.lng });
     });
     mapInstanceRef.current.fitBounds(bounds);
-  }, [filteredAlerts, userLocation, defaultMapCenter]);
+  }, [filteredAlerts, userLocation]);
 
   const handleAlertFocus = (alert) => {
     setSelectedAlertId(alert.id);
@@ -1968,6 +1967,7 @@ function App() {
                   aria-busy={isLoggingIn}
                   className="primary-btn"
                 >
+                  {isLoggingIn ? <span className="spinner" aria-hidden="true" /> : null}
                   {isLoggingIn ? 'Signing in...' : 'Sign in'}
                 </button>
                 <button
@@ -1993,6 +1993,7 @@ function App() {
                 aria-busy={isLoggingIn}
                 className="primary-btn"
               >
+                {isLoggingIn ? <span className="spinner" aria-hidden="true" /> : null}
                 {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
               </button>
             </div>
@@ -2297,6 +2298,7 @@ function App() {
                     onClick={handleProfileSave}
                     disabled={isSavingProfile}
                   >
+                    {isSavingProfile ? <span className="spinner" aria-hidden="true" /> : null}
                     {isSavingProfile ? 'Saving...' : 'Save profile'}
                   </button>
                   {profileStatus && <div className="settings-status" role="status" aria-live="polite">{profileStatus}</div>}
@@ -3056,6 +3058,7 @@ function App() {
                     disabled={isSending || isLoggingIn}
                     className="primary-btn"
                   >
+                    {isSending ? <span className="spinner" aria-hidden="true" /> : null}
                     {isSending ? "Sending..." : "Send"}
                   </button>
                 </div>
