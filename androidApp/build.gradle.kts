@@ -221,8 +221,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 89
-        versionName = "89"
+        versionCode = 90
+        versionName = "90"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "google_maps_key", mapsApiKey)
@@ -290,7 +290,7 @@ android {
             buildConfigField("boolean", "ADS_ENABLED", "true")
             buildConfigField("boolean", "PRO_FEATURES", "false")
             buildConfigField("boolean", "PREMIUM_FEATURES", "false")
-            buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "false")
+            buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "true")
             buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
             buildConfigField("String", "AD_APP_ID", "\"ca-app-pub-5327057757821609~9533221188\"")
             buildConfigField("String", "AD_UNIT_BANNER", "\"ca-app-pub-5327057757821609/3955684775\"")
@@ -298,8 +298,8 @@ android {
             buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"ca-app-pub-5327057757821609/8428571815\"")
             buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"ca-app-pub-5327057757821609/2153424615\"")
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"ca-app-pub-5327057757821609/4210125201\"")
-            buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"\"")
-            buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"\"")
+            buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"pulselink_premium_monthly\"")
+            buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"pulselink_premium_yearly\"")
             resValue("string", "app_name", "PulseLink Beacon")
             val targetSigning = when {
                 freeSigningSpec.isConfigured -> freeReleaseConfig
@@ -319,7 +319,7 @@ android {
             buildConfigField("boolean", "ADS_ENABLED", "false")
             buildConfigField("boolean", "PRO_FEATURES", "true")
             buildConfigField("boolean", "PREMIUM_FEATURES", "false")
-            buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "false")
+            buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "true")        
             buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
             buildConfigField("String", "AD_APP_ID", "\"\"")
             buildConfigField("String", "AD_UNIT_BANNER", "\"\"")
@@ -327,8 +327,8 @@ android {
             buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"\"")
             buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"\"")
             buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
-            buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"\"")
-            buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"\"")
+            buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"pulselink_premium_monthly\"")
+            buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"pulselink_premium_yearly\"")
             resValue("string", "app_name", "PulseLink Pro")
             val targetSigning = when {
                 proSigningSpec.isConfigured -> proReleaseConfig

@@ -25,8 +25,8 @@ android {
         applicationId = "com.RingerSong.free"
         minSdk = 35
         targetSdk = 35
-        versionCode = 17
-        versionName = "4.6"
+        versionCode = 18
+        versionName = "18"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
