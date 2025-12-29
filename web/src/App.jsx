@@ -1909,7 +1909,8 @@ function App() {
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
-        <div className="container login-container">
+        <a href="#main-content" className="skip-link">Skip to main content</a>
+        <div className="container login-container" id="main-content">
           <div className="login-card">
             <img src={logo} alt="PulseLink Pro" className="brand-logo" />
             <h1>PulseLink Web</h1>
@@ -2002,6 +2003,7 @@ function App() {
 
   return (
     <div className="app-shell" style={themeVars}>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
         <div className="sidebar">
           <div className="sidebar-header">
@@ -2135,7 +2137,7 @@ function App() {
             </div>
           )}
         </div>
-        <div className="main-content">
+        <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
               <div className="home-hero">
@@ -2635,6 +2637,7 @@ function App() {
                                         className="ghost-btn icon-only" 
                                         onClick={() => handleDeleteRingerSong(song.id)}
                                         title="Remove from playlist"
+                                        aria-label={`Remove ${song.title} from playlist`}
                                         style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
                                     >
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
