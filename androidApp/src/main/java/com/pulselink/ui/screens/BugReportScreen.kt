@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -98,7 +99,8 @@ fun BugReportScreen(
                 Brush.verticalGradient(
                     listOf(Color(0xFF10131F), Color(0xFF090B11))
                 )
-            ),
+            )
+            .imePadding(),
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(text = stringResource(R.string.bug_report_title), fontWeight = FontWeight.SemiBold) },
@@ -229,6 +231,12 @@ fun BugReportScreen(
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.bug_report_submission_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFCBD5F5)
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         modifier = Modifier.fillMaxWidth(),

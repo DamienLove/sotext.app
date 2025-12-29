@@ -2,6 +2,7 @@ package com.pulselink.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,7 +28,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.Divider
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,21 +39,34 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.pulselink.R
+import androidx.compose.material.icons.filled.VpnKey
 
 data class OnboardingPermissionState(
     val icon: ImageVector,
@@ -58,7 +75,8 @@ data class OnboardingPermissionState(
     val granted: Boolean,
     val manualHelp: String? = null,
     val actionLabel: String? = null,
-    val onAction: (() -> Unit)? = null
+    val onAction: (() -> Unit)? = null,
+    val emphasis: String? = null
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -110,7 +128,7 @@ fun OnboardingIntroScreen(
                     color = Color.White
                 )
                 Text(
-                    text = "PulseLink listens for safewords, alerts trusted contacts, and pushes through Do Not Disturb when it matters most.",
+                    text = "PulseLink links your trusted contacts, pushes through Do Not Disturb, and keeps everyone in sync when it matters most.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color(0xFFCBD5F5)
                 )
@@ -123,7 +141,7 @@ fun OnboardingIntroScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                IntroBullet(text = "Hands-free safewords trigger emergency or check-in alerts.")
+                IntroBullet(text = "Say “Hey Google, PulseLink emergency” for a hands-free alert.")
                 IntroBullet(text = "Escalations send SMS, play tones, and can auto-dial help.")
                 IntroBullet(text = "PulseLink can override silent/DND so partners hear urgent alerts.")
             }
@@ -183,15 +201,21 @@ private fun IntroBullet(text: String) {
 fun OnboardingScreen(
     modifier: Modifier = Modifier,
     permissions: List<OnboardingPermissionState>,
+    focusedPermission: OnboardingPermissionState? = null,
     isReadyToFinish: Boolean,
     onGrantPermissions: () -> Unit,
     onOpenAppSettings: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    extraSection: @Composable (() -> Unit)? = null
 ) {
     val gradient = Brush.verticalGradient(
         colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16))
     )
-    val manualHelp = permissions.firstOrNull { it.manualHelp != null && !it.granted }?.manualHelp
+    val manualHelp = when {
+        focusedPermission != null && !focusedPermission.granted && !focusedPermission.manualHelp.isNullOrBlank() -> focusedPermission.manualHelp
+        else -> permissions.firstOrNull { it.manualHelp != null && !it.granted }?.manualHelp
+    }
+    val activeFocus = focusedPermission?.takeIf { !it.granted }
 
     Box(
         modifier = modifier
@@ -244,17 +268,41 @@ fun OnboardingScreen(
                 modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(24.dp))
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                    .fillMaxWidth()
             ) {
-                items(permissions) { card ->
-                    PermissionCard(state = card)
+                if (activeFocus != null) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (!activeFocus.emphasis.isNullOrBlank()) {
+                            Text(
+                                text = activeFocus.emphasis,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFFFCD34D),
+                                modifier = Modifier.align(Alignment.Start)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        PermissionCard(state = activeFocus)
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(permissions) { card ->
+                            PermissionCard(state = card)
+                        }
+                    }
                 }
             }
+            extraSection?.invoke()
             if (!manualHelp.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -332,8 +380,15 @@ private fun PermissionCard(state: OnboardingPermissionState) {
                     color = statusColor
                 )
             }
+            if (!state.emphasis.isNullOrBlank() && !state.granted) {
+                Text(
+                    text = state.emphasis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFF87171)
+                )
+            }
             if (!state.granted && state.actionLabel != null && state.onAction != null) {
-                Divider(color = Color.White.copy(alpha = 0.08f))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -350,6 +405,298 @@ private fun PermissionCard(state: OnboardingPermissionState) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun OtpCleanupOnboardingCard(
+    enabled: Boolean,
+    days: Int,
+    onToggle: (Boolean) -> Unit,
+    onChangeDays: (Int) -> Unit
+) {
+    val retentionLabel = when (days) {
+        1 -> "1 day"
+        3 -> "3 days"
+        7 -> "7 days"
+        30 -> "30 days"
+        else -> "$days days"
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp),
+        shape = RoundedCornerShape(20.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.2f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.VpnKey,
+                        contentDescription = "2-step cleanup",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "2-step code cleanup",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = if (enabled) {
+                            "Auto-delete 2-step messages after $retentionLabel."
+                        } else {
+                            "Keep 2-step messages unless you delete them."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFFCBD5F5)
+                    )
+                }
+                Switch(checked = enabled, onCheckedChange = onToggle)
+            }
+            TextButton(
+                onClick = {
+                    val next = when (days) {
+                        1 -> 3
+                        3 -> 7
+                        7 -> 30
+                        30 -> 1
+                        else -> 1
+                    }
+                    onChangeDays(next)
+                },
+                enabled = enabled
+            ) {
+                Text(text = "Change window")
+            }
+        }
+    }
+}
+@Composable
+fun BetaAgreementScreen(
+    ownerName: String,
+    agreementVersion: String,
+    isSubmitting: Boolean,
+    onViewFullAgreement: () -> Unit,
+    onAgree: () -> Unit,
+    onBack: () -> Unit
+) {
+    val isDarkTheme = isSystemInDarkTheme()
+    val gradient = if (isDarkTheme) {
+        Brush.verticalGradient(colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16)))
+    } else {
+        Brush.verticalGradient(colors = listOf(Color(0xFFE5E9FF), Color(0xFFF9FAFF)))
+    }
+    val panelColor = if (isDarkTheme) {
+        Color.White.copy(alpha = 0.06f)
+    } else {
+        Color.White
+    }
+    val headingColor = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onBackground
+    val bodyColor = if (isDarkTheme) Color(0xFFD6DCFF) else MaterialTheme.colorScheme.onSurfaceVariant
+    val metaColor = if (isDarkTheme) Color(0xFFBACCFF) else MaterialTheme.colorScheme.primary
+    val actionColor = if (isDarkTheme) Color(0xFF7FB2FF) else MaterialTheme.colorScheme.primary
+    val dividerColor = if (isDarkTheme) {
+        Color.White.copy(alpha = 0.1f)
+    } else {
+        MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+    }
+    val displayName = if (ownerName.isBlank()) {
+        stringResource(id = R.string.beta_agreement_tester_default)
+    } else ownerName
+
+    val scrollState = rememberScrollState()
+    val density = LocalDensity.current
+    var actionHeightPx by remember { mutableIntStateOf(0) }
+    val contentBottomPadding = if (actionHeightPx == 0) {
+        128.dp
+    } else {
+        with(density) { actionHeightPx.toDp() } + 16.dp
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .background(gradient)
+            .padding(horizontal = 24.dp, vertical = 24.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(28.dp))
+                .background(panelColor)
+                .padding(horizontal = 24.dp, vertical = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = contentBottomPadding)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = headingColor
+                            )
+                        }
+                        Text(
+                            text = stringResource(
+                                id = R.string.beta_agreement_tester_label,
+                                displayName,
+                                agreementVersion
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = metaColor,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.End
+                        )
+                    }
+
+                    Text(
+                        text = stringResource(id = R.string.beta_agreement_summary_title),
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = headingColor
+                    )
+                    Text(
+                        text = stringResource(id = R.string.beta_agreement_summary_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = bodyColor
+                    )
+                    Text(
+                        text = stringResource(id = R.string.beta_agreement_summary_points),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = bodyColor
+                    )
+                    Text(
+                        text = stringResource(id = R.string.beta_agreement_summary_footer),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = bodyColor
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        actionHeightPx = coordinates.size.height
+                    },
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                HorizontalDivider(color = dividerColor)
+                TextButton(
+                    onClick = onViewFullAgreement,
+                    colors = ButtonDefaults.textButtonColors(contentColor = actionColor)
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.beta_agreement_view_full),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                Button(
+                    onClick = onAgree,
+                    enabled = !isSubmitting,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text(text = stringResource(id = R.string.beta_agreement_agree_button))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BetaAgreementFullScreen(
+    onBack: () -> Unit
+) {
+    val isDarkTheme = isSystemInDarkTheme()
+    val gradient = if (isDarkTheme) {
+        Brush.verticalGradient(colors = listOf(Color(0xFF0B0D16), Color(0xFF05060B)))
+    } else {
+        Brush.verticalGradient(colors = listOf(Color(0xFFE7EBFF), Color(0xFFF9FAFF)))
+    }
+    val textColor = if (isDarkTheme) Color(0xFFE6EAFF) else MaterialTheme.colorScheme.onBackground
+    val scrollState = rememberScrollState()
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(gradient),
+        containerColor = Color.Transparent,
+        topBar = {
+            TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = textColor,
+                    navigationIconContentColor = textColor
+                ),
+                title = { Text(text = stringResource(id = R.string.beta_agreement_full_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = stringResource(id = R.string.beta_agreement_full_text),
+                style = MaterialTheme.typography.bodyMedium,
+                color = textColor
+            )
         }
     }
 }
