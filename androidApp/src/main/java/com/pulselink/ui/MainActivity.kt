@@ -96,6 +96,7 @@ import com.pulselink.ui.screens.VibrationPatternPickerScreen
 import com.pulselink.ui.screens.MultiLineSetupDialog
 import com.pulselink.ui.screens.LineLimitDialog
 import com.pulselink.ui.screens.ProfileSettingsScreen
+import com.pulselink.ui.screens.ExtensionsStoreScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
@@ -1407,6 +1408,20 @@ class MainActivity : AppCompatActivity() {
                             onSignOut = {
                                 viewModel.signOut()
                             },
+                            onOpenExtensionsStore = { navController.navigate("extensions_store") },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("extensions_store") {
+                        ExtensionsStoreScreen(
+                            settings = state.settings,
+                            onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) },
+                            onToggleFirebaseMessaging = viewModel::setFirebaseMessagingEnabled,
+                            onToggleEmailFallback = viewModel::setEmailFallbackEnabled,
+                            onToggleCrashDetection = viewModel::setCrashDetectionEnabled,
+                            onToggleOtpCleanup = viewModel::setOtpCleanupEnabled,
+                            onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
+                            onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                             onBack = { navController.popBackStack() }
                         )
                     }

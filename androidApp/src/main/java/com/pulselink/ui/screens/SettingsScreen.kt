@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Card
@@ -112,6 +113,7 @@ fun SettingsScreen(
     showAddLogin: Boolean,
     onAddLogin: () -> Unit,
     onSignOut: () -> Unit,
+    onOpenExtensionsStore: () -> Unit,
     onBack: () -> Unit
 ) {
     Scaffold(
@@ -143,6 +145,15 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Extensions Store
+            SettingsActionRow(
+                title = "Extensions Store",
+                subtitle = "Add or remove features",
+                actionLabel = "Open",
+                onAction = onOpenExtensionsStore,
+                leadingIcon = Icons.Filled.AddCircle
+            )
+
             // Profile
             SettingsSectionHeader("Profile")
             SettingsActionRow(
@@ -161,13 +172,15 @@ fun SettingsScreen(
                 checked = settings.includeLocation,
                 onCheckedChange = onToggleIncludeLocation
             )
-            SettingsToggleRow(
-                title = "Crash Detection",
-                subtitle = "Alert trusted contacts if a vehicle crash is detected. (Temporarily unavailable)",
-                checked = settings.crashDetectionEnabled,
-                enabled = false,
-                onCheckedChange = onToggleCrashDetection
-            )
+            if (settings.crashDetectionEnabled) {
+                SettingsToggleRow(
+                    title = "Crash Detection",
+                    subtitle = "Alert trusted contacts if a vehicle crash is detected. (Temporarily unavailable)",
+                    checked = settings.crashDetectionEnabled,
+                    enabled = false,
+                    onCheckedChange = onToggleCrashDetection
+                )
+            }
             SettingsToggleRow(
                 title = "Auto-allow remote sound change",
                 subtitle = null,
@@ -244,18 +257,22 @@ fun SettingsScreen(
                     onAction = onRequestDndAccess,
                     leadingIcon = Icons.Filled.NotificationsActive
                 )
-                SettingsToggleRow(
-                    title = "Firebase Messaging (Faster)",
-                    subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
-                    checked = settings.firebaseMessagingEnabled,
-                    onCheckedChange = onToggleFirebaseMessaging
-                )
-                SettingsToggleRow(
-                    title = "Email Fallback",
-                    subtitle = "Send email if other channels fail.",
-                    checked = settings.emailFallbackEnabled,
-                    onCheckedChange = onToggleEmailFallback
-                )
+                if (settings.firebaseMessagingEnabled) {
+                    SettingsToggleRow(
+                        title = "Firebase Messaging (Faster)",
+                        subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
+                        checked = settings.firebaseMessagingEnabled,
+                        onCheckedChange = onToggleFirebaseMessaging
+                    )
+                }
+                if (settings.emailFallbackEnabled) {
+                    SettingsToggleRow(
+                        title = "Email Fallback",
+                        subtitle = "Send email if other channels fail.",
+                        checked = settings.emailFallbackEnabled,
+                        onCheckedChange = onToggleEmailFallback
+                    )
+                }
             }
 
             // Permissions & System
@@ -344,10 +361,11 @@ fun SettingsScreen(
             }
 
             // Beacon Feature
-            CollapsibleSettingsSection(
-                title = "Beacon Feature",
-                initiallyExpanded = false
-            ) {
+            if (settings.beaconLauncherEnabled) {
+                CollapsibleSettingsSection(
+                    title = "Beacon Feature",
+                    initiallyExpanded = false
+                ) {
                 val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
                 val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                 SettingsActionRow(
@@ -381,6 +399,7 @@ fun SettingsScreen(
                     leadingIcon = Icons.Outlined.WifiTethering
                 )
             }
+            } // End Beacon Feature visibility check
 
             // Support & Account
             CollapsibleSettingsSection(
