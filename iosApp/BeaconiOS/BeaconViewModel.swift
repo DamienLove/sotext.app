@@ -12,12 +12,19 @@ final class BeaconViewModel: ObservableObject {
 
     @Published var isLoggedIn: Bool = false
     private var provider: BeaconConversationProvider
+    private var threadsListener: ListenerRegistration?
+    private var activeMessageListener: ListenerRegistration?
 
     init() {
         // Initial provider setup
         provider = MockBeaconConversationProvider()
 
         setupAuthListener()
+    }
+
+    deinit {
+        threadsListener?.remove()
+        activeMessageListener?.remove()
     }
 
     private func setupAuthListener() {
@@ -29,9 +36,11 @@ final class BeaconViewModel: ObservableObject {
                     if let uid = user?.uid {
                         self.isLoggedIn = true
                         self.provider = FirestoreBeaconConversationProvider(userId: uid)
-                        await self.loadData()
+                        self.startListeningToThreads()
                     } else {
                         self.isLoggedIn = false
+                        self.threadsListener?.remove()
+                        self.activeMessageListener?.remove()
                         self.provider = MockBeaconConversationProvider()
                         self.contacts = []
                         self.conversations = [:]
@@ -41,21 +50,16 @@ final class BeaconViewModel: ObservableObject {
         }
         #else
         self.isLoggedIn = true
-        Task { await loadData() }
+        startListeningToThreads()
         #endif
     }
 
-    private func loadData() async {
-        do {
-            let fetched = try await provider.loadConversations()
-            await MainActor.run {
-                contacts = fetched.keys.sorted(by: { $0.unread > $1.unread })
-                for (contact, msgs) in fetched {
-                    conversations[contact.id] = msgs
-                }
+    private func startListeningToThreads() {
+        threadsListener?.remove()
+        threadsListener = provider.listenToConversations { [weak self] newContacts in
+            DispatchQueue.main.async {
+                self?.contacts = newContacts.sorted(by: { $0.unread > $1.unread })
             }
-        } catch {
-            print("Failed to load conversations: \(error)")
         }
     }
 
@@ -95,9 +99,11 @@ final class BeaconViewModel: ObservableObject {
                 try await provider.send(message: message, to: contact)
                 // Only optimistic update if send didn't throw
                 await MainActor.run {
-                    var msgs = conversations[contact.id] ?? []
-                    msgs.append(message)
-                    conversations[contact.id] = msgs
+                    if activeMessageListener == nil {
+                        var msgs = conversations[contact.id] ?? []
+                        msgs.append(message)
+                        conversations[contact.id] = msgs
+                    }
                     statusText = nil
                 }
             } catch {
@@ -108,5 +114,19 @@ final class BeaconViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    func startListeningToConversation(contact: BeaconContactCard) {
+        activeMessageListener?.remove()
+        activeMessageListener = provider.listenToMessages(for: contact) { [weak self] messages in
+            DispatchQueue.main.async {
+                self?.conversations[contact.id] = messages
+            }
+        }
+    }
+
+    func stopListeningToConversation() {
+        activeMessageListener?.remove()
+        activeMessageListener = nil
     }
 }

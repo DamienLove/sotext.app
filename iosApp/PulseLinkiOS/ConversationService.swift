@@ -6,9 +6,28 @@ import FirebaseAuth
 #endif
 
 protocol ConversationProvider {
+    // Legacy load
     func loadConversations() async throws -> [ContactCard: [ConversationMessage]]
+    // Realtime listeners
+    func listenToConversations(onChange: @escaping ([ContactCard]) -> Void) -> ListenerRegistration?
+    func listenToMessages(for contact: ContactCard, onChange: @escaping ([ConversationMessage]) -> Void) -> ListenerRegistration?
     func send(message: ConversationMessage, to contact: ContactCard) async throws
 }
+
+// Wrapper for ListenerRegistration to be platform-agnostic if needed,
+// but since we import FirebaseFirestore, we can use it directly or return an opaque object.
+// For simplicity in this environment, we use 'Any' or just return the Firebase object if available,
+// or a dummy closure wrapper.
+#if canImport(FirebaseFirestore)
+// ListenerRegistration is available
+#else
+protocol ListenerRegistration {
+    func remove()
+}
+class MockListener: ListenerRegistration {
+    func remove() {}
+}
+#endif
 
 final class InMemoryConversationProvider: ConversationProvider {
     private var store: [ContactCard: [ConversationMessage]] = [:]
@@ -16,8 +35,8 @@ final class InMemoryConversationProvider: ConversationProvider {
     init(seed: [ContactCard: [ConversationMessage]] = [:]) {
         // If seed is empty, provide some mock data compatible with new fields
         if seed.isEmpty {
-            let c1 = ContactCard(name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false)
-            let c2 = ContactCard(name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
+            let c1 = ContactCard(threadId: "1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false)
+            let c2 = ContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
             store = [
                 c1: [],
                 c2: []
@@ -29,6 +48,17 @@ final class InMemoryConversationProvider: ConversationProvider {
 
     func loadConversations() async throws -> [ContactCard: [ConversationMessage]] {
         store
+    }
+
+    func listenToConversations(onChange: @escaping ([ContactCard]) -> Void) -> ListenerRegistration? {
+        // Return initial data
+        onChange(Array(store.keys))
+        return MockListener()
+    }
+
+    func listenToMessages(for contact: ContactCard, onChange: @escaping ([ConversationMessage]) -> Void) -> ListenerRegistration? {
+        onChange(store[contact] ?? [])
+        return MockListener()
     }
 
     func send(message: ConversationMessage, to contact: ContactCard) async throws {
@@ -65,6 +95,7 @@ final class FirestoreConversationProvider: ConversationProvider {
                     // Use display name if available, otherwise fall back to address
                     let name = data["display_name"] as? String ?? address
                     let contact = ContactCard(
+                        threadId: threadDoc.documentID,
                         name: name,
                         address: address,
                         role: "Contact",
@@ -108,6 +139,63 @@ final class FirestoreConversationProvider: ConversationProvider {
         }
     }
 
+    func listenToConversations(onChange: @escaping ([ContactCard]) -> Void) -> ListenerRegistration? {
+        return threadsCollection.addSnapshotListener { snapshot, error in
+            guard let documents = snapshot?.documents else {
+                print("Error listening to threads: \(error?.localizedDescription ?? "Unknown")")
+                return
+            }
+
+            let contacts = documents.compactMap { doc -> ContactCard? in
+                let data = doc.data()
+                let address = data["address"] as? String ?? "Unknown"
+                let name = data["display_name"] as? String ?? address
+
+                return ContactCard(
+                    threadId: doc.documentID,
+                    name: name,
+                    address: address,
+                    role: "Contact",
+                    presence: .offline, // Presence logic requires separate listeners or logic
+                    unread: data["unread"] as? Int ?? 0,
+                    isFavorite: data["isFavorite"] as? Bool ?? false,
+                    isPrivate: data["isPrivate"] as? Bool ?? false,
+                    isTrusted: data["isTrusted"] as? Bool ?? false
+                )
+            }
+            onChange(contacts)
+        }
+    }
+
+    func listenToMessages(for contact: ContactCard, onChange: @escaping ([ConversationMessage]) -> Void) -> ListenerRegistration? {
+        let threadRef = threadsCollection.document(contact.threadId)
+        return threadRef.collection("messages")
+            .order(by: "date", descending: false)
+            .limit(to: 50)
+            .addSnapshotListener { snapshot, error in
+                guard let documents = snapshot?.documents else {
+                    print("Error listening to messages: \(error?.localizedDescription ?? "Unknown")")
+                    return
+                }
+
+                let messages = documents.compactMap { doc -> ConversationMessage? in
+                    let data = doc.data()
+                    let type = data["type"] as? Int ?? 1
+                    let timestamp = data["date"] as? Int64 ?? 0
+                    let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
+
+                    return ConversationMessage(
+                        sender: type == 1 ? contact.address : "You",
+                        text: data["body"] as? String ?? "",
+                        timestamp: date,
+                        isIncoming: type == 1,
+                        isUrgent: false
+                    )
+                }
+                onChange(messages)
+            }
+    }
+
     func send(message: ConversationMessage, to contact: ContactCard) async throws {
         // Use contact.address (phone number) instead of contact.name (display name)
         let docData: [String: Any] = [
@@ -123,6 +211,8 @@ final class FirestoreConversationProvider: ConversationProvider {
     #else
     init(userId: String) {}
     func loadConversations() async throws -> [ContactCard: [ConversationMessage]] { [:] }
+    func listenToConversations(onChange: @escaping ([ContactCard]) -> Void) -> ListenerRegistration? { return nil }
+    func listenToMessages(for contact: ContactCard, onChange: @escaping ([ConversationMessage]) -> Void) -> ListenerRegistration? { return nil }
     func send(message: ConversationMessage, to contact: ContactCard) async throws {}
     #endif
 }
