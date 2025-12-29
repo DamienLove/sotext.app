@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -272,6 +272,37 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
     prev.alert.body === next.alert.body;
 });
 MapAlertItem.displayName = 'MapAlertItem';
+
+// Bolt: Optimized ThemeGalleryItem to prevent re-renders of the theme list
+const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
+  const previewTheme = normalizeTheme(themeDoc.theme || {});
+  const previewStyle = buildThemePreviewStyle(previewTheme);
+  const authorLabel = themeDoc.anonymous
+    ? 'Anonymous'
+    : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+
+  return (
+    <div className="theme-card">
+      <div className="theme-preview" style={previewStyle} />
+      <div className="theme-meta">
+        <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
+        <div className="theme-author">{authorLabel}</div>
+      </div>
+      <button
+        className="primary-btn"
+        type="button"
+        onClick={() => onImport(themeDoc)}
+        aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
+      >
+        Import
+      </button>
+    </div>
+  );
+}, (prev, next) => {
+  return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
+});
+
+ThemeGalleryItem.displayName = 'ThemeGalleryItem';
 
 const defaultTheme = {
   primaryColor: "#6750A4",
@@ -1849,7 +1880,7 @@ function App() {
     setConfirmDeleteId(null);
   }, []);
 
-  const handleApplyPreset = async (presetTheme) => {
+  const handleApplyPreset = useCallback(async (presetTheme) => {
     if (!user) return;
     const normalized = normalizeTheme(presetTheme);
     setThemeStatus("Updating theme...");
@@ -1872,13 +1903,13 @@ function App() {
       console.error("Theme update failed", error);
       setThemeStatus(error?.message ?? "Theme update failed.");
     }
-  };
+  }, [user]);
 
-  const handleImportPublicTheme = async (themeDoc) => {
+  const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
-  };
+  }, [handleApplyPreset]);
 
   const handlePublishTheme = async () => {
     if (!user) return;
@@ -2846,30 +2877,13 @@ function App() {
                     </button>
                   </div>
                   <div className="theme-gallery-grid">
-                    {filteredThemes.map((themeDoc) => {
-                      const previewTheme = normalizeTheme(themeDoc.theme || {});
-                      const previewStyle = buildThemePreviewStyle(previewTheme);
-                      const authorLabel = themeDoc.anonymous
-                        ? 'Anonymous'
-                        : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
-                      return (
-                        <div key={themeDoc.id} className="theme-card">
-                          <div className="theme-preview" style={previewStyle} />
-                          <div className="theme-meta">
-                            <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
-                            <div className="theme-author">{authorLabel}</div>
-                          </div>
-                          <button
-                            className="primary-btn"
-                            type="button"
-                            onClick={() => handleImportPublicTheme(themeDoc)}
-                            aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
-                          >
-                            Import
-                          </button>
-                        </div>
-                      );
-                    })}
+                    {filteredThemes.map((themeDoc) => (
+                      <ThemeGalleryItem
+                        key={themeDoc.id}
+                        themeDoc={themeDoc}
+                        onImport={handleImportPublicTheme}
+                      />
+                    ))}
                     {filteredThemes.length === 0 && (
                       <div className="theme-empty">No themes yet. Be the first to publish!</div>
                     )}
