@@ -43,6 +43,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var searchState: SearchResultState by mutableStateOf(SearchResultState.Idle)
         private set
+    var currentFilter by mutableStateOf(InboxFilter.ALL)
+        private set
 
     init {
         refreshThreads()
@@ -52,10 +54,22 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 currentThreadId?.let { refreshThread(it, refreshRead = false) }
             }
         }
+        viewModelScope.launch {
+            repo.collectInboxState()
+        }
+    }
+
+    fun setFilter(filter: InboxFilter) {
+        currentFilter = filter
+        refreshThreads()
     }
 
     fun refreshThreads() {
-        threads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+        threads = if (currentFilter == InboxFilter.ARCHIVED) {
+            runCatching { repo.listArchivedThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+        } else {
+            runCatching { repo.listInboxThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+        }
     }
 
     fun openThread(threadId: Long, address: String) {
@@ -93,6 +107,20 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             messages = emptyList()
         }
         refreshThreads()
+    }
+
+    fun togglePin(threadId: Long) {
+        viewModelScope.launch {
+            repo.togglePin(threadId)
+            // The repo change flow will trigger refreshThreads, but it might be delayed.
+            // Since togglePin updates DataStore and we collect it in repo, it should trigger changes() flow.
+        }
+    }
+
+    fun toggleArchive(threadId: Long) {
+        viewModelScope.launch {
+            repo.toggleArchive(threadId)
+        }
     }
 
     fun search(query: String) {

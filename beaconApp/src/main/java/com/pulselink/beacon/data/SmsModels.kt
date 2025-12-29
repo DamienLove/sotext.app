@@ -5,7 +5,9 @@ data class SmsThreadItem(
     val address: String,
     val snippet: String,
     val timestamp: Long,
-    val unread: Boolean
+    val unread: Boolean,
+    val isPinned: Boolean = false,
+    val isArchived: Boolean = false
 )
 
 data class SmsMessageItem(

@@ -198,6 +198,8 @@ private fun BeaconNav(
                         missingPermissions = missingReadPerms,
                         notificationsEnabled = notificationsEnabled,
                         notificationsSilent = notificationsSilent,
+                        filter = vm.currentFilter,
+                        onFilterChange = { vm.setFilter(it) },
                     onOpenNotificationSettings = {
                         val intent = com.pulselink.beacon.notifications.MessageNotificationManager
                             .buildNotificationSettingsIntent(context)
@@ -217,13 +219,14 @@ private fun BeaconNav(
                         navController.navigate("thread/$id/${Uri.encode(address)}")
                     },
                     onDeleteThread = { vm.deleteThread(it) },
+                    onTogglePin = { vm.togglePin(it) },
+                    onToggleArchive = { vm.toggleArchive(it) },
                     onRefresh = { vm.refreshThreads() },
                     onSearch = { vm.search(it) },
                     onClearSearch = { vm.clearSearch() },
                     onCustomize = { navController.navigate("customize?address=") },
                     onCompose = { navController.navigate("newMessage") },
                     onOpenNotifications = { navController.navigate("notifications") }
-                                        onCompose = { navController.navigate("newMessage") }
                 )
             }
             composable(
