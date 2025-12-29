@@ -939,6 +939,7 @@ function App() {
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
+  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
 
@@ -988,6 +989,7 @@ function App() {
 
   const handleSpotifySearch = async () => {
     if (!spotifySearch.trim()) return;
+    setIsSearchingSpotify(true);
     setSettingsStatus("Searching...");
     try {
         let token = spotifyToken;
@@ -1014,6 +1016,8 @@ function App() {
         setSettingsStatus("");
     } catch (e) {
         setSettingsStatus("Search failed: " + e.message);
+    } finally {
+        setIsSearchingSpotify(false);
     }
   };
 
@@ -2635,6 +2639,7 @@ function App() {
                                         className="ghost-btn icon-only" 
                                         onClick={() => handleDeleteRingerSong(song.id)}
                                         title="Remove from playlist"
+                                        aria-label={`Remove ${song.title} from playlist`}
                                         style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
                                     >
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -2652,11 +2657,19 @@ function App() {
                             <input
                                 className="login-input"
                                 placeholder="Search Spotify for songs..."
+                                aria-label="Search Spotify for songs"
                                 value={spotifySearch}
                                 onChange={(e) => setSpotifySearch(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
                             />
-                            <button className="primary-btn" onClick={handleSpotifySearch}>Search</button>
+                            <button
+                                className="primary-btn"
+                                onClick={handleSpotifySearch}
+                                disabled={isSearchingSpotify}
+                                aria-busy={isSearchingSpotify}
+                            >
+                                {isSearchingSpotify ? "Searching..." : "Search"}
+                            </button>
                         </div>
                     </div>
 
