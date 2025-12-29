@@ -68,7 +68,6 @@ final class AlertRelayViewModel: ObservableObject {
     // Listeners
     private var threadsListener: ListenerRegistration?
     private var activeMessageListener: ListenerRegistration?
-    private var currentListeningUserId: String?
 
     @Published var isLoggedIn: Bool = false
 
@@ -95,24 +94,15 @@ final class AlertRelayViewModel: ObservableObject {
                     guard let self = self else { return }
                     if let uid = user?.uid {
                         self.isLoggedIn = true
-                        // Only update provider and restart listeners if user changed
-                        if self.currentListeningUserId != uid {
-                            self.currentListeningUserId = uid
-                            self.conversationProvider = FirestoreConversationProvider(userId: uid)
-                            self.startListeningToThreads()
-                        }
+                        self.conversationProvider = FirestoreConversationProvider(userId: uid)
+                        self.startListeningToThreads()
                     } else {
                         self.isLoggedIn = false
-                        self.currentListeningUserId = nil
                         self.threadsListener?.remove()
-                        self.threadsListener = nil
                         self.activeMessageListener?.remove()
-                        self.activeMessageListener = nil
                         self.conversationProvider = InMemoryConversationProvider()
                         self.contacts = []
                         self.conversations = [:]
-                        // Restart listening with mock provider to keep UI consistent
-                        self.startListeningToThreads()
                     }
                 }
             }
@@ -205,26 +195,9 @@ final class AlertRelayViewModel: ObservableObject {
     }
 
     func sendMessage(to contact: ContactCard, text: String, urgent: Bool) {
-        // Validate message content
-        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty else {
-            statusText = "Cannot send empty message"
-            return
-        }
-
-        // Limit message length (10,000 chars for safety)
-        let maxLength = 10000
-        let finalText = trimmedText.count > maxLength
-            ? String(trimmedText.prefix(maxLength))
-            : trimmedText
-
-        if trimmedText.count > maxLength {
-            print("⚠️ Message truncated from \(trimmedText.count) to \(maxLength) characters")
-        }
-
         let message = ConversationMessage(
             sender: "You",
-            text: finalText,
+            text: text,
             timestamp: Date(),
             isIncoming: false,
             isUrgent: urgent
@@ -232,9 +205,18 @@ final class AlertRelayViewModel: ObservableObject {
         Task {
             do {
                 try await conversationProvider.send(message: message, to: contact)
-                // Rely entirely on listener for UI updates (no optimistic update)
-                // This prevents race conditions and duplicate messages
+                // UI update handled by listener if active, or optimistically here?
+                // Optimistic update:
                 await MainActor.run {
+                    // Only append if we aren't listening (to avoid duplicates if listener is fast)
+                    // But listener handles deduping usually by replacing the list.
+                    // For now, let's rely on listener if active.
+                    if activeMessageListener == nil {
+                         var msgs = conversations[contact.id] ?? []
+                         msgs.append(message)
+                         conversations[contact.id] = msgs
+                    }
+
                     statusText = urgent ? "Urgent message sent (ringer boost, DND override)" : "Message sent"
                     if urgent {
                         NotificationManager.shared.playAlertToneIfNeeded(volumeBoost: maxVolumeOnUrgent)
@@ -301,10 +283,8 @@ final class AlertRelayViewModel: ObservableObject {
     private func startListeningToThreads() {
         threadsListener?.remove()
         threadsListener = conversationProvider.listenToConversations { [weak self] newContacts in
-            // Sort on background queue to avoid blocking UI
-            let sorted = newContacts.sorted(by: { $0.unread > $1.unread })
             DispatchQueue.main.async {
-                self?.contacts = sorted
+                self?.contacts = newContacts.sorted(by: { $0.unread > $1.unread })
                 // We don't clear conversations map here to preserve cached messages if any
             }
         }
