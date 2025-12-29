@@ -898,10 +898,6 @@ function App() {
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
   const [themeStatus, setThemeStatus] = useState('');
   const [publicThemes, setPublicThemes] = useState([]);
-<<<<<<< HEAD
-=======
-  // const [unlockedThemes, setUnlockedThemes] = useState([]); // Removed unused state
->>>>>>> origin/Suite-Beta
   const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
   const [themeSearch, setThemeSearch] = useState('');
   const [themePublishForm, setThemePublishForm] = useState({
@@ -1186,11 +1182,6 @@ function App() {
       const updates = {};
       if (newUnlocks.length > 0) {
         updates.unlockedThemeIds = [...currentUnlockedIds, ...newUnlocks];
-<<<<<<< HEAD
-=======
-      } else {
-        // setUnlockedThemes(specialThemePresets.filter(p => currentUnlockedIds.includes(p.id)));
->>>>>>> origin/Suite-Beta
       }
       // Removed unused setUnlockedThemes call
 
@@ -2641,20 +2632,14 @@ function App() {
                                         <div className="song-title">{song.title}</div>
                                         <div className="song-artist">{song.artist}</div>
                                     </div>
-                                    <button 
-                                        className="ghost-btn icon-only" 
+                                    <button
+                                        className="ghost-btn icon-only"
                                         onClick={() => handleDeleteRingerSong(song.id)}
                                         title="Remove from playlist"
-<<<<<<< HEAD
                                         aria-label="Remove from playlist"
                                         style={{color: 'var(--muted)', padding: 8}}
                                     >
                                         <TrashIcon />
-=======
-                                        style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
-                                    >
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
->>>>>>> origin/Suite-Beta
                                     </button>
                                 </div>
                             ))}
