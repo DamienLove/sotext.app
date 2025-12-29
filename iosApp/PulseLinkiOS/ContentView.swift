@@ -231,18 +231,39 @@ private struct HomeTab: View {
     }
 
     private var proUpsellCard: some View {
-        Card {
-            HStack {
-                Text("Upgrade to Pro")
-                    .font(.headline)
-                Spacer()
-                Image(systemName: "star.fill")
-                    .foregroundStyle(RelayColors.accent)
+        Button {
+            // Open upgrade URL or show upgrade sheet
+            if let url = URL(string: "https://pulselink.app/upgrade") {
+                UIApplication.shared.open(url)
             }
-            Text("Unlock SMS Relay, Contacts, and DND Overrides.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        } label: {
+            Card {
+                HStack {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Upgrade to Pro")
+                                .font(.headline)
+                            Spacer()
+                            Image(systemName: "star.fill")
+                                .foregroundStyle(RelayColors.accent)
+                        }
+                        Text("Unlock SMS Relay, Contacts, and DND Overrides.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        HStack {
+                            Spacer()
+                            Text("Learn More")
+                                .font(.caption.bold())
+                                .foregroundStyle(RelayColors.primary)
+                            Image(systemName: "arrow.right")
+                                .font(.caption.bold())
+                                .foregroundStyle(RelayColors.primary)
+                        }
+                    }
+                }
+            }
         }
+        .buttonStyle(.plain)
     }
 }
 
