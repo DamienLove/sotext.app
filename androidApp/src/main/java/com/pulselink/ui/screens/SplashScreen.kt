@@ -11,19 +11,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import com.pulselink.BuildConfig
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.pulselink.R
+import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onFinished: () -> Unit
 ) {
-    val logoRes = if (BuildConfig.ADS_ENABLED) R.drawable.ic_logo else R.drawable.ic_pulselink_pro
+    LaunchedEffect(Unit) {
+        delay(1200)
+        onFinished()
+    }
+
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -36,7 +44,7 @@ fun SplashScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                painter = painterResource(id = logoRes),
+                painter = painterResource(id = R.drawable.ic_logo),
                 contentDescription = "PulseLink logo"
             )
             Text(

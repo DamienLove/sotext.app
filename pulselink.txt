@@ -1,68 +1,107 @@
-dewBranch: Suite-Beta (based on Beta)
+PulseLink Build Notes
+=====================
 
-Recent work
-- 2025-12-29: Synced Suite-Beta with Ds-work-suite-beta (merge 0ebdde92) to keep branches aligned; message queries now sort newest-first across SMS/Firestore, and Shared.podspec header corrected.
-- 2025-12-27: v87 Bug Fixes Complete: Fixed 8 critical GitHub issues ready for QA. Emergency siren false positives eliminated (#266, #251, #243) by changing PulseLinkSmsReceiver.kt:164 to only trigger attention tones for EMERGENCY messages (not URGENT/STANDARD). Message conversations fixed to open at newest message (#265, #261) via ContactConversationViewModel.kt:51 sortedByDescending. Web app emergency map blue screen (#228) already fixed with max-height:520px constraints in App.css. Web app info banner added (#236) to home screen explaining web.pulselink.app access. Watch app build (#237) fixed by adding Compose compiler plugin to shared/build.gradle.kts:12. All fixes include inline QA test comments with expected behavior documentation.
-- 2025-12-27: Truecaller Caller ID Integration: Implemented secure TruecallerLookupClient (CallerIdProvider priority 2) + TruecallerKeyProvider for spam detection, caller identification, location lookup via RapidAPI Truecaller4 API. API keys managed through local.properties/environment variables/Firebase Remote Config for zero-downtime rotation. Build config in androidApp/build.gradle.kts supports TRUECALLER_API_KEY from multiple secure sources. Created docs/truecaller-integration.md setup guide and local.properties.example template. Security: no hardcoded keys, gitignored configuration files, production-ready with remote key rotation capability. Dependency injection wired through AppModule.kt with Named qualifiers.
-- 2025-12-27: Compose Multiplatform Plugin Fix: Resolved Kotlin 2.0.0-RC2 configuration error by adding id("org.jetbrains.kotlin.plugin.compose") to shared/build.gradle.kts plugins block (line 12). This separated Compose compiler plugin is now required for Compose Multiplatform. Fix enables successful builds of :shared module and all dependents including :wearApp. Verified with ./gradlew :shared:build and :wearApp:assembleDebug both completing successfully.
-- 2025-12-26: Release v86 (free/pro/premium): Fixed 6 critical bugs (#218, #228, #236, #248, #251, #260). Message scroll now shows most recent (not oldest). Multi-line presence threshold increased 2min→5min. Added web access hint card for premium users. Emergency map sizing fixed in web app. Auth errors no longer block emergency SMS fallback. AI threshold increased 0.6→0.75 to reduce false alerts. Added 6 new Beacon theme icons. Migration 14→15 adds messageId/status to contact_messages.
-- 2025-12-26: UI/Theme Polishing: Added Glassmorphism effects (backdrop-filter: blur(12px)) and dynamic color-mixing to Web App for better readability over custom backgrounds.
-- 2025-12-26: Generated custom SVG background assets for primary themes (Aurora, Midnight OLED, Sunset Fade, Forest Trail, Neon Noir) and special tier-based themes.
-- 2025-12-26: Cross-Platform Theme Sync: Implemented Real-time theme synchronization between Web, React Native (PulseLink), and Native Android (Beacon) using Firestore. PulseLink now features an ImageBackground layer that reacts to Firestore theme updates.
-- 2025-12-26: Reward System: Implemented "Unlocked & Reward Themes" system. Exclusive themes (Gold Standard, Obsidian Pro, Blueprint, etc.) automatically unlock based on user status (Premium, Pro, Beta Tester, or Tenure) and persist across account states.
-- 2025-12-26: Public Profile Decor: Extended user profiles to sync theme preferences and custom avatars to a public_profiles collection. Users' chosen decor is now visible to others, providing a unified and personal brand across the platform.
-- 2025-12-26: Tier-Gated Avatars: Added exclusive SVG avatars (Crown, Spark, Flask, Star) that unlock for Premium, Pro, Beta, and Loyal users, allowing them to showcase their status publicly.
-- 2025-12-26: Added contact message status tracking (Room v15: messageId/status columns + converters/DAO/repo), optimistic ContactConversationViewModel with read marking, and UI bubbles showing Sending/Sent/Delivered/Read with icons.
-- 2025-12-26: Cloud/FCM: link channel payloads now include status=SENT and FirebaseMessagingService updates Firestore status to DELIVERED on receipt; Cloud Function sets status on new messages.
-- 2025-12-26: SMS thread view now marks threads read on open and flags pending send failures; SMS status enum includes DELIVERED/FAILED for UI and repository mapping.
-- 2025-12-26: Fixed critical SMS alert bugs: PulseLinkSmsReceiver now only triggers attention tones for URGENT/EMERGENCY messages, not STANDARD.
-- 2025-12-26: Increased AI urgency confidence threshold from 0.6 to 0.75 to reduce false positives.
-- 2025-12-26: Release v85 (free/pro/premium): versionCode/Name bumped to 85; rebuilt AABs copied to disposable_aabs/.
+Created: 2025-11-02
 
-CI setup
-- codemagic.yaml workflow ios-simulator-kmp: KMP podspec, XcodeGen, pod install, xcodebuild for simulator, zip artifact.
-- iosApp/project.yml via XcodeGen; Info.plist scaffolded under iosApp/PulseLinkiOS.
-- Fixes: chmod gradlew; allow project repos; add Kotlin native repo; Cocoapods podspec name/version; :shared:syncFramework (iphonesimulator/arm64 Debug) before pod install; workspace PulseLinkiOS.xcworkspace (cd iosApp); scheme PulseLinkI0S. DerivedData=$CM_BUILD_DIR/derivedData.
-- Podfile removes [CP-User] Build Shared phase; CI prebuilds via :shared:syncFramework.
+-- Overview --
+PulseLink is a clean-room rebuild of the emergency phrase app. It includes continuous speech recognition, SMS escalation, high-priority notifications, and contact management without blocking any messaging flows.
 
-Ads (free flavor)
-- App id: ca-app-pub-5327057757821609~9533221188
-- Banner: ca-app-pub-5327057757821609/3955684775
-- Interstitial: ca-app-pub-5327057757821609/3170992810
-- Rewarded interstitial: ca-app-pub-5327057757821609/8428571815
-- Native: ca-app-pub-5327057757821609/2153424615
-- App open: ca-app-pub-5327057757821609/4210125201
-- Ads off for pro/premium; premium has SUBSCRIPTION_ENABLED.
+-- 2025-11-02 Update --
+- Confirmed new audio assets present in `androidApp/src/main/res/raw`.
+- Rebuilt `androidApp:assembleDebug` on 2025-11-02 01:29 local; output at `androidApp/build/outputs/apk/debug/androidApp-debug.apk`.
+- Verified the rebuilt APK bundles the raw audio via `unzip -l`.
+- Next step: install the 2025-11-02 build on a device and confirm each alert sound plays end-to-end.
+- Cleaned Gradle artifacts (`androidApp/build`, project-level `.gradle`) ahead of initial commit.
+- Added `PulseLink-ui-mockup/` sketches (1.png-6.png) to track UI direction.
+- Removed bundled Gradle distribution artifacts to stay under GitHub size limits.
+- Initial snapshot pushed to GitHub: `DamienLove/thepulselinkapp` (branch `main`).
+- Introduced `free` (ads) and `pro` (paid) flavors; debug APKs at `androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk` and `androidApp/build/outputs/apk/pro/debug/androidApp-pro-debug.apk`.
+- Free flavor now loads AdMob app-open, native card, and banner slots when the in-app “Pro mode” switch is turned off.
+- Home top bar now shows the branded icon beside the PulseLink title; flavor app names updated (“PulseLink” vs “PulseLink Pro”).
+- Foreground service start gated until microphone permission granted to satisfy Android 14 FGS requirements.
+- Dropped the unused `dataSync` foreground-service type and disabled auto-start listening so first launch lands on the new Home dashboard.
+- Implemented splash, onboarding, and redesigned home/dashboard with listening switch, navigation tiles, contact list with call/message shortcuts, and pro upgrade card.
+- Wired the SMS command pipeline: link requests/approvals, pings, and remote alert preparation now move through `ContactLinkManager` with DND overrides.
+- Added per-contact linking state, remote permission toggles, and the official PulseLink shield artwork (launcher + in-app logo).
+- Current focus (branch `feature/ui-polish`): tighten back-stack behavior, swap the emergency tier toggle for an outgoing ringer selector, finalize inbound approval/ping UX, request DND access up front, and restore ringer/DND state after alerts.
 
-Product tiers (as of 2025-12-13)
-- Beacon (free): default SMS, ads on.
-- PulseLink Pro (one-time): ads off, PRO_FEATURES=true, SMS-capable.
-- Beacon Premium (subscription): ads off, PRO_FEATURES+PREMIUM_FEATURES+SUBSCRIPTION_ENABLED=true; billing IDs placeholders pulselink_premium_monthly / pulselink_premium_yearly; needs Play products + google-services-premium.json and server validation.
+-- Modules --
+androidApp: Compose UI + Hilt + Room + DataStore + WorkManager integration for long-running foreground services.
 
-Current SMS features
-- Default-SMS permissions/intents, SMS/MMS/WAP receivers, respond-via-message service.
-- Telephony provider writes for inbound/outbound SMS.
-- Inbox/thread UI with live refresh + contact resolution; time-format preference.
+-- Quick Run --
+1. Install Temurin JDK 17.
+2. Generate Gradle wrapper jars (if missing) with gradle wrapper --gradle-version 8.6.
+3. Execute ./gradlew androidApp:assembleDebug.
+4. Deploy via adb install androidApp/build/outputs/apk/debug/androidApp-debug.apk.
 
- Outstanding (carry-over for next session)
- - Beacon free: handle default-SMS role result callback UX, improve permission rationale, add contact avatars, interstitial trigger points, and run lint/unit tests once finalized. Consider launcher/icon entry to inbox from PulseLink home per request.
- - Beacon MMS: current CarrierMessagingService is a stub (immediate OK); implement real carrier-grade MMS download/send pipeline and verify with device/carrier.
-- SMS: Add MMS send/receive UI + compliance tests; enhance inbox with unread badges, delete/archive, and better date formatting; consider content observer cleanup.
- - Beacon visual customization: gradients, icon sizing, and presets polishing; add tests for theme persistence and per-contact overrides.
-- Caller ID: ✅ Truecaller lookup implemented (priority 2 provider). Outstanding: in-call overlay UI, permission flow refinement, additional provider integrations if needed.
-- Private contacts/chats: enforce PIN when opening private threads, store messages securely/encrypted, filter UI lists, add "make private" toggles.
-- Trusted contacts/emergency controls: ensure emergency actions (ringer/volume/siren override) are exposed in SMS app for trusted contacts.
-- Premium web access: design secure relay (likely Firebase Functions + Firestore) for remote message access, add device opt-in, auth, and audit logging.
-- Billing: replace placeholder product IDs, add server-side validation, handle subscription states, and add premium google-services file.
-- Tests: device tests for default SMS role, call screening, and PIN flows.- Attempted toolchain realignment: downgraded Kotlin plugins to 2.0.21 and Compose compiler to 1.7.0-beta02, added lint disables for Compose flow detectors; build still blocked by metadata version mismatch (deps emit 2.2.0 metadata).
-- 2025-12-27: Enabled maven-publish for shared KMP module (group com.pulselink version 0.1.0) publishing to mavenLocal/GitHub Packages with release sources; added RingerSong composite build + dependency on shared-android 0.1.0 for local/CI consumption.
-- 2025-12-27: Shared lib publishing + RingerSong wiring: :shared (group com.pulselink version 0.1.0) publishes release+sources to mavenLocal/GitHub Packages; use ./gradlew :shared:publishToMavenLocal for local, ./gradlew :shared:publish with GITHUB_ACTOR+GITHUB_TOKEN (or GITHUB_USER+GITHUB_PACKAGES_TOKEN) for GH. RingerSong settings now include mavenLocal/GH repo and includeBuild ../pulselink with dependencySubstitution for com.pulselink:shared/shared-android; app uses implementation("com.pulselink:shared-android:0.1.0"). Local builds pick up sibling pulselink if present; CI resolves published artifact. If build complains about JVM target, raise RingerSong Java/Kotlin to 17 to match shared.
-- 2025-12-27: Shared lib v0.1.1 adds SharedThemePreferences (serializable) + ThemePalette mapping helpers; published to mavenLocal. RingerSong now consumes com.pulselink:shared-android:0.1.1 and uses SharedThemePreferences -> ThemePalette for Material theme. RingerSong includeBuild is gated by env USE_PULSELINK_INCLUDEBUILD=true to avoid AGP version clashes; defaults to published artifact.
-- 2025-12-27: Built Android bundles: free/pro release AABs at androidApp/build/outputs/bundle/(freeRelease|proRelease); premium from 12-26 still present. Fix: VisualSettingsScreen package typo corrected.
-- 2025-12-27: Built release bundles after shared v0.1.1 update. AABs: free/pro/premium at androidApp/build/outputs/bundle/(freeRelease|proRelease|premiumRelease); RingerSong app-release.aab at ../RingerSong/app/build/outputs/bundle/release/. Web app built via npm run build (dist/ output). Fixed cpackage typo in VisualSettingsScreen blocking kapt.
-- 2025-12-27: UI/Theme Expansion: Created two new high-fidelity themes, "Cyber Mist" (Cyberpunk/Neon) and "Deep Ocean" (Minimalist Deep Blue), complete with custom-generated SVG background assets. Ported these themes to Web, Android Pro, and Beacon apps for a unified ecosystem experience.
-- 2025-12-27: Shared UI Infrastructure: Updated the :shared KMP module to support Compose Multiplatform. Migrated the canonical "UI Vision" (ThemePalette, ThemeState, and mapping logic) to shared/src/commonMain, enabling RingerSong and other modules to consume the exact same design system via a single dependency.
-- 2025-12-27: RingerSong Web Polish: Redesigned the RingerSong management interface in the Web app. Added a modern branded header with dynamic accent-color tinting, a card-based grid layout for playlist management, and a streamlined Spotify search experience.
-- 2025-12-27: Web App Refinement: Added smooth cubic-bezier transitions for theme switching and enhanced theme card hover states with interactive scaling and soft shadows. Fixed accessibility issues (duplicate aria-labels) in the contact search and message composer.
-- 2025-12-27: Version bump to 87 and rebuilt free/pro/premium AABs (paths under androidApp/build/outputs/bundle/*Release, timestamp ~04:03). QA-ready.
-- 2025-12-27: QA request — rebuilt PulseLink v87 free/pro/premium AABs after Claude fixes; artifacts in androidApp/build/outputs/bundle/*Release/ for verification.
+-- Key Services --
+- PulseLinkForegroundService: Maintains ongoing notification + spawns PulseLinkVoiceService for hotword capture.
+- PulseLinkVoiceService: SpeechRecognizer loop that feeds AlertRouter.
+- AlertRouter: Resolves phrases to escalation tiers and uses AlertDispatcher for SMS + notifications.
+
+-- Permissions --
+App requests microphone, SMS (send/receive), notification, and location access. Behaviors degrade gracefully when any permission is denied.
+-- 2025-11-03 Update --
+- Replaced static alert/check-in channels with per-tone notification channels that always reference the bundled raw assets and respect vibration/DND flags.
+- Added AudioOverrideManager to snapshot/restore ring volume, ringer mode, and interruption filter; removed the RestoreRingerReceiver broadcast.
+- RemoteActionHandler now funnels remote overrides through the AudioOverrideManager for consistent restore behavior.
+- Next steps: finish UI cleanup (remove legacy widgets, relocate Alerts/Settings) and implement remote handshake + DND access prompts.
+- Streamlined Home UI: removed unused navigation buttons, moved alerts management into Alerts screen, and added Settings destination with location toggle.
+- Added remote alert handshake: devices now exchange prepare/ready SMS codes, enforce DND access before remote alerts or pings, and fall back gracefully if overrides fail.
+- Onboarding now detects external permission grants and provides app-settings guidance for stubborn SMS approvals.
+
+-- 2025-11-04 Update --
+- Remote contact attention flow now plays the configured alert tone (respecting per-contact overrides) for pings, manual messages, and remote handshakes while forcing ring volume/DND overrides and scheduling automatic restore.
+- Manual message and ping senders receive immediate feedback if the remote device fails to acknowledge the override; manual composer blocks unlinked contacts and preserves guidance to try again if delivery raises an error.
+- Notification sound picker now manages preview playback via a single MediaPlayer instance that stops/cleans up when leaving the screen.
+- Onboarding permission help clarified the SMS unlock steps (Settings > Apps > PulseLink > Permissions > 3-dot menu) per Motorola fingerprint flows.
+- Contact detail and home actions now await handshake completion, show success/fallback toasts, and refuse remote messaging until the contact is fully linked.
+- Restored the Pro upsell card on Home so the existing navigation entry no longer references a missing composable.
+- Built fresh free/pro debug APKs on 2025-11-04 (`androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk`, `androidApp/build/outputs/apk/pro/debug/androidApp-pro-debug.apk`).
+
+-- 2025-11-04 Update (UI/Messaging) --
+- Split onboarding into a welcome overview + name capture screen followed by a dedicated permissions step that blocks completion until SMS, contacts, microphone, location, notifications, and DND access are all granted.
+- Added a persistent DND access action in Settings so users can re-enable overrides after onboarding.
+- Logged manual messages (inbound/outbound) via a new `contact_messages` table and repository; conversations now persist across app restarts.
+- Replaced the contact detail messaging dialog with a full-screen conversation surface inspired by the new design mock (`branding/PulseLink.png`) including gradient bubbles, logo header, status pills, and quick ping access.
+- Added a gear icon beside each home contact to jump straight into that contact's settings, while tapping the card opens the conversation view.
+- Rebuilt the message composer with gradient styling, mic icon placeholder, and override feedback chips on outbound messages.
+- Confirmed fresh `androidApp:assembleProDebug` and `androidApp:assembleFreeDebug` builds on 2025-11-04 after the UI overhaul.
+- Restored the one-tap "Grant permissions" button on the onboarding permissions screen so users can launch the system dialogs without leaving the flow, while still blocking final completion until every grant (including DND) succeeds.
+
+-- 2025-11-05 Update --
+- Implemented end-to-end SMS delivery tracking with a new `SmsSendReceiver`, PendingIntent callbacks, and deferred completion so manual message send states reflect real modem results.
+- Hardened inbound manual message handling by retrying contact resolution, guarding against ID 0 saves, and flagging outbound results as pending when the remote contact has not approved linking.
+- Polished the onboarding, home, and settings composables with the latest gradients, toggle cards, and permission guidance; fixed the onboarding name field cursor jump reported by QA.
+- Gradle targets `testFreeDebugUnitTest`, `testProDebugUnitTest`, and `androidApp:assembleProDebug` now pass against the refreshed branch (see `androidApp/build/outputs/apk/pro/debug/` for the updated APK).
+- Reworked the contact call flow to wait for remote override confirmation, auto place the call via `ACTION_CALL`, monitor call completion, and push a `CallEnded` SMS so the receiver's audio settings restore immediately after hangup.
+
+-- 2025-11-05 Update (Alert polish & UI) --
+- Emergency quick action now dispatches alerts to ordered contacts sequentially and keeps remote ringers elevated through the follow-up call handshake.
+- Contact call flow waits on the new AlertPrepare(CALL) handshake, sends CallEnded acknowledgements, and auto-restores remote audio overrides after hangup.
+- Link approval screen surfaces an "Allow remote sound change" switch and respects the auto-allow setting during approval.
+- Home header/logo alignment, mic toggle copy, quick actions, and reorder affordances refreshed; Settings gained a listening toggle and clearer tone entries.
+- Tone pickers open as dedicated routes for emergency vs. check-in sounds with cleaned layouts and centered branding.
+- Updated theme palettes and component styling to improve contrast in light/dark modes across settings, contact detail, and dialog surfaces.
+- Contact import pipeline now guards permission failures and returns a user-facing toast instead of crashing.
+
+-- 2025-11-06 Update (Release signing & Play requirements) --
+- Migrated the app to API Level 35: `compileSdk = 35`, `targetSdk = 35`, `buildToolsVersion = 35.0.0`, `versionCode = 3`, `versionName = 1.0.2` to satisfy Play's November 2025 policy.
+- Added a configurable release signing block in Gradle that resolves credentials from `keystore.properties`, environment variables, or `-P android.injected.signing.*`. Defaults now point to the legacy `upload-keystore.jks` so we continue matching the Play upload certificate (SHA1 `38:48:65:74:6B:F3:20:26:47:81:7A:76:63:03:C3:33:6D:9A:45:D3`).
+- Committed `keystore.properties.template` documenting the required fields; the real `keystore.properties` remains git-ignored and must contain the legacy keystore path, alias, and passwords.
+- Updated `.github/workflows/release-aab.yml` to pass signing credentials via env vars and build both free/pro release bundles before calling `r0adkll/upload-google-play@v1`.
+- Local verification (2025-11-06 11:27 MST): `./gradlew clean bundleFreeRelease bundleProRelease assembleFreeRelease assembleProRelease`; outputs land in `androidApp/build/outputs/{bundle,apk}/**/release/`. Note: builds must be re-signed with the legacy key prior to Play upload.
+- Play Console rejected the latest bundle because it was signed with a new key. Resign with the original upload keystore (fingerprint above) or initiate a managed key reset via Play support before the next submission.
+
+Next Immediate actions:
+- Restore the original upload keystore credentials in `keystore.properties` (or CI secrets) so CI and local builds sign with the expected certificate before retrying the Play upload.
+- Coordinate with Play Console admins to confirm the service account still has Release Manager access and that the Google Play Android Developer API is enabled, then rerun the internal track release once the signature matches.
+- Address the outstanding UX polish from 2025-11-05: emergency quick action button, contact reorder drag support, tone picker separation with centered branding, link-approval toggle for "allow remote sound change", contrast fixes, centered logo + mic toggle on Home, removal of the stray "support circle" icon, and the contact import crash.
+- Re-run end-to-end smoke tests (alerts, SMS flows, contact linking) once the UI changes land, then cut the next internal track build via the refreshed GitHub workflow.
+
+-- 2025-11-07 Update (Alpha baseline + signing assets) --
+- Declared `<uses-feature android.hardware.telephony android:required="false" />` so ChromeOS devices (and lint) treat SMS/phone capabilities as optional—resolves the Play Console install block encountered on Chromebooks.
+- Fixed `NativeAdCard` to inflate `native_ad_view` into a `NativeAdView` container before binding, restoring padding/rounded corners on the Upgrade-to-Pro placement.
+- Added `docs/alpha-bugs.json` plus the `Publish Alpha Bug Baseline` workflow that turns each JSON entry into a GitHub issue. First run (workflow #2) created Issues #15 and #16 for the ChromeOS telephony flag + native ad layout regressions.
+- Granted the workflow `issues: write` scope via workflow-level `permissions` so it can open tickets using the default `GITHUB_TOKEN`—no PAT required. Trigger it from GitHub Actions (supports a `dry_run` boolean).
+- Dropped the new Play upload certificate (`upload_certificate.pem`) into the repo root. Use this PEM when Play requests proof of the active upload key while keeping the actual signing keystore (`upload-keystore.jks`) and passwords outside the repo. Always sign release artifacts with the legacy upload key before submitting the next build.

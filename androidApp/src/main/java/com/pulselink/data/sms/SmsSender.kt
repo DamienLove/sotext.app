@@ -21,12 +21,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Singleton
 class SmsSender @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val smsManager: SmsManager,
-    private val smsStore: SmsStore
+    private val smsManager: SmsManager
 ) {
 
     private val pendingRequests = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
-    private val pendingMessages = ConcurrentHashMap<String, PendingMessage>()
 
     @RequiresPermission(allOf = [Manifest.permission.SEND_SMS])
     suspend fun sendAlert(
@@ -53,7 +51,6 @@ class SmsSender @Inject constructor(
         timeoutMillis: Long = DEFAULT_TIMEOUT_MS,
         awaitResult: Boolean = true
     ): Boolean {
-        val timestamp = System.currentTimeMillis()
         val requestId = UUID.randomUUID().toString()
         var deferred: CompletableDeferred<Boolean>? = null
         if (awaitResult) {
@@ -86,12 +83,6 @@ class SmsSender @Inject constructor(
         }.onFailure { error ->
             Log.e(TAG, "Unable to send SMS to $phoneNumber", error)
             pendingRequests.remove(requestId)?.complete(false)
-            pendingMessages.remove(requestId)
-        }.onSuccess {
-            val rowId = smsStore.insertOutgoingPending(phoneNumber, message, timestamp)
-            if (rowId != null) {
-                pendingMessages[requestId] = PendingMessage(rowId)
-            }
         }
 
         if (!awaitResult) {
@@ -107,25 +98,9 @@ class SmsSender @Inject constructor(
         return result
     }
 
-    fun handleSendResult(requestId: String, action: String, success: Boolean) {
-        val pending = pendingMessages[requestId]
-        if (success) {
-            when (action) {
-                ACTION_SMS_SENT -> pending?.rowId?.let { smsStore.markOutgoingSent(it) }
-                ACTION_SMS_DELIVERED -> pending?.rowId?.let { smsStore.markOutgoingDelivered(it) }
-            }
-        }
-        if (action == ACTION_SMS_SENT) {
-            pendingRequests.remove(requestId)?.complete(success)
-        }
-        if (!success || action == ACTION_SMS_DELIVERED) {
-            pendingMessages.remove(requestId)
-        }
+    fun completeSmsRequest(requestId: String, success: Boolean) {
+        pendingRequests.remove(requestId)?.complete(success)
     }
-
-    private data class PendingMessage(
-        val rowId: Long
-    )
 
     companion object {
         private const val TAG = "PulseLinkSmsSender"

@@ -11,10 +11,5 @@ data class AlertEvent(
     val tier: EscalationTier,
     val contactCount: Int,
     val sentSms: Boolean,
-    val sharedLocation: Boolean,
-    val contactId: Long? = null,
-    val contactName: String? = null,
-    val isIncoming: Boolean = false,
-    val soundKey: String? = null,
-    val isRead: Boolean = false
+    val sharedLocation: Boolean
 )

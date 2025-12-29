@@ -2,36 +2,26 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
-    <uses-permission android:name="android.permission.WRITE_SMS" />
-    <uses-permission android:name="android.permission.RECEIVE_MMS" />
-    <uses-permission android:name="android.permission.RECEIVE_WAP_PUSH" />
-    <uses-permission
-        android:name="android.permission.SEND_RESPOND_VIA_MESSAGE"
-        tools:ignore="ProtectedPermissions" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
-    <queries>
-        <package android:name="com.google.android.apps.bard" />
-        <package android:name="com.google.android.apps.googleassistant" />
-        <package android:name="com.google.android.googlequicksearchbox" />
-    </queries>
 
     <application
         android:name=".PulseLinkApp"
@@ -44,311 +34,33 @@
 
         <activity
             android:name=".ui.MainActivity"
-            android:exported="true"
-            android:windowSoftInputMode="adjustResize"
-            android:supportsPictureInPicture="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SENDTO" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="sms" />
-                <data android:scheme="smsto" />
-                <data android:scheme="mms" />
-                <data android:scheme="mmsto" />
-            </intent-filter>
-        </activity>
-        <!-- Launcher shortcut that jumps directly to SMS inbox; enabled at runtime when PulseLink is default SMS -->
-        <activity
-            android:name=".ui.InboxLauncherActivity"
-            android:exported="true"
-            android:enabled="@bool/show_beacon_launcher"
-            android:label="Beacon Inbox"
-            android:icon="@drawable/ic_beacon_inbox"
-            android:roundIcon="@drawable/ic_beacon_inbox"
-            android:taskAffinity="com.pulselink.beacon.inbox"
-            android:launchMode="singleTask">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxLogo"
-            android:enabled="false"
-            android:icon="@drawable/ic_logo"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_logo"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
+        <service
+            android:name=".service.PulseLinkForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <service
+            android:name=".service.PulseLinkVoiceService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <receiver
+            android:name=".receiver.TriggerBootReceiver"
+            android:enabled="true"
+            android:exported="false">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxPro"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_inbox"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_inbox"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeDefaultLight"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_default_light"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_default_light"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeMidnightOled"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_midnight_oled"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_midnight_oled"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeOceanDeep"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_ocean_deep"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_ocean_deep"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeRosePetal"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_rose_petal"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_rose_petal"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeSunsetFade"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_sunset_fade"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_sunset_fade"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeCitrusPop"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_citrus_pop"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_citrus_pop"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeForestTrail"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_forest_trail"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_forest_trail"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeLavenderHaze"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_lavender_haze"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_lavender_haze"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeSlateMono"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_slate_mono"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_slate_mono"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeDesertClay"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_desert_clay"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_desert_clay"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeNordFrost"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_nord_frost"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_nord_frost"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeNeonNoir"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_neon_noir"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_neon_noir"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemePaperback"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_paperback"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_paperback"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeMintBreeze"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_mint_breeze"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_mint_breeze"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeAmethystNight"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_amethyst_night"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_amethyst_night"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <activity-alias
-            android:name="com.pulselink.BeaconInboxThemeAurora"
-            android:enabled="false"
-            android:icon="@drawable/ic_beacon_theme_aurora"
-            android:label="Beacon Inbox"
-            android:roundIcon="@drawable/ic_beacon_theme_aurora"
-            android:exported="true"
-            android:targetActivity=".ui.InboxLauncherActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <!-- Beacon inbox activity (opened from launcher shortcut or in-app) -->
-        <activity
-            android:name=".ui.BeaconInboxActivity"
-            android:exported="true"
-            android:windowSoftInputMode="adjustResize"
-            android:taskAffinity="com.pulselink.beacon.inbox"
-            android:launchMode="singleTop" />
-
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="${admobAppId}" />
-
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="@string/google_maps_key" />
-
-        <!-- App Actions configuration using shortcuts framework -->
-        <meta-data
-            android:name="android.app.shortcuts"
-            android:resource="@xml/shortcuts" />
+        </receiver>
 
         <receiver
             android:name=".receiver.PulseLinkSmsReceiver"
@@ -356,21 +68,7 @@
             android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="999">
-                <action android:name="android.provider.Telephony.SMS_DELIVER" />
-            </intent-filter>
-            <intent-filter android:priority="999">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".receiver.MmsWapPushReceiver"
-            android:enabled="true"
-            android:exported="true"
-            android:permission="android.permission.BROADCAST_WAP_PUSH">
-            <intent-filter android:priority="999">
-                <action android:name="android.provider.Telephony.WAP_PUSH_DELIVER" />
-                <data android:mimeType="application/vnd.wap.mms-message" />
             </intent-filter>
         </receiver>
 
@@ -384,60 +82,9 @@
             </intent-filter>
         </receiver>
 
-        <activity
-            android:name=".ui.AssistantShortcutActivity"
-            android:exported="true"
-            android:excludeFromRecents="true"
-            android:launchMode="singleTop"
-            android:taskAffinity=""
-            android:theme="@style/Theme.PulseLink.Transparent">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:host="assistant"
-                    android:scheme="pulselink" />
-            </intent-filter>
-
-            <!-- App Links intent-filter for HTTPS URLs -->
-            <!-- Requires assetlinks.json hosted at https://pulselink.app/.well-known/assetlinks.json -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="pulselink.app"
-                    android:pathPrefix="/assistant" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.pulselink.intent.ASSISTANT_EMERGENCY" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.pulselink.intent.ASSISTANT_CHECK_IN" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.pulselink.intent.ASSISTANT_VOICE" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
-        <activity
-            android:name=".ui.EmergencyPopupActivity"
-            android:exported="false"
-            android:theme="@style/Theme.PulseLink.Transparent"
-            android:launchMode="singleTop"
-            android:taskAffinity=""
-            android:excludeFromRecents="true"
-            android:showOnLockScreen="true"
-            android:turnScreenOn="true" />
-
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.export"
+            android:authorities="com.pulselink.export"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
@@ -445,76 +92,12 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <service
-            android:name=".service.RespondViaMessageService"
-            android:exported="true"
-            android:permission="android.permission.SEND_RESPOND_VIA_MESSAGE">
-            <intent-filter>
-                <action android:name="android.intent.action.RESPOND_VIA_MESSAGE" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="sms" />
-                <data android:scheme="smsto" />
-                <data android:scheme="mms" />
-                <data android:scheme="mmsto" />
-            </intent-filter>
-        </service>
-
-        <service
-            android:name=".callid.CallerIdScreeningService"
-            android:permission="android.permission.BIND_SCREENING_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.telecom.CallScreeningService" />
-            </intent-filter>
-        </service>
-
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
             tools:node="remove" />
 
-        <service
-            android:name=".wear.WearCommandListenerService"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
-                <data android:scheme="wear" android:host="*" android:pathPrefix="/pulselink/action" />
-            </intent-filter>
-        </service>
-
-        <service
-            android:name=".data.messaging.PulseLinkFirebaseMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
-
-        <!-- Home screen widget (available in all flavors, incl. Pro) -->
-        <receiver
-            android:name=".widget.PulseLinkWidgetProvider"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_info" />
-        </receiver>
-        <receiver
-            android:name=".widget.PulseLinkWidgetActionReceiver"
-            android:exported="false" />
-
-        <service
-            android:name=".widget.PulseLinkWidgetService"
-            android:permission="android.permission.BIND_REMOTEVIEWS"
-            android:exported="true" />
-
-        <service
-            android:name=".service.CrashDetectionService"
-            android:enabled="true"
-            android:exported="false" />
-
     </application>
+
 </manifest>

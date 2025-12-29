@@ -1,12 +1,6 @@
 package com.pulselink.ui.screens
 
-import android.app.Activity
-import android.content.Intent
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,23 +26,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,56 +47,39 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.layout.widthIn
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pulselink.R
-import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.MessageDirection
-import com.pulselink.domain.model.MessageStatus
-import com.pulselink.ui.state.ContactConversationViewModel
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 @Composable
 fun ContactConversationScreen(
     contact: Contact?,
-    isProUser: Boolean,
-    showAds: Boolean,
-    viewModel: ContactConversationViewModel,
+    messages: List<ContactMessage>,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
     onCallContact: suspend (Contact) -> Unit,
-    onPing: suspend () -> Boolean,
-    onVoiceCommand: suspend (String) -> VoiceCommandResult,
-    onUpgradeClick: () -> Unit
+    onSendMessage: suspend (String) -> ManualMessageResult,
+    onPing: suspend () -> Boolean
 ) {
-    val messages by viewModel.messages.collectAsStateWithLifecycle()
-    LaunchedEffect(contact?.id) {
-        viewModel.markMessagesAsRead()
-    }
-    LaunchedEffect(messages) {
-        viewModel.markMessagesAsRead()
-    }
     val gradient = Brush.verticalGradient(
         colors = listOf(Color(0xFF0B0E1A), Color(0xFF151826))
     )
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .imePadding()
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .background(gradient)
     ) {
@@ -122,15 +89,11 @@ fun ContactConversationScreen(
             ConversationBody(
                 contact = contact,
                 messages = messages,
-                isProUser = isProUser,
-                showAds = showAds,
                 onBack = onBack,
                 onOpenSettings = onOpenSettings,
                 onCallContact = onCallContact,
-                onSendMessage = { body -> viewModel.sendMessage(body) },
-                onPing = onPing,
-                onVoiceCommand = onVoiceCommand,
-                onUpgradeClick = onUpgradeClick
+                onSendMessage = onSendMessage,
+                onPing = onPing
             )
         }
     }
@@ -155,56 +118,20 @@ private fun EmptyConversationState(onBack: () -> Unit) {
 private fun ConversationBody(
     contact: Contact,
     messages: List<ContactMessage>,
-    isProUser: Boolean,
-    showAds: Boolean,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
     onCallContact: suspend (Contact) -> Unit,
     onSendMessage: suspend (String) -> ManualMessageResult,
-    onPing: suspend () -> Boolean,
-    onVoiceCommand: suspend (String) -> VoiceCommandResult,
-    onUpgradeClick: () -> Unit
+    onPing: suspend () -> Boolean
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf(TextFieldValue("")) }
-    val listState = remember(contact.id) { LazyListState() }
-    val isNearBottom by remember {
-        derivedStateOf {
-            val layout = listState.layoutInfo
-            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
-        }
-    }
-    var initialScrollDone by remember(contact.id) { mutableStateOf(false) }
-    val voiceLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode != Activity.RESULT_OK) return@rememberLauncherForActivityResult
-        val spoken = result.data
-            ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            ?.firstOrNull()
-            ?.trim()
-        if (spoken.isNullOrEmpty()) {
-            Toast.makeText(context, context.getString(R.string.voice_command_error_unknown), Toast.LENGTH_SHORT).show()
-            return@rememberLauncherForActivityResult
-        }
-        scope.launch {
-            val outcome = onVoiceCommand(spoken)
-            val message = when (outcome) {
-                is VoiceCommandResult.Success -> outcome.message
-                is VoiceCommandResult.Error -> outcome.message
-                VoiceCommandResult.UpgradeRequired -> context.getString(R.string.voice_command_upgrade_required)
-            }
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-        }
-    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp)
-            .padding(top = 24.dp, bottom = 8.dp),
+            .padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Row(
@@ -220,14 +147,13 @@ private fun ConversationBody(
                 )
             }
             Row {
-                val hasPhone = (listOf(contact.phoneNumber) + contact.additionalPhones).any { it.isNotBlank() }
                 IconButton(onClick = {
                     scope.launch { onCallContact(contact) }
-                }, enabled = hasPhone) {
+                }) {
                     Icon(
                         imageVector = Icons.Filled.Call,
                         contentDescription = "Call contact",
-                        tint = if (hasPhone) Color(0xFF34D399) else Color.White.copy(alpha = 0.3f)
+                        tint = Color(0xFF34D399)
                     )
                 }
                 IconButton(onClick = onOpenSettings) {
@@ -263,40 +189,18 @@ private fun ConversationBody(
             )
             StatusRow(contact)
             if (contact.linkStatus == LinkStatus.LINKED) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                val result = runCatching { onPing() }
-                                val toastText = when {
-                                    result.isFailure -> context.getString(R.string.contact_check_in_toast_failure)
-                                    result.getOrDefault(false) -> context.getString(R.string.contact_check_in_toast_success)
-                                    else -> context.getString(R.string.contact_check_in_toast_muted)
-                                }
-                                Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF059669),
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(28.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Filled.CheckCircle, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = stringResource(id = R.string.contact_check_in_primary))
+                TextButton(onClick = {
+                    scope.launch {
+                        val result = runCatching { onPing() }
+                        val toastText = when {
+                            result.isFailure -> "Check-in failed to send"
+                            result.getOrDefault(false) -> "Check-in sent"
+                            else -> "Check-in sent (receiver may still be on silent)"
+                        }
+                        Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
                     }
-                    Text(
-                        text = stringResource(id = R.string.contact_check_in_secondary),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF9BE7C4),
-                        textAlign = TextAlign.Center
-                    )
+                }) {
+                    Text(text = "Send check-in", color = Color(0xFF67DBA0))
                 }
             }
         }
@@ -305,21 +209,11 @@ private fun ConversationBody(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            state = listState,
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
-            items(messages, key = { it.messageId.ifBlank { it.id.toString() } }) { message ->
-                MessageBubble(
-                    message = message,
-                    isOwnMessage = message.direction == MessageDirection.OUTBOUND
-                )
-            }
-        }
-        LaunchedEffect(messages.size) {
-            if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
-                listState.animateScrollToItem(0)  // Scroll to index 0 (most recent message)
-                initialScrollDone = true
+            items(messages, key = { it.id }) { message ->
+                MessageBubble(message = message)
             }
         }
 
@@ -350,7 +244,6 @@ private fun ConversationBody(
                                     ManualMessageResult.Failure.Reason.CONTACT_MISSING -> "Contact no longer available"
                                     ManualMessageResult.Failure.Reason.NOT_LINKED -> "Link this contact before messaging"
                                     ManualMessageResult.Failure.Reason.SMS_FAILED -> "Message failed to send"
-                                    ManualMessageResult.Failure.Reason.PERMISSION_REQUIRED -> context.getString(R.string.permission_sms)
                                     ManualMessageResult.Failure.Reason.UNKNOWN -> "Message failed to send"
                                 }
                             }
@@ -365,23 +258,6 @@ private fun ConversationBody(
                         input = TextFieldValue("")
                     }
                 }
-            },
-        onVoice = {
-            if (!isProUser) {
-                Toast.makeText(context, context.getString(R.string.voice_command_upgrade_required), Toast.LENGTH_SHORT).show()
-                onUpgradeClick()
-                return@ComposerRow
-                }
-                if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-                    Toast.makeText(context, context.getString(R.string.voice_command_no_recognizer), Toast.LENGTH_SHORT).show()
-                    return@ComposerRow
-                }
-                val prompt = context.getString(R.string.voice_command_prompt)
-                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_PROMPT, prompt)
-                }
-                voiceLauncher.launch(intent)
             }
         )
     }
@@ -413,8 +289,7 @@ private fun StatusRow(contact: Contact) {
 private fun ComposerRow(
     input: TextFieldValue,
     onInputChange: (TextFieldValue) -> Unit,
-    onSend: () -> Unit,
-    onVoice: () -> Unit
+    onSend: () -> Unit
 ) {
     val gradient = Brush.horizontalGradient(listOf(Color(0xFF1D4ED8), Color(0xFF3B82F6)))
     Row(
@@ -444,7 +319,7 @@ private fun ComposerRow(
                 innerField()
             }
         )
-        IconButton(onClick = onVoice) {
+        IconButton(onClick = { /* TODO: future voice support */ }) {
             Icon(Icons.Filled.Mic, contentDescription = "Voice message", tint = Color.White)
         }
         Spacer(modifier = Modifier.width(4.dp))
@@ -459,21 +334,23 @@ private fun ComposerRow(
 }
 
 @Composable
-private fun MessageBubble(message: ContactMessage, isOwnMessage: Boolean) {
-    val bubbleBrush = if (isOwnMessage) {
+private fun MessageBubble(message: ContactMessage) {
+    val isOutbound = message.direction == MessageDirection.OUTBOUND
+    val alignment = if (isOutbound) Alignment.End else Alignment.Start
+    val bubbleBrush = if (isOutbound) {
         Brush.horizontalGradient(listOf(Color(0xFF2563EB), Color(0xFF60A5FA)))
     } else {
         null
     }
-    val bubbleColor = if (isOwnMessage) Color.Transparent else Color(0x33212533)
-    val textColor = if (isOwnMessage) Color.White else Color(0xFFE2E8F0)
+    val bubbleColor = if (isOutbound) Color.Transparent else Color(0x33212533)
+    val textColor = if (isOutbound) Color.White else Color(0xFFE2E8F0)
     val timestamp = remember(message.timestamp) {
         android.text.format.DateFormat.format("h:mm a", message.timestamp).toString()
     }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (isOwnMessage) Alignment.End else Alignment.Start
+        horizontalAlignment = alignment
     ) {
         Box(
             modifier = Modifier
@@ -488,45 +365,13 @@ private fun MessageBubble(message: ContactMessage, isOwnMessage: Boolean) {
             Text(text = message.body, color = textColor, fontSize = 16.sp)
         }
         Spacer(modifier = Modifier.height(6.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (isOwnMessage) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = when (message.status) {
-                            MessageStatus.SENDING -> "Sending…"
-                            MessageStatus.SENT -> "Sent"
-                            MessageStatus.DELIVERED -> "Delivered"
-                            MessageStatus.READ -> "Read"
-                        },
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Icon(
-                        imageVector = when (message.status) {
-                            MessageStatus.SENDING -> Icons.Filled.Schedule
-                            MessageStatus.SENT -> Icons.Filled.Done
-                            MessageStatus.DELIVERED -> Icons.Filled.DoneAll
-                            MessageStatus.READ -> Icons.Filled.DoneAll
-                        },
-                        contentDescription = null,
-                        modifier = Modifier.size(12.dp),
-                        tint = if (message.status == MessageStatus.READ) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
-                }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (isOutbound) {
                 Text(
                     text = if (message.overrideSucceeded) "override ready" else "may be silenced",
                     color = if (message.overrideSucceeded) Color(0xFF67DBA0) else Color(0xFFFFB74D),
-                    fontSize = 12.sp
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(end = 8.dp)
                 )
             }
             Text(text = timestamp, color = Color(0xFF94A3B8), fontSize = 12.sp)
