@@ -940,6 +940,7 @@ function App() {
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
+  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
 
@@ -989,6 +990,7 @@ function App() {
 
   const handleSpotifySearch = async () => {
     if (!spotifySearch.trim()) return;
+    setIsSearchingSpotify(true);
     setSettingsStatus("Searching...");
     try {
         let token = spotifyToken;
@@ -1015,6 +1017,8 @@ function App() {
         setSettingsStatus("");
     } catch (e) {
         setSettingsStatus("Search failed: " + e.message);
+    } finally {
+        setIsSearchingSpotify(false);
     }
   };
 
@@ -1909,7 +1913,8 @@ function App() {
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
-        <div className="container login-container">
+        <a href="#main-content" className="skip-link">Skip to main content</a>
+        <div className="container login-container" id="main-content">
           <div className="login-card">
             <img src={logo} alt="PulseLink Pro" className="brand-logo" />
             <h1>PulseLink Web</h1>
@@ -2002,6 +2007,7 @@ function App() {
 
   return (
     <div className="app-shell" style={themeVars}>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
         <div className="sidebar">
           <div className="sidebar-header">
@@ -2135,7 +2141,7 @@ function App() {
             </div>
           )}
         </div>
-        <div className="main-content">
+        <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
               <div className="home-hero">
@@ -2529,7 +2535,7 @@ function App() {
                       <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env.local to load the map view.</p>
                     </div>
                   )}
-                  {mapStatus && <div className="map-status">{mapStatus}</div>}
+                  {mapStatus && <div className="map-status" role="status" aria-live="polite">{mapStatus}</div>}
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
@@ -2565,6 +2571,7 @@ function App() {
                             event.stopPropagation();
                             handleClearAlert(alert.id);
                           }}
+                          aria-label={`Clear alert from ${alert.address}`}
                         >
                           Clear
                         </button>
@@ -2636,8 +2643,8 @@ function App() {
                                         className="ghost-btn icon-only"
                                         onClick={() => handleDeleteRingerSong(song.id)}
                                         title="Remove from playlist"
-                                        aria-label="Remove from playlist"
-                                        style={{color: 'var(--muted)', padding: 8}}
+                                        aria-label={`Remove ${song.title} from playlist`}
+                                        style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
                                     >
                                         <TrashIcon />
                                     </button>
@@ -2654,11 +2661,19 @@ function App() {
                             <input
                                 className="login-input"
                                 placeholder="Search Spotify for songs..."
+                                aria-label="Search Spotify for songs"
                                 value={spotifySearch}
                                 onChange={(e) => setSpotifySearch(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
                             />
-                            <button className="primary-btn" onClick={handleSpotifySearch}>Search</button>
+                            <button
+                                className="primary-btn"
+                                onClick={handleSpotifySearch}
+                                disabled={isSearchingSpotify}
+                                aria-busy={isSearchingSpotify}
+                            >
+                                {isSearchingSpotify ? "Searching..." : "Search"}
+                            </button>
                         </div>
                     </div>
 

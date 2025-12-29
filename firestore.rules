@@ -136,10 +136,10 @@ service cloud.firestore {
 
     match /themes_public/{themeId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null &&
-        request.resource.data.ownerUid == request.auth.uid &&
-        request.resource.data.status == "approved" &&
-        request.resource.data.hasImages == false;
+      // Security: Sentinel - Prevent public theme poisoning.
+      // Users cannot be trusted to approve their own themes.
+      // Moderation must happen via 'themes_submissions' and a backend function.
+      allow write: if false;
     }
 
     match /themes_submissions/{themeId} {
