@@ -25,7 +25,8 @@
       "Bash(tasklist:*)",
       "Bash(taskkill:*)",
       "Bash(cmd.exe /c \"taskkill /IM studio64.exe\")",
-      "Bash(./gradlew:*)"
+      "Bash(./gradlew:*)",
+      "Bash(claude doctor)"
     ]
   }
 }
