@@ -1038,7 +1038,8 @@ function App() {
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
-    timeFormat: 'AUTO'
+    timeFormat: 'AUTO',
+    thirdPartyExtensionsEnabled: false
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1273,7 +1274,8 @@ function App() {
       setRemoteSettings({
         remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? false,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
-        timeFormat: data.timeFormat ?? 'AUTO'
+        timeFormat: data.timeFormat ?? 'AUTO',
+        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? false
       });
 
       // Check for theme and avatar unlocks
@@ -1477,7 +1479,11 @@ function App() {
       },
       (error) => {
         console.error('Failed to load emergency locations', error);
-        setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+        if (error?.code === 'permission-denied') {
+          setAlertStatus('Missing permissions to read emergency locations. Sign out/in or check Firebase rules for your account.');
+        } else {
+          setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+        }
       }
     );
     return () => unsubscribe();
@@ -2357,6 +2363,18 @@ function App() {
                   <h3>Theme Gallery</h3>
                   <p>Browse, import, and publish custom themes.</p>
                 </button>
+                <button
+                  className="home-card"
+                  onClick={() => setActivePanel('extensions')}
+                  disabled={!remoteSettings.thirdPartyExtensionsEnabled}
+                  title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
+                >
+                  <div className="home-icon pulselink">
+                    <img src={logo} alt="Extensions" />
+                  </div>
+                  <h3>Extensions</h3>
+                  <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Attach 3rd-party add-ons (coming soon)" : "Enable 3rd-party extensions to start."}</p>
+                </button>
               </div>
             </div>
           )}
@@ -2613,6 +2631,14 @@ function App() {
                 <h3>Emergency map</h3>
                 <p>Locations parsed from PulseLink alert messages synced to this account.</p>
               </div>
+              {!user && (
+                <div className="settings-card" style={{ marginBottom: 20 }}>
+                  <h4>Sign in to view alerts</h4>
+                  <p className="settings-note">Emergency locations are secured per account. Please sign in to load your map.</p>
+                </div>
+              )}
+              {user && (
+              <>
               <div className="map-controls">
                 <button
                   className="secondary-btn"
@@ -2724,6 +2750,8 @@ function App() {
                   )}
                 </div>
               </div>
+              </>
+              )}
             </div>
           )}
 
@@ -2860,7 +2888,28 @@ function App() {
                         : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
                       return (
                         <div key={themeDoc.id} className="theme-card">
-                          <div className="theme-preview" style={previewStyle} />
+                          <div className="theme-preview" style={previewStyle}>
+                            <div className="theme-preview-chat">
+                              <div
+                                className="theme-bubble incoming"
+                                style={{
+                                  background: previewTheme.bubbleIncoming,
+                                  color: previewTheme.onBubbleIncoming
+                                }}
+                              >
+                                Hey, you good?
+                              </div>
+                              <div
+                                className="theme-bubble outgoing"
+                                style={{
+                                  background: previewTheme.bubbleOutgoing,
+                                  color: previewTheme.onBubbleOutgoing
+                                }}
+                              >
+                                Yep, on my way!
+                              </div>
+                            </div>
+                          </div>
                           <div className="theme-meta">
                             <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
                             <div className="theme-author">{authorLabel}</div>
@@ -2945,8 +2994,30 @@ function App() {
                         className="theme-chip"
                         onClick={() => handleApplyPreset(preset.theme)}
                       >
-                        <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
-                        {preset.name}
+                        <div className="theme-chip-title">
+                          <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
+                          <strong>{preset.name}</strong>
+                        </div>
+                        <div className="theme-chip-preview">
+                          <div
+                            className="theme-bubble incoming"
+                            style={{
+                              background: preset.theme.bubbleIncoming,
+                              color: preset.theme.onBubbleIncoming
+                            }}
+                          >
+                            Sample incoming
+                          </div>
+                          <div
+                            className="theme-bubble outgoing"
+                            style={{
+                              background: preset.theme.bubbleOutgoing,
+                              color: preset.theme.onBubbleOutgoing
+                            }}
+                          >
+                            Sample reply
+                          </div>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -3040,6 +3111,31 @@ function App() {
             </div>
           )}
 
+          {activePanel === 'extensions' && (
+            <div className="pulselink-panel">
+              <div className="panel-header">
+                <h3>Extensions</h3>
+                <p>Attach third-party add-ons to PulseLink / Beacon once enabled. Web access mirrors the mobile toggle.</p>
+              </div>
+              <div className="settings-card">
+                <p className="settings-note" style={{ marginBottom: 12 }}>
+                  Status: {remoteSettings.thirdPartyExtensionsEnabled ? "Enabled (beta)" : "Disabled"}.
+                  Turn this on in Settings to allow extensions in both the app and web.
+                </p>
+                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                  <button className="primary-btn" type="button" onClick={() => setActivePanel('settings')}>
+                    Enable in Settings
+                  </button>
+                )}
+                {remoteSettings.thirdPartyExtensionsEnabled && (
+                  <div className="settings-note">
+                    Extension marketplace coming soon. Admins can still side-load trusted extensions via mobile until then.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activePanel === 'settings' && (
             <div className="settings-panel">
               <div className="settings-header">
@@ -3101,6 +3197,14 @@ function App() {
                       onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
                     />
                     Auto-update contact info
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.thirdPartyExtensionsEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
+                    />
+                    Enable 3rd-party extensions (beta)
                   </label>
                   <label className="login-field">
                     Time format
