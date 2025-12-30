@@ -29,10 +29,12 @@ struct ContentView: View {
                     }
                     .badge(isPro ? "Pro" : nil)
 
-                ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
-                    .tabItem {
-                        Label("Contacts", systemImage: "person.2.fill")
-                    }
+                if isPro {
+                    ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
+                        .tabItem {
+                            Label("Contacts", systemImage: "person.2.fill")
+                        }
+                }
 
                 SettingsTab(viewModel: viewModel)
                     .tabItem {
@@ -68,9 +70,13 @@ private struct HomeTab: View {
             ScrollView {
                 VStack(spacing: 20) {
                     emergencyCard
-                    relayCard
-                    overrideCard
-                    activityCard
+                    if isPro {
+                        relayCard
+                        overrideCard
+                        activityCard
+                    } else {
+                        proUpsellCard
+                    }
                 }
                 .padding(16)
             }
@@ -220,6 +226,21 @@ private struct HomeTab: View {
             Label("Check-in acknowledged - Morgan", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.secondary)
             Label("Widget updated with latest status", systemImage: "rectangle.dashed.badge.record")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var proUpsellCard: some View {
+        Card {
+            HStack {
+                Text("Upgrade to Pro")
+                    .font(.headline)
+                Spacer()
+                Image(systemName: "star.fill")
+                    .foregroundStyle(RelayColors.accent)
+            }
+            Text("Unlock SMS Relay, Contacts, and DND Overrides.")
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
     }
