@@ -1480,7 +1480,7 @@ function App() {
   useEffect(() => {
     if (!user) {
       setAlertLocations([]);
-      setAlertStatus('');
+      setAlertStatus('Sign in to view emergency locations.');
       return;
     }
     const alertsRef = collection(db, "users", user.uid, "emergencyLocations");
@@ -1510,7 +1510,11 @@ function App() {
       },
       (error) => {
         console.error('Failed to load emergency locations', error);
-        setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+        if (error?.code === 'permission-denied') {
+          setAlertStatus('Missing permissions to read emergency locations. Sign out/in or check Firebase rules for your account.');
+        } else {
+          setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+        }
       }
     );
     return () => unsubscribe();
@@ -2659,6 +2663,14 @@ function App() {
                 <h3>Emergency map</h3>
                 <p>Locations parsed from PulseLink alert messages synced to this account.</p>
               </div>
+              {!user && (
+                <div className="settings-card" style={{ marginBottom: 20 }}>
+                  <h4>Sign in to view alerts</h4>
+                  <p className="settings-note">Emergency locations are secured per account. Please sign in to load your map.</p>
+                </div>
+              )}
+              {user && (
+              <>
               <div className="map-controls">
                 <button
                   className="secondary-btn"
@@ -2770,6 +2782,8 @@ function App() {
                   )}
                 </div>
               </div>
+              </>
+              )}
             </div>
           )}
 
