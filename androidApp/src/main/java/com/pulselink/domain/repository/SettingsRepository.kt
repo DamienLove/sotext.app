@@ -11,6 +11,8 @@ interface SettingsRepository {
     suspend fun update(transform: (PulseLinkSettings) -> PulseLinkSettings)
     suspend fun setProUnlocked(enabled: Boolean)
     suspend fun setPremiumUnlocked(enabled: Boolean)
+    suspend fun setPremiumPurchaseToken(token: String?)
+    suspend fun setTierBeforePremium(tier: String?)
     suspend fun setOnboardingComplete()
     suspend fun ensureDeviceId(): String
     suspend fun setOwnerName(name: String)

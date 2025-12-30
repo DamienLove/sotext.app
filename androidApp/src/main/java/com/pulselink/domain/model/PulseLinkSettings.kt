@@ -35,6 +35,8 @@ data class PulseLinkSettings(
     val autoCallAfterAlert: Boolean = false,
     val proUnlocked: Boolean = false,
     val premiumUnlocked: Boolean = false,
+    val premiumPurchaseToken: String? = null,
+    val tierBeforePremium: String? = null,
     val onboardingComplete: Boolean = false,
     val deviceId: String = "",
     val isBetaTester: Boolean = false,

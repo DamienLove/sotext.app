@@ -17,6 +17,11 @@ import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
 import com.pulselink.BuildConfig
 import com.pulselink.domain.repository.SettingsRepository
+import com.google.firebase.functions.FirebaseFunctions
+import com.pulselink.auth.FirebaseAuthManager
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.tasks.await
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -32,13 +37,16 @@ data class SubscriptionState(
     val loading: Boolean = false,
     val product: ProductDetails? = null,
     val isPremiumActive: Boolean = false,
+    val tierBeforePremium: String? = null,
     val statusMessage: String? = null
 )
 
 @Singleton
 class SubscriptionManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val functions: FirebaseFunctions,
+    private val authManager: FirebaseAuthManager
 ) : PurchasesUpdatedListener {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -60,6 +68,12 @@ class SubscriptionManager @Inject constructor(
     init {
         if (BuildConfig.SUBSCRIPTION_ENABLED) {
             startConnection()
+            scope.launch {
+                while (true) {
+                    refreshPremiumStatus()
+                    delay(6 * 60 * 60 * 1000L) // every 6h
+                }
+            }
         }
     }
 
@@ -194,15 +208,79 @@ class SubscriptionManager @Inject constructor(
             purchase.products.contains(BuildConfig.SUBS_MONTHLY_PRODUCT_ID) &&
                 purchase.purchaseState == Purchase.PurchaseState.PURCHASED
         }
+        val wasActive = _state.value.isPremiumActive
         _state.value = _state.value.copy(isPremiumActive = active, loading = false)
         scope.launch {
+            val currentSettings = settingsRepository.settings.first()
+            if (!currentSettings.premiumUnlocked) {
+                val tierBefore = when {
+                    currentSettings.proUnlocked -> "pro"
+                    else -> "free"
+                }
+                settingsRepository.setTierBeforePremium(tierBefore)
+            }
             settingsRepository.setPremiumUnlocked(active)
+
+            // Auto-enable remote web access when premium becomes active
+            if (active && !wasActive) {
+                settingsRepository.setRemoteWebAccessEnabled(true)
+            }
+            purchases.firstOrNull { it.products.contains(BuildConfig.SUBS_MONTHLY_PRODUCT_ID) }
+                ?.let {
+                    settingsRepository.setPremiumPurchaseToken(it.purchaseToken)
+                    verifyRemote(it)
+                }
         }
         purchases.filter { it.isAcknowledged.not() }.forEach { purchase ->
             val params = AcknowledgePurchaseParams.newBuilder()
                 .setPurchaseToken(purchase.purchaseToken)
                 .build()
             billingClient.acknowledgePurchase(params) { /* no-op */ }
+        }
+    }
+
+    private suspend fun verifyRemote(purchase: Purchase) {
+        runCatching {
+            functions
+                .getHttpsCallable("verifySubscription")
+                .call(
+                    hashMapOf(
+                        "purchaseToken" to purchase.purchaseToken,
+                        "packageName" to context.packageName,
+                        "productId" to BuildConfig.SUBS_MONTHLY_PRODUCT_ID
+                    )
+                )
+                .await()
+        }.onFailure {
+            _state.value = _state.value.copy(statusMessage = "Server verification failed")
+        }.onSuccess {
+            authManager.refreshClaims()
+        }
+    }
+
+    suspend fun refreshPremiumStatus() {
+        if (!BuildConfig.SUBSCRIPTION_ENABLED) return
+        runCatching {
+            functions.getHttpsCallable("getPremiumStatus")
+                .call()
+                .await()
+        }.onSuccess { result ->
+            val data = result.data as? Map<*, *> ?: emptyMap<String, Any>()
+            val active = (data["hasClaim"] as? Boolean) == true
+            val wasActive = _state.value.isPremiumActive
+            _state.value = _state.value.copy(isPremiumActive = active)
+            settingsRepository.setPremiumUnlocked(active)
+
+            // Auto-enable remote web access when premium becomes active
+            if (active && !wasActive) {
+                settingsRepository.setRemoteWebAccessEnabled(true)
+            }
+            if (!active) {
+                settingsRepository.setPremiumPurchaseToken(null)
+            }
+            authManager.refreshClaims()
+        }.onFailure {
+            _state.value = _state.value.copy(statusMessage = "Status sync failed")
         }
     }
 }

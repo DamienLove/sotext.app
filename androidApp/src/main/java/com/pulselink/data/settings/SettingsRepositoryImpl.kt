@@ -50,6 +50,8 @@ private val BETA_AGREEMENT_VERSION = stringPreferencesKey("beta_agreement_versio
 private val AUTO_CALL = booleanPreferencesKey("auto_call")
 private val PRO_UNLOCKED = booleanPreferencesKey("pro_unlocked")
 private val PREMIUM_UNLOCKED = booleanPreferencesKey("premium_unlocked")
+private val PREMIUM_PURCHASE_TOKEN = stringPreferencesKey("premium_purchase_token")
+private val TIER_BEFORE_PREMIUM = stringPreferencesKey("tier_before_premium")
 private val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
 private val DEVICE_ID = stringPreferencesKey("device_id")
 private val OWNER_NAME = stringPreferencesKey("owner_name")
@@ -147,6 +149,8 @@ class SettingsRepositoryImpl @Inject constructor(
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
             premiumUnlocked = prefs[PREMIUM_UNLOCKED] ?: PulseLinkSettings().premiumUnlocked,
+            premiumPurchaseToken = prefs[PREMIUM_PURCHASE_TOKEN],
+            tierBeforePremium = prefs[TIER_BEFORE_PREMIUM],
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
             deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
             ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName,
@@ -367,6 +371,26 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setPremiumUnlocked(enabled: Boolean) {
         editOnIo { prefs ->
             prefs[PREMIUM_UNLOCKED] = enabled
+        }
+    }
+
+    override suspend fun setPremiumPurchaseToken(token: String?) {
+        editOnIo { prefs ->
+            if (token.isNullOrBlank()) {
+                prefs.remove(PREMIUM_PURCHASE_TOKEN)
+            } else {
+                prefs[PREMIUM_PURCHASE_TOKEN] = token
+            }
+        }
+    }
+
+    override suspend fun setTierBeforePremium(tier: String?) {
+        editOnIo { prefs ->
+            if (tier.isNullOrBlank()) {
+                prefs.remove(TIER_BEFORE_PREMIUM)
+            } else {
+                prefs[TIER_BEFORE_PREMIUM] = tier
+            }
         }
     }
 

@@ -681,11 +681,11 @@ function App() {
         if (!token) {
             token = await getSpotifyToken();
         }
-        
+
         const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(spotifySearch)}&type=track&limit=5`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (response.status === 401) {
             // Token expired, retry once
             token = await getSpotifyToken();
@@ -2111,17 +2111,17 @@ function App() {
                 <h3>RingerSong</h3>
                 <p>Smart ringtone progression and streaming manager.</p>
               </div>
-              
+
               <div className="settings-card">
                 <h4>Push Track to Device</h4>
                 <p className="settings-label">
                   Search Spotify and push to your connected RingerSong device.
                 </p>
-                
+
                 <label className="login-field">
                   Target Device ID
-                  <input 
-                    className="login-input" 
+                  <input
+                    className="login-input"
                     placeholder="Enter UID from RingerSong Settings"
                     value={contactForm.targetUid || user?.uid || ''}
                     onChange={(e) => setContactForm(prev => ({...prev, targetUid: e.target.value}))}
@@ -2131,7 +2131,7 @@ function App() {
 
                 <div style={{marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12}}>
                     <h4>Spotify Search</h4>
-                    
+
                     {!spotifyToken && !spotifyCreds.clientId && (
                         <div className="settings-note" style={{marginBottom: 12}}>
                             Enter Spotify API Credentials (from developer.spotify.com) to enable search.
@@ -2139,16 +2139,16 @@ function App() {
                     )}
 
                     <div className="composer-row" style={{marginBottom: 12}}>
-                        <input 
-                            className="login-input" 
+                        <input
+                            className="login-input"
                             placeholder="Client ID"
                             value={spotifyCreds.clientId}
                             onChange={(e) => setSpotifyCreds(prev => ({...prev, clientId: e.target.value}))}
                             style={{fontSize: '0.8em'}}
                             aria-label="Spotify Client ID"
                         />
-                        <input 
-                            className="login-input" 
+                        <input
+                            className="login-input"
                             placeholder="Client Secret"
                             type="password"
                             value={spotifyCreds.clientSecret}
@@ -2159,8 +2159,8 @@ function App() {
                     </div>
 
                     <div className="composer-row">
-                        <input 
-                            className="login-input" 
+                        <input
+                            className="login-input"
                             placeholder="Search for a song..."
                             value={spotifySearch}
                             onChange={(e) => setSpotifySearch(e.target.value)}
@@ -2187,10 +2187,10 @@ function App() {
                         ))}
                     </div>
                 )}
-                
+
                 {settingsStatus && <div className="settings-status" style={{marginTop: 12}}>{settingsStatus}</div>}
               </div>
-              
+
               <div className="settings-card">
                  <h4>Manual URI Push</h4>
                  <div className="empty-state" style={{padding: 20}}>

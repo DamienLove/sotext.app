@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -54,6 +54,9 @@ const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none
 const ThemeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>;
 const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
+const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
+const Spinner = () => <span className="spinner" aria-hidden="true" />;
 
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
@@ -103,6 +106,37 @@ const MessageItem = memo(({ msg, showPreviews }) => (
 
 MessageItem.displayName = 'MessageItem';
 
+// Bolt: Custom comparator for DeviceContactItem to handle object reference changes
+const areDeviceContactsEqual = (prev, next) => {
+  const p = prev.contact;
+  const n = next.contact;
+  if (p === n) return true; // Reference equality
+  if (!p || !n) return false; // Null/undefined safety
+
+  // Shallow checks for simple props
+  if (p.id !== n.id) return false;
+  if (p.displayName !== n.displayName) return false;
+  if (p.phoneNumber !== n.phoneNumber) return false;
+  if (p.email !== n.email) return false;
+
+  // Deep check for array props (assuming arrays of strings)
+  const pPhones = p.additionalPhones || [];
+  const nPhones = n.additionalPhones || [];
+  if (pPhones.length !== nPhones.length) return false;
+  for (let i = 0; i < pPhones.length; i++) {
+    if (pPhones[i] !== nPhones[i]) return false;
+  }
+
+  const pEmails = p.additionalEmails || [];
+  const nEmails = n.additionalEmails || [];
+  if (pEmails.length !== nEmails.length) return false;
+  for (let i = 0; i < pEmails.length; i++) {
+    if (pEmails[i] !== nEmails[i]) return false;
+  }
+
+  return true;
+};
+
 // Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
 const DeviceContactItem = memo(({ contact }) => {
   const extraPhones = Array.isArray(contact.additionalPhones)
@@ -123,9 +157,122 @@ const DeviceContactItem = memo(({ contact }) => {
       </div>
     </div>
   );
-});
+}, areDeviceContactsEqual);
 
 DeviceContactItem.displayName = 'DeviceContactItem';
+
+// Bolt: Optimized TrustedContactRow to avoid re-rendering list on parent state changes
+const TrustedContactRow = memo(({ contact, isConfirmingDelete, onEdit, onDeleteRequest, onDeleteConfirm, onDeleteCancel }) => (
+  <div className="contact-row">
+    <div className="contact-main">
+      <div className="contact-name">{contact.displayName}</div>
+      <div className="contact-meta">
+        {contact.phoneNumber || contact.email || 'No phone or email'}
+      </div>
+    </div>
+    <div className="contact-actions">
+      <button
+        className="secondary-btn"
+        onClick={() => onEdit(contact)}
+        aria-label={`Edit ${contact.displayName}`}
+      >
+        Edit
+      </button>
+      {isConfirmingDelete ? (
+        <button
+          className="secondary-btn"
+          onClick={() => onDeleteConfirm(contact.id)}
+          aria-label={`Confirm remove ${contact.displayName}`}
+          onBlur={onDeleteCancel}
+        >
+          Confirm?
+        </button>
+      ) : (
+        <button
+          className="ghost-btn"
+          onClick={() => onDeleteRequest(contact.id)}
+          aria-label={`Remove ${contact.displayName}`}
+        >
+          Remove
+        </button>
+      )}
+    </div>
+  </div>
+), (prev, next) => {
+  return prev.isConfirmingDelete === next.isConfirmingDelete &&
+    prev.contact.id === next.contact.id &&
+    prev.contact.displayName === next.contact.displayName &&
+    prev.contact.phoneNumber === next.contact.phoneNumber &&
+    prev.contact.email === next.contact.email;
+});
+
+TrustedContactRow.displayName = 'TrustedContactRow';
+
+const alertBadgeCopy = {
+  emergency: 'Emergency',
+  check_in: 'Check-in',
+  non_urgent: 'Alert'
+};
+
+const alertBadgeColor = {
+  emergency: '#f43f5e',
+  check_in: '#22c55e',
+  non_urgent: '#60a5fa'
+};
+
+const buildAlertSnippet = (body = '') => {
+  const firstLine = body.split('\n')[0] ?? '';
+  if (firstLine.length <= 88) return firstLine;
+  return `${firstLine.slice(0, 85)}...`;
+};
+
+// Bolt: Optimized MapAlertItem to prevent re-renders of the alert list
+const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
+  <div
+    className={`map-item ${isActive ? 'active' : ''}`}
+    onClick={() => onFocus(alert)}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onFocus(alert);
+      }
+    }}
+  >
+    <div className="map-item-header">
+      <div className="map-item-title">{alert.address}</div>
+      <span
+        className="map-badge"
+        style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+      >
+        {alertBadgeCopy[alert.severity] ?? 'Alert'}
+      </span>
+    </div>
+    <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+    <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+    <div className="map-item-actions">
+      <button
+        className="secondary-btn"
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onClear(alert.id);
+        }}
+      >
+        Clear
+      </button>
+    </div>
+  </div>
+), (prev, next) => {
+  return prev.isActive === next.isActive &&
+    prev.alert.id === next.alert.id &&
+    prev.alert.address === next.alert.address &&
+    prev.alert.severity === next.alert.severity &&
+    prev.alert.date === next.alert.date &&
+    prev.alert.body === next.alert.body;
+});
+MapAlertItem.displayName = 'MapAlertItem';
 
 const defaultTheme = {
   primaryColor: "#6750A4",
@@ -805,24 +952,6 @@ const toMillis = (value) => {
   return 0;
 };
 
-const alertBadgeCopy = {
-  emergency: 'Emergency',
-  check_in: 'Check-in',
-  non_urgent: 'Alert'
-};
-
-const alertBadgeColor = {
-  emergency: '#f43f5e',
-  check_in: '#22c55e',
-  non_urgent: '#60a5fa'
-};
-
-const buildAlertSnippet = (body = '') => {
-  const firstLine = body.split('\n')[0] ?? '';
-  if (firstLine.length <= 88) return firstLine;
-  return `${firstLine.slice(0, 85)}...`;
-};
-
 // Sentinel: Prevent XSS in map info windows
 const escapeHtml = (unsafe) => {
   return (unsafe || '')
@@ -896,7 +1025,6 @@ function App() {
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
   const [themeStatus, setThemeStatus] = useState('');
   const [publicThemes, setPublicThemes] = useState([]);
-  // const [unlockedThemes, setUnlockedThemes] = useState([]); // Removed unused state
   const [themeGalleryStatus, setThemeGalleryStatus] = useState('');
   const [themeSearch, setThemeSearch] = useState('');
   const [themePublishForm, setThemePublishForm] = useState({
@@ -920,7 +1048,7 @@ function App() {
   const [composeBody, setComposeBody] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
   const [alertLocations, setAlertLocations] = useState([]);
   const [alertStatus, setAlertStatus] = useState('');
@@ -931,6 +1059,9 @@ function App() {
   const [geoStatus, setGeoStatus] = useState('');
   const [userLocation, setUserLocation] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
+  const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -939,6 +1070,7 @@ function App() {
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
+  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
 
@@ -988,6 +1120,7 @@ function App() {
 
   const handleSpotifySearch = async () => {
     if (!spotifySearch.trim()) return;
+    setIsSearchingSpotify(true);
     setSettingsStatus("Searching...");
     try {
         let token = spotifyToken;
@@ -1014,6 +1147,8 @@ function App() {
         setSettingsStatus("");
     } catch (e) {
         setSettingsStatus("Search failed: " + e.message);
+    } finally {
+        setIsSearchingSpotify(false);
     }
   };
 
@@ -1218,9 +1353,8 @@ function App() {
       const updates = {};
       if (newUnlocks.length > 0) {
         updates.unlockedThemeIds = [...currentUnlockedIds, ...newUnlocks];
-      } else {
-        // setUnlockedThemes(specialThemePresets.filter(p => currentUnlockedIds.includes(p.id)));
       }
+      // Removed unused setUnlockedThemes call
 
       if (newAvatarUnlocks.length > 0) {
         updates.unlockedAvatarIds = [...currentUnlockedAvatars, ...newAvatarUnlocks];
@@ -1504,7 +1638,8 @@ function App() {
     mapInstanceRef.current.fitBounds(bounds);
   }, [filteredAlerts, userLocation, defaultMapCenter]);
 
-  const handleAlertFocus = (alert) => {
+  // Bolt: Wrap handlers in useCallback to ensure stable references for React.memo
+  const handleAlertFocus = useCallback((alert) => {
     setSelectedAlertId(alert.id);
     if (!mapInstanceRef.current || !window.google?.maps) return;
     const marker = mapMarkersRef.current.get(alert.id);
@@ -1531,10 +1666,11 @@ function App() {
       mapInstanceRef.current.panTo({ lat: alert.lat, lng: alert.lng });
       mapInstanceRef.current.setZoom(13);
     }
-  };
+  }, []);
 
-  const handleClearAlert = async (alertId) => {
-    if (!user) return;
+  const handleClearAlert = useCallback(async (alertId) => {
+    if (!user) return; // user is in closure, but user.uid might change. Actually, user ref might change.
+    // To be safe, add user as dependency.
     try {
       await setDoc(
         doc(db, "users", user.uid, "emergencyLocations", alertId),
@@ -1545,7 +1681,7 @@ function App() {
       console.error('Failed to clear alert', error);
       setAlertStatus(error?.message ?? 'Unable to clear alert.');
     }
-  };
+  }, [user]);
 
   const fetchAlertLocations = () => {
     // Firestore onSnapshot handles real-time updates automatically.
@@ -1676,7 +1812,7 @@ function App() {
     setContactStatus('');
   };
 
-  const handleEditContact = (contact) => {
+  const handleEditContact = useCallback((contact) => {
     setContactForm({
       displayName: contact.displayName ?? '',
       phoneNumber: contact.phoneNumber ?? '',
@@ -1692,7 +1828,7 @@ function App() {
     setEditingContactId(contact.id);
     setContactStatus('');
     setActivePanel('pulselink');
-  };
+  }, []);
 
   const handleSaveContact = async () => {
     if (!user) return;
@@ -1732,7 +1868,7 @@ function App() {
     }
   };
 
-  const handleDeleteContact = async (contactId) => {
+  const handleDeleteContact = useCallback(async (contactId) => {
     if (!user) return;
     setContactStatus("Removing contact...");
     try {
@@ -1742,7 +1878,17 @@ function App() {
       console.error("Delete contact failed", error);
       setContactStatus(error?.message ?? "Delete failed.");
     }
-  };
+  }, [user]);
+
+  // Stable handlers for TrustedContactRow
+  const handleDeleteConfirm = useCallback((id) => {
+    handleDeleteContact(id);
+    setConfirmDeleteId(null);
+  }, [handleDeleteContact]);
+
+  const handleDeleteCancel = useCallback(() => {
+    setConfirmDeleteId(null);
+  }, []);
 
   const handleApplyPreset = async (presetTheme) => {
     if (!user) return;
@@ -1832,7 +1978,8 @@ function App() {
 
   const handleRemoteSettingsSave = async () => {
     if (!user) return;
-    setSettingsStatus("Saving settings...");
+    setIsSavingSettings(true);
+    setRemoteSettingsStatus("Saving settings...");
     try {
       await setDoc(doc(db, "users", user.uid), {
         remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
@@ -1840,10 +1987,12 @@ function App() {
         timeFormat: remoteSettings.timeFormat,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
-      setSettingsStatus("Settings updated.");
+      setRemoteSettingsStatus("Settings updated.");
     } catch (error) {
       console.error("Settings update failed", error);
-      setSettingsStatus(error?.message ?? "Settings update failed.");
+      setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
@@ -1943,10 +2092,17 @@ function App() {
     }
   };
 
+  // Bolt: Stable handler to prevent ghost content when switching threads
+  const handleThreadSelect = useCallback((thread) => {
+    setMessages([]); // Clear previous messages immediately
+    setSelectedThread(thread);
+  }, []);
+
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
-        <div className="container login-container">
+        <a href="#main-content" className="skip-link">Skip to main content</a>
+        <div className="container login-container" id="main-content">
           <div className="login-card">
             <img src={logo} alt="PulseLink Pro" className="brand-logo" />
             <h1>PulseLink Web</h1>
@@ -2039,6 +2195,7 @@ function App() {
 
   return (
     <div className="app-shell" style={themeVars}>
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
         <div className="sidebar">
           <div className="sidebar-header">
@@ -2144,7 +2301,26 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threadListElements}
+              {threads.length === 0 ? (
+                <div className="sidebar-placeholder">
+                  <div className="sidebar-tip muted">
+                    No conversations found.
+                  </div>
+                  <div className="sidebar-tip muted">
+                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+                  </div>
+                </div>
+              ) : (
+                threads.map(thread => (
+                  <ThreadItem
+                    key={thread.id}
+                    thread={thread}
+                    isActive={selectedThread?.id === thread.id}
+                    onSelect={handleThreadSelect}
+                    showPreviews={showPreviews}
+                  />
+                ))
+              )}
             </div>
           ) : (
             <div className="sidebar-placeholder">
@@ -2153,7 +2329,7 @@ function App() {
             </div>
           )}
         </div>
-        <div className="main-content">
+        <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
               <div className="home-hero">
@@ -2260,8 +2436,9 @@ function App() {
                           className={`theme-chip`}
                           style={{ padding: 0, borderRadius: '50%', width: 40, height: 40, justifyContent: 'center' }}
                           title="Use Custom URL"
+                          aria-label="Use custom avatar URL"
                         >
-                          ❌
+                          <LinkIcon />
                         </button>
                       </div>
                     )}
@@ -2303,8 +2480,14 @@ function App() {
                     type="button"
                     onClick={handleProfileSave}
                     disabled={isSavingProfile}
+                    aria-busy={isSavingProfile}
                   >
-                    {isSavingProfile ? 'Saving...' : 'Save profile'}
+                    {isSavingProfile ? (
+                      <>
+                        <Spinner />
+                        Saving...
+                      </>
+                    ) : 'Save profile'}
                   </button>
                   {profileStatus && <div className="settings-status" role="status" aria-live="polite">{profileStatus}</div>}
                 </div>
@@ -2312,44 +2495,15 @@ function App() {
                   <h4>Trusted contacts</h4>
                   <div className="contact-list">
                     {trustedContacts.map((contact) => (
-                      <div key={contact.id} className="contact-row">
-                        <div className="contact-main">
-                          <div className="contact-name">{contact.displayName}</div>
-                          <div className="contact-meta">
-                            {contact.phoneNumber || contact.email || 'No phone or email'}
-                          </div>
-                        </div>
-                        <div className="contact-actions">
-                          <button
-                            className="secondary-btn"
-                            onClick={() => handleEditContact(contact)}
-                            aria-label={`Edit ${contact.displayName}`}
-                          >
-                            Edit
-                          </button>
-                          {confirmDeleteId === contact.id ? (
-                            <button
-                              className="secondary-btn"
-                              onClick={() => {
-                                handleDeleteContact(contact.id);
-                                setConfirmDeleteId(null);
-                              }}
-                              aria-label={`Confirm remove ${contact.displayName}`}
-                              onBlur={() => setConfirmDeleteId(null)}
-                            >
-                              Confirm?
-                            </button>
-                          ) : (
-                            <button
-                              className="ghost-btn"
-                              onClick={() => setConfirmDeleteId(contact.id)}
-                              aria-label={`Remove ${contact.displayName}`}
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <TrustedContactRow
+                        key={contact.id}
+                        contact={contact}
+                        isConfirmingDelete={confirmDeleteId === contact.id}
+                        onEdit={handleEditContact}
+                        onDeleteRequest={setConfirmDeleteId}
+                        onDeleteConfirm={handleDeleteConfirm}
+                        onDeleteCancel={handleDeleteCancel}
+                      />
                     ))}
                     {trustedContacts.length === 0 && (
                       <div className="settings-note">No trusted contacts yet.</div>
@@ -2544,47 +2698,55 @@ function App() {
                       <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env.local to load the map view.</p>
                     </div>
                   )}
-                  {mapStatus && <div className="map-status">{mapStatus}</div>}
+                  {mapStatus && <div className="map-status" role="status" aria-live="polite">{mapStatus}</div>}
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
-                    <div
-                      key={alert.id}
-                      className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
-                      onClick={() => handleAlertFocus(alert)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          handleAlertFocus(alert);
-                        }
-                      }}
-                    >
-                      <div className="map-item-header">
-                        <div className="map-item-title">{alert.address}</div>
-                        <span
-                          className="map-badge"
-                          style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-                        >
-                          {alertBadgeCopy[alert.severity] ?? 'Alert'}
-                        </span>
+                    <React.Fragment key={alert.id}>
+                      <MapAlertItem
+                        alert={alert}
+                        isActive={selectedAlertId === alert.id}
+                        onFocus={handleAlertFocus}
+                        onClear={handleClearAlert}
+                      />
+                      <div
+                        className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
+                        onClick={() => handleAlertFocus(alert)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleAlertFocus(alert);
+                          }
+                        }}
+                      >
+                        <div className="map-item-header">
+                          <div className="map-item-title">{alert.address}</div>
+                          <span
+                            className="map-badge"
+                            style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+                          >
+                            {alertBadgeCopy[alert.severity] ?? 'Alert'}
+                          </span>
+                        </div>
+                        <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+                        <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+                        <div className="map-item-actions">
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleClearAlert(alert.id);
+                            }}
+                            aria-label={`Clear alert from ${alert.address}`}
+                          >
+                            Clear
+                          </button>
+                        </div>
                       </div>
-                      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-                      <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-                      <div className="map-item-actions">
-                        <button
-                          className="secondary-btn"
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleClearAlert(alert.id);
-                          }}
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
+                    </React.Fragment>
                   ))}
                   {filteredAlerts.length === 0 && (
                     <div className="map-empty">
@@ -2647,13 +2809,14 @@ function App() {
                                         <div className="song-title">{song.title}</div>
                                         <div className="song-artist">{song.artist}</div>
                                     </div>
-                                    <button 
-                                        className="ghost-btn icon-only" 
+                                    <button
+                                        className="ghost-btn icon-only"
                                         onClick={() => handleDeleteRingerSong(song.id)}
                                         title="Remove from playlist"
+                                        aria-label={`Remove ${song.title} from playlist`}
                                         style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
                                     >
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        <TrashIcon />
                                     </button>
                                 </div>
                             ))}
@@ -2668,11 +2831,19 @@ function App() {
                             <input
                                 className="login-input"
                                 placeholder="Search Spotify for songs..."
+                                aria-label="Search Spotify for songs"
                                 value={spotifySearch}
                                 onChange={(e) => setSpotifySearch(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
                             />
-                            <button className="primary-btn" onClick={handleSpotifySearch}>Search</button>
+                            <button
+                                className="primary-btn"
+                                onClick={handleSpotifySearch}
+                                disabled={isSearchingSpotify}
+                                aria-busy={isSearchingSpotify}
+                            >
+                                {isSearchingSpotify ? "Searching..." : "Search"}
+                            </button>
                         </div>
                     </div>
 
@@ -2985,9 +3156,21 @@ function App() {
                       <option value="TWENTY_FOUR_HOUR">24-hour</option>
                     </select>
                   </label>
-                  <button className="secondary-btn" type="button" onClick={handleRemoteSettingsSave}>
-                    Save PulseLink settings
+                  <button
+                    className="secondary-btn"
+                    type="button"
+                    onClick={handleRemoteSettingsSave}
+                    disabled={isSavingSettings}
+                    aria-busy={isSavingSettings}
+                  >
+                    {isSavingSettings ? (
+                      <>
+                        <Spinner />
+                        Saving...
+                      </>
+                    ) : 'Save PulseLink settings'}
                   </button>
+                  {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Account data</h4>

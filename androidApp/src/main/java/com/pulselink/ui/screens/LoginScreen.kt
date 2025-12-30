@@ -52,8 +52,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.pulselink.BuildConfig
 import com.pulselink.R
+import com.pulselink.ui.branding.brandLogoRes
 import com.pulselink.ui.state.LoginMode
 import com.pulselink.ui.state.LoginUiState
 
@@ -69,14 +69,15 @@ fun LoginScreen(
     onSmsOnlyClick: () -> Unit,
     onGoogleClick: () -> Unit,
     onMessageConsumed: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    useProBranding: Boolean = false
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
-    val logoRes = if (BuildConfig.ADS_ENABLED) R.drawable.ic_logo else R.drawable.ic_pulselink_pro
+    val logoRes = brandLogoRes(useProBranding)
     val title = if (state.mode == LoginMode.SIGN_IN) {
         stringResource(R.string.login_title_sign_in)
     } else {
@@ -206,16 +207,10 @@ fun LoginScreen(
                     )
                 }
             }
-            val containerColor = if (BuildConfig.ADS_ENABLED) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.secondary
-            }
-            val contentColor = if (BuildConfig.ADS_ENABLED) {
-                MaterialTheme.colorScheme.onPrimary
-            } else {
-                MaterialTheme.colorScheme.onSecondary
-            }
+            val containerColor =
+                if (useProBranding) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+            val contentColor =
+                if (useProBranding) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
 
             val primaryLoading = state.isLoading || state.isSocialLoading
             Button(
