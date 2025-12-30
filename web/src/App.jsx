@@ -2906,7 +2906,28 @@ function App() {
                         : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
                       return (
                         <div key={themeDoc.id} className="theme-card">
-                          <div className="theme-preview" style={previewStyle} />
+                          <div className="theme-preview" style={previewStyle}>
+                            <div className="theme-preview-chat">
+                              <div
+                                className="theme-bubble incoming"
+                                style={{
+                                  background: previewTheme.bubbleIncoming,
+                                  color: previewTheme.onBubbleIncoming
+                                }}
+                              >
+                                Hey, you good?
+                              </div>
+                              <div
+                                className="theme-bubble outgoing"
+                                style={{
+                                  background: previewTheme.bubbleOutgoing,
+                                  color: previewTheme.onBubbleOutgoing
+                                }}
+                              >
+                                Yep, on my way!
+                              </div>
+                            </div>
+                          </div>
                           <div className="theme-meta">
                             <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
                             <div className="theme-author">{authorLabel}</div>
@@ -2991,8 +3012,30 @@ function App() {
                         className="theme-chip"
                         onClick={() => handleApplyPreset(preset.theme)}
                       >
-                        <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
-                        {preset.name}
+                        <div className="theme-chip-title">
+                          <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
+                          <strong>{preset.name}</strong>
+                        </div>
+                        <div className="theme-chip-preview">
+                          <div
+                            className="theme-bubble incoming"
+                            style={{
+                              background: preset.theme.bubbleIncoming,
+                              color: preset.theme.onBubbleIncoming
+                            }}
+                          >
+                            Sample incoming
+                          </div>
+                          <div
+                            className="theme-bubble outgoing"
+                            style={{
+                              background: preset.theme.bubbleOutgoing,
+                              color: preset.theme.onBubbleOutgoing
+                            }}
+                          >
+                            Sample reply
+                          </div>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -3082,6 +3125,31 @@ function App() {
                   </button>
                   {themeStatus && <div className="settings-status" role="status" aria-live="polite">{themeStatus}</div>}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'extensions' && (
+            <div className="pulselink-panel">
+              <div className="panel-header">
+                <h3>Extensions</h3>
+                <p>Attach third-party add-ons to PulseLink / Beacon once enabled. Web access mirrors the mobile toggle.</p>
+              </div>
+              <div className="settings-card">
+                <p className="settings-note" style={{ marginBottom: 12 }}>
+                  Status: {remoteSettings.thirdPartyExtensionsEnabled ? "Enabled (beta)" : "Disabled"}.
+                  Turn this on in Settings to allow extensions in both the app and web.
+                </p>
+                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                  <button className="primary-btn" type="button" onClick={() => setActivePanel('settings')}>
+                    Enable in Settings
+                  </button>
+                )}
+                {remoteSettings.thirdPartyExtensionsEnabled && (
+                  <div className="settings-note">
+                    Extension marketplace coming soon. Admins can still side-load trusted extensions via mobile until then.
+                  </div>
+                )}
               </div>
             </div>
           )}
