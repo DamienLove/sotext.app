@@ -302,6 +302,8 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
 }, (prev, next) => {
   // Use strict equality for themeDoc because Firestore updates create new object references
   // even if the data inside is similar, which is the desired behavior for updates.
+  // Note: Unlike MapAlertItem which uses deep field comparison, we rely on reference equality here
+  // because theme objects are large and deeply comparing them would be expensive.
   return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
 });
 
@@ -1912,7 +1914,7 @@ function App() {
     if (!themeDoc?.theme) return;
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
-  }, [handleApplyPreset, setThemeGalleryStatus]);
+  }, [handleApplyPreset]);
 
   const handlePublishTheme = async () => {
     if (!user) return;
