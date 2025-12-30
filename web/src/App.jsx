@@ -64,22 +64,34 @@ const areThreadsEqual = (prev, next) => {
          prev.onSelect === next.onSelect &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
+         prev.thread.display_name === next.thread.display_name &&
+         prev.thread.phone_number === next.thread.phone_number &&
          prev.thread.snippet === next.thread.snippet;
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
-  <button
-    className={`thread-item ${isActive ? 'active' : ''}`}
-    onClick={() => onSelect(thread)}
-    aria-current={isActive ? 'true' : undefined}
-    aria-label={`Select conversation with ${thread.address}`}
-  >
-    <div className="thread-name">{thread.address}</div>
-    <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
-  </button>
-), areThreadsEqual);
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => {
+  const displayName = thread.display_name || thread.address;
+  const secondary = thread.display_name ? (thread.phone_number || thread.address) : (showPreviews ? thread.snippet : '••••••');
+
+  return (
+    <button
+      className={`thread-item ${isActive ? 'active' : ''}`}
+      onClick={() => onSelect(thread)}
+      aria-current={isActive ? 'true' : undefined}
+      aria-label={`Select conversation with ${displayName}`}
+    >
+      <div className="thread-name">{displayName}</div>
+      <div className="thread-snippet">
+        {thread.display_name && showPreviews ?
+          <span className="thread-preview-meta">{secondary} • {thread.snippet}</span> :
+          secondary
+        }
+      </div>
+    </button>
+  );
+}, areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
 
