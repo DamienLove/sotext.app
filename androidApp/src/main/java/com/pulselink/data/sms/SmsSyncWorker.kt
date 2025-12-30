@@ -76,11 +76,13 @@ class SmsSyncWorker @AssistedInject constructor(
                     val lineThreadDoc = lineThreadsRef.document(thread.threadId.toString())
 
                     val (namePart, numberPart) = splitSmsDisplayAddress(thread.address)
-                    val displayName = if (numberPart != null) namePart else ""
-                    val phoneNumber = numberPart ?: namePart
+                    val displayName = if (numberPart != null && namePart.isNotBlank()) namePart else ""
+                    val phoneNumber = numberPart?.takeIf { it.isNotBlank() } ?: namePart
 
                     val threadData = mapOf(
                         "address" to thread.address,
+                        // Using snake_case for new fields to match cross-platform schema,
+                        // while maintaining camelCase for existing legacy fields.
                         "display_name" to displayName,
                         "phone_number" to phoneNumber,
                         "snippet" to thread.snippet,

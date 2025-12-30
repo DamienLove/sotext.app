@@ -73,7 +73,9 @@ const areThreadsEqual = (prev, next) => {
 // when only the selection state changes or when unrelated threads update.
 const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => {
   const displayName = thread.display_name || thread.address;
-  const secondary = thread.display_name ? (thread.phone_number || thread.address) : (showPreviews ? thread.snippet : '••••••');
+  // Refactored logic for clarity
+  const phoneInfo = thread.display_name ? (thread.phone_number || thread.address) : null;
+  const secondary = phoneInfo || (showPreviews ? thread.snippet : '••••••');
 
   return (
     <button

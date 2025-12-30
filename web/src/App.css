@@ -926,3 +926,8 @@
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
 }
+.thread-preview-meta {
+  font-size: 0.85em;
+  color: var(--muted);
+  opacity: 0.8;
+}
