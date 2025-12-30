@@ -1230,6 +1230,43 @@ function App() {
     });
   }, [deviceContacts, contactSearch]);
 
+  // Bolt: Memoize list elements to avoid re-creating them on every render
+  const threadListElements = useMemo(() => {
+    if (threads.length === 0) {
+      return (
+        <div className="sidebar-placeholder">
+          <div className="sidebar-tip muted">
+            No conversations found.
+          </div>
+          <div className="sidebar-tip muted">
+            Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+          </div>
+        </div>
+      );
+    }
+    return threads.map(thread => (
+      <ThreadItem
+        key={thread.id}
+        thread={thread}
+        isActive={selectedThread?.id === thread.id}
+        onSelect={setSelectedThread}
+        showPreviews={showPreviews}
+      />
+    ));
+  }, [threads, selectedThread?.id, showPreviews]);
+
+  const messageListElements = useMemo(() => (
+    messages.map(msg => (
+      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
+    ))
+  ), [messages, showPreviews]);
+
+  const contactListElements = useMemo(() => (
+    filteredDeviceContacts.map((contact) => (
+      <DeviceContactItem key={contact.id} contact={contact} />
+    ))
+  ), [filteredDeviceContacts]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -2592,9 +2629,7 @@ function App() {
                 />
               </div>
               <div className="contact-list contact-list--full">
-                {filteredDeviceContacts.map((contact) => (
-                  <DeviceContactItem key={contact.id} contact={contact} />
-                ))}
+                {contactListElements}
                 {filteredDeviceContacts.length === 0 && (
                   <div className="settings-note">
                     {contactSearch.trim()
@@ -3174,9 +3209,7 @@ function App() {
                     <h3>{selectedThread.address}</h3>
                   </div>
                   <div className="messages-list">
-                    {messages.map(msg => (
-                      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
-                    ))}
+                    {messageListElements}
                     <div ref={messagesEndRef} />
                   </div>
                 </>
