@@ -27,6 +27,7 @@ import com.pulselink.beacon.ui.SmsViewModel
 import com.pulselink.beacon.ui.ThreadScreen
 import com.pulselink.beacon.ui.ThemeViewModel
 import com.pulselink.beacon.data.ThemeState
+import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.ui.customize.CustomizationScreen
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -349,19 +350,6 @@ private fun BeaconNav(
 }
 
 private fun buildDefaultSmsRequestIntent(context: android.content.Context): Intent? {
-            composable("newMessage") {
-                NewMessageScreen(
-                    theme = themeState.global,
-                    onBack = { navController.popBackStack() },
-                    onStartConversation = { address ->
-                        navController.navigate("thread/0/${Uri.encode(address)}") {
-                            popUpTo("inbox")
-                        }
-                    }
-                )
-            }
-
-private fun requestDefaultSms(context: android.content.Context) {
     val packageName = context.packageName
     if (isDefaultSmsRoleHeld(context)) return null
 

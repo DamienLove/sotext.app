@@ -33,10 +33,12 @@ class SmsRepository(private val context: Context) {
 
     suspend fun togglePin(threadId: Long) {
         inboxPrefs.togglePin(threadId)
+        observerFlow.tryEmit(Unit)
     }
 
     suspend fun toggleArchive(threadId: Long) {
         inboxPrefs.toggleArchive(threadId)
+        observerFlow.tryEmit(Unit)
     }
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
@@ -163,7 +165,7 @@ class SmsRepository(private val context: Context) {
 
             // Cap fetch
             var count = 0
-            val fetchBuffer = if (selection == null) 500 else limit + 20
+            val fetchBuffer = if (selection == null) FETCH_BUFFER_UNFILTERED else limit + FETCH_BUFFER_MARGIN
 
             while (c.moveToNext() && count < fetchBuffer) {
                 val threadId = c.getLong(idIdx)
@@ -528,6 +530,8 @@ class SmsRepository(private val context: Context) {
 
     companion object {
         private const val SQLITE_MAX_ARGS_SAFE = 900
+        private const val FETCH_BUFFER_UNFILTERED = 500  // Buffer for unfiltered queries
+        private const val FETCH_BUFFER_MARGIN = 20  // Extra margin for filtered queries
 
         private fun isDefaultSmsApp(context: Context): Boolean {
             val roleHeld = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
