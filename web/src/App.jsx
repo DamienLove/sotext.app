@@ -1231,6 +1231,7 @@ function App() {
   }, [deviceContacts, contactSearch]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
+  // eslint-disable-next-line no-unused-vars
   const threadListElements = useMemo(() => {
     if (threads.length === 0) {
       return (

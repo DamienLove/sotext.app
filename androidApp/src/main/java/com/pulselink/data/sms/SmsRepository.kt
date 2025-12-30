@@ -645,12 +645,10 @@ class SmsRepository @Inject constructor(
         if (!loadCanonicalAddresses(recipientIdSet)) {
             return emptyList()
         }
-        val items = mutableListOf<SmsThreadItem>()
+
+        // BATCHING OPTIMIZATION: Collect all potential phone numbers first
+        val threadContactsMap = mutableMapOf<Long, String>()
         rows.forEach { row ->
-            if (SmsCodec.isPulseLinkPayload(row.snippet)) return@forEach
-            val isArchived = archivedIds.contains(row.threadId)
-            if (onlyArchived && !isArchived) return@forEach
-            if (!includeArchived && isArchived) return@forEach
             val recipients = row.recipientIds.split(' ')
                 .mapNotNull { id ->
                     val trimmed = id.trim()
@@ -658,14 +656,49 @@ class SmsRepository @Inject constructor(
                     canonicalAddressCache.get(trimmed)?.takeIf { it.isNotBlank() }
                 }
             if (recipients.isEmpty()) return@forEach
+
             val displayAddress = if (recipients.isEmpty()) "" else {
                 recipients.joinToString(", ") { resolveAddress(it) }
             }
+
             val primaryRecipient = recipients.firstOrNull().orEmpty()
             val phone = if (primaryRecipient.isNotBlank()) primaryRecipient else stripSmsDisplayName(displayAddress)
-            val normalized = normalizePhone(phone)
-            val contact = contactDao.getByPhone(phone)
-                ?: contactDao.getByPhone(normalized)
+            threadContactsMap[row.threadId] = phone
+        }
+
+        val allPhones = threadContactsMap.values.map { stripSmsDisplayName(it) }.distinct()
+        val normalizedPhones = allPhones.map { normalizePhone(it) }.distinct()
+        val allLookupKeys = (allPhones + normalizedPhones).distinct()
+
+        // Batch query contacts
+        val contactsList = contactDao.getByPhones(allLookupKeys)
+        val contactsMap = contactsList.associateBy { it.phoneNumber }
+
+        val items = mutableListOf<SmsThreadItem>()
+        rows.forEach { row ->
+            if (SmsCodec.isPulseLinkPayload(row.snippet)) return@forEach
+            val isArchived = archivedIds.contains(row.threadId)
+            if (onlyArchived && !isArchived) return@forEach
+            if (!includeArchived && isArchived) return@forEach
+
+            val recipients = row.recipientIds.split(' ')
+                .mapNotNull { id ->
+                    val trimmed = id.trim()
+                    if (trimmed.isEmpty()) return@mapNotNull null
+                    canonicalAddressCache.get(trimmed)?.takeIf { it.isNotBlank() }
+                }
+            if (recipients.isEmpty()) return@forEach
+
+            val displayAddress = if (recipients.isEmpty()) "" else {
+                recipients.joinToString(", ") { resolveAddress(it) }
+            }
+
+            val primaryPhone = threadContactsMap[row.threadId] ?: ""
+            val normalized = normalizePhone(primaryPhone)
+
+            // Look up in our pre-fetched map
+            val contact = contactsMap[primaryPhone] ?: contactsMap[normalized]
+
             val trustedUrgency = contact?.let {
                 when {
                     OtpHelper.isUrgentBody(row.snippet) -> MessageUrgency.URGENT
@@ -683,7 +716,7 @@ class SmsRepository @Inject constructor(
                 isFavorite = contact?.isFavorite == true,
                 isTrusted = contact != null,
                 trustedUrgency = trustedUrgency,
-                isOtp = OtpHelper.isOtpMessage(phone, row.snippet)
+                isOtp = OtpHelper.isOtpMessage(primaryPhone, row.snippet)
             )
         }
         return items.sortedByDescending { it.timestamp }
@@ -758,8 +791,19 @@ class SmsRepository @Inject constructor(
             val dateIdx = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
             val readIdx = c.getColumnIndexOrThrow(Telephony.Sms.READ)
             val seenThreads = HashSet<Long>()
-            val items = mutableListOf<SmsThreadItem>()
+
+            data class SmsRow(
+                val threadId: Long,
+                val body: String,
+                val address: String,
+                val timestamp: Long,
+                val unread: Boolean,
+                val isArchived: Boolean
+            )
+
+            val validRows = mutableListOf<SmsRow>()
             var count = 0
+
             while (c.moveToNext() && count < limit) {
                 val threadId = c.getLong(threadIdx)
                 val body = c.getString(bodyIdx) ?: ""
@@ -767,42 +811,60 @@ class SmsRepository @Inject constructor(
                     continue
                 }
                 if (!seenThreads.add(threadId)) continue
+
                 val ts = c.getLong(dateIdx)
                 val unread = c.getInt(readIdx) == 0
                 val address = resolveAddress(c.getString(addrIdx))
                 val isArchived = archivedIds.contains(threadId)
 
                 if (onlyArchived && !isArchived) {
-                    // skip
+                    continue
                 } else if (!includeArchived && isArchived) {
-                    // skip
-                } else {
-                    val phone = stripSmsDisplayName(address)
-                    val normalized = normalizePhone(phone)
-                    val contact = contactDao.getByPhone(phone)
-                        ?: contactDao.getByPhone(normalized)
-                    val trustedUrgency = contact?.let {
-                        when {
-                            OtpHelper.isUrgentBody(body) -> MessageUrgency.URGENT
-                            it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
-                            else -> MessageUrgency.STANDARD
-                        }
-                    }
-                    items += SmsThreadItem(
-                        threadId = threadId,
-                        address = address,
-                        snippet = body,
-                        timestamp = ts,
-                        unread = unread,
-                        isPrivate = contact?.isPrivate == true,
-                        isFavorite = contact?.isFavorite == true,
-                        isTrusted = contact != null,
-                        trustedUrgency = trustedUrgency,
-                        isOtp = OtpHelper.isOtpMessage(phone, body)
-                    )
+                    continue
                 }
+
+                validRows.add(SmsRow(threadId, body, address, ts, unread, isArchived))
                 count++
             }
+
+            if (validRows.isEmpty()) return emptyList()
+
+            // Batch Contact Lookup
+            val phones = validRows.map { stripSmsDisplayName(it.address) }.distinct()
+            val normalizedPhones = phones.map { normalizePhone(it) }.distinct()
+            val allKeys = (phones + normalizedPhones).distinct()
+
+            val contactsList = contactDao.getByPhones(allKeys)
+            val contactsMap = contactsList.associateBy { it.phoneNumber }
+
+            val items = mutableListOf<SmsThreadItem>()
+            validRows.forEach { row ->
+                val phone = stripSmsDisplayName(row.address)
+                val normalized = normalizePhone(phone)
+                val contact = contactsMap[phone] ?: contactsMap[normalized]
+
+                 val trustedUrgency = contact?.let {
+                    when {
+                        OtpHelper.isUrgentBody(row.body) -> MessageUrgency.URGENT
+                        it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
+                        else -> MessageUrgency.STANDARD
+                    }
+                }
+
+                items += SmsThreadItem(
+                    threadId = row.threadId,
+                    address = row.address,
+                    snippet = row.body,
+                    timestamp = row.timestamp,
+                    unread = row.unread,
+                    isPrivate = contact?.isPrivate == true,
+                    isFavorite = contact?.isFavorite == true,
+                    isTrusted = contact != null,
+                    trustedUrgency = trustedUrgency,
+                    isOtp = OtpHelper.isOtpMessage(phone, row.body)
+                )
+            }
+
             return items
         }
     }
