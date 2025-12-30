@@ -102,6 +102,7 @@ import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
+import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.state.LoginViewModel
 import com.pulselink.ui.state.ContactConversationViewModel
 import com.pulselink.ui.state.MainViewModel
@@ -1765,8 +1766,23 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("bug_report") {
+                        val context = LocalContext.current
+                        val uri = remember(context) {
+                            viewModel.buildBugReportUri(
+                                context,
+                                BugReportData(
+                                    summary = "",
+                                    stepsToReproduce = "",
+                                    expectedBehavior = "",
+                                    actualBehavior = "",
+                                    frequency = "",
+                                    severity = "",
+                                    userEmail = ""
+                                )
+                            )
+                        }
                         BugReportWebScreen(
-                            url = MainViewModel.BUG_REPORT_PAGE_URL,
+                            url = uri.toString(),
                             onBack = { navController.popBackStack() }
                         )
                     }
