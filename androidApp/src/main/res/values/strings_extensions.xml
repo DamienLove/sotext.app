@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="extensions_store_title">Extensions Store</string>
+    <string name="extensions_store_header">Customize your experience</string>
+    <string name="extensions_store_subtitle">Enable only the features you need to keep PulseLink simple and fast.</string>
+    <string name="extensions_store_unavailable">Temporarily unavailable</string>
+    <string name="settings_extensions_store_title">Extensions Store</string>
+    <string name="settings_extensions_store_subtitle">Add or remove features</string>
+    <string name="settings_extensions_store_action">Open</string>
+    <string name="settings_extensions_hint_header">Looking for more?</string>
+    <string name="settings_extensions_hint_body">Some features are hidden because they are disabled. Visit the Extensions Store to enable them.</string>
+
+    <!-- Extension Items -->
+    <string name="extension_beacon_title">Beacon Inbox</string>
+    <string name="extension_beacon_desc">A focused, distraction-free SMS inbox with privacy features and custom themes.</string>
+    <string name="extension_relay_title">Cloud Relay</string>
+    <string name="extension_relay_desc">Sync messages between devices using Firebase. Faster delivery than SMS.</string>
+    <string name="extension_email_backup_title">Email Backup</string>
+    <string name="extension_email_backup_desc">Automatically send critical alerts via email when SMS fails.</string>
+    <string name="extension_web_title">Web Access</string>
+    <string name="extension_web_desc">Manage your messages and settings from a computer browser.</string>
+    <string name="extension_otp_title">Smart OTP Cleanup</string>
+    <string name="extension_otp_desc">Automatically delete one-time password messages after 24 hours.</string>
+    <string name="extension_ai_title">AI Assistant</string>
+    <string name="extension_ai_desc">Smart summaries, urgency detection, and reply suggestions.</string>
+    <string name="extension_crash_title">Crash Detection</string>
+    <string name="extension_crash_desc">Automatically alert contacts if a vehicle crash is detected.</string>
+</resources>
