@@ -747,8 +747,15 @@ class MainActivity : AppCompatActivity() {
 
                 LaunchedEffect(state.settings.crashDetectionEnabled) {
                     val intent = Intent(context, com.pulselink.service.CrashDetectionService::class.java)
-                    // Crash detection is temporarily disabled pending foreground service/location policy work.
-                    context.stopService(intent)
+                    if (state.settings.crashDetectionEnabled) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(intent)
+                        } else {
+                            context.startService(intent)
+                        }
+                    } else {
+                        context.stopService(intent)
+                    }
                 }
 
                 val startDestination = remember(initialInboxShortcut) {

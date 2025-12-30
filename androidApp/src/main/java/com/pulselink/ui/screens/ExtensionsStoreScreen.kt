@@ -141,7 +141,7 @@ fun ExtensionsStoreScreen(
                 icon = Icons.Filled.CarCrash,
                 isEnabled = settings.crashDetectionEnabled,
                 onToggle = onToggleCrashDetection,
-                isAvailable = false, // Temporarily unavailable as per existing code
+                isAvailable = true,
                 requiresPremium = true
             )
         )
