@@ -96,6 +96,7 @@ final class AlertRelayViewModel: ObservableObject {
                         self.isLoggedIn = true
                         self.conversationProvider = FirestoreConversationProvider(userId: uid)
                         self.startListeningToThreads()
+                        await DeviceManager.shared.registerDevice()
                     } else {
                         self.isLoggedIn = false
                         self.threadsListener?.remove()

@@ -37,6 +37,7 @@ final class BeaconViewModel: ObservableObject {
                         self.isLoggedIn = true
                         self.provider = FirestoreBeaconConversationProvider(userId: uid)
                         self.startListeningToThreads()
+                        await BeaconDeviceManager.shared.registerDevice()
                     } else {
                         self.isLoggedIn = false
                         self.threadsListener?.remove()
