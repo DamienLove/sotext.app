@@ -1048,7 +1048,7 @@ function App() {
   const [composeBody, setComposeBody] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [isSavingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
   const [alertLocations, setAlertLocations] = useState([]);
   const [alertStatus, setAlertStatus] = useState('');
@@ -1060,14 +1060,12 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
   const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
-  const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
@@ -1101,21 +1099,13 @@ function App() {
   };
 
   const getSpotifyToken = async () => {
-    if (!spotifyCreds.clientId || !spotifyCreds.clientSecret) {
-        throw new Error("Missing Client ID/Secret");
-    }
-    const response = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(spotifyCreds.clientId + ':' + spotifyCreds.clientSecret)
-      },
-      body: 'grant_type=client_credentials'
-    });
-    const data = await response.json();
-    if (data.error) throw new Error(data.error_description || "Token error");
-    setSpotifyToken(data.access_token);
-    return data.access_token;
+    // Sentinel: Use Cloud Function to fetch token securely, avoiding exposed secrets
+    const callable = httpsCallable(functions, 'getSpotifyAccessToken');
+    const result = await callable();
+    const token = result.data.access_token;
+    if (!token) throw new Error("Failed to retrieve access token");
+    setSpotifyToken(token);
+    return token;
   };
 
   const handleSpotifySearch = async () => {
@@ -1231,29 +1221,7 @@ function App() {
   }, [deviceContacts, contactSearch]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
-  const threadListElements = useMemo(() => {
-    if (threads.length === 0) {
-      return (
-        <div className="sidebar-placeholder">
-          <div className="sidebar-tip muted">
-            No conversations found.
-          </div>
-          <div className="sidebar-tip muted">
-            Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
-          </div>
-        </div>
-      );
-    }
-    return threads.map(thread => (
-      <ThreadItem
-        key={thread.id}
-        thread={thread}
-        isActive={selectedThread?.id === thread.id}
-        onSelect={setSelectedThread}
-        showPreviews={showPreviews}
-      />
-    ));
-  }, [threads, selectedThread?.id, showPreviews]);
+  // const threadListElements = useMemo(() => { ... }); // removed unused
 
   const messageListElements = useMemo(() => (
     messages.map(msg => (

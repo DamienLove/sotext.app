@@ -12,3 +12,8 @@
 **Vulnerability:** The `themes_public` collection allowed users to bypass the moderation queue by writing directly to the public collection with `status: "approved"` in the request data, as the rule relied on the user-provided data for validation.
 **Learning:** Never trust client-provided data (e.g., `request.resource.data.status`) to enforce workflow states like "approved" or "verified". If a user can write the data, they can write any state they want.
 **Prevention:** State transitions (like Pending -> Approved) for shared resources must be performed by a privileged backend environment (Admin SDK) that the user cannot directly manipulate, or the collection must be read-only for clients.
+
+## 2024-05-27 - Frontend Secret Exposure
+**Vulnerability:** The Spotify Client Secret was exposed in the frontend bundle via `import.meta.env.VITE_SPOTIFY_CLIENT_SECRET`.
+**Learning:** `VITE_` (and `REACT_APP_`) environment variables are embedded into the built JavaScript files and are visible to anyone who inspects the client code. They are not secure for private keys or secrets.
+**Prevention:** Never use `VITE_` or similar prefixes for secrets. Secrets must be stored in the backend (e.g., Firebase Functions secrets or config) and accessed only by server-side code. The frontend should call a Cloud Function to perform actions requiring the secret.
