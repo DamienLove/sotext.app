@@ -145,11 +145,12 @@ fun SettingsScreen(
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Extensions Store
+            // Extensions Store & Profile
+            SettingsSectionHeader("Customization")
             SettingsActionRow(
-                title = "Extensions Store",
-                subtitle = "Add or remove features",
-                actionLabel = "Open",
+                title = stringResource(R.string.settings_extensions_store_title),
+                subtitle = stringResource(R.string.settings_extensions_store_subtitle),
+                actionLabel = stringResource(R.string.settings_extensions_store_action),
                 onAction = onOpenExtensionsStore,
                 leadingIcon = Icons.Filled.AddCircle
             )
@@ -406,6 +407,29 @@ fun SettingsScreen(
                 title = "Support & Account",
                 initiallyExpanded = false
             ) {
+                // Hint for hidden extensions
+                if (!settings.beaconLauncherEnabled || !settings.firebaseMessagingEnabled || !settings.emailFallbackEnabled) {
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                        ),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = stringResource(R.string.settings_extensions_hint_header),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_extensions_hint_body),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
                 AssistantCommandsCard(
                     proEnabled = !BuildConfig.ADS_ENABLED || settings.proUnlocked,
                     onOpenHelp = onOpenHelp

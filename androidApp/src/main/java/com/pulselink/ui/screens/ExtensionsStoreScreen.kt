@@ -1,24 +1,51 @@
 package com.pulselink.ui.screens
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.CarCrash
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Laptop
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.WifiTethering
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.pulselink.R
 import com.pulselink.domain.model.PulseLinkSettings
 
 data class Extension(
     val id: String,
-    val title: String,
-    val description: String,
+    val titleRes: Int,
+    val descriptionRes: Int,
     val icon: ImageVector,
     val isEnabled: Boolean,
     val onToggle: (Boolean) -> Unit,
@@ -42,56 +69,56 @@ fun ExtensionsStoreScreen(
         listOf(
             Extension(
                 id = "beacon",
-                title = "Beacon Inbox",
-                description = "A focused, distraction-free SMS inbox with privacy features and custom themes.",
+                titleRes = R.string.extension_beacon_title,
+                descriptionRes = R.string.extension_beacon_desc,
                 icon = Icons.Filled.WifiTethering,
                 isEnabled = settings.beaconLauncherEnabled,
                 onToggle = onToggleBeaconLauncher
             ),
             Extension(
                 id = "relay",
-                title = "Cloud Relay",
-                description = "Sync messages between devices using Firebase. Faster delivery than SMS.",
+                titleRes = R.string.extension_relay_title,
+                descriptionRes = R.string.extension_relay_desc,
                 icon = Icons.Filled.CloudSync,
                 isEnabled = settings.firebaseMessagingEnabled,
                 onToggle = onToggleFirebaseMessaging
             ),
             Extension(
                 id = "email_backup",
-                title = "Email Backup",
-                description = "Automatically send critical alerts via email when SMS fails.",
+                titleRes = R.string.extension_email_backup_title,
+                descriptionRes = R.string.extension_email_backup_desc,
                 icon = Icons.Filled.Email,
                 isEnabled = settings.emailFallbackEnabled,
                 onToggle = onToggleEmailFallback
             ),
             Extension(
                 id = "web",
-                title = "Web Access",
-                description = "Manage your messages and settings from a computer browser.",
+                titleRes = R.string.extension_web_title,
+                descriptionRes = R.string.extension_web_desc,
                 icon = Icons.Filled.Laptop,
                 isEnabled = settings.remoteWebAccessEnabled,
                 onToggle = onToggleRemoteWebAccess
             ),
             Extension(
                 id = "otp",
-                title = "Smart OTP Cleanup",
-                description = "Automatically delete one-time password messages after 24 hours.",
+                titleRes = R.string.extension_otp_title,
+                descriptionRes = R.string.extension_otp_desc,
                 icon = Icons.Filled.DeleteSweep,
                 isEnabled = settings.otpCleanupEnabled,
                 onToggle = onToggleOtpCleanup
             ),
             Extension(
                 id = "ai",
-                title = "AI Assistant",
-                description = "Smart summaries, urgency detection, and reply suggestions.",
+                titleRes = R.string.extension_ai_title,
+                descriptionRes = R.string.extension_ai_desc,
                 icon = Icons.Filled.SmartToy,
                 isEnabled = settings.aiSummariesEnabled,
                 onToggle = onToggleAiSummaries
             ),
             Extension(
                 id = "crash",
-                title = "Crash Detection",
-                description = "Automatically alert contacts if a vehicle crash is detected.",
+                titleRes = R.string.extension_crash_title,
+                descriptionRes = R.string.extension_crash_desc,
                 icon = Icons.Filled.CarCrash,
                 isEnabled = settings.crashDetectionEnabled,
                 onToggle = onToggleCrashDetection,
@@ -103,37 +130,36 @@ fun ExtensionsStoreScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Extensions Store") },
+                title = { Text(stringResource(R.string.extensions_store_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 }
             )
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(padding)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                Text(
-                    text = "Customize your experience",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Enable only the features you need to keep PulseLink simple and fast.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-                )
-            }
+            Text(
+                text = stringResource(R.string.extensions_store_header),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = stringResource(R.string.extensions_store_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+            )
 
-            items(extensions) { extension ->
+            extensions.forEach { extension ->
                 ExtensionCard(extension)
             }
         }
@@ -163,7 +189,7 @@ fun ExtensionCard(extension: Extension) {
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = extension.title,
+                text = stringResource(extension.titleRes),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (extension.isEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
@@ -177,13 +203,13 @@ fun ExtensionCard(extension: Extension) {
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = extension.description,
+        text = stringResource(extension.descriptionRes),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (extension.isEnabled) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (!extension.isAvailable) {
-                 Text(
-                    text = "Temporarily unavailable",
+        Text(
+            text = stringResource(R.string.extensions_store_unavailable),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 8.dp)
