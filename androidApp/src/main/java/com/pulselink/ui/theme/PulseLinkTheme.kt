@@ -54,11 +54,9 @@ fun PulseLinkTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    // Force dark theme preference for the "Future Deep" look if desired,
-    // but respecting system setting is standard.
-    // However, the user asked for "Future Deep" specifically.
-    // Given the design language is heavily dark-mode centric:
-    val colors = if (darkTheme) DarkColors else LightColors
+    // Future Deep design requires dark mode for full fidelity.
+    // System setting is ignored to ensure brand consistency.
+    val colors = DarkColors
 
     MaterialTheme(
         colorScheme = colors,

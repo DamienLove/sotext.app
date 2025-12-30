@@ -2,7 +2,7 @@ package com.pulselink.beacon.ui
 
 import android.provider.Telephony
 import android.text.format.DateUtils
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -246,7 +246,7 @@ fun InboxScreen(
                 theme = theme
             )
 
-            AnimatedContent(targetState = searchState, label = "search_results") { state ->
+            Crossfade(targetState = searchState, label = "search_results") { state ->
                 when (state) {
                     is SearchResultState.Messages -> SearchResults(
                         hits = state.hits,
@@ -372,7 +372,7 @@ fun InboxScreen(
                             }
                         }
                         OutlinedButton(onClick = onRefreshDefaultStatus, enabled = !isCheckingDefaultSms) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, tint = iconTint, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = iconTint, modifier = Modifier.size(Spacing.medium))
                         }
                     }
                 }
@@ -392,7 +392,7 @@ fun InboxScreen(
                             tint = iconTint.copy(alpha = 0.5f),
                             modifier = Modifier
                                 .padding(bottom = Spacing.small)
-                                .size(64.dp)
+                                .size(Spacing.section)
                         )
                         Text(
                             "No messages yet",
@@ -441,7 +441,7 @@ fun InboxScreen(
                             onClick = { onOpenThread(item.threadId, item.address) }
                         )
                     }
-                    item { Spacer(modifier = Modifier.height(80.dp)) }
+                    item { Spacer(modifier = Modifier.height(Spacing.section)) }
                 }
             }
         }
@@ -531,7 +531,7 @@ private fun SwipeableThreadRow(
 private fun ThreadRow(thread: SmsThreadItem, theme: ThemePalette, onClick: () -> Unit) {
     // Determine background color based on unread state for "Future Deep" feel
     val backgroundColor = if (thread.unread) {
-        theme.accentColor.copy(alpha = 0.12f)
+        theme.accentColor.copy(alpha = 0.2f)
     } else {
         theme.inboxBackgroundColor
     }
