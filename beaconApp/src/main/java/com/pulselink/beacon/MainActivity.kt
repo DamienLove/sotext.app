@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.google.android.gms.ads.MobileAds
+import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.ui.ads.BannerAd
 import com.pulselink.beacon.ui.InboxScreen
 import com.pulselink.beacon.ui.NewMessageScreen
@@ -27,7 +28,6 @@ import com.pulselink.beacon.ui.SmsViewModel
 import com.pulselink.beacon.ui.ThreadScreen
 import com.pulselink.beacon.ui.ThemeViewModel
 import com.pulselink.beacon.data.ThemeState
-import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.ui.customize.CustomizationScreen
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -350,6 +350,24 @@ private fun BeaconNav(
 }
 
 private fun buildDefaultSmsRequestIntent(context: android.content.Context): Intent? {
+    val packageName = context.packageName
+    if (isDefaultSmsRoleHeld(context)) return null
+
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val roleManager = context.getSystemService(RoleManager::class.java)
+        if (roleManager?.isRoleAvailable(RoleManager.ROLE_SMS) == true) {
+            roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
+        } else {
+            null
+        }
+    } else {
+        Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT).apply {
+            putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, packageName)
+        }
+    }
+}
+
+private fun requestDefaultSms(context: android.content.Context) {
     val packageName = context.packageName
     if (isDefaultSmsRoleHeld(context)) return null
 

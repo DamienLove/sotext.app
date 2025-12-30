@@ -28,8 +28,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -506,7 +505,7 @@ private fun SwipeableThreadRow(
             // Use muted theme color for archive, accent for pin
             val (color, alignment, icon) = when (state.targetValue) {
                 SwipeToDismissBoxValue.EndToStart -> Triple(theme.frameColor.copy(alpha = 0.5f), Alignment.CenterEnd, Icons.Default.Inbox) // Archive
-                SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor, Alignment.CenterStart, if (thread.isPinned) Icons.Outlined.StarOutline else Icons.Default.Star) // Pin/Unpin
+                SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor, Alignment.CenterStart, if (thread.isPinned) Icons.Default.PushPin else Icons.Default.PushPin) // Pin/Unpin
                 else -> Triple(Color.Transparent, Alignment.CenterEnd, Icons.Default.Inbox)
             }
 
@@ -577,7 +576,7 @@ private fun ThreadRow(
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = if (thread.isPinned) Icons.Outlined.StarOutline else Icons.Default.Star,
+                            imageVector = Icons.Default.PushPin,
                             contentDescription = if (thread.isPinned) "Unpin conversation" else "Pin conversation"
                         )
                     }
@@ -612,7 +611,7 @@ private fun ThreadRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (thread.isPinned) {
                     Icon(
-                        Icons.Default.Star,
+                        Icons.Default.PushPin,
                         contentDescription = "Pinned",
                         tint = theme.accentColor,
                         modifier = Modifier.padding(end = 4.dp).size(16.dp)

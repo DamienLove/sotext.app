@@ -530,8 +530,8 @@ class SmsRepository(private val context: Context) {
 
     companion object {
         private const val SQLITE_MAX_ARGS_SAFE = 900
-        private const val FETCH_BUFFER_UNFILTERED = 500  // Buffer for unfiltered queries
-        private const val FETCH_BUFFER_MARGIN = 20  // Extra margin for filtered queries
+        private const val FETCH_BUFFER_UNFILTERED = 500
+        private const val FETCH_BUFFER_MARGIN = 20
 
         private fun isDefaultSmsApp(context: Context): Boolean {
             val roleHeld = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

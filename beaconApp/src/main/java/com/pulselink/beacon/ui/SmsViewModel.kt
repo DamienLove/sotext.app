@@ -29,8 +29,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = SmsRepository(app.applicationContext)
     private companion object {
-        const val THREAD_LIMIT = 200  // Reasonable limit for inbox threads
-        const val MESSAGE_LIMIT = 200  // Reasonable limit for thread messages
+        const val THREAD_LIMIT = 200
+        const val MESSAGE_LIMIT = 200
     }
 
     var threads by mutableStateOf<List<SmsThreadItem>>(emptyList())

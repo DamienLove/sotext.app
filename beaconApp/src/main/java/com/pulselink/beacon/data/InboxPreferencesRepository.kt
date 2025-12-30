@@ -61,8 +61,3 @@ class InboxPreferencesRepository(private val context: Context) {
         return set.joinToString(",")
     }
 }
-
-data class InboxState(
-    val pinnedThreadIds: Set<Long> = emptySet(),
-    val archivedThreadIds: Set<Long> = emptySet()
-)
