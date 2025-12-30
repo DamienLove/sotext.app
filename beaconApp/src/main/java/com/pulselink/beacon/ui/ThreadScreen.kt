@@ -21,6 +21,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,9 +31,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,10 +49,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,12 +67,64 @@ fun ThreadScreen(
     theme: ThemePalette,
     onBack: () -> Unit,
     onSend: (String) -> Unit,
+    onScheduleMessage: (String, Long) -> Unit = { _, _ -> },
     onDeleteThread: () -> Unit,
     onEditNotificationSound: () -> Unit,
     onCustomize: () -> Unit,
 ) {
     var draft by remember { mutableStateOf("") }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
+
     val iconTint = theme.accentColor
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let {
+                        selectedDateMillis = it
+                        showDatePicker = false
+                        showTimePicker = true
+                    }
+                }) { Text("Next") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
+    if (showTimePicker) {
+        val timePickerState = rememberTimePickerState()
+        TimePickerDialog(
+            onDismissRequest = { showTimePicker = false },
+            onConfirm = {
+                selectedDateMillis?.let { dateMillis ->
+                    // dateMillis is UTC midnight of the selected date.
+                    val utcDate = Instant.ofEpochMilli(dateMillis)
+                        .atZone(ZoneId.of("UTC"))
+                        .toLocalDate()
+
+                    val localTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                    val targetZoned = utcDate.atTime(localTime).atZone(ZoneId.systemDefault())
+
+                    val finalTime = targetZoned.toInstant().toEpochMilli()
+
+                    onScheduleMessage(draft, finalTime)
+                    draft = ""
+                    showTimePicker = false
+                }
+            }
+        ) {
+            TimePicker(state = timePickerState)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -129,6 +193,11 @@ fun ThreadScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
+                    IconButton(onClick = {
+                        if (draft.isNotBlank()) showDatePicker = true
+                    }) {
+                        Icon(Icons.Default.Schedule, contentDescription = "Schedule", tint = iconTint)
+                    }
                     TextField(
                         value = draft,
                         onValueChange = { draft = it },
@@ -146,6 +215,39 @@ fun ThreadScreen(
                     ) {
                         Icon(Icons.Default.Send, contentDescription = "Send", tint = iconTint)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TimePickerDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Dialog(onDismissRequest = onDismissRequest) {
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = 6.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                content()
+                Row(
+                    modifier = Modifier
+                        .height(40.dp)
+                        .fillMaxWidth()
+                ) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    TextButton(onClick = onDismissRequest) { Text("Cancel") }
+                    TextButton(onClick = onConfirm) { Text("OK") }
                 }
             }
         }

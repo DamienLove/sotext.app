@@ -8,14 +8,21 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsRepository
 import com.pulselink.beacon.data.SmsThreadItem
+import com.pulselink.beacon.data.scheduled.BeaconDatabase
+import com.pulselink.beacon.data.scheduled.ScheduledMessage
+import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 
 sealed class SearchResultState {
     object Idle : SearchResultState()
@@ -28,6 +35,9 @@ sealed class SearchResultState {
 class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = SmsRepository(app.applicationContext)
+    private val scheduledDao = BeaconDatabase.getDatabase(app).scheduledMessageDao()
+    private val workManager = WorkManager.getInstance(app)
+
     private companion object {
         const val THREAD_LIMIT = Int.MAX_VALUE
         const val MESSAGE_LIMIT = Int.MAX_VALUE
@@ -59,7 +69,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openThread(threadId: Long, address: String) {
-                // Handle new conversations
+        // Handle new conversations
         if (threadId == 0L && !address.isNullOrBlank()) {
             currentThreadId = 0L
             currentAddress = address
@@ -84,6 +94,29 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         val ok = runCatching { repo.sendSms(addr, body) }.getOrDefault(false)
         if (ok) currentThreadId?.let { refreshThread(it, refreshRead = true) }
         return ok
+    }
+
+    fun scheduleMessage(body: String, scheduledTime: Long) {
+        val addr = currentAddress.ifBlank { messages.lastOrNull()?.address.orEmpty() }
+        if (addr.isBlank()) return
+
+        viewModelScope.launch {
+            val message = ScheduledMessage(
+                address = addr,
+                body = body,
+                scheduledTimeMillis = scheduledTime
+            )
+            val id = scheduledDao.insert(message)
+
+            val delay = scheduledTime - System.currentTimeMillis()
+            if (delay > 0) {
+                val request = OneTimeWorkRequestBuilder<ScheduledMessageWorker>()
+                    .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                    .setInputData(workDataOf("messageId" to id))
+                    .build()
+                workManager.enqueue(request)
+            }
+        }
     }
 
     fun deleteThread(threadId: Long) {
