@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2025-12-30: Bumped PulseLink to v93 (free/pro); rebuilt release AABs at androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab and .../proRelease/androidApp-pro-release.aab. RingerSong remains v20 (bundle rebuilt).
 - 2025-12-30: Added SMS attachment picker in Beacon threads (paperclip button opens file picker + SMS/MMS send intent); rebuilt PulseLink v92 (free/pro) and RingerSong v20 release bundles.
 - 2025-12-30: Version bump — PulseLink v92 (free/pro) and RingerSong v20; premium branding shows gold logos/badges on splash/login and Beacon inbox logo now blue (free) or gold (premium) unless overridden by theme.
 - 2025-12-30: Premium branding refresh: splash/login now use gold logo when premium is active; Beacon inbox logo tints blue (free) or gold (premium) while respecting theme overrides; added 3rd-party extensions toggle (premium-gated) across Android/Web settings.
