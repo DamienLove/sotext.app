@@ -1,6 +1,7 @@
 package com.pulselink.beacon.ui
 
 import android.text.format.DateUtils
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -76,6 +78,7 @@ fun ThreadScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
+    val context = LocalContext.current
 
     val iconTint = theme.accentColor
 
@@ -116,9 +119,15 @@ fun ThreadScreen(
 
                     val finalTime = targetZoned.toInstant().toEpochMilli()
 
-                    onScheduleMessage(draft, finalTime)
-                    draft = ""
-                    showTimePicker = false
+                    val now = System.currentTimeMillis()
+                    if (finalTime <= now) {
+                        Toast.makeText(context, "Please select a future time", Toast.LENGTH_SHORT).show()
+                    } else {
+                        onScheduleMessage(draft, finalTime)
+                        draft = ""
+                        showTimePicker = false
+                        Toast.makeText(context, "Message scheduled", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         ) {

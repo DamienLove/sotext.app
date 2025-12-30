@@ -19,7 +19,9 @@ abstract class BeaconDatabase : RoomDatabase() {
                     context.applicationContext,
                     BeaconDatabase::class.java,
                     "beacon_database"
-                ).build()
+                )
+                .fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

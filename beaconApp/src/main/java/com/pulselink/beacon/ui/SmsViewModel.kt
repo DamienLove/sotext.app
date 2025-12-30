@@ -16,6 +16,7 @@ import com.pulselink.beacon.data.SmsRepository
 import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.scheduled.BeaconDatabase
 import com.pulselink.beacon.data.scheduled.ScheduledMessage
+import com.pulselink.beacon.data.scheduled.MessageStatus
 import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.BuildConfig
 import kotlinx.coroutines.Dispatchers
@@ -100,16 +101,25 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         val addr = currentAddress.ifBlank { messages.lastOrNull()?.address.orEmpty() }
         if (addr.isBlank()) return
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val message = ScheduledMessage(
                 address = addr,
                 body = body,
                 scheduledTimeMillis = scheduledTime
             )
-            val id = scheduledDao.insert(message)
 
             val delay = scheduledTime - System.currentTimeMillis()
-            if (delay > 0) {
+
+            // If delay is effectively non-positive, consider it failed or send immediately?
+            // Sending immediately might be unexpected if user picked "now".
+            // But if it's in the past (e.g. user spent time in picker), we should probably fail or ask.
+            // For now, let's auto-fail if it's too far in past, or try to send if it's close.
+            // Simpler: if delay <= 0, mark as failed (as per PR feedback recommendation).
+
+            if (delay <= 0) {
+                scheduledDao.insert(message.copy(status = MessageStatus.FAILED))
+            } else {
+                val id = scheduledDao.insert(message)
                 val request = OneTimeWorkRequestBuilder<ScheduledMessageWorker>()
                     .setInitialDelay(delay, TimeUnit.MILLISECONDS)
                     .setInputData(workDataOf("messageId" to id))
