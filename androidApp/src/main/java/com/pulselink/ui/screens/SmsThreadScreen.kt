@@ -122,7 +122,7 @@ fun SmsThreadScreen(
     aiSummaryEnabled: Boolean = false,
     aiComposeEnabled: Boolean = false,
     onLoadMore: () -> Unit = {},
-    messageLimit: Int = 100
+    hasMoreToLoad: Boolean = true
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -350,17 +350,7 @@ fun SmsThreadScreen(
                         )
                     }
                 }
-                if (aiSummaryEnabled) {
-                    item {
-                        AiSummaryCard(
-                            state = aiSummaryState,
-                            onGenerate = onRequestSummary,
-                            onClear = onClearSummary,
-                            theme = effectiveTheme
-                        )
-                    }
-                }
-                if (messages.size >= messageLimit) {
+                if (hasMoreToLoad && messages.size >= 20) {
                      item {
                          Box(
                              modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -371,6 +361,16 @@ fun SmsThreadScreen(
                              }
                          }
                      }
+                }
+                if (aiSummaryEnabled) {
+                    item {
+                        AiSummaryCard(
+                            state = aiSummaryState,
+                            onGenerate = onRequestSummary,
+                            onClear = onClearSummary,
+                            theme = effectiveTheme
+                        )
+                    }
                 }
             }
         }

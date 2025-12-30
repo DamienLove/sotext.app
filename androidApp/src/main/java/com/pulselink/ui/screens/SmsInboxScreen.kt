@@ -144,7 +144,7 @@ fun SmsInboxScreen(
     archivedOnly: Boolean = false,
     isDatabaseBusy: Boolean = false,
     onLoadMore: () -> Unit = {},
-    threadLimit: Int = 100
+    hasMoreToLoad: Boolean = true
 ) {
     var filter by rememberSaveable(archivedOnly) {
         mutableStateOf(if (archivedOnly) InboxFilter.ARCHIVED else InboxFilter.ALL)
@@ -562,7 +562,7 @@ fun SmsInboxScreen(
                             actionsEnabled = isLocalLine
                         )
                     }
-                    if (threads.size >= threadLimit) {
+                    if (hasMoreToLoad && filtered.size >= 20) {
                          item {
                              Box(
                                  modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
