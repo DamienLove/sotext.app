@@ -1038,7 +1038,8 @@ function App() {
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
-    timeFormat: 'AUTO'
+    timeFormat: 'AUTO',
+    thirdPartyExtensionsEnabled: false
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1304,7 +1305,8 @@ function App() {
       setRemoteSettings({
         remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? false,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
-        timeFormat: data.timeFormat ?? 'AUTO'
+        timeFormat: data.timeFormat ?? 'AUTO',
+        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? false
       });
 
       // Check for theme and avatar unlocks
@@ -1984,6 +1986,7 @@ function App() {
         remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
         autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
         timeFormat: remoteSettings.timeFormat,
+        thirdPartyExtensionsEnabled: remoteSettings.thirdPartyExtensionsEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -2345,11 +2348,11 @@ function App() {
                   <strong>Access PulseLink Web anytime:</strong> Visit web.pulselink.app from any browser to manage your contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
                 </div>
               </div>
-              <div className="home-grid">
-                <button className="home-card" onClick={() => setActivePanel('pulselink')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink" />
-                  </div>
+            <div className="home-grid">
+              <button className="home-card" onClick={() => setActivePanel('pulselink')}>
+                <div className="home-icon pulselink">
+                  <img src={logo} alt="PulseLink" />
+                </div>
                   <h3>PulseLink</h3>
                   <p>Update your profile and trusted contacts.</p>
                 </button>
@@ -2381,16 +2384,28 @@ function App() {
                   <h3>Emergency Map</h3>
                   <p>Track shared locations from PulseLink alerts.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('themes')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink themes" />
-                  </div>
-                  <h3>Theme Gallery</h3>
-                  <p>Browse, import, and publish custom themes.</p>
-                </button>
-              </div>
+              <button className="home-card" onClick={() => setActivePanel('themes')}>
+                <div className="home-icon pulselink">
+                  <img src={logo} alt="PulseLink themes" />
+                </div>
+                <h3>Theme Gallery</h3>
+                <p>Browse, import, and publish custom themes.</p>
+              </button>
+              <button
+                className="home-card"
+                onClick={() => setActivePanel('extensions')}
+                disabled={!remoteSettings.thirdPartyExtensionsEnabled}
+                title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
+              >
+                <div className="home-icon pulselink">
+                  <img src={logo} alt="Extensions" />
+                </div>
+                <h3>Extensions</h3>
+                <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Attach 3rd-party add-ons (coming soon)" : "Enable 3rd-party extensions to start."}</p>
+              </button>
             </div>
-          )}
+          </div>
+        )}
 
           {activePanel === 'pulselink' && (
             <div className="pulselink-panel">
@@ -3132,6 +3147,14 @@ function App() {
                       onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
                     />
                     Auto-update contact info
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.thirdPartyExtensionsEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
+                    />
+                    Enable 3rd-party extensions (beta)
                   </label>
                   <label className="login-field">
                     Time format

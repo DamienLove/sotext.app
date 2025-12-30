@@ -1,5 +1,6 @@
 package com.pulselink.ui.screens
 
+import com.pulselink.BuildConfig
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.WifiTethering
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -42,14 +44,15 @@ import androidx.compose.ui.unit.dp
 import com.pulselink.R
 import com.pulselink.domain.model.PulseLinkSettings
 
-data class Extension(
+data class FeatureToggle(
     val id: String,
     val titleRes: Int,
     val descriptionRes: Int,
     val icon: ImageVector,
     val isEnabled: Boolean,
     val onToggle: (Boolean) -> Unit,
-    val isAvailable: Boolean = true
+    val isAvailable: Boolean = true,
+    val requiresPremium: Boolean = false
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,11 +66,16 @@ fun ExtensionsStoreScreen(
     onToggleOtpCleanup: (Boolean) -> Unit,
     onToggleRemoteWebAccess: (Boolean) -> Unit,
     onToggleAiSummaries: (Boolean) -> Unit,
+    onToggleThirdPartyExtensions: (Boolean) -> Unit,
     onBack: () -> Unit
 ) {
-    val extensions = remember(settings) {
+    val premiumActive = remember(settings) {
+        BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
+    }
+
+    val features = remember(settings) {
         listOf(
-            Extension(
+            FeatureToggle(
                 id = "beacon",
                 titleRes = R.string.extension_beacon_title,
                 descriptionRes = R.string.extension_beacon_desc,
@@ -75,7 +83,7 @@ fun ExtensionsStoreScreen(
                 isEnabled = settings.beaconLauncherEnabled,
                 onToggle = onToggleBeaconLauncher
             ),
-            Extension(
+            FeatureToggle(
                 id = "relay",
                 titleRes = R.string.extension_relay_title,
                 descriptionRes = R.string.extension_relay_desc,
@@ -83,7 +91,7 @@ fun ExtensionsStoreScreen(
                 isEnabled = settings.firebaseMessagingEnabled,
                 onToggle = onToggleFirebaseMessaging
             ),
-            Extension(
+            FeatureToggle(
                 id = "email_backup",
                 titleRes = R.string.extension_email_backup_title,
                 descriptionRes = R.string.extension_email_backup_desc,
@@ -91,15 +99,16 @@ fun ExtensionsStoreScreen(
                 isEnabled = settings.emailFallbackEnabled,
                 onToggle = onToggleEmailFallback
             ),
-            Extension(
+            FeatureToggle(
                 id = "web",
                 titleRes = R.string.extension_web_title,
                 descriptionRes = R.string.extension_web_desc,
                 icon = Icons.Filled.Laptop,
                 isEnabled = settings.remoteWebAccessEnabled,
-                onToggle = onToggleRemoteWebAccess
+                onToggle = onToggleRemoteWebAccess,
+                requiresPremium = true
             ),
-            Extension(
+            FeatureToggle(
                 id = "otp",
                 titleRes = R.string.extension_otp_title,
                 descriptionRes = R.string.extension_otp_desc,
@@ -107,22 +116,33 @@ fun ExtensionsStoreScreen(
                 isEnabled = settings.otpCleanupEnabled,
                 onToggle = onToggleOtpCleanup
             ),
-            Extension(
+            FeatureToggle(
                 id = "ai",
                 titleRes = R.string.extension_ai_title,
                 descriptionRes = R.string.extension_ai_desc,
                 icon = Icons.Filled.SmartToy,
                 isEnabled = settings.aiSummariesEnabled,
-                onToggle = onToggleAiSummaries
+                onToggle = onToggleAiSummaries,
+                requiresPremium = true
             ),
-            Extension(
+            FeatureToggle(
+                id = "third_party_extensions",
+                titleRes = R.string.extension_third_party_title,
+                descriptionRes = R.string.extension_third_party_desc,
+                icon = Icons.Filled.Extension,
+                isEnabled = settings.thirdPartyExtensionsEnabled,
+                onToggle = onToggleThirdPartyExtensions,
+                requiresPremium = true
+            ),
+            FeatureToggle(
                 id = "crash",
                 titleRes = R.string.extension_crash_title,
                 descriptionRes = R.string.extension_crash_desc,
                 icon = Icons.Filled.CarCrash,
                 isEnabled = settings.crashDetectionEnabled,
                 onToggle = onToggleCrashDetection,
-                isAvailable = false // Temporarily unavailable as per existing code
+                isAvailable = false, // Temporarily unavailable as per existing code
+                requiresPremium = true
             )
         )
     }
@@ -159,18 +179,23 @@ fun ExtensionsStoreScreen(
                 modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
             )
 
-            extensions.forEach { extension ->
-                ExtensionCard(extension)
+            features.forEach { feature ->
+                FeatureCard(feature, premiumActive)
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            ExtensionCTA()
         }
     }
 }
 
 @Composable
-fun ExtensionCard(extension: Extension) {
+fun FeatureCard(feature: FeatureToggle, premiumActive: Boolean) {
+    val locked = feature.requiresPremium && !premiumActive
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (extension.isEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (feature.isEnabled && !locked) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
         ),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -182,39 +207,96 @@ fun ExtensionCard(extension: Extension) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Icon(
-                        imageVector = extension.icon,
+                        imageVector = feature.icon,
                         contentDescription = null,
                         modifier = Modifier.size(32.dp),
-                        tint = if (extension.isEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (feature.isEnabled && !locked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                text = stringResource(extension.titleRes),
+                        text = stringResource(feature.titleRes),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (extension.isEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                        color = if (feature.isEnabled && !locked) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                     )
+                    if (feature.requiresPremium) {
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = stringResource(R.string.extensions_store_premium_badge),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (locked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
                 Switch(
-                    checked = extension.isEnabled,
-                    onCheckedChange = extension.onToggle,
-                    enabled = extension.isAvailable
+                    checked = feature.isEnabled && !locked,
+                    onCheckedChange = {
+                        if (!locked) feature.onToggle(it)
+                    },
+                    enabled = feature.isAvailable && !locked
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-        text = stringResource(extension.descriptionRes),
+                text = stringResource(feature.descriptionRes),
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (extension.isEnabled) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                color = if (feature.isEnabled && !locked) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (!extension.isAvailable) {
-        Text(
-            text = stringResource(R.string.extensions_store_unavailable),
+            if (!feature.isAvailable) {
+                Text(
+                    text = stringResource(R.string.extensions_store_unavailable),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            } else if (locked) {
+                Text(
+                    text = stringResource(R.string.extensions_store_premium_hint),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ExtensionCTA() {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.extensions_store_external_header),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = stringResource(R.string.extensions_store_external_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.extensions_store_external_action),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

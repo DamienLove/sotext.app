@@ -144,7 +144,8 @@ fun SmsInboxScreen(
     archivedOnly: Boolean = false,
     isDatabaseBusy: Boolean = false,
     onLoadMore: () -> Unit = {},
-    hasMoreToLoad: Boolean = true
+    hasMoreToLoad: Boolean = true,
+    isPremium: Boolean = false
 ) {
     var filter by rememberSaveable(archivedOnly) {
         mutableStateOf(if (archivedOnly) InboxFilter.ARCHIVED else InboxFilter.ALL)
@@ -249,6 +250,14 @@ fun SmsInboxScreen(
     } else {
         TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
     }
+    val defaultTheme = ThemePreferences()
+    val themeOverridesTopColor = theme.onTopBarColor != defaultTheme.onTopBarColor
+    val premiumLogoTint = Color(0xFFF5C542)
+    val freeLogoTint = Color(0xFF1D4ED8)
+    val logoTint = when {
+        themeOverridesTopColor -> parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
+        else -> if (isPremium) premiumLogoTint else freeLogoTint
+    }
     val topBarForeground = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
     val collapsedFraction = scrollBehavior.state.collapsedFraction
     val beaconExpandedAlpha = (1f - collapsedFraction).coerceIn(0f, 1f)
@@ -267,7 +276,7 @@ fun SmsInboxScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_beacon_inbox),
                                 contentDescription = null,
-                                tint = topBarForeground,
+                                tint = logoTint,
                                 modifier = Modifier
                                     .size(beaconExpandedIconSize * beaconExpandedAlpha)
                                     .alpha(beaconExpandedAlpha)
@@ -283,7 +292,7 @@ fun SmsInboxScreen(
                         Icon(
                             painter = painterResource(id = R.drawable.ic_beacon_inbox),
                             contentDescription = "Beacon",
-                            tint = topBarForeground,
+                            tint = logoTint,
                             modifier = Modifier
                                 .size(beaconCollapsedIconSize)
                                 .alpha(beaconCollapsedAlpha)
