@@ -62,6 +62,8 @@ class SmsInboxViewModel @Inject constructor(
     val threads: StateFlow<List<SmsThreadItem>> = _threads
     private val _archived = MutableStateFlow<List<SmsThreadItem>>(emptyList())
     val archived: StateFlow<List<SmsThreadItem>> = _archived
+    private val _currentThreadLimit = MutableStateFlow(100)
+    val threadLimit: StateFlow<Int> = _currentThreadLimit
     private val _searchState = MutableStateFlow<SearchResultState>(SearchResultState.Idle)
     val searchState: StateFlow<SearchResultState> = _searchState
     private val _lines = MutableStateFlow<List<SmsLine>>(emptyList())
@@ -106,7 +108,8 @@ class SmsInboxViewModel @Inject constructor(
 
     fun loadMoreThreads() {
         currentThreadLimit += 50
-        refresh(force = true)
+        _currentThreadLimit.value = currentThreadLimit
+        refresh()
     }
 
     fun importAllMessages() {
@@ -297,6 +300,8 @@ class SmsThreadViewModel @Inject constructor(
     val contact: StateFlow<Contact?> = _contact
     private val _isArchived = MutableStateFlow(false)
     val isArchived: StateFlow<Boolean> = _isArchived
+    private val _currentMessageLimit = MutableStateFlow(100)
+    val messageLimit: StateFlow<Int> = _currentMessageLimit
     private val _summaryState = MutableStateFlow<AiSummaryState>(AiSummaryState.Idle)
     val summaryState: StateFlow<AiSummaryState> = _summaryState
     private val _composeState = MutableStateFlow<AiComposeState>(AiComposeState.Idle)
@@ -568,6 +573,7 @@ class SmsThreadViewModel @Inject constructor(
 
     fun loadMoreMessages() {
         currentMessageLimit += 100
+        _currentMessageLimit.value = currentMessageLimit
         viewModelScope.launch {
             refreshMessages()
         }

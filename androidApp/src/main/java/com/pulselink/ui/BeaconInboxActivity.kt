@@ -259,6 +259,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
                                     val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
                                     val searchState by smsInboxViewModel.searchState.collectAsStateWithLifecycle()
+                                    val threadLimit by smsInboxViewModel.threadLimit.collectAsStateWithLifecycle()
                                     val contactsByNumber = remember(state.contacts) {
                                         val map = mutableMapOf<String, com.pulselink.domain.model.Contact>()
                                         state.contacts.forEach { contact ->
@@ -338,6 +339,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                             },
                                             theme = state.settings.themePreferences,
                                             onImportAll = { smsInboxViewModel.importAllMessages() },
+                                            onLoadMore = { smsInboxViewModel.loadMoreThreads() },
+                                            threadLimit = threadLimit,
                                                 sectionTitle = when (currentRoute) {
                                                     BeaconNavRoute.Inbox -> "All messages"
                                                     BeaconNavRoute.Otp -> "2-step codes"
@@ -628,6 +631,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val isArchived by threadViewModel.isArchived.collectAsStateWithLifecycle()
                                     val summaryState by threadViewModel.summaryState.collectAsStateWithLifecycle()
                                     val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
+                                    val messageLimit by threadViewModel.messageLimit.collectAsStateWithLifecycle()
                                     val decodedAddress = Uri.decode(address)
                                     val premiumActive = subscriptionUiState.isPremiumActive ||
                                         state.settings.premiumUnlocked ||
@@ -702,7 +706,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                         },
                                         onClearCompose = { threadViewModel.clearCompose() },
                                         aiSummaryEnabled = premiumActive && state.settings.aiSummariesEnabled,
-                                        aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled
+                                        aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled,
+                                        onLoadMore = { threadViewModel.loadMoreMessages() },
+                                        messageLimit = messageLimit
                                     )
                                 }
                                 composable("beacon_settings") {

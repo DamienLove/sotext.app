@@ -42,6 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
@@ -120,7 +121,8 @@ fun SmsThreadScreen(
     onClearCompose: () -> Unit = {},
     aiSummaryEnabled: Boolean = false,
     aiComposeEnabled: Boolean = false,
-    onLoadMore: () -> Unit = {}
+    onLoadMore: () -> Unit = {},
+    messageLimit: Int = 100
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -348,7 +350,17 @@ fun SmsThreadScreen(
                         )
                     }
                 }
-                if (messages.size >= 50) {
+                if (aiSummaryEnabled) {
+                    item {
+                        AiSummaryCard(
+                            state = aiSummaryState,
+                            onGenerate = onRequestSummary,
+                            onClear = onClearSummary,
+                            theme = effectiveTheme
+                        )
+                    }
+                }
+                if (messages.size >= messageLimit) {
                      item {
                          Box(
                              modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -359,16 +371,6 @@ fun SmsThreadScreen(
                              }
                          }
                      }
-                }
-                if (aiSummaryEnabled) {
-                    item {
-                        AiSummaryCard(
-                            state = aiSummaryState,
-                            onGenerate = onRequestSummary,
-                            onClear = onClearSummary,
-                            theme = effectiveTheme
-                        )
-                    }
                 }
             }
         }
