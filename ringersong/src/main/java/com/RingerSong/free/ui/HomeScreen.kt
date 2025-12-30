@@ -295,6 +295,9 @@ fun HomeScreen(
                 },
                 onClearUrgencyTone = {
                     onClearUrgencyTone(activeContact!!.id)
+                },
+                onSetUrgencyTone = { contactId, uri ->
+                    onSetUrgencyTone(contactId, uri)
                 }
             )
         }
@@ -1051,7 +1054,8 @@ private fun ContactSettingsDialog(
     onAssignSong: (String?) -> Unit,
     onUrgencyThresholdChange: (Int) -> Unit,
     onPickUrgencyTone: () -> Unit,
-    onClearUrgencyTone: () -> Unit
+    onClearUrgencyTone: () -> Unit,
+    onSetUrgencyTone: (String, Uri) -> Unit
 ) {
     var showUrgencySongPicker by remember { mutableStateOf(false) }
     val context = LocalContext.current
