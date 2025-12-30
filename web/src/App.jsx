@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback, Fragment } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -275,8 +275,9 @@ MapAlertItem.displayName = 'MapAlertItem';
 
 // Bolt: Optimized ThemeGalleryItem to prevent re-renders of the theme list
 const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
-  const previewTheme = normalizeTheme(themeDoc.theme || {});
-  const previewStyle = buildThemePreviewStyle(previewTheme);
+  const previewTheme = useMemo(() => normalizeTheme(themeDoc.theme || {}), [themeDoc.theme]);
+  const previewStyle = useMemo(() => buildThemePreviewStyle(previewTheme), [previewTheme]);
+
   const authorLabel = themeDoc.anonymous
     ? 'Anonymous'
     : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
@@ -299,6 +300,8 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
     </div>
   );
 }, (prev, next) => {
+  // Use strict equality for themeDoc because Firestore updates create new object references
+  // even if the data inside is similar, which is the desired behavior for updates.
   return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
 });
 
@@ -1909,7 +1912,7 @@ function App() {
     if (!themeDoc?.theme) return;
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
-  }, [handleApplyPreset]);
+  }, [handleApplyPreset, setThemeGalleryStatus]);
 
   const handlePublishTheme = async () => {
     if (!user) return;
@@ -2685,7 +2688,7 @@ function App() {
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
-                    <React.Fragment key={alert.id}>
+                    <Fragment key={alert.id}>
                       <MapAlertItem
                         alert={alert}
                         isActive={selectedAlertId === alert.id}
@@ -2729,7 +2732,7 @@ function App() {
                           </button>
                         </div>
                       </div>
-                    </React.Fragment>
+                    </Fragment>
                   ))}
                   {filteredAlerts.length === 0 && (
                     <div className="map-empty">
