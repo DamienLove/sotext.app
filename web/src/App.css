@@ -366,6 +366,23 @@
   cursor: pointer;
 }
 
+/* Spinner for loading states */
+.spinner {
+  display: inline-block;
+  width: 0.875em;
+  height: 0.875em;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.5em;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .link-button {
   background: none;
   border: none;
