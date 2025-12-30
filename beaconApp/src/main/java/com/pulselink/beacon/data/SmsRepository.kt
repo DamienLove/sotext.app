@@ -50,7 +50,7 @@ class SmsRepository(private val context: Context) {
         // 1. Fetch Pinned Threads explicitly
         val pinnedIds = state.pinnedThreadIds.filter { it > 0 }
         if (pinnedIds.isNotEmpty()) {
-            items.addAll(fetchSpecificThreads(pinnedIds, state, isPinned = true))
+            items.addAll(fetchSpecificThreads(pinnedIds, state))
         }
 
         // 2. Fetch Regular Threads (Unarchived)
@@ -82,12 +82,12 @@ class SmsRepository(private val context: Context) {
         val archivedIds = state.archivedThreadIds.filter { it > 0 }
         if (archivedIds.isEmpty()) return emptyList()
 
-        return fetchSpecificThreads(archivedIds, state, isPinned = false)
+        return fetchSpecificThreads(archivedIds, state)
             .sortedByDescending { it.timestamp }
             .take(limit)
     }
 
-    private fun fetchSpecificThreads(ids: List<Long>, state: InboxState, isPinned: Boolean): List<SmsThreadItem> {
+    private fun fetchSpecificThreads(ids: List<Long>, state: InboxState): List<SmsThreadItem> {
         if (ids.isEmpty()) return emptyList()
         val chunks = ids.chunked(SQLITE_MAX_ARGS_SAFE)
         val items = mutableListOf<SmsThreadItem>()
@@ -117,9 +117,7 @@ class SmsRepository(private val context: Context) {
                 while (c.moveToNext()) {
                     val threadId = c.getLong(idIdx)
                     val isArchived = state.archivedThreadIds.contains(threadId)
-                    // Pinned state check: if we are fetching "pinned" list, it's pinned.
-                    // If fetching "archived", it might also be pinned.
-                    val actualIsPinned = state.pinnedThreadIds.contains(threadId)
+                    val isPinned = state.pinnedThreadIds.contains(threadId)
 
                     items += SmsThreadItem(
                         threadId = threadId,
@@ -127,7 +125,7 @@ class SmsRepository(private val context: Context) {
                         snippet = c.getString(snippetIdx) ?: "",
                         timestamp = c.getLong(dateIdx),
                         unread = c.getInt(readIdx) == 0,
-                        isPinned = actualIsPinned,
+                        isPinned = isPinned,
                         isArchived = isArchived
                     )
                 }

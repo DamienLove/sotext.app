@@ -120,10 +120,12 @@ fun InboxScreen(
     val filtered = remember(filter, threads) {
         threads.filter { thread ->
             when (filter) {
-                InboxFilter.ALL -> true // Already filtered by Repo
+                // ALL and ARCHIVED modes are pre-filtered by the Repository query.
+                // We trust the repository to return the correct set (Inbox/Pinned vs Archived).
+                InboxFilter.ALL -> true
                 InboxFilter.READ -> !thread.unread
                 InboxFilter.UNREAD -> thread.unread
-                InboxFilter.ARCHIVED -> true // Already filtered by Repo
+                InboxFilter.ARCHIVED -> true
             }
         }
     }
@@ -499,8 +501,9 @@ private fun SwipeableThreadRow(
     SwipeToDismissBox(
         state = state,
         backgroundContent = {
+            // Use muted theme color for archive, accent for pin
             val (color, alignment, icon) = when (state.targetValue) {
-                SwipeToDismissBoxValue.EndToStart -> Triple(Color(0xFF757575), Alignment.CenterEnd, Icons.Default.Inbox) // Archive
+                SwipeToDismissBoxValue.EndToStart -> Triple(theme.frameColor.copy(alpha = 0.5f), Alignment.CenterEnd, Icons.Default.Inbox) // Archive
                 SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor, Alignment.CenterStart, if (thread.isPinned) Icons.Default.VerticalAlignBottom else Icons.Default.VerticalAlignTop) // Pin/Unpin
                 else -> Triple(Color.Transparent, Alignment.CenterEnd, Icons.Default.Inbox)
             }
@@ -570,7 +573,12 @@ private fun ThreadRow(
                         onTogglePin()
                         showMenu = false
                     },
-                    leadingIcon = { Icon(Icons.Default.VerticalAlignTop, contentDescription = null) }
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.VerticalAlignTop,
+                            contentDescription = if (thread.isPinned) "Unpin conversation" else "Pin conversation"
+                        )
+                    }
                 )
                 DropdownMenuItem(
                     text = { Text(if (thread.isArchived) "Unarchive" else "Archive") },
@@ -578,7 +586,12 @@ private fun ThreadRow(
                         onToggleArchive()
                         showMenu = false
                     },
-                    leadingIcon = { Icon(Icons.Default.Inbox, contentDescription = null) }
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Inbox,
+                            contentDescription = if (thread.isArchived) "Unarchive conversation" else "Archive conversation"
+                        )
+                    }
                 )
                 DropdownMenuItem(
                     text = { Text("Delete") },
@@ -586,7 +599,12 @@ private fun ThreadRow(
                         onDelete()
                         showMenu = false
                     },
-                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete conversation"
+                        )
+                    }
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {

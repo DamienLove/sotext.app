@@ -21,6 +21,7 @@ class InboxPreferencesRepository(private val context: Context) {
     }
 
     suspend fun togglePin(threadId: Long) {
+        if (threadId <= 0) return
         context.inboxDataStore.edit { prefs ->
             val current = decodeSet(prefs[pinnedKey]).toMutableSet()
             if (current.contains(threadId)) {
@@ -33,6 +34,7 @@ class InboxPreferencesRepository(private val context: Context) {
     }
 
     suspend fun toggleArchive(threadId: Long) {
+        if (threadId <= 0) return
         context.inboxDataStore.edit { prefs ->
             val current = decodeSet(prefs[archivedKey]).toMutableSet()
             if (current.contains(threadId)) {
@@ -44,6 +46,12 @@ class InboxPreferencesRepository(private val context: Context) {
         }
     }
 
+    /**
+     * Decodes a comma-separated string of Long IDs.
+     * Note: CSV encoding has O(N) parsing overhead and is limited by max string size in Preferences.
+     * For extremely large datasets (thousands of pinned/archived items), migration to Proto DataStore
+     * or Room is recommended.
+     */
     private fun decodeSet(raw: String?): Set<Long> {
         if (raw.isNullOrBlank()) return emptySet()
         return raw.split(",").mapNotNull { it.toLongOrNull() }.toSet()
