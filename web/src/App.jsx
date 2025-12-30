@@ -56,6 +56,7 @@ const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
+const Spinner = () => <span className="spinner" aria-hidden="true" />;
 
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
@@ -1047,7 +1048,7 @@ function App() {
   const [composeBody, setComposeBody] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
   const [alertLocations, setAlertLocations] = useState([]);
   const [alertStatus, setAlertStatus] = useState('');
@@ -1058,6 +1059,9 @@ function App() {
   const [geoStatus, setGeoStatus] = useState('');
   const [userLocation, setUserLocation] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
+  const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -1225,6 +1229,43 @@ function App() {
       );
     });
   }, [deviceContacts, contactSearch]);
+
+  // Bolt: Memoize list elements to avoid re-creating them on every render
+  const threadListElements = useMemo(() => {
+    if (threads.length === 0) {
+      return (
+        <div className="sidebar-placeholder">
+          <div className="sidebar-tip muted">
+            No conversations found.
+          </div>
+          <div className="sidebar-tip muted">
+            Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+          </div>
+        </div>
+      );
+    }
+    return threads.map(thread => (
+      <ThreadItem
+        key={thread.id}
+        thread={thread}
+        isActive={selectedThread?.id === thread.id}
+        onSelect={setSelectedThread}
+        showPreviews={showPreviews}
+      />
+    ));
+  }, [threads, selectedThread?.id, showPreviews]);
+
+  const messageListElements = useMemo(() => (
+    messages.map(msg => (
+      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
+    ))
+  ), [messages, showPreviews]);
+
+  const contactListElements = useMemo(() => (
+    filteredDeviceContacts.map((contact) => (
+      <DeviceContactItem key={contact.id} contact={contact} />
+    ))
+  ), [filteredDeviceContacts]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -1937,7 +1978,8 @@ function App() {
 
   const handleRemoteSettingsSave = async () => {
     if (!user) return;
-    setSettingsStatus("Saving settings...");
+    setIsSavingSettings(true);
+    setRemoteSettingsStatus("Saving settings...");
     try {
       await setDoc(doc(db, "users", user.uid), {
         remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
@@ -1945,10 +1987,12 @@ function App() {
         timeFormat: remoteSettings.timeFormat,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
-      setSettingsStatus("Settings updated.");
+      setRemoteSettingsStatus("Settings updated.");
     } catch (error) {
       console.error("Settings update failed", error);
-      setSettingsStatus(error?.message ?? "Settings update failed.");
+      setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
@@ -2434,8 +2478,14 @@ function App() {
                     type="button"
                     onClick={handleProfileSave}
                     disabled={isSavingProfile}
+                    aria-busy={isSavingProfile}
                   >
-                    {isSavingProfile ? 'Saving...' : 'Save profile'}
+                    {isSavingProfile ? (
+                      <>
+                        <Spinner />
+                        Saving...
+                      </>
+                    ) : 'Save profile'}
                   </button>
                   {profileStatus && <div className="settings-status" role="status" aria-live="polite">{profileStatus}</div>}
                 </div>
@@ -2577,9 +2627,7 @@ function App() {
                 />
               </div>
               <div className="contact-list contact-list--full">
-                {filteredDeviceContacts.map((contact) => (
-                  <DeviceContactItem key={contact.id} contact={contact} />
-                ))}
+                {contactListElements}
                 {filteredDeviceContacts.length === 0 && (
                   <div className="settings-note">
                     {contactSearch.trim()
@@ -3098,9 +3146,21 @@ function App() {
                       <option value="TWENTY_FOUR_HOUR">24-hour</option>
                     </select>
                   </label>
-                  <button className="secondary-btn" type="button" onClick={handleRemoteSettingsSave}>
-                    Save PulseLink settings
+                  <button
+                    className="secondary-btn"
+                    type="button"
+                    onClick={handleRemoteSettingsSave}
+                    disabled={isSavingSettings}
+                    aria-busy={isSavingSettings}
+                  >
+                    {isSavingSettings ? (
+                      <>
+                        <Spinner />
+                        Saving...
+                      </>
+                    ) : 'Save PulseLink settings'}
                   </button>
+                  {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Account data</h4>
@@ -3139,9 +3199,7 @@ function App() {
                     <h3>{selectedThread.address}</h3>
                   </div>
                   <div className="messages-list">
-                    {messages.map(msg => (
-                      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
-                    ))}
+                    {messageListElements}
                     <div ref={messagesEndRef} />
                   </div>
                 </>
