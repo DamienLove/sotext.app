@@ -2,6 +2,7 @@ import Foundation
 #if canImport(FirebaseFirestore)
 import FirebaseFirestore
 import FirebaseAuth
+import FirebaseMessaging
 import UIKit
 #endif
 
@@ -13,8 +14,16 @@ final class DeviceManager {
     @MainActor
     func registerDevice() async {
         #if canImport(FirebaseFirestore)
-        guard let user = Auth.auth().currentUser else { return }
-        guard let deviceId = UIDevice.current.identifierForVendor?.uuidString else { return }
+        guard let user = Auth.auth().currentUser else {
+            print("Cannot register device: No authenticated user")
+            return
+        }
+        guard let deviceId = UIDevice.current.identifierForVendor?.uuidString else {
+            print("Cannot register device: No vendor identifier available")
+            return
+        }
+
+        let token = try? await Messaging.messaging().token()
 
         let db = Firestore.firestore()
         let deviceData: [String: Any] = [
@@ -23,7 +32,8 @@ final class DeviceManager {
             "model": UIDevice.current.model,
             "platform": "iOS",
             "app": "PulseLink",
-            "lastSeen": FieldValue.serverTimestamp()
+            "fcmToken": token ?? "",
+            "updatedAt": FieldValue.serverTimestamp()
         ]
 
         do {
