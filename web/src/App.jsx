@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -2402,39 +2402,37 @@ function App() {
               <div className="pulselink-grid">
                 <div className="settings-card">
                   <h4>Public profile</h4>
-                  <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'center' }}>
-                    <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'var(--surface-alt)', border: '2px solid var(--border)' }}>
+                  <div className="profile-header-row">
+                    <div className="profile-avatar-preview">
                       {profile.avatarId ? (
-                        <img 
-                          src={avatarPresets.find(p => p.id === profile.avatarId)?.src} 
-                          alt="Avatar" 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        <img
+                          src={avatarPresets.find(p => p.id === profile.avatarId)?.src}
+                          alt="Avatar"
+                          className="profile-avatar-img"
                         />
                       ) : (
                         profile.avatarUrl ? (
-                          <img src={profile.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={profile.avatarUrl} alt="Avatar" className="profile-avatar-img" />
                         ) : (
-                          <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>?</div>
+                          <div className="profile-avatar-placeholder">?</div>
                         )
                       )}
                     </div>
                     {unlockedAvatars.length > 0 && (
-                      <div className="theme-grid">
+                      <div className="avatar-selector">
                         {unlockedAvatars.map(av => (
                           <button
                             key={av.id}
                             onClick={() => setProfile(prev => ({ ...prev, avatarId: av.id }))}
-                            className={`theme-chip ${profile.avatarId === av.id ? 'active' : ''}`}
-                            style={{ padding: 4, borderRadius: '50%', width: 40, height: 40, border: profile.avatarId === av.id ? '2px solid var(--accent)' : '1px solid var(--border)' }}
+                            className={`avatar-option-btn ${profile.avatarId === av.id ? 'active' : ''}`}
                             title={av.name}
                           >
-                            <img src={av.src} alt={av.name} style={{ width: '100%', height: '100%' }} />
+                            <img src={av.src} alt={av.name} className="avatar-option-img" />
                           </button>
                         ))}
                         <button
                           onClick={() => setProfile(prev => ({ ...prev, avatarId: '' }))}
-                          className={`theme-chip`}
-                          style={{ padding: 0, borderRadius: '50%', width: 40, height: 40, justifyContent: 'center' }}
+                          className={`avatar-option-btn ${!profile.avatarId ? 'active' : ''}`}
                           title="Use Custom URL"
                           aria-label="Use custom avatar URL"
                         >
@@ -2765,18 +2763,10 @@ function App() {
             <div className="pulselink-panel">
               <div className="ringersong-header">
                 <div
-                  className="ringersong-logo-mask"
+                  className="ringersong-logo-container"
                   style={{
-                      width: 52, height: 52,
-                      backgroundColor: 'var(--accent)',
                       maskImage: `url(${ringersongLogo})`,
-                      maskSize: 'contain',
-                      maskRepeat: 'no-repeat',
-                      maskPosition: 'center',
-                      WebkitMaskImage: `url(${ringersongLogo})`,
-                      WebkitMaskSize: 'contain',
-                      WebkitMaskRepeat: 'no-repeat',
-                      WebkitMaskPosition: 'center'
+                      WebkitMaskImage: `url(${ringersongLogo})`
                   }}
                 />
                 <div>
