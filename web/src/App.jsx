@@ -275,20 +275,20 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
 MapAlertItem.displayName = 'MapAlertItem';
 
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#22d3ee",
+  secondaryColor: "#0ea5e9",
+  bubbleOutgoing: "#22d3ee",
+  bubbleIncoming: "#1f2937",
+  backgroundColor: "#05070f",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
+  bubbleCornerRadius: 16,
   inboxIconVariant: "Default",
-  onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  onBubbleOutgoing: "#05070f",
+  onBubbleIncoming: "#eef2fb",
+  onBackground: "#eef2fb",
+  topBarColor: "#0d1224",
+  onTopBarColor: "#eef2fb",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
@@ -1230,6 +1230,12 @@ function App() {
     });
   }, [deviceContacts, contactSearch]);
 
+  // Bolt: Stable handler to prevent ghost content when switching threads
+  const handleThreadSelect = useCallback((thread) => {
+    setMessages([]); // Clear previous messages immediately
+    setSelectedThread(thread);
+  }, []);
+
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const threadListElements = useMemo(() => {
     if (threads.length === 0) {
@@ -1249,11 +1255,11 @@ function App() {
         key={thread.id}
         thread={thread}
         isActive={selectedThread?.id === thread.id}
-        onSelect={setSelectedThread}
+        onSelect={handleThreadSelect}
         showPreviews={showPreviews}
       />
     ));
-  }, [threads, selectedThread?.id, showPreviews]);
+  }, [threads, selectedThread?.id, showPreviews, handleThreadSelect]);
 
   const messageListElements = useMemo(() => (
     messages.map(msg => (
@@ -2094,12 +2100,6 @@ function App() {
     }
   };
 
-  // Bolt: Stable handler to prevent ghost content when switching threads
-  const handleThreadSelect = useCallback((thread) => {
-    setMessages([]); // Clear previous messages immediately
-    setSelectedThread(thread);
-  }, []);
-
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
@@ -2303,26 +2303,7 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
-                <div className="sidebar-placeholder">
-                  <div className="sidebar-tip muted">
-                    No conversations found.
-                  </div>
-                  <div className="sidebar-tip muted">
-                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
-                  </div>
-                </div>
-              ) : (
-                threads.map(thread => (
-                  <ThreadItem
-                    key={thread.id}
-                    thread={thread}
-                    isActive={selectedThread?.id === thread.id}
-                    onSelect={handleThreadSelect}
-                    showPreviews={showPreviews}
-                  />
-                ))
-              )}
+              {threadListElements}
             </div>
           ) : (
             <div className="sidebar-placeholder">

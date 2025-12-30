@@ -50,23 +50,30 @@
 }
 
 :root {
-  --bg: #0b0e16;
-  --bg-accent: #131a2a;
-  --surface: #1a2236;
-  --surface-alt: #232d45;
-  --ink: #f0f4f8;
-  --muted: #94a3b8;
-  --accent: #6366f1;
-  --accent-strong: #4f46e5;
-  --border: #2e3a52;
+  /* Future Deep v2 Palette */
+  --bg: #05070f;
+  --bg-accent: #0d1224;
+  --surface: #0c1326;
+  --surface-alt: #0f1a30;
+  --ink: #eef2fb;
+  --muted: #9fb3c8;
+  --accent: #22d3ee;
+  --accent-strong: #0ea5e9;
+
+  /* Glass & Borders */
+  --border: rgba(255, 255, 255, 0.06);
+  --glass: rgba(12, 19, 38, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.08);
+
+  /* Functional Colors */
   --success: #10b981;
   --danger: #ef4444;
   --warning: #f59e0b;
+
+  /* Layout */
   --radius: 16px;
-  --shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
-  --shadow-soft: 0 8px 24px -6px rgba(0, 0, 0, 0.3);
-  --glass: rgba(26, 34, 54, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --shadow: 0 26px 68px -22px rgba(0, 0, 0, 0.65);
+  --shadow-soft: 0 12px 30px -12px rgba(0, 0, 0, 0.55);
 
   /* Opacity Levels */
   --opacity-high: 0.9;
@@ -126,8 +133,7 @@ a:hover {
 body {
   margin: 0;
   min-height: 100vh;
-  /* Deep, rich background gradient */
-  background: radial-gradient(circle at 10% 20%, #1e293b 0%, var(--bg) 60%, #020617 100%);
+  background: radial-gradient(circle at 20% 20%, #12203a 0%, var(--bg) 52%, #04060c 100%);
   overflow-x: hidden;
 }
 

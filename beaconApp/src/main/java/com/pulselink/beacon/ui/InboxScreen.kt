@@ -2,6 +2,8 @@ package com.pulselink.beacon.ui
 
 import android.provider.Telephony
 import android.text.format.DateUtils
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,11 +41,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FabPosition
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -78,6 +79,9 @@ import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.R
+import com.pulselink.ui.theme.Layout // Use DesignSystem tokens
+import com.pulselink.ui.theme.Spacing
+import com.pulselink.ui.theme.Gradients
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,7 +97,7 @@ fun InboxScreen(
     onRequestDefault: () -> Unit,
     onRefreshDefaultStatus: () -> Unit,
     onOpenThread: (Long, String) -> Unit,
-        onCompose: () -> Unit,
+    onCompose: () -> Unit,
     onDeleteThread: (Long) -> Unit,
     onRefresh: () -> Unit,
     onSearch: (String) -> Unit,
@@ -144,7 +148,7 @@ fun InboxScreen(
                 title = {
                     Text(
                         "Beacon Inbox",
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = theme.frameColor
                     )
                 },
@@ -154,7 +158,7 @@ fun InboxScreen(
                         contentDescription = "Beacon",
                         tint = Color.Unspecified,
                         modifier = Modifier
-                            .padding(start = 8.dp)
+                            .padding(start = Spacing.medium)
                             .size(32.dp)
                             .alpha(beaconIconAlpha)
                     )
@@ -178,10 +182,12 @@ fun InboxScreen(
                 scrollBehavior = scrollBehavior
             )
         },
-                floatingActionButton = {
+        floatingActionButton = {
             FloatingActionButton(
                 onClick = onCompose,
-                containerColor = theme.accentColor
+                containerColor = theme.accentColor,
+                contentColor = theme.inboxBackgroundColor, // High contrast
+                shape = RoundedCornerShape(Layout.buttonCornerRadius)
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
@@ -214,16 +220,16 @@ fun InboxScreen(
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(Layout.inputCornerRadius),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = Spacing.medium, vertical = Spacing.small),
                 placeholder = { Text("Search contacts or messages") },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = theme.accentColor,
-                    unfocusedBorderColor = theme.frameColor.copy(alpha = 0.4f),
-                    focusedContainerColor = theme.inboxBackgroundColor,
-                    unfocusedContainerColor = theme.inboxBackgroundColor
+                    unfocusedBorderColor = theme.frameColor.copy(alpha = 0.2f),
+                    focusedContainerColor = theme.inboxBackgroundColor.copy(alpha = 0.5f),
+                    unfocusedContainerColor = theme.inboxBackgroundColor.copy(alpha = 0.5f)
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
@@ -240,42 +246,49 @@ fun InboxScreen(
                 theme = theme
             )
 
-            when (searchState) {
-                is SearchResultState.Messages -> SearchResults(
-                    hits = searchState.hits,
-                    theme = theme,
-                    onOpenThread = onOpenThread
-                )
-                SearchResultState.Empty -> Text(
-                    "No matches. Try a contact name or phrase.",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                SearchResultState.Searching -> Text(
-                    "Searching…",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                else -> Unit
+            AnimatedContent(targetState = searchState, label = "search_results") { state ->
+                when (state) {
+                    is SearchResultState.Messages -> SearchResults(
+                        hits = state.hits,
+                        theme = theme,
+                        onOpenThread = onOpenThread
+                    )
+                    SearchResultState.Empty -> Text(
+                        "No matches. Try a contact name or phrase.",
+                        modifier = Modifier.padding(horizontal = Spacing.medium, vertical = Spacing.small),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = mutedTint
+                    )
+                    SearchResultState.Searching -> Text(
+                        "Searching…",
+                        modifier = Modifier.padding(horizontal = Spacing.medium, vertical = Spacing.small),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = mutedTint
+                    )
+                    else -> Unit
+                }
             }
 
-            if (!notificationsEnabled || notificationsSilent) {
+            AnimatedVisibility(visible = !notificationsEnabled || notificationsSilent) {
                 Surface(
-                    tonalElevation = 2.dp,
+                    shape = RoundedCornerShape(Layout.cardCornerRadius),
+                    color = theme.inboxBackgroundColor.copy(alpha = 0.5f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(12.dp)
+                        .padding(horizontal = Spacing.medium, vertical = Spacing.small)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(Spacing.medium),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = iconTint)
                         Column(Modifier.weight(1f)) {
                             Text(
                                 text = if (!notificationsEnabled) "Message notifications are off" else "Message alerts are silent",
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                color = theme.frameColor
                             )
                             Text(
                                 text = if (!notificationsEnabled) {
@@ -283,7 +296,8 @@ fun InboxScreen(
                                 } else {
                                     "Enable sound or vibration for incoming texts."
                                 },
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
+                                color = mutedTint
                             )
                         }
                         OutlinedButton(onClick = onOpenNotificationSettings) {
@@ -295,22 +309,25 @@ fun InboxScreen(
 
             if (missingPermissions.isNotEmpty()) {
                 Surface(
-                    tonalElevation = 2.dp,
+                    shape = RoundedCornerShape(Layout.cardCornerRadius),
+                    color = theme.inboxBackgroundColor.copy(alpha = 0.5f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(12.dp)
+                        .padding(horizontal = Spacing.medium, vertical = Spacing.small)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(Spacing.medium),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.Settings, contentDescription = null, tint = iconTint)
                         Column(Modifier.weight(1f)) {
-                            Text("Permissions needed", fontWeight = FontWeight.SemiBold)
+                            Text("Permissions needed", fontWeight = FontWeight.SemiBold, color = theme.frameColor)
                             Text(
                                 "Grant SMS permission so Beacon can read and show messages.",
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
+                                color = mutedTint
                             )
                         }
                         OutlinedButton(onClick = onRequestPermissions) {
@@ -322,37 +339,40 @@ fun InboxScreen(
 
             if (!isDefaultSms || isCheckingDefaultSms) {
                 Surface(
-                    tonalElevation = 2.dp,
+                    shape = RoundedCornerShape(Layout.cardCornerRadius),
+                    color = theme.inboxBackgroundColor.copy(alpha = 0.5f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(12.dp)
+                        .padding(horizontal = Spacing.medium, vertical = Spacing.small)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(Spacing.medium),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(Icons.Default.Sms, contentDescription = null, tint = iconTint)
                         Column(Modifier.weight(1f)) {
                             Text(
                                 if (isCheckingDefaultSms) "Checking default SMS status..." else "Set as default SMS",
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                color = theme.frameColor
                             )
                             Text(
                                 "Required for receiving texts and showing notifications.",
-                                style = MaterialTheme.typography.bodySmall
+                                style = MaterialTheme.typography.bodySmall,
+                                color = mutedTint
                             )
                         }
                         if (isCheckingDefaultSms) {
-                            CircularProgressIndicator(strokeWidth = 2.dp)
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(24.dp), color = iconTint)
                         } else {
                             OutlinedButton(onClick = onRequestDefault) {
                                 Text("Set")
                             }
                         }
                         OutlinedButton(onClick = onRefreshDefaultStatus, enabled = !isCheckingDefaultSms) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, tint = iconTint)
-                            Text("Refresh", modifier = Modifier.padding(start = 6.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = iconTint, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -369,17 +389,24 @@ fun InboxScreen(
                         Icon(
                             imageVector = Icons.Default.Inbox,
                             contentDescription = null,
-                            tint = iconTint,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            tint = iconTint.copy(alpha = 0.5f),
+                            modifier = Modifier
+                                .padding(bottom = Spacing.small)
+                                .size(64.dp)
                         )
-                        Text("No messages yet")
+                        Text(
+                            "No messages yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = theme.frameColor
+                        )
                         Text(
                             when (filter) {
                                 InboxFilter.UNREAD -> "No unread messages."
                                 InboxFilter.READ -> "No read messages."
                                 else -> "New texts will appear here once Beacon is the default SMS app."
                             },
-                            style = MaterialTheme.typography.bodySmall
+                            style = MaterialTheme.typography.bodySmall,
+                            color = mutedTint
                         )
                     }
                 }
@@ -387,15 +414,15 @@ fun InboxScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = Spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.small)
                 ) {
                     itemsIndexed(filtered, key = { _, item -> item.threadId }) { index, item ->
                         if (index == 3) {
                             NativeAdCard(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
+                                    .padding(vertical = Spacing.small)
                             )
                         }
                         val dismissState = rememberSwipeToDismissBoxState(
@@ -414,7 +441,7 @@ fun InboxScreen(
                             onClick = { onOpenThread(item.threadId, item.address) }
                         )
                     }
-                    item { Spacer(modifier = Modifier.height(60.dp)) }
+                    item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
             }
         }
@@ -430,18 +457,19 @@ private fun SearchResults(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .padding(horizontal = Spacing.medium, vertical = Spacing.small)
     ) {
         hits.take(5).forEach { msg ->
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                tonalElevation = 1.dp,
+                shape = RoundedCornerShape(Layout.cardCornerRadius),
+                color = theme.inboxBackgroundColor.copy(alpha = 0.8f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp)
+                    .padding(vertical = Spacing.extraSmall)
                     .clickable { onOpenThread(msg.threadId, msg.address) }
             ) {
-                Column(Modifier.padding(12.dp)) {
+                Column(Modifier.padding(Spacing.medium)) {
                     Text(
                         text = msg.address.ifBlank { "Unknown sender" },
                         style = MaterialTheme.typography.titleSmall,
@@ -451,7 +479,8 @@ private fun SearchResults(
                     Text(
                         text = msg.body,
                         style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2
+                        maxLines = 2,
+                        color = theme.frameColor
                     )
                     Text(
                         text = DateUtils.getRelativeTimeSpanString(
@@ -459,7 +488,8 @@ private fun SearchResults(
                             System.currentTimeMillis(),
                             DateUtils.MINUTE_IN_MILLIS
                         ).toString(),
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall,
+                        color = theme.frameColor.copy(alpha = 0.6f)
                     )
                 }
             }
@@ -482,7 +512,7 @@ private fun SwipeableThreadRow(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(color)
+                    .background(color, RoundedCornerShape(Layout.cardCornerRadius))
                     .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.CenterEnd
             ) {
@@ -499,24 +529,38 @@ private fun SwipeableThreadRow(
 
 @Composable
 private fun ThreadRow(thread: SmsThreadItem, theme: ThemePalette, onClick: () -> Unit) {
+    // Determine background color based on unread state for "Future Deep" feel
+    val backgroundColor = if (thread.unread) {
+        theme.accentColor.copy(alpha = 0.12f)
+    } else {
+        theme.inboxBackgroundColor
+    }
+
+    val borderColor = if (thread.unread) {
+        theme.accentColor.copy(alpha = 0.3f)
+    } else {
+        theme.frameColor.copy(alpha = 0.15f)
+    }
+
     Surface(
-        shape = RoundedCornerShape(theme.bubbleRadius.dp),
-        tonalElevation = if (thread.unread) 2.dp else 0.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.35f)),
-        color = theme.inboxBackgroundColor,
+        shape = RoundedCornerShape(Layout.cardCornerRadius),
+        // Use manual border for glass effect instead of tonal elevation
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
+        color = backgroundColor,
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
     ) {
         Column(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .padding(horizontal = Spacing.medium, vertical = Spacing.medium)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = thread.address.ifBlank { "Unknown" },
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (thread.unread) FontWeight.SemiBold else FontWeight.Normal,
+                    fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.Medium,
+                    color = theme.frameColor,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
@@ -526,14 +570,15 @@ private fun ThreadRow(thread: SmsThreadItem, theme: ThemePalette, onClick: () ->
                         DateUtils.MINUTE_IN_MILLIS
                     ).toString(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.DarkGray
+                    color = theme.frameColor.copy(alpha = 0.6f)
                 )
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Spacing.extraSmall))
             Text(
                 text = thread.snippet,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1
+                maxLines = 1,
+                color = theme.frameColor.copy(alpha = if (thread.unread) 1f else 0.7f)
             )
         }
     }
@@ -550,8 +595,8 @@ private fun TabsRow(
         modifier = Modifier
             .fillMaxWidth()
             .selectableGroup()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = Spacing.medium, vertical = Spacing.small),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
         verticalAlignment = Alignment.CenterVertically
     ) {
         TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
@@ -583,15 +628,17 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePalette, onCli
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (selected) theme.frameColor else theme.frameColor.copy(alpha = 0.6f)
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) theme.accentColor else theme.frameColor.copy(alpha = 0.6f)
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(Spacing.extraSmall))
+
+        // Animated indicator simulation
         Box(
             modifier = Modifier
                 .height(2.dp)
                 .fillMaxWidth(0.8f)
-                .background(if (selected) theme.accentColor else Color.Transparent)
+                .background(if (selected) theme.accentColor else Color.Transparent, RoundedCornerShape(2.dp))
         )
     }
 }
