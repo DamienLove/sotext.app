@@ -4,7 +4,6 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
-  onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendPasswordResetEmail
@@ -1070,7 +1069,6 @@ function App() {
       });
       return;
     }
-    const userRef = doc(db, "users", user.uid);
     // const unsubscribe = onSnapshot(userRef, (snapshot) => {
       const data = {};
       setProfile({
