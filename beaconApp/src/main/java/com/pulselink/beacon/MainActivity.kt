@@ -196,34 +196,33 @@ private fun BeaconNav(
                         isDefaultSms = isDefaultSms,
                         isCheckingDefaultSms = isCheckingDefaultSms,
                         missingPermissions = missingReadPerms,
+                        onRequestPermissions = {
+                            permissionLauncher.launch(missingPerms.toTypedArray())
+                        },
+                        onRequestDefault = {
+                            buildDefaultSmsRequestIntent(context)?.let { intent ->
+                                defaultSmsLauncher.launch(intent)
+                            } ?: launchDefaultSmsCheck()
+                        },
+                        onRefreshDefaultStatus = launchDefaultSmsCheck,
+                        onOpenThread = { id, address ->
+                            vm.openThread(id, address)
+                            navController.navigate("thread/$id/${Uri.encode(address)}")
+                        },
+                        onCompose = { navController.navigate("newMessage") },
+                        onDeleteThread = { vm.deleteThread(it) },
+                        onRefresh = { vm.refreshThreads() },
+                        onSearch = { vm.search(it) },
+                        onClearSearch = { vm.clearSearch() },
+                        onCustomize = { navController.navigate("customize?address=") },
+                        onOpenNotifications = { navController.navigate("notifications") },
                         notificationsEnabled = notificationsEnabled,
                         notificationsSilent = notificationsSilent,
-                    onOpenNotificationSettings = {
-                        val intent = com.pulselink.beacon.notifications.MessageNotificationManager
-                            .buildNotificationSettingsIntent(context)
-                        context.startActivity(intent)
-                    },
-                    onRequestPermissions = {
-                        permissionLauncher.launch(missingPerms.toTypedArray())
-                    },
-                    onRequestDefault = {
-                        buildDefaultSmsRequestIntent(context)?.let { intent ->
-                            defaultSmsLauncher.launch(intent)
-                        } ?: launchDefaultSmsCheck()
-                    },
-                    onRefreshDefaultStatus = launchDefaultSmsCheck,
-                    onOpenThread = { id, address ->
-                        vm.openThread(id, address)
-                        navController.navigate("thread/$id/${Uri.encode(address)}")
-                    },
-                    onDeleteThread = { vm.deleteThread(it) },
-                    onRefresh = { vm.refreshThreads() },
-                    onSearch = { vm.search(it) },
-                    onClearSearch = { vm.clearSearch() },
-                    onCustomize = { navController.navigate("customize?address=") },
-                    onCompose = { navController.navigate("newMessage") },
-                    onOpenNotifications = { navController.navigate("notifications") }
-                                        onCompose = { navController.navigate("newMessage") }
+                        onOpenNotificationSettings = {
+                            val intent = com.pulselink.beacon.notifications.MessageNotificationManager
+                                .buildNotificationSettingsIntent(context)
+                            context.startActivity(intent)
+                        }
                 )
             }
             composable(
@@ -346,19 +345,6 @@ private fun BeaconNav(
 }
 
 private fun buildDefaultSmsRequestIntent(context: android.content.Context): Intent? {
-            composable("newMessage") {
-                NewMessageScreen(
-                    theme = themeState.global,
-                    onBack = { navController.popBackStack() },
-                    onStartConversation = { address ->
-                        navController.navigate("thread/0/${Uri.encode(address)}") {
-                            popUpTo("inbox")
-                        }
-                    }
-                )
-            }
-
-private fun requestDefaultSms(context: android.content.Context) {
     val packageName = context.packageName
     if (isDefaultSmsRoleHeld(context)) return null
 

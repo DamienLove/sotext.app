@@ -55,11 +55,13 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshThreads() {
-        threads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+        viewModelScope.launch {
+            threads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+        }
     }
 
     fun openThread(threadId: Long, address: String) {
-                // Handle new conversations
+        // Handle new conversations
         if (threadId == 0L && !address.isNullOrBlank()) {
             currentThreadId = 0L
             currentAddress = address
@@ -73,17 +75,26 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun refreshThread(threadId: Long, refreshRead: Boolean) {
-        messages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
-            .getOrElse { emptyList() }
-        if (refreshRead) runCatching { repo.markThreadRead(threadId) }
+        viewModelScope.launch {
+            messages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
+                .getOrElse { emptyList() }
+            if (refreshRead) runCatching { repo.markThreadRead(threadId) }
+        }
     }
 
     fun sendMessage(body: String): Boolean {
         val addr = currentAddress.ifBlank { messages.lastOrNull()?.address.orEmpty() }
         if (addr.isBlank()) return false
-        val ok = runCatching { repo.sendSms(addr, body) }.getOrDefault(false)
-        if (ok) currentThreadId?.let { refreshThread(it, refreshRead = true) }
-        return ok
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = runCatching { repo.sendSms(addr, body) }.getOrDefault(false)
+            if (ok) {
+                withContext(Dispatchers.Main) {
+                    currentThreadId?.let { refreshThread(it, refreshRead = true) }
+                }
+            }
+        }
+        return true
     }
 
     fun deleteThread(threadId: Long) {
