@@ -1180,6 +1180,7 @@ function App() {
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [isPremiumUser, setIsPremiumUser] = useState(null); // null = loading
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
@@ -1440,6 +1441,7 @@ function App() {
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
       const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
+      setIsPremiumUser(isPremium);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
       const isLoyal = tenureDays > 365;
@@ -2194,6 +2196,10 @@ function App() {
 
   const handleSendMessage = async () => {
     if (!user) return;
+    if (!isPremiumUser) {
+      setSendStatus("Premium subscription required.");
+      return;
+    }
     const address = composeAddress.trim();
     const body = composeBody.trim();
     if (!address || !body) {
@@ -2213,7 +2219,11 @@ function App() {
       setSendStatus("Queued for sending from your device.");
     } catch (error) {
       console.error("Send failed", error);
-      setSendStatus("Send failed. Try again.");
+      if (error?.code === 'permission-denied') {
+        setSendStatus("Premium required to send messages.");
+      } else {
+        setSendStatus("Send failed. Try again.");
+      }
     } finally {
       setIsSending(false);
     }
@@ -3330,6 +3340,23 @@ function App() {
 
           {activePanel === 'beacon' && (
             <>
+              {isPremiumUser === null ? (
+                <div className="empty-state">
+                  <Spinner />
+                  <div style={{ marginTop: 16 }}>Checking subscription...</div>
+                </div>
+              ) : !isPremiumUser ? (
+                <div className="empty-state">
+                  <div className="lock-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
+                  <h3>Premium Required</h3>
+                  <p className="muted" style={{ maxWidth: '300px', margin: '0 auto 20px' }}>
+                    Web access to messages is available exclusively to Premium subscribers.
+                  </p>
+                  <button className="primary-btn" onClick={() => setActivePanel('settings')}>
+                    Check Subscription
+                  </button>
+                </div>
+              ) : (
               <div className="beacon-tabs">
                 <button
                   className={`beacon-tab ${beaconTab === 'messages' ? 'active' : ''}`}
