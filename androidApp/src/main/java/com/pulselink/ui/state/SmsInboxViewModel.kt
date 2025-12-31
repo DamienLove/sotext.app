@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -132,6 +133,12 @@ class SmsInboxViewModel @Inject constructor(
                 localThreads.value = threads.map { it.copy(lineId = deviceId) }
                 localArchived.value = archived.map { it.copy(lineId = deviceId) }
             }
+    fun refresh() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val threadsDeferred = async { smsRepository.listThreads(limit = THREAD_LIMIT) }
+            val archivedDeferred = async { smsRepository.listArchivedThreads(limit = THREAD_LIMIT) }
+            _threads.value = threadsDeferred.await()
+            _archived.value = archivedDeferred.await()
         }
     }
 
