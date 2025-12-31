@@ -770,7 +770,7 @@ private fun ThreadRow(
                             lineColors = lineColors,
                             theme = theme,
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
+                                .align(Alignment.Bottom)
                                 .padding(end = 10.dp, bottom = 10.dp)
                         )
                     }
@@ -1107,6 +1107,173 @@ private fun TabText(
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LineBadge(
+    index: Int,
+    color: Color,
+    theme: ThemePreferences,
+    isActive: Boolean = false,
+    size: Dp = (16f * theme.iconSizeFactor).coerceIn(12f, 20f).dp
+) {
+    val shape = RoundedCornerShape(3.dp)
+    val borderColor = if (isActive) color else color.copy(alpha = 0.45f)
+    val backgroundColor = if (isActive) color else color.copy(alpha = 0.12f)
+    Box(
+        modifier = Modifier
+            .size(size)
+            .border(width = if (isActive) 2.dp else 1.dp, color = borderColor, shape = shape)
+            .background(backgroundColor, shape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = (index + 1).toString(),
+            color = if (isActive) Color.White else borderColor,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun MultiLineIndicator(
+    lineCount: Int,
+    activeIndex: Int?,
+    lineColors: List<Color>,
+    theme: ThemePreferences,
+    modifier: Modifier = Modifier
+) {
+    if (lineCount <= 0 || lineColors.isEmpty()) return
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(lineCount) { index ->
+            val color = lineColors[index % lineColors.size]
+            LineBadge(
+                index = index,
+                color = color,
+                theme = theme,
+                isActive = activeIndex == index,
+                size = (14f * theme.iconSizeFactor).coerceIn(12f, 18f).dp
+            )
+        }
+    }
+}
+
+@Composable
+private fun LinePickerRow(
+    lines: List<com.pulselink.domain.model.SmsLine>,
+    activeLineId: String?,
+    lineColors: List<Color>,
+    theme: ThemePreferences,
+    onSelectLine: (String) -> Unit
+) {
+    if (lines.isEmpty()) return
+    var expanded by remember { mutableStateOf(false) }
+    val selectedIndex = lines.indexOfFirst { it.id == activeLineId }.takeIf { it >= 0 } ?: 0
+    val selectedLine = lines.getOrNull(selectedIndex)
+    val badgeColor = lineColors[selectedIndex % lineColors.size]
+    val label = "Line ${selectedIndex + 1}"
+    val subtitle = selectedLine?.phoneNumber ?: ""
+    val onBackground = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true },
+            tonalElevation = 1.dp,
+            shape = RoundedCornerShape(12.dp),
+            color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LineBadge(
+                    index = selectedIndex,
+                    color = badgeColor,
+                    theme = theme,
+                    isActive = true,
+                    size = (18f * theme.iconSizeFactor).coerceIn(14f, 22f).dp
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Active line",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = onBackground.copy(alpha = 0.7f)
+                    )
+                    Text(label, fontWeight = FontWeight.SemiBold, color = onBackground)
+                    if (subtitle.isNotBlank()) {
+                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = onBackground.copy(alpha = 0.7f))
+                    }
+                }
+                if (lines.size > 1) {
+                    MultiLineIndicator(
+                        lineCount = lines.size,
+                        activeIndex = selectedIndex,
+                        lineColors = lineColors,
+                        theme = theme
+                    )
+                }
+                ThemeIcon(
+                    iconKey = ThemeIconKey.ARROW_DOWN,
+                    theme = theme,
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = onBackground
+                )
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            lines.forEachIndexed { index, line ->
+                val itemColor = lineColors[index % lineColors.size]
+                val itemLabel = "Line ${index + 1}"
+                val isActive = index == selectedIndex
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            LineBadge(
+                                index = index,
+                                color = itemColor,
+                                theme = theme,
+                                isActive = isActive,
+                                size = (16f * theme.iconSizeFactor).coerceIn(12f, 20f).dp
+                            )
+                            Column {
+                                Text(itemLabel)
+                                if (line.phoneNumber.isNotBlank()) {
+                                    Text(line.phoneNumber, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            if (isActive) {
+                                Text(
+                                    text = "Active",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = itemColor
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelectLine(line.id)
+                    }
+                )
             }
         }
     }
