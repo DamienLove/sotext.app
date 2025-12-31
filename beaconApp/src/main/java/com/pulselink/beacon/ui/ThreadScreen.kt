@@ -1,6 +1,14 @@
 package com.pulselink.beacon.ui
 
 import android.text.format.DateUtils
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +31,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -67,6 +77,15 @@ fun ThreadScreen(
 ) {
     var draft by remember { mutableStateOf("") }
     val iconTint = theme.accentColor
+    val context = LocalContext.current
+
+    val attachmentPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            sendAttachmentViaSms(context, address, uri)
+        }
+    }
 
         val listState = remember(address) { LazyListState() }
             val scope = rememberCoroutineScope()
@@ -159,6 +178,9 @@ fun ThreadScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
+                    IconButton(onClick = { attachmentPicker.launch("*/*") }) {
+                        Icon(Icons.Default.AttachFile, contentDescription = "Attach file", tint = iconTint)
+                    }
                     TextField(
                         value = draft,
                         onValueChange = { draft = it },
@@ -247,5 +269,42 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                 )
             }
         }
+    }
+}
+
+private fun sendAttachmentViaSms(
+    context: Context,
+    address: String,
+    uri: Uri
+) {
+    val mimeType = context.contentResolver.getType(uri) ?: "*/*"
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = mimeType
+        data = Uri.parse("smsto:$address")
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra("address", address)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    val resolved = context.packageManager.queryIntentActivities(
+        intent,
+        PackageManager.MATCH_DEFAULT_ONLY
+    )
+    resolved.forEach { resolveInfo ->
+        context.grantUriPermission(
+            resolveInfo.activityInfo.packageName,
+            uri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+        )
+    }
+
+    try {
+        context.startActivity(Intent.createChooser(intent, "Send attachment via SMS/MMS"))
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(
+            context,
+            "No messaging app found to send attachments",
+            Toast.LENGTH_LONG
+        ).show()
     }
 }
