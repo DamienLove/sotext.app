@@ -1099,7 +1099,7 @@ function App() {
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [isPremiumUser, setIsPremiumUser] = useState(false);
+  const [isPremiumUser, setIsPremiumUser] = useState(null); // null = loading
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
@@ -2109,6 +2109,10 @@ function App() {
 
   const handleSendMessage = async () => {
     if (!user) return;
+    if (!isPremiumUser) {
+      setSendStatus("Premium subscription required.");
+      return;
+    }
     const address = composeAddress.trim();
     const body = composeBody.trim();
     if (!address || !body) {
@@ -2128,7 +2132,11 @@ function App() {
       setSendStatus("Queued for sending from your device.");
     } catch (error) {
       console.error("Send failed", error);
-      setSendStatus("Send failed. Try again.");
+      if (error?.code === 'permission-denied') {
+        setSendStatus("Premium required to send messages.");
+      } else {
+        setSendStatus("Send failed. Try again.");
+      }
     } finally {
       setIsSending(false);
     }
@@ -3283,7 +3291,12 @@ function App() {
 
           {activePanel === 'beacon' && (
             <>
-              {!isPremiumUser ? (
+              {isPremiumUser === null ? (
+                <div className="empty-state">
+                  <Spinner />
+                  <div style={{ marginTop: 16 }}>Checking subscription...</div>
+                </div>
+              ) : !isPremiumUser ? (
                 <div className="empty-state">
                   <div className="lock-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
                   <h3>Premium Required</h3>
