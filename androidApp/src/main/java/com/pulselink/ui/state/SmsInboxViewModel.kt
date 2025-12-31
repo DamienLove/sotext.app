@@ -56,8 +56,12 @@ class SmsInboxViewModel @Inject constructor(
     private val contactRepository: ContactRepository
 ) : ViewModel() {
     private companion object {
-        const val THREAD_LIMIT = Int.MAX_VALUE
+        const val INITIAL_THREAD_LIMIT = 100
+        const val THREAD_PAGE_SIZE = 50
     }
+    private var currentThreadLimit = INITIAL_THREAD_LIMIT
+    private val _hasMoreThreads = MutableStateFlow(true)
+    val hasMoreThreads: StateFlow<Boolean> = _hasMoreThreads
     private val localThreads = MutableStateFlow<List<SmsThreadItem>>(emptyList())
     private val localArchived = MutableStateFlow<List<SmsThreadItem>>(emptyList())
     private val remoteThreads = MutableStateFlow<List<SmsThreadItem>>(emptyList())
@@ -90,7 +94,7 @@ class SmsInboxViewModel @Inject constructor(
             }
             val (threads, archived) = withContext(Dispatchers.IO) {
                 smsRepository.listThreadsAndArchived(
-                    limit = THREAD_LIMIT,
+                    limit = currentThreadLimit,
                     fromSmsOnly = false,
                     forceRefresh = force
                 )
@@ -104,7 +108,13 @@ class SmsInboxViewModel @Inject constructor(
             }
             localThreads.value = threads.map { it.copy(lineId = deviceId) }
             localArchived.value = archived.map { it.copy(lineId = deviceId) }
+            _hasMoreThreads.value = threads.size >= currentThreadLimit
         }
+    }
+
+    fun loadMoreThreads() {
+        currentThreadLimit += THREAD_PAGE_SIZE
+        refresh(force = true)
     }
 
     fun importAllMessages() {
@@ -115,7 +125,7 @@ class SmsInboxViewModel @Inject constructor(
                 }
                 val (threads, archived) = withContext(Dispatchers.IO) {
                     smsRepository.listThreadsAndArchived(
-                        limit = THREAD_LIMIT,
+                        limit = currentThreadLimit,
                         fromSmsOnly = true,
                         forceRefresh = true
                     )
@@ -251,7 +261,10 @@ class SmsInboxViewModel @Inject constructor(
             val active = activeLine ?: deviceId
             val visibleThreads = when (mode) {
                 LineInboxMode.COMBINED -> (local + remote).sortedByDescending { it.timestamp }
-                LineInboxMode.PER_LINE -> if (active == deviceId) local else remote.filter { it.lineId == active }
+                LineInboxMode.PER_LINE -> {
+                    val list = if (active == deviceId) local else remote.filter { it.lineId == active }
+                    list.sortedByDescending { it.timestamp }
+                }
             }
             val visibleArchived = if (mode == LineInboxMode.PER_LINE && active != deviceId) {
                 emptyList()
@@ -289,9 +302,13 @@ class SmsThreadViewModel @Inject constructor(
     private val smsOutboxService: SmsOutboxService
 ) : ViewModel() {
     private companion object {
-        const val MESSAGE_LIMIT = Int.MAX_VALUE
+        const val INITIAL_MESSAGE_LIMIT = 100
+        const val MESSAGE_PAGE_SIZE = 100
         const val PENDING_MATCH_WINDOW_MS = 20_000L
     }
+    private var currentMessageLimit = INITIAL_MESSAGE_LIMIT
+    private val _hasMoreMessages = MutableStateFlow(true)
+    val hasMoreMessages: StateFlow<Boolean> = _hasMoreMessages
     private val _messages = MutableStateFlow<List<SmsMessageItem>>(emptyList())
     val messages: StateFlow<List<SmsMessageItem>> = _messages
     private val _contact = MutableStateFlow<Contact?>(null)
@@ -318,6 +335,7 @@ class SmsThreadViewModel @Inject constructor(
     fun load(threadId: Long, address: String, lineId: String? = null) {
         activeThreadId = threadId.takeIf { it > 0 }
         activeAddress = address
+        currentMessageLimit = INITIAL_MESSAGE_LIMIT
         resetMessages()
         viewModelScope.launch {
             deviceLineId = settingsRepository.ensureDeviceId()
@@ -350,8 +368,8 @@ class SmsThreadViewModel @Inject constructor(
                 activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
             }
             val msgs = when {
-                activeThreadId != null -> smsRepository.messagesForThread(activeThreadId!!, limit = MESSAGE_LIMIT)
-                activeAddress.isNotBlank() -> smsRepository.messagesForAddress(activeAddress, limit = MESSAGE_LIMIT)
+                activeThreadId != null -> smsRepository.messagesForThread(activeThreadId!!, limit = currentMessageLimit)
+                activeAddress.isNotBlank() -> smsRepository.messagesForAddress(activeAddress, limit = currentMessageLimit)
                 else -> emptyList()
             }
             val contact = msgs.firstOrNull()?.address?.let { contactRepository.getByPhone(it) }
@@ -471,6 +489,7 @@ class SmsThreadViewModel @Inject constructor(
             loadedMessages = messages
             _messages.value = mergeMessages(messages)
         }
+        _hasMoreMessages.value = messages.size >= currentMessageLimit
         val latestMessageId = messages.firstOrNull()?.id
         if (latestMessageId != lastSummaryMessageId) {
             lastSummaryMessageId = null
@@ -564,6 +583,13 @@ class SmsThreadViewModel @Inject constructor(
 
     fun clearSummary() {
         _summaryState.value = AiSummaryState.Idle
+    }
+
+    fun loadMoreMessages() {
+        currentMessageLimit += MESSAGE_PAGE_SIZE
+        viewModelScope.launch {
+            refreshMessages()
+        }
     }
 
     fun requestCompose(

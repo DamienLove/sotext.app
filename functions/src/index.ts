@@ -26,3 +26,9 @@ export {alertRelay, alertRelayHttp} from "./alertRelay";
 export {onMessageCreated} from "./messaging";
 export {sendEmailNotification} from "./email";
 export {findUser, deleteAccount} from "./users";
+export {approveTheme} from "./themes";
+export {
+  verifySubscription,
+  getPremiumStatus,
+  handlePlayStoreRTDN,
+} from "./billing";

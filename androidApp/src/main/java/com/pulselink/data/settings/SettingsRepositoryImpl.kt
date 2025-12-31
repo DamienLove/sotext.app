@@ -50,6 +50,8 @@ private val BETA_AGREEMENT_VERSION = stringPreferencesKey("beta_agreement_versio
 private val AUTO_CALL = booleanPreferencesKey("auto_call")
 private val PRO_UNLOCKED = booleanPreferencesKey("pro_unlocked")
 private val PREMIUM_UNLOCKED = booleanPreferencesKey("premium_unlocked")
+private val PREMIUM_PURCHASE_TOKEN = stringPreferencesKey("premium_purchase_token")
+private val TIER_BEFORE_PREMIUM = stringPreferencesKey("tier_before_premium")
 private val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
 private val DEVICE_ID = stringPreferencesKey("device_id")
 private val OWNER_NAME = stringPreferencesKey("owner_name")
@@ -71,6 +73,7 @@ private val BEACON_HINT_DISMISSED = booleanPreferencesKey("beacon_hint_dismissed
 private val WEB_ACCESS_HINT_DISMISSED = booleanPreferencesKey("web_access_hint_dismissed")
 private val FIREBASE_MESSAGING_ENABLED = booleanPreferencesKey("firebase_messaging_enabled")
 private val EMAIL_FALLBACK_ENABLED = booleanPreferencesKey("email_fallback_enabled")
+private val THIRD_PARTY_EXTENSIONS_ENABLED = booleanPreferencesKey("third_party_extensions_enabled")
 private val MESSAGING_CHANNEL_PRIORITY = stringPreferencesKey("messaging_channel_priority")
 private val CRASH_DETECTION_ENABLED = booleanPreferencesKey("crash_detection_enabled")
 private val AI_SUMMARIES_ENABLED = booleanPreferencesKey("ai_summaries_enabled")
@@ -128,9 +131,9 @@ class SettingsRepositoryImpl @Inject constructor(
             }
                 ?: PulseLinkSettings().checkInProfile,
             callSoundKey = prefs[CALL_SOUND] ?: PulseLinkSettings().callSoundKey,
-            messageNotificationSoundUri = prefs[MESSAGE_NOTIFICATION_SOUND]     
+            messageNotificationSoundUri = prefs[MESSAGE_NOTIFICATION_SOUND]
                 ?: PulseLinkSettings().messageNotificationSoundUri,
-            messageNotificationVibrate = prefs[MESSAGE_NOTIFICATION_VIBRATE]    
+            messageNotificationVibrate = prefs[MESSAGE_NOTIFICATION_VIBRATE]
                 ?: PulseLinkSettings().messageNotificationVibrate,
             messageNotificationSoundOverrides = decodeJsonOrNull(
                 prefs[MESSAGE_NOTIFICATION_SOUND_OVERRIDES]
@@ -147,6 +150,8 @@ class SettingsRepositoryImpl @Inject constructor(
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
             proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
             premiumUnlocked = prefs[PREMIUM_UNLOCKED] ?: PulseLinkSettings().premiumUnlocked,
+            premiumPurchaseToken = prefs[PREMIUM_PURCHASE_TOKEN],
+            tierBeforePremium = prefs[TIER_BEFORE_PREMIUM],
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
             deviceId = prefs[DEVICE_ID] ?: PulseLinkSettings().deviceId,
             ownerName = prefs[OWNER_NAME] ?: PulseLinkSettings().ownerName,
@@ -169,6 +174,7 @@ class SettingsRepositoryImpl @Inject constructor(
             webAccessHintDismissed = prefs[WEB_ACCESS_HINT_DISMISSED] ?: PulseLinkSettings().webAccessHintDismissed,
             firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
             emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
+            thirdPartyExtensionsEnabled = prefs[THIRD_PARTY_EXTENSIONS_ENABLED] ?: PulseLinkSettings().thirdPartyExtensionsEnabled,
             messagingChannelPriority = decodeJsonOrNull(prefs[MESSAGING_CHANNEL_PRIORITY]) {
                 json.decodeFromString<List<MessageChannel>>(it)
             } ?: PulseLinkSettings().messagingChannelPriority,
@@ -250,6 +256,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[WEB_ACCESS_HINT_DISMISSED] = updated.webAccessHintDismissed
             prefs[FIREBASE_MESSAGING_ENABLED] = updated.firebaseMessagingEnabled
             prefs[EMAIL_FALLBACK_ENABLED] = updated.emailFallbackEnabled
+            prefs[THIRD_PARTY_EXTENSIONS_ENABLED] = updated.thirdPartyExtensionsEnabled
             prefs[MESSAGING_CHANNEL_PRIORITY] = encodeJson {
                 json.encodeToString(updated.messagingChannelPriority)
             }
@@ -367,6 +374,26 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setPremiumUnlocked(enabled: Boolean) {
         editOnIo { prefs ->
             prefs[PREMIUM_UNLOCKED] = enabled
+        }
+    }
+
+    override suspend fun setPremiumPurchaseToken(token: String?) {
+        editOnIo { prefs ->
+            if (token.isNullOrBlank()) {
+                prefs.remove(PREMIUM_PURCHASE_TOKEN)
+            } else {
+                prefs[PREMIUM_PURCHASE_TOKEN] = token
+            }
+        }
+    }
+
+    override suspend fun setTierBeforePremium(tier: String?) {
+        editOnIo { prefs ->
+            if (tier.isNullOrBlank()) {
+                prefs.remove(TIER_BEFORE_PREMIUM)
+            } else {
+                prefs[TIER_BEFORE_PREMIUM] = tier
+            }
         }
     }
 
@@ -540,6 +567,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setEmailFallbackEnabled(enabled: Boolean) {
         editOnIo { prefs ->
             prefs[EMAIL_FALLBACK_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setThirdPartyExtensionsEnabled(enabled: Boolean) {
+        editOnIo { prefs ->
+            prefs[THIRD_PARTY_EXTENSIONS_ENABLED] = enabled
         }
     }
 

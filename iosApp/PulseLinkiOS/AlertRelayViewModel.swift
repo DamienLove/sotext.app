@@ -18,6 +18,7 @@ enum Presence: String {
 
 struct ContactCard: Identifiable, Hashable {
     let id = UUID()
+    let threadId: String
     let name: String
     let address: String // Phone number or unique ID
     let role: String
@@ -64,6 +65,10 @@ final class AlertRelayViewModel: ObservableObject {
     private let pinCode = "1234" // demo PIN; replace with secure storage
     private let emergencyLocationService = EmergencyLocationService()
 
+    // Listeners
+    private var threadsListener: ListenerRegistration?
+    private var activeMessageListener: ListenerRegistration?
+
     @Published var isLoggedIn: Bool = false
 
     init(baseUrl: String = AlertRelay.shared.DEFAULT_BASE_URL) {
@@ -76,6 +81,11 @@ final class AlertRelayViewModel: ObservableObject {
         setupAuthListener()
     }
 
+    deinit {
+        threadsListener?.remove()
+        activeMessageListener?.remove()
+    }
+
     private func setupAuthListener() {
         #if canImport(FirebaseAuth)
         if FirebaseBootstrap.isConfigured {
@@ -85,9 +95,11 @@ final class AlertRelayViewModel: ObservableObject {
                     if let uid = user?.uid {
                         self.isLoggedIn = true
                         self.conversationProvider = FirestoreConversationProvider(userId: uid)
-                        await self.loadConversations()
+                        self.startListeningToThreads()
                     } else {
                         self.isLoggedIn = false
+                        self.threadsListener?.remove()
+                        self.activeMessageListener?.remove()
                         self.conversationProvider = InMemoryConversationProvider()
                         self.contacts = []
                         self.conversations = [:]
@@ -98,7 +110,7 @@ final class AlertRelayViewModel: ObservableObject {
         #else
         // In preview/mock mode, simulate login or stay logged out
         self.isLoggedIn = true // Assume logged in for previews if desired, or false to test login
-        Task { await loadConversations() }
+        startListeningToThreads()
         #endif
     }
 
@@ -193,11 +205,18 @@ final class AlertRelayViewModel: ObservableObject {
         Task {
             do {
                 try await conversationProvider.send(message: message, to: contact)
-                // Only update UI if send succeeded (which it won't for Firestore provider yet)
+                // UI update handled by listener if active, or optimistically here?
+                // Optimistic update:
                 await MainActor.run {
-                    var msgs = conversations[contact.id] ?? []
-                    msgs.append(message)
-                    conversations[contact.id] = msgs
+                    // Only append if we aren't listening (to avoid duplicates if listener is fast)
+                    // But listener handles deduping usually by replacing the list.
+                    // For now, let's rely on listener if active.
+                    if activeMessageListener == nil {
+                         var msgs = conversations[contact.id] ?? []
+                         msgs.append(message)
+                         conversations[contact.id] = msgs
+                    }
+
                     statusText = urgent ? "Urgent message sent (ringer boost, DND override)" : "Message sent"
                     if urgent {
                         NotificationManager.shared.playAlertToneIfNeeded(volumeBoost: maxVolumeOnUrgent)
@@ -214,6 +233,20 @@ final class AlertRelayViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    func startListeningToConversation(contact: ContactCard) {
+        activeMessageListener?.remove()
+        activeMessageListener = conversationProvider.listenToMessages(for: contact) { [weak self] messages in
+            DispatchQueue.main.async {
+                self?.conversations[contact.id] = messages
+            }
+        }
+    }
+
+    func stopListeningToConversation() {
+        activeMessageListener?.remove()
+        activeMessageListener = nil
     }
 
     func deleteAccount() async throws {
@@ -247,19 +280,12 @@ final class AlertRelayViewModel: ObservableObject {
         #endif
     }
 
-    private func loadConversations() async {
-        if let fetched = try? await conversationProvider.loadConversations() {
-            await MainActor.run {
-                var newConversations: [UUID: [ConversationMessage]] = [:]
-                var newContacts: [ContactCard] = []
-
-                for (contact, msgs) in fetched {
-                    newContacts.append(contact)
-                    newConversations[contact.id] = msgs
-                }
-
-                self.contacts = newContacts.sorted(by: { $0.unread > $1.unread })
-                self.conversations = newConversations
+    private func startListeningToThreads() {
+        threadsListener?.remove()
+        threadsListener = conversationProvider.listenToConversations { [weak self] newContacts in
+            DispatchQueue.main.async {
+                self?.contacts = newContacts.sorted(by: { $0.unread > $1.unread })
+                // We don't clear conversations map here to preserve cached messages if any
             }
         }
     }

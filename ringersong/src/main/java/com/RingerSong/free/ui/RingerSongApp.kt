@@ -71,7 +71,7 @@ private fun AppNavHost(
     val coroutineScope = rememberCoroutineScope()
     val activity = LocalContext.current as? Activity
     val currentUser = viewModel.currentUser.collectAsStateWithLifecycle().value
-    
+
     val startDest = if (currentUser == null) Routes.Login else Routes.Home
 
     NavHost(
@@ -94,7 +94,10 @@ private fun AppNavHost(
                 state = viewModel.state.collectAsStateWithLifecycle().value,
                 searchState = viewModel.searchState.collectAsStateWithLifecycle().value,
                 youtubeSearchState = viewModel.youtubeSearchState.collectAsStateWithLifecycle().value,
-                onOpenSettings = { navController.navigate(Routes.Settings) },
+                onOpenSettings = {
+                    activity?.let { AdServices.showInterstitial(it) }
+                    navController.navigate(Routes.Settings)
+                },
                 onToggleEnabled = viewModel::toggleEnabled,
                 onToggleShuffle = viewModel::toggleShuffle,
                 onToggleNotifications = viewModel::toggleNotifications,
@@ -119,24 +122,28 @@ private fun AppNavHost(
                 onAddSpotifyTrack = { track ->
                     viewModel.addSpotifyTrack(track) { message ->
                         coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                        activity?.let { AdServices.showInterstitial(it) }
                     }
                 },
-                onYouTubeQueryChange = viewModel::updateYouTubeSearchQuery,
+                onYouTubeQueryChange = viewModel::updateYouTubeSearchQuery,     
                 onYouTubeSearch = viewModel::searchYouTubeMusic,
                 onClearYouTubeSearch = viewModel::clearYouTubeSearch,
                 onAddYouTubeTrack = { track ->
                     viewModel.addSpotifyTrack(track) { message ->
                         coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                        activity?.let { AdServices.showInterstitial(it) }       
                     }
-                }
+                },
+                snackbarHostState = snackbarHostState,
+                onClearDownloadError = viewModel::clearDownloadError
             )
         }
         composable(Routes.Settings) {
             SettingsScreen(
-                state = viewModel.state.collectAsStateWithLifecycle().value,    
+                state = viewModel.state.collectAsStateWithLifecycle().value,
                 currentUser = currentUser,
                 onBack = { navController.popBackStack() },
-                onSegmentSecondsChange = viewModel::updateSegmentSeconds,       
+                onSegmentSecondsChange = viewModel::updateSegmentSeconds,
                 onMaxSongsChange = viewModel::updateMaxSongs,
                 onResetProgress = viewModel::resetGlobalProgress
             )

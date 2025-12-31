@@ -29,10 +29,12 @@ struct ContentView: View {
                     }
                     .badge(isPro ? "Pro" : nil)
 
-                ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
-                    .tabItem {
-                        Label("Contacts", systemImage: "person.2.fill")
-                    }
+                if isPro {
+                    ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
+                        .tabItem {
+                            Label("Contacts", systemImage: "person.2.fill")
+                        }
+                }
 
                 SettingsTab(viewModel: viewModel)
                     .tabItem {
@@ -68,9 +70,13 @@ private struct HomeTab: View {
             ScrollView {
                 VStack(spacing: 20) {
                     emergencyCard
-                    relayCard
-                    overrideCard
-                    activityCard
+                    if isPro {
+                        relayCard
+                        overrideCard
+                        activityCard
+                    } else {
+                        proUpsellCard
+                    }
                 }
                 .padding(16)
             }
@@ -223,6 +229,21 @@ private struct HomeTab: View {
                 .foregroundStyle(.secondary)
         }
     }
+
+    private var proUpsellCard: some View {
+        Card {
+            HStack {
+                Text("Upgrade to Pro")
+                    .font(.headline)
+                Spacer()
+                Image(systemName: "star.fill")
+                    .foregroundStyle(RelayColors.accent)
+            }
+            Text("Unlock SMS Relay, Contacts, and DND Overrides.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
 }
 
 // MARK: - Contacts
@@ -261,7 +282,9 @@ private struct ContactsTab: View {
                     messages: viewModel.messages(for: contact),
                     onSend: { text, urgent in
                         viewModel.sendMessage(to: contact, text: text, urgent: urgent)
-                    }
+                    },
+                    onAppear: { viewModel.startListeningToConversation(contact: contact) },
+                    onDisappear: { viewModel.stopListeningToConversation() }
                 )
             }
             .navigationTitle("Contacts")
@@ -273,6 +296,8 @@ private struct ConversationView: View {
     let contact: ContactCard
     let messages: [ConversationMessage]
     let onSend: (String, Bool) -> Void
+    var onAppear: (() -> Void)? = nil
+    var onDisappear: (() -> Void)? = nil
 
     @State private var draft = ""
     @State private var urgent = true
@@ -306,6 +331,8 @@ private struct ConversationView: View {
                     if let last = messages.last { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
             }
+            .onAppear { onAppear?() }
+            .onDisappear { onDisappear?() }
 
             VStack(spacing: 8) {
                 Toggle("Mark urgent (override DND, boost volume)", isOn: $urgent)

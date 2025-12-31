@@ -16,14 +16,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import com.pulselink.BuildConfig
 import com.pulselink.R
+import com.pulselink.ui.branding.brandLogoRes
 
 @Composable
 fun SplashScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    useProBranding: Boolean = false
 ) {
-    val logoRes = if (BuildConfig.ADS_ENABLED) R.drawable.ic_logo else R.drawable.ic_pulselink_pro
+    val logoRes = brandLogoRes(useProBranding)
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -40,13 +41,20 @@ fun SplashScreen(
                 contentDescription = "PulseLink logo"
             )
             Text(
-                text = "PulseLink",
+                text = if (useProBranding) "PulseLink Premium" else "PulseLink",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 ),
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
+            if (useProBranding) {
+                Text(
+                    text = "Premium",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

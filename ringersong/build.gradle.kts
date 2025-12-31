@@ -25,8 +25,8 @@ android {
         applicationId = "com.RingerSong.free"
         minSdk = 35
         targetSdk = 35
-        versionCode = 17
-        versionName = "4.6"
+        versionCode = 20
+        versionName = "20"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -132,7 +132,7 @@ dependencies {
     implementation(libs.play.services.ads)
     implementation(libs.youtubedl.android)
     implementation(libs.youtubedl.android.ffmpeg)
-    
+
     implementation("com.spotify.android:auth:2.1.1")
 
     implementation("com.google.code.gson:gson:2.10.1")
