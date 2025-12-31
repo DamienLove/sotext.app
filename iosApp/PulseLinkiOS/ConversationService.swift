@@ -21,6 +21,7 @@ protocol ConversationProvider {
 #if canImport(FirebaseFirestore)
 // ListenerRegistration is provided by FirebaseFirestore
 // MockListener conforms to Firebase's ListenerRegistration for InMemoryConversationProvider
+// ListenerRegistration is available from FirebaseFirestore
 class MockListener: ListenerRegistration {
     func remove() {}
 }
