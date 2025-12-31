@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -1099,6 +1099,7 @@ function App() {
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [isPremiumUser, setIsPremiumUser] = useState(false);
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
@@ -1353,6 +1354,7 @@ function App() {
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
       const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
+      setIsPremiumUser(isPremium);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
       const isLoyal = tenureDays > 365;
@@ -3281,55 +3283,70 @@ function App() {
 
           {activePanel === 'beacon' && (
             <>
-              {selectedThread ? (
-                <>
-                  <div className="chat-header">
-                    <h3>{selectedThread.address}</h3>
-                  </div>
-                  <div className="messages-list">
-                    {messageListElements}
-                    <div ref={messagesEndRef} />
-                  </div>
-                </>
-              ) : (
+              {!isPremiumUser ? (
                 <div className="empty-state">
-                  <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                  <div>Select a thread or start a new message</div>
-                </div>
-              )}
-              <div className="composer">
-                <div className="composer-row">
-                  <label className="composer-label" htmlFor="compose-address">To</label>
-                  <input
-                    id="compose-address"
-                    className="composer-input"
-                    type="tel"
-                    placeholder="Phone number"
-                    value={composeAddress}
-                    onChange={(e) => setComposeAddress(e.target.value)}
-                  />
-                </div>
-                <div className="composer-row composer-actions">
-                  <textarea
-                    className="composer-textarea"
-                    placeholder="Type a message..."
-                    aria-label="Message body"
-                    value={composeBody}
-                    onChange={(e) => setComposeBody(e.target.value)}
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={isSending || isLoggingIn}
-                    className="primary-btn"
-                  >
-                    {isSending ? "Sending..." : "Send"}
+                  <div className="lock-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
+                  <h3>Premium Required</h3>
+                  <p className="muted" style={{ maxWidth: '300px', margin: '0 auto 20px' }}>
+                    Web access to messages is available exclusively to Premium subscribers.
+                  </p>
+                  <button className="primary-btn" onClick={() => setActivePanel('settings')}>
+                    Check Subscription
                   </button>
                 </div>
-                {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
-                <div className="compose-hint">
-                  Messages are sent from your phone when it&apos;s online and signed in.
-                </div>
-              </div>
+              ) : (
+                <>
+                  {selectedThread ? (
+                    <>
+                      <div className="chat-header">
+                        <h3>{selectedThread.address}</h3>
+                      </div>
+                      <div className="messages-list">
+                        {messageListElements}
+                        <div ref={messagesEndRef} />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="empty-state">
+                      <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                      <div>Select a thread or start a new message</div>
+                    </div>
+                  )}
+                  <div className="composer">
+                    <div className="composer-row">
+                      <label className="composer-label" htmlFor="compose-address">To</label>
+                      <input
+                        id="compose-address"
+                        className="composer-input"
+                        type="tel"
+                        placeholder="Phone number"
+                        value={composeAddress}
+                        onChange={(e) => setComposeAddress(e.target.value)}
+                      />
+                    </div>
+                    <div className="composer-row composer-actions">
+                      <textarea
+                        className="composer-textarea"
+                        placeholder="Type a message..."
+                        aria-label="Message body"
+                        value={composeBody}
+                        onChange={(e) => setComposeBody(e.target.value)}
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={isSending || isLoggingIn}
+                        className="primary-btn"
+                      >
+                        {isSending ? "Sending..." : "Send"}
+                      </button>
+                    </div>
+                    {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
+                    <div className="compose-hint">
+                      Messages are sent from your phone when it&apos;s online and signed in.
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
