@@ -127,16 +127,33 @@ const areMessagesEqual = (prev, next) => {
 
 // Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
 // or when new messages arrive (which creates new object references).
-const MessageItem = memo(({ msg, showPreviews }) => (
-  <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
-    <div className="message-bubble">
-      {showPreviews ? msg.body : '••••••'}
+const MessageItem = memo(({ msg, showPreviews, onAvatarClick, threadAddress }) => {
+  const isReceived = msg.type === 1;
+  const contactInitial = threadAddress ? threadAddress.charAt(0).toUpperCase() : '?';
+
+  return (
+    <div className={`message ${isReceived ? 'received' : 'sent'}`}>
+      {isReceived && (
+        <button
+          className="message-avatar"
+          onClick={() => onAvatarClick && onAvatarClick(threadAddress)}
+          aria-label={`View contact info for ${threadAddress}`}
+          title="View contact info"
+        >
+          {contactInitial}
+        </button>
+      )}
+      <div className="message-content">
+        <div className="message-bubble">
+          {showPreviews ? msg.body : '••••••'}
+        </div>
+        <div className="message-time">
+          {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
     </div>
-    <div className="message-time">
-      {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-    </div>
-  </div>
-), areMessagesEqual);
+  );
+}, areMessagesEqual);
 
 MessageItem.displayName = 'MessageItem';
 
@@ -308,21 +325,78 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
 });
 MapAlertItem.displayName = 'MapAlertItem';
 
+// Bolt: Optimized ThemeGalleryItem to prevent re-renders of the theme list
+const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
+  const previewTheme = useMemo(() => normalizeTheme(themeDoc.theme || {}), [themeDoc.theme]);
+  const previewStyle = useMemo(() => buildThemePreviewStyle(previewTheme), [previewTheme]);
+
+  const authorLabel = themeDoc.anonymous
+    ? 'Anonymous'
+    : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+
+  return (
+    <div className="theme-card">
+      <div className="theme-preview" style={previewStyle}>
+        <div className="theme-preview-chat">
+          <div
+            className="theme-bubble incoming"
+            style={{
+              background: previewTheme.bubbleIncoming,
+              color: previewTheme.onBubbleIncoming
+            }}
+          >
+            Hey, you good?
+          </div>
+          <div
+            className="theme-bubble outgoing"
+            style={{
+              background: previewTheme.bubbleOutgoing,
+              color: previewTheme.onBubbleOutgoing
+            }}
+          >
+            Yep, on my way!
+          </div>
+        </div>
+      </div>
+      <div className="theme-meta">
+        <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
+        <div className="theme-author">{authorLabel}</div>
+      </div>
+      <button
+        className="primary-btn"
+        type="button"
+        onClick={() => onImport(themeDoc)}
+        aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
+      >
+        Import
+      </button>
+    </div>
+  );
+}, (prev, next) => {
+  // Use strict equality for themeDoc because Firestore updates create new object references
+  // even if the data inside is similar, which is the desired behavior for updates.
+  // Note: Unlike MapAlertItem which uses deep field comparison, we rely on reference equality here
+  // because theme objects are large and deeply comparing them would be expensive.
+  return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
+});
+
+ThemeGalleryItem.displayName = 'ThemeGalleryItem';
+
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#22d3ee",
+  secondaryColor: "#0ea5e9",
+  bubbleOutgoing: "#22d3ee",
+  bubbleIncoming: "#1a2236",
+  backgroundColor: "#05070f",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
-  inboxIconVariant: "Default",
-  onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  bubbleCornerRadius: 16,
+  inboxIconVariant: "midnight_oled",
+  onBubbleOutgoing: "#04101c",
+  onBubbleIncoming: "#eef2fb",
+  onBackground: "#eef2fb",
+  topBarColor: "#0c1326",
+  onTopBarColor: "#eef2fb",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
@@ -953,11 +1027,16 @@ const buildThemePreviewStyle = (theme) => {
   const style = {
     backgroundColor: active.backgroundColor
   };
-  if (active.appBackgroundGradientStart && active.appBackgroundGradientEnd) {
-    style.backgroundImage = `linear-gradient(135deg, ${active.appBackgroundGradientStart}, ${active.appBackgroundGradientEnd})`;
-  }
+  // Build background layers (gradient + image if both exist)
+  const bgLayers = [];
   if (active.backgroundImageUrl) {
-    style.backgroundImage = `url(${active.backgroundImageUrl})`;
+    bgLayers.push(`url(${active.backgroundImageUrl})`);
+  }
+  if (active.appBackgroundGradientStart && active.appBackgroundGradientEnd) {
+    bgLayers.push(`linear-gradient(135deg, ${active.appBackgroundGradientStart}, ${active.appBackgroundGradientEnd})`);
+  }
+  if (bgLayers.length > 0) {
+    style.backgroundImage = bgLayers.join(', ');
     style.backgroundSize = 'cover';
     style.backgroundPosition = 'center';
   }
@@ -1084,6 +1163,8 @@ function App() {
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
+  const [beaconTab, setBeaconTab] = useState('messages'); // 'messages' or 'contacts'
+  const [viewingContactAddress, setViewingContactAddress] = useState(null); // Phone number of contact being viewed
   const [alertLocations, setAlertLocations] = useState([]);
   const [alertStatus, setAlertStatus] = useState('');
   const [severityFilter, setSeverityFilter] = useState('emergency');
@@ -1292,9 +1373,15 @@ function App() {
 
   const messageListElements = useMemo(() => (
     messages.map(msg => (
-      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
+      <MessageItem
+        key={msg.id}
+        msg={msg}
+        showPreviews={showPreviews}
+        threadAddress={selectedThread?.address}
+        onAvatarClick={setViewingContactAddress}
+      />
     ))
-  ), [messages, showPreviews]);
+  ), [messages, showPreviews, selectedThread?.address]);
 
   const contactListElements = useMemo(() => (
     filteredDeviceContacts.map((contact) => (
@@ -1931,7 +2018,7 @@ function App() {
     setConfirmDeleteId(null);
   }, []);
 
-  const handleApplyPreset = async (presetTheme) => {
+  const handleApplyPreset = useCallback(async (presetTheme) => {
     if (!user) return;
     const normalized = normalizeTheme(presetTheme);
     setThemeStatus("Updating theme...");
@@ -1954,13 +2041,13 @@ function App() {
       console.error("Theme update failed", error);
       setThemeStatus(error?.message ?? "Theme update failed.");
     }
-  };
+  }, [user]);
 
-  const handleImportPublicTheme = async (themeDoc) => {
+  const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
-  };
+  }, [handleApplyPreset]);
 
   const handlePublishTheme = async () => {
     if (!user) return;
@@ -2900,51 +2987,13 @@ function App() {
                     </button>
                   </div>
                   <div className="theme-gallery-grid">
-                    {filteredThemes.map((themeDoc) => {
-                      const previewTheme = normalizeTheme(themeDoc.theme || {});
-                      const previewStyle = buildThemePreviewStyle(previewTheme);
-                      const authorLabel = themeDoc.anonymous
-                        ? 'Anonymous'
-                        : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
-                      return (
-                        <div key={themeDoc.id} className="theme-card">
-                          <div className="theme-preview" style={previewStyle}>
-                            <div className="theme-preview-chat">
-                              <div
-                                className="theme-bubble incoming"
-                                style={{
-                                  background: previewTheme.bubbleIncoming,
-                                  color: previewTheme.onBubbleIncoming
-                                }}
-                              >
-                                Hey, you good?
-                              </div>
-                              <div
-                                className="theme-bubble outgoing"
-                                style={{
-                                  background: previewTheme.bubbleOutgoing,
-                                  color: previewTheme.onBubbleOutgoing
-                                }}
-                              >
-                                Yep, on my way!
-                              </div>
-                            </div>
-                          </div>
-                          <div className="theme-meta">
-                            <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
-                            <div className="theme-author">{authorLabel}</div>
-                          </div>
-                          <button
-                            className="primary-btn"
-                            type="button"
-                            onClick={() => handleImportPublicTheme(themeDoc)}
-                            aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
-                          >
-                            Import
-                          </button>
-                        </div>
-                      );
-                    })}
+                    {filteredThemes.map((themeDoc) => (
+                      <ThemeGalleryItem
+                        key={themeDoc.id}
+                        themeDoc={themeDoc}
+                        onImport={handleImportPublicTheme}
+                      />
+                    ))}
                     {filteredThemes.length === 0 && (
                       <div className="theme-empty">No themes yet. Be the first to publish!</div>
                     )}
@@ -3308,11 +3357,33 @@ function App() {
                   </button>
                 </div>
               ) : (
+              <div className="beacon-tabs">
+                <button
+                  className={`beacon-tab ${beaconTab === 'messages' ? 'active' : ''}`}
+                  onClick={() => setBeaconTab('messages')}
+                >
+                  Messages
+                </button>
+                <button
+                  className={`beacon-tab ${beaconTab === 'contacts' ? 'active' : ''}`}
+                  onClick={() => setBeaconTab('contacts')}
+                >
+                  Contacts
+                </button>
+              </div>
+              {beaconTab === 'messages' ? (
                 <>
                   {selectedThread ? (
                     <>
                       <div className="chat-header">
                         <h3>{selectedThread.address}</h3>
+                        <button
+                          className="secondary-btn"
+                          onClick={() => setViewingContactAddress(selectedThread.address)}
+                          aria-label="View contact info"
+                        >
+                          Info
+                        </button>
                       </div>
                       <div className="messages-list">
                         {messageListElements}
@@ -3359,11 +3430,117 @@ function App() {
                     </div>
                   </div>
                 </>
+              ) : (
+                <div className="contacts-panel">
+                  <div className="panel-header">
+                    <h3>Contacts</h3>
+                    <p>All device contacts synced from your phone.</p>
+                  </div>
+                  <div className="contacts-toolbar">
+                    <div className="contact-count">
+                      {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
+                    </div>
+                    <input
+                      className="login-input contact-search"
+                      placeholder="Search by name, phone, or email"
+                      aria-label="Search contacts"
+                      value={contactSearch}
+                      onChange={(e) => setContactSearch(e.target.value)}
+                    />
+                  </div>
+                  <div className="contact-list contact-list--full">
+                    {contactListElements}
+                    {filteredDeviceContacts.length === 0 && (
+                      <div className="settings-note">
+                        {contactSearch.trim()
+                          ? 'No contacts match that search.'
+                          : 'No device contacts synced yet.'}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </>
           )}
         </div>
       </div>
+
+      {/* Contact Info Modal */}
+      {viewingContactAddress && (
+        <div className="contact-modal-overlay" onClick={() => setViewingContactAddress(null)}>
+          <div className="contact-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="contact-modal-header">
+              <h4>Contact Info</h4>
+              <button
+                className="contact-modal-close"
+                onClick={() => setViewingContactAddress(null)}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="contact-modal-body">
+              <div className="contact-modal-avatar">
+                {viewingContactAddress.charAt(0).toUpperCase()}
+              </div>
+              <div className="contact-modal-info">
+                {(() => {
+                  const contact = deviceContacts.find(
+                    (c) => c.phoneNumber === viewingContactAddress
+                  );
+                  if (contact) {
+                    return (
+                      <>
+                        {contact.displayName && (
+                          <div className="contact-modal-field">
+                            <div className="contact-modal-label">Name</div>
+                            <div className="contact-modal-value">{contact.displayName}</div>
+                          </div>
+                        )}
+                        <div className="contact-modal-field">
+                          <div className="contact-modal-label">Phone</div>
+                          <div className="contact-modal-value">{contact.phoneNumber}</div>
+                        </div>
+                        {contact.email && (
+                          <div className="contact-modal-field">
+                            <div className="contact-modal-label">Email</div>
+                            <div className="contact-modal-value">{contact.email}</div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  } else {
+                    return (
+                      <div className="contact-modal-field">
+                        <div className="contact-modal-label">Phone</div>
+                        <div className="contact-modal-value">{viewingContactAddress}</div>
+                      </div>
+                    );
+                  }
+                })()}
+              </div>
+              <div className="contact-modal-actions">
+                <button
+                  className="secondary-btn"
+                  onClick={() => {
+                    setComposeAddress(viewingContactAddress);
+                    setViewingContactAddress(null);
+                    setBeaconTab('messages');
+                  }}
+                >
+                  Send Message
+                </button>
+                <button
+                  className="ghost-btn"
+                  onClick={() => setViewingContactAddress(null)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1026,7 +1026,6 @@ private fun TabsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
             .selectableGroup()
             .horizontalScroll(scrollState)
             .padding(horizontal = 12.dp, vertical = 6.dp),

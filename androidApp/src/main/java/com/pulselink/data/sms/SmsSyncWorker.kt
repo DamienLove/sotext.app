@@ -29,7 +29,10 @@ class SmsSyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        if (!BuildConfig.PREMIUM_FEATURES) {
+        val settings = settingsRepository.settings.first()
+        val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
+
+        if (!isPremium) {
             return Result.success()
         }
 
@@ -39,7 +42,6 @@ class SmsSyncWorker @AssistedInject constructor(
         }
 
         return try {
-            val settings = settingsRepository.settings.first()
             val deviceId = settingsRepository.ensureDeviceId()
             val phoneNumber = settings.devicePhoneNumber
                 ?: settingsRepository.getLastKnownPhone()
