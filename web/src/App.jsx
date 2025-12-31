@@ -1480,7 +1480,7 @@ function App() {
   useEffect(() => {
     if (!user) {
       setAlertLocations([]);
-      setAlertStatus('');
+      setAlertStatus('Sign in to view emergency locations.');
       return;
     }
     const alertsRef = collection(db, "users", user.uid, "emergencyLocations");
@@ -1510,7 +1510,11 @@ function App() {
       },
       (error) => {
         console.error('Failed to load emergency locations', error);
-        setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+        if (error?.code === 'permission-denied') {
+          setAlertStatus('Missing permissions to read emergency locations. Sign out/in or check Firebase rules for your account.');
+        } else {
+          setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+        }
       }
     );
     return () => unsubscribe();
@@ -2641,6 +2645,14 @@ function App() {
                 <h3>Emergency map</h3>
                 <p>Locations parsed from PulseLink alert messages synced to this account.</p>
               </div>
+              {!user && (
+                <div className="settings-card" style={{ marginBottom: 20 }}>
+                  <h4>Sign in to view alerts</h4>
+                  <p className="settings-note">Emergency locations are secured per account. Please sign in to load your map.</p>
+                </div>
+              )}
+              {user && (
+              <>
               <div className="map-controls">
                 <button
                   className="secondary-btn"
@@ -2752,6 +2764,8 @@ function App() {
                   )}
                 </div>
               </div>
+              </>
+              )}
             </div>
           )}
 
@@ -2888,7 +2902,28 @@ function App() {
                         : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
                       return (
                         <div key={themeDoc.id} className="theme-card">
-                          <div className="theme-preview" style={previewStyle} />
+                          <div className="theme-preview" style={previewStyle}>
+                            <div className="theme-preview-chat">
+                              <div
+                                className="theme-bubble incoming"
+                                style={{
+                                  background: previewTheme.bubbleIncoming,
+                                  color: previewTheme.onBubbleIncoming
+                                }}
+                              >
+                                Hey, you good?
+                              </div>
+                              <div
+                                className="theme-bubble outgoing"
+                                style={{
+                                  background: previewTheme.bubbleOutgoing,
+                                  color: previewTheme.onBubbleOutgoing
+                                }}
+                              >
+                                Yep, on my way!
+                              </div>
+                            </div>
+                          </div>
                           <div className="theme-meta">
                             <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
                             <div className="theme-author">{authorLabel}</div>
@@ -2973,8 +3008,30 @@ function App() {
                         className="theme-chip"
                         onClick={() => handleApplyPreset(preset.theme)}
                       >
-                        <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
-                        {preset.name}
+                        <div className="theme-chip-title">
+                          <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
+                          <strong>{preset.name}</strong>
+                        </div>
+                        <div className="theme-chip-preview">
+                          <div
+                            className="theme-bubble incoming"
+                            style={{
+                              background: preset.theme.bubbleIncoming,
+                              color: preset.theme.onBubbleIncoming
+                            }}
+                          >
+                            Sample incoming
+                          </div>
+                          <div
+                            className="theme-bubble outgoing"
+                            style={{
+                              background: preset.theme.bubbleOutgoing,
+                              color: preset.theme.onBubbleOutgoing
+                            }}
+                          >
+                            Sample reply
+                          </div>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -3068,6 +3125,31 @@ function App() {
             </div>
           )}
 
+          {activePanel === 'extensions' && (
+            <div className="pulselink-panel">
+              <div className="panel-header">
+                <h3>Extensions</h3>
+                <p>Attach third-party add-ons to PulseLink / Beacon once enabled. Web access mirrors the mobile toggle.</p>
+              </div>
+              <div className="settings-card">
+                <p className="settings-note" style={{ marginBottom: 12 }}>
+                  Status: {remoteSettings.thirdPartyExtensionsEnabled ? "Enabled (beta)" : "Disabled"}.
+                  Turn this on in Settings to allow extensions in both the app and web.
+                </p>
+                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                  <button className="primary-btn" type="button" onClick={() => setActivePanel('settings')}>
+                    Enable in Settings
+                  </button>
+                )}
+                {remoteSettings.thirdPartyExtensionsEnabled && (
+                  <div className="settings-note">
+                    Extension marketplace coming soon. Admins can still side-load trusted extensions via mobile until then.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activePanel === 'settings' && (
             <div className="settings-panel">
               <div className="settings-header">
@@ -3078,7 +3160,7 @@ function App() {
                 <div className="settings-card">
                   <h4>Account</h4>
                   <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
+                    <span className="settings-label">Signed in as:</span>
                     <span className="settings-value">{user.email || 'Unknown'}</span>
                   </div>
                   <div className="settings-row">

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -37,6 +38,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
@@ -62,6 +67,17 @@ fun ThreadScreen(
 ) {
     var draft by remember { mutableStateOf("") }
     val iconTint = theme.accentColor
+
+        val listState = remember(address) { LazyListState() }
+            val scope = rememberCoroutineScope()
+                var initialScrollDone by remember(address) { mutableStateOf(false) }
+                    val isNearBottom by remember {
+                                derivedStateOf {
+                                                val layout = listState.layoutInfo
+                                                            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
+                                                                        lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+                                                                                }
+                                                                                    }
 
     Scaffold(
         topBar = {
@@ -106,6 +122,9 @@ fun ThreadScreen(
                 reverseLayout = true,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 8.dp, top = 8.dp)
+                                state = listState,
+                                            reverseLayout = true,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(messages, key = { it.id }) { msg ->
                     MessageBubble(message = msg, theme = theme)
@@ -122,6 +141,13 @@ fun ThreadScreen(
                     }
                 }
             }
+
+                    LaunchedEffect(messages.size) {
+                                    if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
+                                                        listState.animateScrollToItem(0)
+                                                                        initialScrollDone = true
+                                                                                    }
+                                                                                            }
 
             Surface(
                 tonalElevation = 2.dp,
