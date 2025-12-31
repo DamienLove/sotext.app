@@ -27,7 +27,7 @@ struct ContentView: View {
                     .tabItem {
                         Label("Home", systemImage: "shield.lefthalf.filled")
                     }
-                    .badge(isPro ? "Pro" : nil)
+                    .badge(isPro ? Text("Pro") : nil)
 
                 if isPro {
                     ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
