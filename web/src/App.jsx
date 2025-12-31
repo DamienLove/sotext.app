@@ -2099,6 +2099,7 @@ function App() {
   };
 
   // Bolt: Stable handler to prevent ghost content when switching threads
+  // eslint-disable-next-line no-unused-vars
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
     setSelectedThread(thread);
@@ -2307,26 +2308,7 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
-                <div className="sidebar-placeholder">
-                  <div className="sidebar-tip muted">
-                    No conversations found.
-                  </div>
-                  <div className="sidebar-tip muted">
-                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
-                  </div>
-                </div>
-              ) : (
-                threads.map(thread => (
-                  <ThreadItem
-                    key={thread.id}
-                    thread={thread}
-                    isActive={selectedThread?.id === thread.id}
-                    onSelect={handleThreadSelect}
-                    showPreviews={showPreviews}
-                  />
-                ))
-              )}
+              {threadListElements}
             </div>
           ) : (
             <div className="sidebar-placeholder">

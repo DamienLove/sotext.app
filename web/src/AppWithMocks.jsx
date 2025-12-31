@@ -4,6 +4,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
+  // eslint-disable-next-line no-unused-vars
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -1070,7 +1071,7 @@ function App() {
       });
       return;
     }
-    const userRef = doc(db, "users", user.uid);
+    // const userRef = doc(db, 'users', user.uid);
     // const unsubscribe = onSnapshot(userRef, (snapshot) => {
       const data = {};
       setProfile({

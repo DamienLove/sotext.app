@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -118,6 +119,9 @@ fun ThreadScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
+                reverseLayout = true,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 8.dp, top = 8.dp)
                                 state = listState,
                                             reverseLayout = true,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -125,6 +129,8 @@ fun ThreadScreen(
                 items(messages, key = { it.id }) { msg ->
                     MessageBubble(message = msg, theme = theme)
                 }
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+
                 item {
                     if (messages.size > 3) {
                         NativeAdCard(
@@ -134,7 +140,6 @@ fun ThreadScreen(
                         )
                     }
                 }
-                item { Spacer(modifier = Modifier.height(40.dp)) }
             }
 
                     LaunchedEffect(messages.size) {
@@ -158,7 +163,11 @@ fun ThreadScreen(
                         value = draft,
                         onValueChange = { draft = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Write your message") }
+                        placeholder = { Text("Write your message") },
+                        colors = androidx.compose.material3.TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
+                        )
                     )
                     IconButton(
                         onClick = {
@@ -183,7 +192,12 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
     val alignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
     val frameColor = theme.frameColor
-    val bubbleShape = RoundedCornerShape(theme.bubbleRadius.dp)
+    val bubbleShape = RoundedCornerShape(
+        topStart = 16.dp,
+        topEnd = 16.dp,
+        bottomStart = if (isOutgoing) 16.dp else 4.dp,
+        bottomEnd = if (isOutgoing) 4.dp else 16.dp
+    )
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -195,7 +209,7 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
             tonalElevation = 1.dp,
             border = BorderStroke(1.dp, frameColor.copy(alpha = 0.6f)),
             modifier = Modifier
-                .fillMaxWidth(0.9f)
+                .fillMaxWidth(0.85f)
                 .clip(bubbleShape)
         ) {
             Column(
@@ -216,6 +230,7 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(200.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                             )
                         }
                 }
@@ -227,7 +242,8 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                     ).toString(),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Light,
-                    color = Color.DarkGray
+                    color = Color.DarkGray,
+                    modifier = Modifier.align(Alignment.End)
                 )
             }
         }
