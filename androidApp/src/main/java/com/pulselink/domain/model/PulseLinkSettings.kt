@@ -56,6 +56,7 @@ data class PulseLinkSettings(
     val firebaseMessagingEnabled: Boolean = true,
     val emailFallbackEnabled: Boolean = false,
     val thirdPartyExtensionsEnabled: Boolean = false,
+    val mergedExperienceEnabled: Boolean = false,
     val messagingChannelPriority: List<MessageChannel> = listOf(MessageChannel.FIREBASE, MessageChannel.SMS, MessageChannel.EMAIL),
     val crashDetectionEnabled: Boolean = false,
     val aiSummariesEnabled: Boolean = false,

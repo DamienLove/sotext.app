@@ -105,6 +105,7 @@ import com.pulselink.util.parseColorOr
 import com.pulselink.util.splitSmsDisplayAddress
 import com.pulselink.ui.state.SearchResultState
 import com.pulselink.data.sms.SmsMessageItem
+import com.pulselink.ui.branding.beaconBrandName
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -148,7 +149,8 @@ fun SmsInboxScreen(
     isDatabaseBusy: Boolean = false,
     onLoadMore: () -> Unit = {},
     hasMoreToLoad: Boolean = true,
-    isPremium: Boolean = false
+    isPremium: Boolean = false,
+    isPro: Boolean = false
 ) {
     var filter by rememberSaveable(archivedOnly) {
         mutableStateOf(if (archivedOnly) InboxFilter.ARCHIVED else InboxFilter.ALL)
@@ -259,7 +261,7 @@ fun SmsInboxScreen(
     val freeLogoTint = Color(0xFF1D4ED8)
     val logoTint = when {
         themeOverridesTopColor -> parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
-        else -> if (isPremium) premiumLogoTint else freeLogoTint
+        else -> if (isPremium || isPro) premiumLogoTint else freeLogoTint
     }
     val topBarForeground = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
     val collapsedFraction = scrollBehavior.state.collapsedFraction
@@ -285,10 +287,10 @@ fun SmsInboxScreen(
                                     .alpha(beaconExpandedAlpha)
                             )
                             Spacer(modifier = Modifier.width(12.dp * beaconExpandedAlpha))
-                            Text(
-                                "Beacon Inbox",
-                                color = topBarForeground
-                            )
+                                Text(
+                                    beaconBrandName(isPremium, isPro),
+                                    color = topBarForeground
+                                )
                         }
                     },
                     navigationIcon = {

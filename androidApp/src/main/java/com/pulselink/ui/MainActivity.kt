@@ -89,6 +89,7 @@ import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.screens.OtpCleanupOnboardingCard
 import com.pulselink.ui.screens.OnboardingIntroScreen
 import com.pulselink.ui.screens.FaqScreen
+import com.pulselink.ui.branding.pulseBrandName
 import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.MessageNotificationSoundScreen
@@ -218,6 +219,8 @@ class MainActivity : AppCompatActivity() {
                 val threadLineOverrides by linesViewModel.threadLineOverrides.collectAsStateWithLifecycle()
                 val authState by viewModel.authState.collectAsStateWithLifecycle()
                 val isPremium = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
+                val isPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || isPremium
+                val pulseDisplayName = pulseBrandName(isPremium, isPro)
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
@@ -767,7 +770,20 @@ class MainActivity : AppCompatActivity() {
                         BuildConfig.PREMIUM_FEATURES ||
                         state.isProUser
                     composable("splash") {
-                        SplashScreen(useProBranding = premiumBranding)
+                        val brandName = pulseBrandName(
+                            isPremium = premiumBranding,
+                            isPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked
+                        )
+                        val badgeText = when {
+                            premiumBranding -> "Premium"
+                            BuildConfig.PRO_FEATURES || state.settings.proUnlocked -> "Pro"
+                            else -> null
+                        }
+                        SplashScreen(
+                            usePremiumBranding = premiumBranding || BuildConfig.PRO_FEATURES || state.settings.proUnlocked,
+                            brandName = brandName,
+                            badgeText = badgeText
+                        )
                         LaunchedEffect(authState, state.onboardingComplete) {
                             if (authState is AuthState.Loading) return@LaunchedEffect
                             delay(1200)
@@ -1106,7 +1122,10 @@ class MainActivity : AppCompatActivity() {
                                     playStoreIntent.setPackage(null)
                                     startActivity(playStoreIntent)
                                 }
-                            }
+                            },
+                            brandName = pulseDisplayName,
+                            isPremium = isPremium,
+                            isPro = isPro
                         )
                     }
                     composable("alerts_history") {
@@ -1152,7 +1171,10 @@ class MainActivity : AppCompatActivity() {
                                     playStoreIntent.setPackage(null)
                                     startActivity(playStoreIntent)
                                 }
-                            }
+                            },
+                            brandName = pulseDisplayName,
+                            isPremium = isPremium,
+                            isPro = isPro
                         )
                     }
                     composable(
@@ -1189,6 +1211,7 @@ class MainActivity : AppCompatActivity() {
                                 contact?.let { sendLinkOrInvite(it) }
                             },
                             onApproveLink = { viewModel.approveLink(contactId) },
+                            onSetRemotePin = { pin -> viewModel.setRemotePin(contactId, pin) },
                             onPing = { viewModel.sendPing(contactId) },
                             onDelete = {
                                 viewModel.deleteContact(contactId)

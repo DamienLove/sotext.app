@@ -567,6 +567,15 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch { linkManager.updateRemoteOverridePermission(contactId, allow) }
     }
 
+    fun setRemotePin(contactId: Long, pin: String?) {
+        viewModelScope.launch {
+            val contact = contactRepository.getContact(contactId)
+            if (contact != null) {
+                contactRepository.upsert(contact.copy(remotePin = pin))
+            }
+        }
+    }
+
     suspend fun sendManualMessage(
         contactId: Long,
         message: String,

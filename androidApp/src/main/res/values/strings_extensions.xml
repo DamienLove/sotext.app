@@ -34,4 +34,6 @@
     <string name="extension_crash_desc">Automatically alert contacts if a vehicle crash is detected.</string>
     <string name="extension_third_party_title">3rd-party extensions</string>
     <string name="extension_third_party_desc">Enable downloadable add-ons from trusted partners (beta). Requires Premium.</string>
+    <string name="extension_merged_title">Unified Navigation</string>
+    <string name="extension_merged_desc">Merge PulseLink Home and Beacon Inbox into a single bottom-tabbed interface.</string>
 </resources>
