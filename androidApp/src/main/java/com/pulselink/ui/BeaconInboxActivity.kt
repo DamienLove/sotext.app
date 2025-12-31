@@ -63,6 +63,7 @@ import androidx.navigation.navArgument
 import com.pulselink.BuildConfig
 import com.pulselink.billing.SubscriptionManager
 import com.pulselink.ui.ads.BannerAdSlot
+import com.pulselink.ui.screens.BeaconContactsScreen
 import com.pulselink.ui.screens.BeaconNavBar
 import com.pulselink.ui.screens.BeaconNavRoute
 import com.pulselink.ui.screens.BeaconSettingsScreen
@@ -831,6 +832,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
                                         onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                                         onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                                        onToggleMergedExperience = { enabled -> viewModel.setMergedExperienceEnabled(enabled) },
                                         onBack = { navController.popBackStack() }
                                     )
                                 }

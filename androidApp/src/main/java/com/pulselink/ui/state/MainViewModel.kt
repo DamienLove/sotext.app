@@ -1516,6 +1516,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setMergedExperienceEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setMergedExperienceEnabled(enabled)
+        }
+    }
+
     fun setCrashDetectionEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setCrashDetectionEnabled(enabled)

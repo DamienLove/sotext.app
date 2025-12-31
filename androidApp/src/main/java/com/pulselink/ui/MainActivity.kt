@@ -1156,8 +1156,8 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() },
                             onOpenSettings = { navController.navigate("contact/$contactId/settings") },
                             onCallContact = callContactHandler,
-                            onPing = { viewModel.sendPing(contactId) },
-                            onVoiceCommand = { query -> viewModel.processVoiceCommand(query) },
+                            onPing = suspend { viewModel.sendPing(contactId) },
+                            onVoiceCommand = { query: String -> viewModel.processVoiceCommand(query) },
                             onUpgradeClick = {
                                 val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
                                     data = Uri.parse("market://details?id=com.pulselink.pro")
@@ -1171,10 +1171,7 @@ class MainActivity : AppCompatActivity() {
                                     playStoreIntent.setPackage(null)
                                     startActivity(playStoreIntent)
                                 }
-                            },
-                            brandName = pulseDisplayName,
-                            isPremium = isPremium,
-                            isPro = isPro
+                            }
                         )
                     }
                     composable(
@@ -1212,7 +1209,7 @@ class MainActivity : AppCompatActivity() {
                             },
                             onApproveLink = { viewModel.approveLink(contactId) },
                             onSetRemotePin = { pin -> viewModel.setRemotePin(contactId, pin) },
-                            onPing = { viewModel.sendPing(contactId) },
+                            onPing = suspend { viewModel.sendPing(contactId) },
                             onDelete = {
                                 viewModel.deleteContact(contactId)
                                 navController.popBackStack()
@@ -1450,6 +1447,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
                             onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                             onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                            onToggleMergedExperience = { enabled -> viewModel.setMergedExperienceEnabled(enabled) },
                             onBack = { navController.popBackStack() }
                         )
                     }

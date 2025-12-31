@@ -2886,13 +2886,6 @@ function App() {
                         </div>
                       </div>
                     </Fragment>
-                    <MapAlertItem
-                      key={alert.id}
-                      alert={alert}
-                      isActive={selectedAlertId === alert.id}
-                      onFocus={handleAlertFocus}
-                      onClear={handleClearAlert}
-                    />
                   ))}
                   {filteredAlerts.length === 0 && (
                     <div className="map-empty">
@@ -3404,108 +3397,111 @@ function App() {
                   </button>
                 </div>
               ) : (
-              <div className="beacon-tabs">
-                <button
-                  className={`beacon-tab ${beaconTab === 'messages' ? 'active' : ''}`}
-                  onClick={() => setBeaconTab('messages')}
-                >
-                  Messages
-                </button>
-                <button
-                  className={`beacon-tab ${beaconTab === 'contacts' ? 'active' : ''}`}
-                  onClick={() => setBeaconTab('contacts')}
-                >
-                  Contacts
-                </button>
-              </div>
-              {beaconTab === 'messages' ? (
                 <>
-                  {selectedThread ? (
+                  <div className="beacon-tabs">
+                    <button
+                      className={`beacon-tab ${beaconTab === 'messages' ? 'active' : ''}`}
+                      onClick={() => setBeaconTab('messages')}
+                    >
+                      Messages
+                    </button>
+                    <button
+                      className={`beacon-tab ${beaconTab === 'contacts' ? 'active' : ''}`}
+                      onClick={() => setBeaconTab('contacts')}
+                    >
+                      Contacts
+                    </button>
+                  </div>
+                  {beaconTab === 'messages' ? (
                     <>
-                      <div className="chat-header">
-                        <h3>{selectedThread.address}</h3>
-                        <button
-                          className="secondary-btn"
-                          onClick={() => setViewingContactAddress(selectedThread.address)}
-                          aria-label="View contact info"
-                        >
-                          Info
-                        </button>
-                      </div>
-                      <div className="messages-list">
-                        {messageListElements}
-                        <div ref={messagesEndRef} />
+                      {selectedThread ? (
+                        <>
+                          <div className="chat-header">
+                            <h3>{selectedThread.address}</h3>
+                            <button
+                              className="secondary-btn"
+                              onClick={() => setViewingContactAddress(selectedThread.address)}
+                              aria-label="View contact info"
+                            >
+                              Info
+                            </button>
+                          </div>
+                          <div className="messages-list">
+                            {messageListElements}
+                            <div ref={messagesEndRef} />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="empty-state">
+                          <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                          <div>Select a thread or start a new message</div>
+                        </div>
+                      )}
+                      <div className="composer">
+                        <div className="composer-row">
+                          <label className="composer-label" htmlFor="compose-address">To</label>
+                          <input
+                            id="compose-address"
+                            className="composer-input"
+                            type="tel"
+                            placeholder="Phone number"
+                            value={composeAddress}
+                            onChange={(e) => setComposeAddress(e.target.value)}
+                          />
+                        </div>
+                        <div className="composer-row composer-actions">
+                          <textarea
+                            className="composer-textarea"
+                            placeholder="Type a message..."
+                            aria-label="Message body"
+                            value={composeBody}
+                            onChange={(e) => setComposeBody(e.target.value)}
+                          />
+                          <button
+                            onClick={handleSendMessage}
+                            disabled={isSending || isLoggingIn}
+                            className="primary-btn"
+                          >
+                            {isSending ? "Sending..." : "Send"}
+                          </button>
+                        </div>
+                        {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
+                        <div className="compose-hint">
+                          Messages are sent from your phone when it&apos;s online and signed in.
+                        </div>
                       </div>
                     </>
                   ) : (
-                    <div className="empty-state">
-                      <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                      <div>Select a thread or start a new message</div>
+                    <div className="contacts-panel">
+                      <div className="panel-header">
+                        <h3>Contacts</h3>
+                        <p>All device contacts synced from your phone.</p>
+                      </div>
+                      <div className="contacts-toolbar">
+                        <div className="contact-count">
+                          {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
+                        </div>
+                        <input
+                          className="login-input contact-search"
+                          placeholder="Search by name, phone, or email"
+                          aria-label="Search contacts"
+                          value={contactSearch}
+                          onChange={(e) => setContactSearch(e.target.value)}
+                        />
+                      </div>
+                      <div className="contact-list contact-list--full">
+                        {contactListElements}
+                        {filteredDeviceContacts.length === 0 && (
+                          <div className="settings-note">
+                            {contactSearch.trim()
+                              ? 'No contacts match that search.'
+                              : 'No device contacts synced yet.'}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
-                  <div className="composer">
-                    <div className="composer-row">
-                      <label className="composer-label" htmlFor="compose-address">To</label>
-                      <input
-                        id="compose-address"
-                        className="composer-input"
-                        type="tel"
-                        placeholder="Phone number"
-                        value={composeAddress}
-                        onChange={(e) => setComposeAddress(e.target.value)}
-                      />
-                    </div>
-                    <div className="composer-row composer-actions">
-                      <textarea
-                        className="composer-textarea"
-                        placeholder="Type a message..."
-                        aria-label="Message body"
-                        value={composeBody}
-                        onChange={(e) => setComposeBody(e.target.value)}
-                      />
-                      <button
-                        onClick={handleSendMessage}
-                        disabled={isSending || isLoggingIn}
-                        className="primary-btn"
-                      >
-                        {isSending ? "Sending..." : "Send"}
-                      </button>
-                    </div>
-                    {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
-                    <div className="compose-hint">
-                      Messages are sent from your phone when it&apos;s online and signed in.
-                    </div>
-                  </div>
                 </>
-              ) : (
-                <div className="contacts-panel">
-                  <div className="panel-header">
-                    <h3>Contacts</h3>
-                    <p>All device contacts synced from your phone.</p>
-                  </div>
-                  <div className="contacts-toolbar">
-                    <div className="contact-count">
-                      {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
-                    </div>
-                    <input
-                      className="login-input contact-search"
-                      placeholder="Search by name, phone, or email"
-                      aria-label="Search contacts"
-                      value={contactSearch}
-                      onChange={(e) => setContactSearch(e.target.value)}
-                    />
-                  </div>
-                  <div className="contact-list contact-list--full">
-                    {contactListElements}
-                    {filteredDeviceContacts.length === 0 && (
-                      <div className="settings-note">
-                        {contactSearch.trim()
-                          ? 'No contacts match that search.'
-                          : 'No device contacts synced yet.'}
-                      </div>
-                    )}
-                  </div>
-                </div>
               )}
             </>
           )}

@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -1023,28 +1024,29 @@ private fun TabsRow(
     onFilterChange: (InboxFilter) -> Unit,
     theme: ThemePreferences
 ) {
-    val scrollState = rememberScrollState()
     val unreadBadge = unreadCount.takeIf { it > 0 }?.toString()
-    Row(
+    val tabs = listOf(
+        Triple("All Messages", InboxFilter.ALL, null as String?),
+        Triple("Read", InboxFilter.READ, null as String?),
+        Triple("Unread", InboxFilter.UNREAD, unreadBadge),
+        Triple("Archived", InboxFilter.ARCHIVED, null as String?)
+    )
+
+    LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .selectableGroup()
-            .horizontalScroll(scrollState)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TabText(label = "All Messages", selected = filter == InboxFilter.ALL, theme = theme) {
-            onFilterChange(InboxFilter.ALL)
-        }
-        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
-            onFilterChange(InboxFilter.READ)
-        }
-        TabText(label = "Unread", badge = unreadBadge, selected = filter == InboxFilter.UNREAD, theme = theme) {
-            onFilterChange(InboxFilter.UNREAD)
-        }
-        TabText(label = "Archived", selected = filter == InboxFilter.ARCHIVED, theme = theme) {
-            onFilterChange(InboxFilter.ARCHIVED)
+        items(tabs) { (label, tabFilter, badge) ->
+            TabText(
+                label = label,
+                badge = badge,
+                selected = filter == tabFilter,
+                theme = theme
+            ) { onFilterChange(tabFilter) }
         }
     }
 }
