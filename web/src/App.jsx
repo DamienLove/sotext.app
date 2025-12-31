@@ -3178,7 +3178,7 @@ function App() {
                 <div className="settings-card">
                   <h4>Account</h4>
                   <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
+                    <span className="settings-label">Signed in as:</span>
                     <span className="settings-value">{user.email || 'Unknown'}</span>
                   </div>
                   <div className="settings-row">
