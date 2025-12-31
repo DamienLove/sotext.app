@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -336,7 +336,28 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
 
   return (
     <div className="theme-card">
-      <div className="theme-preview" style={previewStyle} />
+      <div className="theme-preview" style={previewStyle}>
+        <div className="theme-preview-chat">
+          <div
+            className="theme-bubble incoming"
+            style={{
+              background: previewTheme.bubbleIncoming,
+              color: previewTheme.onBubbleIncoming
+            }}
+          >
+            Hey, you good?
+          </div>
+          <div
+            className="theme-bubble outgoing"
+            style={{
+              background: previewTheme.bubbleOutgoing,
+              color: previewTheme.onBubbleOutgoing
+            }}
+          >
+            Yep, on my way!
+          </div>
+        </div>
+      </div>
       <div className="theme-meta">
         <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
         <div className="theme-author">{authorLabel}</div>
@@ -2808,51 +2829,6 @@ function App() {
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
-                    <Fragment key={alert.id}>
-                      <MapAlertItem
-                        alert={alert}
-                        isActive={selectedAlertId === alert.id}
-                        onFocus={handleAlertFocus}
-                        onClear={handleClearAlert}
-                      />
-                      <div
-                        className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
-                        onClick={() => handleAlertFocus(alert)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            handleAlertFocus(alert);
-                          }
-                        }}
-                      >
-                        <div className="map-item-header">
-                          <div className="map-item-title">{alert.address}</div>
-                          <span
-                            className="map-badge"
-                            style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-                          >
-                            {alertBadgeCopy[alert.severity] ?? 'Alert'}
-                          </span>
-                        </div>
-                        <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-                        <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-                        <div className="map-item-actions">
-                          <button
-                            className="secondary-btn"
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleClearAlert(alert.id);
-                            }}
-                            aria-label={`Clear alert from ${alert.address}`}
-                          >
-                            Clear
-                          </button>
-                        </div>
-                      </div>
-                    </Fragment>
                     <MapAlertItem
                       key={alert.id}
                       alert={alert}
@@ -3008,51 +2984,6 @@ function App() {
                         onImport={handleImportPublicTheme}
                       />
                     ))}
-                    {filteredThemes.map((themeDoc) => {
-                      const previewTheme = normalizeTheme(themeDoc.theme || {});
-                      const previewStyle = buildThemePreviewStyle(previewTheme);
-                      const authorLabel = themeDoc.anonymous
-                        ? 'Anonymous'
-                        : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
-                      return (
-                        <div key={themeDoc.id} className="theme-card">
-                          <div className="theme-preview" style={previewStyle}>
-                            <div className="theme-preview-chat">
-                              <div
-                                className="theme-bubble incoming"
-                                style={{
-                                  background: previewTheme.bubbleIncoming,
-                                  color: previewTheme.onBubbleIncoming
-                                }}
-                              >
-                                Hey, you good?
-                              </div>
-                              <div
-                                className="theme-bubble outgoing"
-                                style={{
-                                  background: previewTheme.bubbleOutgoing,
-                                  color: previewTheme.onBubbleOutgoing
-                                }}
-                              >
-                                Yep, on my way!
-                              </div>
-                            </div>
-                          </div>
-                          <div className="theme-meta">
-                            <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
-                            <div className="theme-author">{authorLabel}</div>
-                          </div>
-                          <button
-                            className="primary-btn"
-                            type="button"
-                            onClick={() => handleImportPublicTheme(themeDoc)}
-                            aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
-                          >
-                            Import
-                          </button>
-                        </div>
-                      );
-                    })}
                     {filteredThemes.length === 0 && (
                       <div className="theme-empty">No themes yet. Be the first to publish!</div>
                     )}
