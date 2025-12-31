@@ -33,7 +33,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -133,12 +132,6 @@ class SmsInboxViewModel @Inject constructor(
                 localThreads.value = threads.map { it.copy(lineId = deviceId) }
                 localArchived.value = archived.map { it.copy(lineId = deviceId) }
             }
-    fun refresh() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val threadsDeferred = async { smsRepository.listThreads(limit = THREAD_LIMIT) }
-            val archivedDeferred = async { smsRepository.listArchivedThreads(limit = THREAD_LIMIT) }
-            _threads.value = threadsDeferred.await()
-            _archived.value = archivedDeferred.await()
         }
     }
 
@@ -302,13 +295,11 @@ class SmsThreadViewModel @Inject constructor(
     private val smsOutboxService: SmsOutboxService
 ) : ViewModel() {
     private companion object {
-        const val INITIAL_MESSAGE_LIMIT = 100
-        const val MESSAGE_PAGE_SIZE = 100
         const val PENDING_MATCH_WINDOW_MS = 20_000L
+        const val INITIAL_MESSAGE_LIMIT = 100
+        const val MESSAGE_PAGE_SIZE = 50
     }
     private var currentMessageLimit = INITIAL_MESSAGE_LIMIT
-    private val _hasMoreMessages = MutableStateFlow(true)
-    val hasMoreMessages: StateFlow<Boolean> = _hasMoreMessages
     private val _messages = MutableStateFlow<List<SmsMessageItem>>(emptyList())
     val messages: StateFlow<List<SmsMessageItem>> = _messages
     private val _contact = MutableStateFlow<Contact?>(null)
@@ -321,6 +312,8 @@ class SmsThreadViewModel @Inject constructor(
     val composeState: StateFlow<AiComposeState> = _composeState
     private val _isDatabaseBusy = MutableStateFlow(false)
     val isDatabaseBusy: StateFlow<Boolean> = _isDatabaseBusy
+    private val _hasMoreMessages = MutableStateFlow(false)
+    val hasMoreMessages: StateFlow<Boolean> = _hasMoreMessages
     private var activeThreadId: Long? = null
     private var activeAddress: String = ""
     private var activeLineId: String? = null
@@ -335,7 +328,7 @@ class SmsThreadViewModel @Inject constructor(
     fun load(threadId: Long, address: String, lineId: String? = null) {
         activeThreadId = threadId.takeIf { it > 0 }
         activeAddress = address
-        currentMessageLimit = INITIAL_MESSAGE_LIMIT
+        currentMessageLimit = 100
         resetMessages()
         viewModelScope.launch {
             deviceLineId = settingsRepository.ensureDeviceId()
@@ -385,6 +378,7 @@ class SmsThreadViewModel @Inject constructor(
         updateMessages(msgs)
         _contact.value = contact
         _isArchived.value = archived
+        _hasMoreMessages.value = msgs.size >= currentMessageLimit
     }
 
     fun toggleArchive() {
@@ -489,7 +483,6 @@ class SmsThreadViewModel @Inject constructor(
             loadedMessages = messages
             _messages.value = mergeMessages(messages)
         }
-        _hasMoreMessages.value = messages.size >= currentMessageLimit
         val latestMessageId = messages.firstOrNull()?.id
         if (latestMessageId != lastSummaryMessageId) {
             lastSummaryMessageId = null

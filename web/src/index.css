@@ -56,8 +56,9 @@
   --surface-alt: #232d45;
   --ink: #f0f4f8;
   --muted: #94a3b8;
-  --accent: #6366f1;
-  --accent-strong: #4f46e5;
+  --ink-muted: #94a3b8; /* Alias for consistency */
+  --accent: #22d3ee;
+  --accent-strong: #0ea5e9;
   --border: #2e3a52;
   --success: #10b981;
   --danger: #ef4444;
@@ -84,14 +85,23 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   box-sizing: border-box;
 }
 
+::selection {
+  background: rgba(34, 211, 238, 0.25);
+  color: var(--ink);
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -99,12 +109,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--surface-alt);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -126,8 +136,8 @@ a:hover {
 body {
   margin: 0;
   min-height: 100vh;
-  /* Deep, rich background gradient */
-  background: radial-gradient(circle at 10% 20%, #1e293b 0%, var(--bg) 60%, #020617 100%);
+  /* Deep, rich background gradient fallback */
+  background: #020617;
   overflow-x: hidden;
 }
 
