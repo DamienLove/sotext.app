@@ -82,9 +82,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun sendMessage(body: String): Boolean {
+    fun sendMessage(body: String) {
         val addr = currentAddress.ifBlank { messages.lastOrNull()?.address.orEmpty() }
-        if (addr.isBlank()) return false
+        if (addr.isBlank()) return
 
         viewModelScope.launch(Dispatchers.IO) {
             val ok = runCatching { repo.sendSms(addr, body) }.getOrDefault(false)
@@ -94,7 +94,6 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
-        return true
     }
 
     fun deleteThread(threadId: Long) {

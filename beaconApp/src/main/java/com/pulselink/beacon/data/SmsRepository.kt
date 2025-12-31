@@ -11,10 +11,12 @@ import android.provider.ContactsContract
 import android.provider.Telephony
 import android.util.LruCache
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.jvm.Volatile
 
@@ -24,12 +26,14 @@ class SmsRepository(private val context: Context) {
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val otpRegex = Regex("\\b\\d{4,8}\\b")
 
-    private val addressCache = LruCache<Long, String>(200)
-    private val contactCache = LruCache<String, String>(500)
+    private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
+    private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
 
     init {
         ensureObserversRegistered()
-        purgeExpiredOneTimeCodes()
+        CoroutineScope(Dispatchers.IO).launch {
+            purgeExpiredOneTimeCodes()
+        }
     }
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
@@ -82,9 +86,7 @@ class SmsRepository(private val context: Context) {
     }
 
     private fun resolveThreadAddress(threadId: Long): String {
-        synchronized(addressCache) {
-            addressCache[threadId]?.let { return it }
-        }
+        addressCache[threadId]?.let { return it }
 
         val cursor = runCatching {
             context.contentResolver.query(
@@ -104,15 +106,13 @@ class SmsRepository(private val context: Context) {
             }
         }
         if (result.isNotBlank()) {
-            synchronized(addressCache) {
-                addressCache.put(threadId, result)
-            }
+            addressCache.put(threadId, result)
         }
         return result
     }
 
-    private fun readMmsMessages(threadId: Long, limit: Int): List<SmsMessageItem> {
-        if (!hasReadPerms()) return emptyList()
+    private suspend fun readMmsMessages(threadId: Long, limit: Int): List<SmsMessageItem> = withContext(Dispatchers.IO) {
+        if (!hasReadPerms()) return@withContext emptyList()
         val projection = arrayOf(
             Telephony.Mms._ID,
             Telephony.Mms.THREAD_ID,
@@ -127,7 +127,7 @@ class SmsRepository(private val context: Context) {
                 arrayOf(threadId.toString()),
                 "${Telephony.Mms.DATE} DESC"
             )
-        }.getOrNull() ?: return emptyList()
+        }.getOrNull() ?: return@withContext emptyList()
 
         cursor.use { c ->
             val idIdx = c.getColumnIndexOrThrow(Telephony.Mms._ID)
@@ -155,12 +155,12 @@ class SmsRepository(private val context: Context) {
                 )
                 count++
             }
-            return items
+            return@withContext items
         }
     }
 
-    private fun resolveMmsAddress(mmsId: Long): String {
-        if (!hasReadPerms()) return ""
+    private suspend fun resolveMmsAddress(mmsId: Long): String = withContext(Dispatchers.IO) {
+        if (!hasReadPerms()) return@withContext ""
         val uri = Uri.parse("content://mms/$mmsId/addr")
         val cursor = runCatching {
             context.contentResolver.query(
@@ -170,18 +170,18 @@ class SmsRepository(private val context: Context) {
                 null,
                 null
             )
-        }.getOrNull() ?: return ""
+        }.getOrNull() ?: return@withContext ""
         cursor.use { c ->
             if (c.moveToFirst()) {
                 val addr = c.getString(c.getColumnIndexOrThrow("address"))
-                return resolveAddress(addr)
+                return@withContext resolveAddress(addr)
             }
         }
-        return ""
+        return@withContext ""
     }
 
-    private fun readMmsParts(mmsId: Long): List<MmsPart> {
-        if (!hasReadPerms()) return emptyList()
+    private suspend fun readMmsParts(mmsId: Long): List<MmsPart> = withContext(Dispatchers.IO) {
+        if (!hasReadPerms()) return@withContext emptyList()
         val uri = Uri.parse("content://mms/$mmsId/part")
         val cursor = runCatching {
             context.contentResolver.query(
@@ -191,7 +191,7 @@ class SmsRepository(private val context: Context) {
                 null,
                 null
             )
-        }.getOrNull() ?: return emptyList()
+        }.getOrNull() ?: return@withContext emptyList()
 
         val parts = mutableListOf<MmsPart>()
         cursor.use { c ->
@@ -210,7 +210,7 @@ class SmsRepository(private val context: Context) {
                 )
             }
         }
-        return parts
+        return@withContext parts
     }
 
     suspend fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> = withContext(Dispatchers.IO) {
@@ -407,9 +407,7 @@ class SmsRepository(private val context: Context) {
         val number = raw?.trim().orEmpty()
         if (number.isBlank()) return ""
 
-        synchronized(contactCache) {
-            contactCache[number]?.let { return it }
-        }
+        contactCache[number]?.let { return it }
 
         val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
         val lookupUri = Uri.withAppendedPath(uri, Uri.encode(number))
@@ -433,13 +431,14 @@ class SmsRepository(private val context: Context) {
             }
         } ?: number
 
-        synchronized(contactCache) {
-            contactCache.put(number, result)
-        }
+        contactCache.put(number, result)
         return result
     }
 
     companion object {
+        private const val ADDRESS_CACHE_SIZE = 200
+        private const val CONTACT_CACHE_SIZE = 500
+
         private fun isDefaultSmsApp(context: Context): Boolean {
             val roleHeld = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 context.getSystemService(RoleManager::class.java)
