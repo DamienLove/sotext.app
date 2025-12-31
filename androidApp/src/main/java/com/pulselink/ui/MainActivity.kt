@@ -748,6 +748,16 @@ class MainActivity : AppCompatActivity() {
                 LaunchedEffect(state.settings.crashDetectionEnabled) {
                     val intent = Intent(context, com.pulselink.service.CrashDetectionService::class.java)
                     if (state.settings.crashDetectionEnabled) {
+                        // Check for required permissions first
+                        val hasLocationPermission = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+
+                        if (!hasLocationPermission) {
+                            return@LaunchedEffect
+                        }
+
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             context.startForegroundService(intent)
                         } else {

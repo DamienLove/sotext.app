@@ -1282,4 +1282,4 @@
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
 }
-.mono { font-family: monospace; }
+.mono { font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace; }
