@@ -27,7 +27,7 @@ struct ContentView: View {
                     .tabItem {
                         Label("Home", systemImage: "shield.lefthalf.filled")
                     }
-                    .badge(isPro ? "Pro" : nil)
+                    .badge(isPro ? Text("Pro") : nil)
 
                 if isPro {
                     ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
@@ -529,9 +529,9 @@ private struct CancelEmergencySheet: View {
 // MARK: - Theme
 
 enum RelayColors {
-    static let primary = Color(red: 0.37, green: 0.44, blue: 1.00)   // Indigo (Android Primary)
-    static let accent  = Color(red: 1.00, green: 0.92, blue: 0.00)   // Yellow (Android Secondary)
-    static let deep    = Color(red: 0.04, green: 0.05, blue: 0.09)   // Deep Dark (Android Background)
+    static let primary = Color(red: 0.39, green: 0.40, blue: 0.95)   // Indigo (#6366f1)
+    static let accent  = Color(red: 0.75, green: 0.53, blue: 0.12)   // Gold deep
+    static let deep    = Color(red: 0.01, green: 0.02, blue: 0.03)   // Deep Dark (#030407)
 }
 
 #Preview {
