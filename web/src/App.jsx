@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback, Fragment } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -56,6 +56,41 @@ const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
+const CopyIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
+const CheckIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+const Spinner = () => <span className="spinner" aria-hidden="true" />;
+
+const CopyButton = ({ text, label }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  useEffect(() => {
+    if (copied) {
+      const timer = setTimeout(() => setCopied(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copied]);
+
+  return (
+    <button
+      className="ghost-btn icon-only"
+      onClick={handleCopy}
+      aria-label={label || "Copy to clipboard"}
+      title={label || "Copy"}
+      style={{ padding: 4 }}
+    >
+      {copied ? <CheckIcon /> : <CopyIcon />}
+    </button>
+  );
+};
 
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
@@ -1073,7 +1108,8 @@ function App() {
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
-    timeFormat: 'AUTO'
+    timeFormat: 'AUTO',
+    thirdPartyExtensionsEnabled: false
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1083,7 +1119,6 @@ function App() {
   const [composeBody, setComposeBody] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
   const [alertLocations, setAlertLocations] = useState([]);
   const [alertStatus, setAlertStatus] = useState('');
@@ -1094,6 +1129,9 @@ function App() {
   const [geoStatus, setGeoStatus] = useState('');
   const [userLocation, setUserLocation] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
+  const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -1262,6 +1300,43 @@ function App() {
     });
   }, [deviceContacts, contactSearch]);
 
+  // Bolt: Memoize list elements to avoid re-creating them on every render
+  const threadListElements = useMemo(() => {
+    if (threads.length === 0) {
+      return (
+        <div className="sidebar-placeholder">
+          <div className="sidebar-tip muted">
+            No conversations found.
+          </div>
+          <div className="sidebar-tip muted">
+            Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+          </div>
+        </div>
+      );
+    }
+    return threads.map(thread => (
+      <ThreadItem
+        key={thread.id}
+        thread={thread}
+        isActive={selectedThread?.id === thread.id}
+        onSelect={setSelectedThread}
+        showPreviews={showPreviews}
+      />
+    ));
+  }, [threads, selectedThread?.id, showPreviews]);
+
+  const messageListElements = useMemo(() => (
+    messages.map(msg => (
+      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
+    ))
+  ), [messages, showPreviews]);
+
+  const contactListElements = useMemo(() => (
+    filteredDeviceContacts.map((contact) => (
+      <DeviceContactItem key={contact.id} contact={contact} />
+    ))
+  ), [filteredDeviceContacts]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -1300,7 +1375,8 @@ function App() {
       setRemoteSettings({
         remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? false,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
-        timeFormat: data.timeFormat ?? 'AUTO'
+        timeFormat: data.timeFormat ?? 'AUTO',
+        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? false
       });
 
       // Check for theme and avatar unlocks
@@ -1474,7 +1550,7 @@ function App() {
   useEffect(() => {
     if (!user) {
       setAlertLocations([]);
-      setAlertStatus('');
+      setAlertStatus('Sign in to view emergency locations.');
       return;
     }
     const alertsRef = collection(db, "users", user.uid, "emergencyLocations");
@@ -1504,7 +1580,11 @@ function App() {
       },
       (error) => {
         console.error('Failed to load emergency locations', error);
-        setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+        if (error?.code === 'permission-denied') {
+          setAlertStatus('Missing permissions to read emergency locations. Sign out/in or check Firebase rules for your account.');
+        } else {
+          setAlertStatus(error?.message ?? 'Unable to load emergency locations.');
+        }
       }
     );
     return () => unsubscribe();
@@ -1973,18 +2053,22 @@ function App() {
 
   const handleRemoteSettingsSave = async () => {
     if (!user) return;
-    setSettingsStatus("Saving settings...");
+    setIsSavingSettings(true);
+    setRemoteSettingsStatus("Saving settings...");
     try {
       await setDoc(doc(db, "users", user.uid), {
         remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
         autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
         timeFormat: remoteSettings.timeFormat,
+        thirdPartyExtensionsEnabled: remoteSettings.thirdPartyExtensionsEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
-      setSettingsStatus("Settings updated.");
+      setRemoteSettingsStatus("Settings updated.");
     } catch (error) {
       console.error("Settings update failed", error);
-      setSettingsStatus(error?.message ?? "Settings update failed.");
+      setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
@@ -2085,6 +2169,7 @@ function App() {
   };
 
   // Bolt: Stable handler to prevent ghost content when switching threads
+  // eslint-disable-next-line no-unused-vars
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
     setSelectedThread(thread);
@@ -2293,26 +2378,7 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
-                <div className="sidebar-placeholder">
-                  <div className="sidebar-tip muted">
-                    No conversations found.
-                  </div>
-                  <div className="sidebar-tip muted">
-                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
-                  </div>
-                </div>
-              ) : (
-                threads.map(thread => (
-                  <ThreadItem
-                    key={thread.id}
-                    thread={thread}
-                    isActive={selectedThread?.id === thread.id}
-                    onSelect={handleThreadSelect}
-                    showPreviews={showPreviews}
-                  />
-                ))
-              )}
+              {threadListElements}
             </div>
           ) : (
             <div className="sidebar-placeholder">
@@ -2338,11 +2404,11 @@ function App() {
                   <strong>Access PulseLink Web anytime:</strong> Visit web.pulselink.app from any browser to manage your contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
                 </div>
               </div>
-              <div className="home-grid">
-                <button className="home-card" onClick={() => setActivePanel('pulselink')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink" />
-                  </div>
+            <div className="home-grid">
+              <button className="home-card" onClick={() => setActivePanel('pulselink')}>
+                <div className="home-icon pulselink">
+                  <img src={logo} alt="PulseLink" />
+                </div>
                   <h3>PulseLink</h3>
                   <p>Update your profile and trusted contacts.</p>
                 </button>
@@ -2374,16 +2440,28 @@ function App() {
                   <h3>Emergency Map</h3>
                   <p>Track shared locations from PulseLink alerts.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('themes')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink themes" />
-                  </div>
-                  <h3>Theme Gallery</h3>
-                  <p>Browse, import, and publish custom themes.</p>
-                </button>
-              </div>
+              <button className="home-card" onClick={() => setActivePanel('themes')}>
+                <div className="home-icon pulselink">
+                  <img src={logo} alt="PulseLink themes" />
+                </div>
+                <h3>Theme Gallery</h3>
+                <p>Browse, import, and publish custom themes.</p>
+              </button>
+              <button
+                className="home-card"
+                onClick={() => setActivePanel('extensions')}
+                disabled={!remoteSettings.thirdPartyExtensionsEnabled}
+                title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
+              >
+                <div className="home-icon pulselink">
+                  <img src={logo} alt="Extensions" />
+                </div>
+                <h3>Extensions</h3>
+                <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Attach 3rd-party add-ons (coming soon)" : "Enable 3rd-party extensions to start."}</p>
+              </button>
             </div>
-          )}
+          </div>
+        )}
 
           {activePanel === 'pulselink' && (
             <div className="pulselink-panel">
@@ -2394,39 +2472,37 @@ function App() {
               <div className="pulselink-grid">
                 <div className="settings-card">
                   <h4>Public profile</h4>
-                  <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'center' }}>
-                    <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: 'var(--surface-alt)', border: '2px solid var(--border)' }}>
+                  <div className="profile-header-row">
+                    <div className="profile-avatar-preview">
                       {profile.avatarId ? (
-                        <img 
-                          src={avatarPresets.find(p => p.id === profile.avatarId)?.src} 
-                          alt="Avatar" 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        <img
+                          src={avatarPresets.find(p => p.id === profile.avatarId)?.src}
+                          alt="Avatar"
+                          className="profile-avatar-img"
                         />
                       ) : (
                         profile.avatarUrl ? (
-                          <img src={profile.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={profile.avatarUrl} alt="Avatar" className="profile-avatar-img" />
                         ) : (
-                          <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>?</div>
+                          <div className="profile-avatar-placeholder">?</div>
                         )
                       )}
                     </div>
                     {unlockedAvatars.length > 0 && (
-                      <div className="theme-grid">
+                      <div className="avatar-selector">
                         {unlockedAvatars.map(av => (
                           <button
                             key={av.id}
                             onClick={() => setProfile(prev => ({ ...prev, avatarId: av.id }))}
-                            className={`theme-chip ${profile.avatarId === av.id ? 'active' : ''}`}
-                            style={{ padding: 4, borderRadius: '50%', width: 40, height: 40, border: profile.avatarId === av.id ? '2px solid var(--accent)' : '1px solid var(--border)' }}
+                            className={`avatar-option-btn ${profile.avatarId === av.id ? 'active' : ''}`}
                             title={av.name}
                           >
-                            <img src={av.src} alt={av.name} style={{ width: '100%', height: '100%' }} />
+                            <img src={av.src} alt={av.name} className="avatar-option-img" />
                           </button>
                         ))}
                         <button
                           onClick={() => setProfile(prev => ({ ...prev, avatarId: '' }))}
-                          className={`theme-chip`}
-                          style={{ padding: 0, borderRadius: '50%', width: 40, height: 40, justifyContent: 'center' }}
+                          className={`avatar-option-btn ${!profile.avatarId ? 'active' : ''}`}
                           title="Use Custom URL"
                           aria-label="Use custom avatar URL"
                         >
@@ -2472,8 +2548,14 @@ function App() {
                     type="button"
                     onClick={handleProfileSave}
                     disabled={isSavingProfile}
+                    aria-busy={isSavingProfile}
                   >
-                    {isSavingProfile ? 'Saving...' : 'Save profile'}
+                    {isSavingProfile ? (
+                      <>
+                        <Spinner />
+                        Saving...
+                      </>
+                    ) : 'Save profile'}
                   </button>
                   {profileStatus && <div className="settings-status" role="status" aria-live="polite">{profileStatus}</div>}
                 </div>
@@ -2615,9 +2697,7 @@ function App() {
                 />
               </div>
               <div className="contact-list contact-list--full">
-                {filteredDeviceContacts.map((contact) => (
-                  <DeviceContactItem key={contact.id} contact={contact} />
-                ))}
+                {contactListElements}
                 {filteredDeviceContacts.length === 0 && (
                   <div className="settings-note">
                     {contactSearch.trim()
@@ -2635,6 +2715,14 @@ function App() {
                 <h3>Emergency map</h3>
                 <p>Locations parsed from PulseLink alert messages synced to this account.</p>
               </div>
+              {!user && (
+                <div className="settings-card" style={{ marginBottom: 20 }}>
+                  <h4>Sign in to view alerts</h4>
+                  <p className="settings-note">Emergency locations are secured per account. Please sign in to load your map.</p>
+                </div>
+              )}
+              {user && (
+              <>
               <div className="map-controls">
                 <button
                   className="secondary-btn"
@@ -2735,6 +2823,13 @@ function App() {
                         </div>
                       </div>
                     </Fragment>
+                    <MapAlertItem
+                      key={alert.id}
+                      alert={alert}
+                      isActive={selectedAlertId === alert.id}
+                      onFocus={handleAlertFocus}
+                      onClear={handleClearAlert}
+                    />
                   ))}
                   {filteredAlerts.length === 0 && (
                     <div className="map-empty">
@@ -2746,6 +2841,8 @@ function App() {
                   )}
                 </div>
               </div>
+              </>
+              )}
             </div>
           )}
 
@@ -2753,18 +2850,10 @@ function App() {
             <div className="pulselink-panel">
               <div className="ringersong-header">
                 <div
-                  className="ringersong-logo-mask"
+                  className="ringersong-logo-container"
                   style={{
-                      width: 52, height: 52,
-                      backgroundColor: 'var(--accent)',
                       maskImage: `url(${ringersongLogo})`,
-                      maskSize: 'contain',
-                      maskRepeat: 'no-repeat',
-                      maskPosition: 'center',
-                      WebkitMaskImage: `url(${ringersongLogo})`,
-                      WebkitMaskSize: 'contain',
-                      WebkitMaskRepeat: 'no-repeat',
-                      WebkitMaskPosition: 'center'
+                      WebkitMaskImage: `url(${ringersongLogo})`
                   }}
                 />
                 <div>
@@ -2889,6 +2978,51 @@ function App() {
                         onImport={handleImportPublicTheme}
                       />
                     ))}
+                    {filteredThemes.map((themeDoc) => {
+                      const previewTheme = normalizeTheme(themeDoc.theme || {});
+                      const previewStyle = buildThemePreviewStyle(previewTheme);
+                      const authorLabel = themeDoc.anonymous
+                        ? 'Anonymous'
+                        : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+                      return (
+                        <div key={themeDoc.id} className="theme-card">
+                          <div className="theme-preview" style={previewStyle}>
+                            <div className="theme-preview-chat">
+                              <div
+                                className="theme-bubble incoming"
+                                style={{
+                                  background: previewTheme.bubbleIncoming,
+                                  color: previewTheme.onBubbleIncoming
+                                }}
+                              >
+                                Hey, you good?
+                              </div>
+                              <div
+                                className="theme-bubble outgoing"
+                                style={{
+                                  background: previewTheme.bubbleOutgoing,
+                                  color: previewTheme.onBubbleOutgoing
+                                }}
+                              >
+                                Yep, on my way!
+                              </div>
+                            </div>
+                          </div>
+                          <div className="theme-meta">
+                            <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
+                            <div className="theme-author">{authorLabel}</div>
+                          </div>
+                          <button
+                            className="primary-btn"
+                            type="button"
+                            onClick={() => handleImportPublicTheme(themeDoc)}
+                            aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
+                          >
+                            Import
+                          </button>
+                        </div>
+                      );
+                    })}
                     {filteredThemes.length === 0 && (
                       <div className="theme-empty">No themes yet. Be the first to publish!</div>
                     )}
@@ -2958,8 +3092,30 @@ function App() {
                         className="theme-chip"
                         onClick={() => handleApplyPreset(preset.theme)}
                       >
-                        <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
-                        {preset.name}
+                        <div className="theme-chip-title">
+                          <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
+                          <strong>{preset.name}</strong>
+                        </div>
+                        <div className="theme-chip-preview">
+                          <div
+                            className="theme-bubble incoming"
+                            style={{
+                              background: preset.theme.bubbleIncoming,
+                              color: preset.theme.onBubbleIncoming
+                            }}
+                          >
+                            Sample incoming
+                          </div>
+                          <div
+                            className="theme-bubble outgoing"
+                            style={{
+                              background: preset.theme.bubbleOutgoing,
+                              color: preset.theme.onBubbleOutgoing
+                            }}
+                          >
+                            Sample reply
+                          </div>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -3053,6 +3209,31 @@ function App() {
             </div>
           )}
 
+          {activePanel === 'extensions' && (
+            <div className="pulselink-panel">
+              <div className="panel-header">
+                <h3>Extensions</h3>
+                <p>Attach third-party add-ons to PulseLink / Beacon once enabled. Web access mirrors the mobile toggle.</p>
+              </div>
+              <div className="settings-card">
+                <p className="settings-note" style={{ marginBottom: 12 }}>
+                  Status: {remoteSettings.thirdPartyExtensionsEnabled ? "Enabled (beta)" : "Disabled"}.
+                  Turn this on in Settings to allow extensions in both the app and web.
+                </p>
+                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                  <button className="primary-btn" type="button" onClick={() => setActivePanel('settings')}>
+                    Enable in Settings
+                  </button>
+                )}
+                {remoteSettings.thirdPartyExtensionsEnabled && (
+                  <div className="settings-note">
+                    Extension marketplace coming soon. Admins can still side-load trusted extensions via mobile until then.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activePanel === 'settings' && (
             <div className="settings-panel">
               <div className="settings-header">
@@ -3062,13 +3243,19 @@ function App() {
               <div className="settings-grid">
                 <div className="settings-card">
                   <h4>Account</h4>
-                  <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
+                  <div
+                    className="settings-row"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    <span className="settings-label">Signed in as:</span>
                     <span className="settings-value">{user.email || 'Unknown'}</span>
                   </div>
                   <div className="settings-row">
                     <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">{user.uid}</span>
+                    <div className="settings-value-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="settings-value mono">{user.uid}</span>
+                      <CopyButton text={user.uid} label="Copy User ID" />
+                    </div>
                   </div>
                   <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                     Send password reset email
@@ -3115,6 +3302,14 @@ function App() {
                     />
                     Auto-update contact info
                   </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.thirdPartyExtensionsEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
+                    />
+                    Enable 3rd-party extensions (beta)
+                  </label>
                   <label className="login-field">
                     Time format
                     <select
@@ -3127,9 +3322,21 @@ function App() {
                       <option value="TWENTY_FOUR_HOUR">24-hour</option>
                     </select>
                   </label>
-                  <button className="secondary-btn" type="button" onClick={handleRemoteSettingsSave}>
-                    Save PulseLink settings
+                  <button
+                    className="secondary-btn"
+                    type="button"
+                    onClick={handleRemoteSettingsSave}
+                    disabled={isSavingSettings}
+                    aria-busy={isSavingSettings}
+                  >
+                    {isSavingSettings ? (
+                      <>
+                        <Spinner />
+                        Saving...
+                      </>
+                    ) : 'Save PulseLink settings'}
                   </button>
+                  {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Account data</h4>
@@ -3168,9 +3375,7 @@ function App() {
                     <h3>{selectedThread.address}</h3>
                   </div>
                   <div className="messages-list">
-                    {messages.map(msg => (
-                      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
-                    ))}
+                    {messageListElements}
                     <div ref={messagesEndRef} />
                   </div>
                 </>

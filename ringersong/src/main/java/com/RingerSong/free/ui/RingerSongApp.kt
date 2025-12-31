@@ -94,7 +94,10 @@ private fun AppNavHost(
                 state = viewModel.state.collectAsStateWithLifecycle().value,
                 searchState = viewModel.searchState.collectAsStateWithLifecycle().value,
                 youtubeSearchState = viewModel.youtubeSearchState.collectAsStateWithLifecycle().value,
-                onOpenSettings = { navController.navigate(Routes.Settings) },
+                onOpenSettings = {
+                    activity?.let { AdServices.showInterstitial(it) }
+                    navController.navigate(Routes.Settings)
+                },
                 onToggleEnabled = viewModel::toggleEnabled,
                 onToggleShuffle = viewModel::toggleShuffle,
                 onToggleNotifications = viewModel::toggleNotifications,
@@ -119,16 +122,20 @@ private fun AppNavHost(
                 onAddSpotifyTrack = { track ->
                     viewModel.addSpotifyTrack(track) { message ->
                         coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                        activity?.let { AdServices.showInterstitial(it) }
                     }
                 },
-                onYouTubeQueryChange = viewModel::updateYouTubeSearchQuery,
+                onYouTubeQueryChange = viewModel::updateYouTubeSearchQuery,     
                 onYouTubeSearch = viewModel::searchYouTubeMusic,
                 onClearYouTubeSearch = viewModel::clearYouTubeSearch,
                 onAddYouTubeTrack = { track ->
                     viewModel.addSpotifyTrack(track) { message ->
                         coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                        activity?.let { AdServices.showInterstitial(it) }       
                     }
-                }
+                },
+                snackbarHostState = snackbarHostState,
+                onClearDownloadError = viewModel::clearDownloadError
             )
         }
         composable(Routes.Settings) {
