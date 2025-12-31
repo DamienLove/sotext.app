@@ -373,6 +373,8 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
     </div>
   );
 }, (prev, next) => {
+  // Shallow comparison of themeDoc is sufficient as Firestore updates return new objects
+  // but stable references for unchanged documents in the list
   // Use strict equality for themeDoc because Firestore updates create new object references
   // even if the data inside is similar, which is the desired behavior for updates.
   // Note: Unlike MapAlertItem which uses deep field comparison, we rely on reference equality here
