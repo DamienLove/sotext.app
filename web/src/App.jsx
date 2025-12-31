@@ -362,20 +362,20 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
 ThemeGalleryItem.displayName = 'ThemeGalleryItem';
 
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#22d3ee",
+  secondaryColor: "#0ea5e9",
+  bubbleOutgoing: "#22d3ee",
+  bubbleIncoming: "#1a2236",
+  backgroundColor: "#05070f",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
-  inboxIconVariant: "Default",
-  onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  bubbleCornerRadius: 16,
+  inboxIconVariant: "midnight_oled",
+  onBubbleOutgoing: "#04101c",
+  onBubbleIncoming: "#eef2fb",
+  onBackground: "#eef2fb",
+  topBarColor: "#0c1326",
+  onTopBarColor: "#eef2fb",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
@@ -2808,51 +2808,6 @@ function App() {
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
-                    <Fragment key={alert.id}>
-                      <MapAlertItem
-                        alert={alert}
-                        isActive={selectedAlertId === alert.id}
-                        onFocus={handleAlertFocus}
-                        onClear={handleClearAlert}
-                      />
-                      <div
-                        className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
-                        onClick={() => handleAlertFocus(alert)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            handleAlertFocus(alert);
-                          }
-                        }}
-                      >
-                        <div className="map-item-header">
-                          <div className="map-item-title">{alert.address}</div>
-                          <span
-                            className="map-badge"
-                            style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-                          >
-                            {alertBadgeCopy[alert.severity] ?? 'Alert'}
-                          </span>
-                        </div>
-                        <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-                        <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-                        <div className="map-item-actions">
-                          <button
-                            className="secondary-btn"
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleClearAlert(alert.id);
-                            }}
-                            aria-label={`Clear alert from ${alert.address}`}
-                          >
-                            Clear
-                          </button>
-                        </div>
-                      </div>
-                    </Fragment>
                     <MapAlertItem
                       key={alert.id}
                       alert={alert}
