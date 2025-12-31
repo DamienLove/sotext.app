@@ -139,7 +139,7 @@ fun ThreadScreen(
 
                     LaunchedEffect(messages.size) {
                                     if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
-                                                        listState.animateScrollToItem(0)
+                                                        listState.animateScrollToItem(messages.size - 1)
                                                                         initialScrollDone = true
                                                                                     }
                                                                                             }
