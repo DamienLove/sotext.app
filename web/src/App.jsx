@@ -308,6 +308,42 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
 });
 MapAlertItem.displayName = 'MapAlertItem';
 
+// Bolt: Optimized ThemeGalleryItem to prevent re-renders of the theme list
+const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
+  const previewTheme = useMemo(() => normalizeTheme(themeDoc.theme || {}), [themeDoc.theme]);
+  const previewStyle = useMemo(() => buildThemePreviewStyle(previewTheme), [previewTheme]);
+
+  const authorLabel = themeDoc.anonymous
+    ? 'Anonymous'
+    : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+
+  return (
+    <div className="theme-card">
+      <div className="theme-preview" style={previewStyle} />
+      <div className="theme-meta">
+        <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
+        <div className="theme-author">{authorLabel}</div>
+      </div>
+      <button
+        className="primary-btn"
+        type="button"
+        onClick={() => onImport(themeDoc)}
+        aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
+      >
+        Import
+      </button>
+    </div>
+  );
+}, (prev, next) => {
+  // Use strict equality for themeDoc because Firestore updates create new object references
+  // even if the data inside is similar, which is the desired behavior for updates.
+  // Note: Unlike MapAlertItem which uses deep field comparison, we rely on reference equality here
+  // because theme objects are large and deeply comparing them would be expensive.
+  return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
+});
+
+ThemeGalleryItem.displayName = 'ThemeGalleryItem';
+
 const defaultTheme = {
   primaryColor: "#6750A4",
   secondaryColor: "#625B71",
@@ -1929,7 +1965,7 @@ function App() {
     setConfirmDeleteId(null);
   }, []);
 
-  const handleApplyPreset = async (presetTheme) => {
+  const handleApplyPreset = useCallback(async (presetTheme) => {
     if (!user) return;
     const normalized = normalizeTheme(presetTheme);
     setThemeStatus("Updating theme...");
@@ -1952,13 +1988,13 @@ function App() {
       console.error("Theme update failed", error);
       setThemeStatus(error?.message ?? "Theme update failed.");
     }
-  };
+  }, [user]);
 
-  const handleImportPublicTheme = async (themeDoc) => {
+  const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
-  };
+  }, [handleApplyPreset]);
 
   const handlePublishTheme = async () => {
     if (!user) return;
@@ -2742,6 +2778,51 @@ function App() {
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
+                    <Fragment key={alert.id}>
+                      <MapAlertItem
+                        alert={alert}
+                        isActive={selectedAlertId === alert.id}
+                        onFocus={handleAlertFocus}
+                        onClear={handleClearAlert}
+                      />
+                      <div
+                        className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
+                        onClick={() => handleAlertFocus(alert)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleAlertFocus(alert);
+                          }
+                        }}
+                      >
+                        <div className="map-item-header">
+                          <div className="map-item-title">{alert.address}</div>
+                          <span
+                            className="map-badge"
+                            style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+                          >
+                            {alertBadgeCopy[alert.severity] ?? 'Alert'}
+                          </span>
+                        </div>
+                        <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+                        <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+                        <div className="map-item-actions">
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleClearAlert(alert.id);
+                            }}
+                            aria-label={`Clear alert from ${alert.address}`}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    </Fragment>
                     <MapAlertItem
                       key={alert.id}
                       alert={alert}
@@ -2890,6 +2971,13 @@ function App() {
                     </button>
                   </div>
                   <div className="theme-gallery-grid">
+                    {filteredThemes.map((themeDoc) => (
+                      <ThemeGalleryItem
+                        key={themeDoc.id}
+                        themeDoc={themeDoc}
+                        onImport={handleImportPublicTheme}
+                      />
+                    ))}
                     {filteredThemes.map((themeDoc) => {
                       const previewTheme = normalizeTheme(themeDoc.theme || {});
                       const previewStyle = buildThemePreviewStyle(previewTheme);
