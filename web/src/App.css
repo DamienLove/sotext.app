@@ -155,8 +155,8 @@
   display: flex;
   flex-direction: column; /* Changed from grid to column list for cleaner nav */
   gap: 4px;
-  overflow-y: auto;
-  flex: 1;
+  overflow-y: visible;
+  flex-shrink: 0;
 }
 
 .nav-item {
@@ -530,6 +530,38 @@
 }
 
 /* Chat Interface (Beacon) */
+.beacon-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 16px 24px 0 24px;
+  background: rgba(18, 24, 39, 0.6);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.beacon-tab {
+  padding: 10px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95em;
+  transition: all 0.2s;
+}
+
+.beacon-tab:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px 8px 0 0;
+}
+
+.beacon-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
 .chat-header {
   padding: 16px 24px;
   border-bottom: 1px solid var(--border);
@@ -539,6 +571,13 @@
   position: sticky;
   top: 0;
   z-index: 5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-header h3 {
+  margin: 0;
 }
 
 .messages-list {
@@ -552,18 +591,46 @@
 .message {
   max-width: 65%;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  align-items: flex-start;
 }
 
 .message.sent {
   align-self: flex-end;
-  align-items: flex-end;
+  flex-direction: row-reverse;
 }
 
 .message.received {
   align-self: flex-start;
-  align-items: flex-start;
+  flex-direction: row;
+}
+
+.message-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: white;
+  border: none;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-size: 0.85em;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.message-avatar:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .message-bubble {
@@ -780,6 +847,116 @@
   }
 }
 
+/* Contact Info Modal */
+.contact-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.contact-modal {
+  background: linear-gradient(180deg, rgba(12, 19, 38, 0.95), rgba(8, 14, 28, 0.97));
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
+  animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.contact-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.contact-modal-header h4 {
+  font-size: 1.2em;
+  margin: 0;
+}
+
+.contact-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: color 0.2s;
+}
+
+.contact-modal-close:hover {
+  color: var(--ink);
+}
+
+.contact-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.contact-modal-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: white;
+  display: grid;
+  place-items: center;
+  font-size: 2em;
+  font-weight: 700;
+  margin: 0 auto 16px;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
+
+.contact-modal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contact-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.contact-modal-label {
+  font-size: 0.8em;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.contact-modal-value {
+  color: var(--ink);
+  font-size: 1em;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.contact-modal-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
 /* Helpers */
 .text-muted { color: var(--muted); }
 .text-danger { color: var(--danger); }
@@ -846,35 +1023,58 @@
 }
 
 .theme-preview {
-  height: 150px;
-  border-radius: 12px;
+  height: 180px;
+  border-radius: 16px;
   margin-bottom: 12px;
-  padding: 12px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background-color: var(--surface, #0f172a);
-  background-blend-mode: overlay;
+  justify-content: flex-end;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-preview::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.5) 100%);
+  z-index: 0;
 }
 
 .theme-preview-chat {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
 }
 
 .theme-bubble {
-  max-width: 80%;
-  padding: 8px 10px;
-  border-radius: 14px;
-  font-size: 0.9em;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+  max-width: 75%;
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 0.85em;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  font-weight: 500;
 }
 
-.theme-bubble.incoming { align-self: flex-start; }
-.theme-bubble.outgoing { align-self: flex-end; }
+.theme-bubble.incoming {
+  align-self: flex-start;
+  border-bottom-left-radius: 6px;
+}
+.theme-bubble.outgoing {
+  align-self: flex-end;
+  border-bottom-right-radius: 6px;
+}
 
 .theme-gallery-grid {
   display: grid;
@@ -1149,6 +1349,12 @@
   place-items: center;
   margin-bottom: 12px;
   background: linear-gradient(140deg, rgba(34, 211, 238, 0.18), rgba(14, 165, 233, 0.1));
+}
+
+.home-icon img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .panel-header h3 {
