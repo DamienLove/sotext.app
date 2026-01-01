@@ -1425,11 +1425,14 @@ function App() {
     if (threads.length === 0) {
       return (
         <div className="sidebar-placeholder">
-          <div className="sidebar-tip muted">
-            No conversations found.
-          </div>
-          <div className="sidebar-tip muted">
-            Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+          <div className="empty-state" style={{ padding: '20px 0' }}>
+            <div className="empty-logo" style={{ width: 48, height: 48, marginBottom: 12 }}>
+              <img src={beaconLogo} alt="No threads" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
+            <div className="sidebar-tip">No conversations found.</div>
+            <div className="sidebar-tip muted" style={{ fontSize: '0.8em' }}>
+              Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings.
+            </div>
           </div>
         </div>
       );

@@ -50,27 +50,48 @@
 }
 
 :root {
-  --bg: #0b0e16;
-  --bg-accent: #131a2a;
-  --surface: #1a2236;
-  --surface-alt: #232d45;
+  /* Core Palette - Future Deep */
+  --bg: #03060b;
+  --bg-accent: #0b1121;
+  --surface: #0f1629;
+  --surface-alt: #161f36;
+  --surface-hover: #1c2640;
+
+  /* Text Colors */
   --ink: #f0f4f8;
+  --ink-secondary: #cbd5e1;
   --muted: #94a3b8;
-  --ink-muted: #94a3b8; /* Alias for consistency */
+  --ink-muted: #94a3b8;
+
+  /* Brand Colors */
   --accent: #22d3ee;
+  --accent-glow: rgba(34, 211, 238, 0.5);
   --accent-strong: #0ea5e9;
-  --border: #2e3a52;
+  --accent-dim: rgba(34, 211, 238, 0.1);
+
+  /* Functional Colors */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.15);
   --success: #10b981;
-  --danger: #ef4444;
+  --danger: #f43f5e;
   --warning: #f59e0b;
+
+  /* Measurements */
   --radius: 16px;
-  --shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
-  --shadow-soft: 0 8px 24px -6px rgba(0, 0, 0, 0.3);
-  --glass: rgba(26, 34, 54, 0.6);
+  --radius-sm: 8px;
+  --radius-lg: 24px;
+
+  /* Effects */
+  --shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  --shadow-soft: 0 8px 24px -6px rgba(0, 0, 0, 0.4);
+  --glass: rgba(15, 22, 41, 0.7);
+  --glass-strong: rgba(11, 17, 33, 0.85);
   --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.03);
 
   /* Opacity Levels */
-  --opacity-high: 0.9;
+  --opacity-high: 0.95;
   --opacity-medium: 0.7;
   --opacity-low: 0.4;
 
@@ -87,6 +108,7 @@
 
 html {
   scroll-behavior: smooth;
+  height: 100%;
 }
 
 * {
@@ -95,10 +117,10 @@ html {
 
 ::selection {
   background: rgba(34, 211, 238, 0.25);
-  color: var(--ink);
+  color: #fff;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Modern & Slim */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -110,17 +132,20 @@ html {
 
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background-clip: content-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.25);
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: "Space Grotesk", sans-serif;
   margin: 0 0 0.5em 0;
   line-height: 1.2;
+  color: var(--ink);
 }
 
 a {
@@ -136,8 +161,9 @@ a:hover {
 body {
   margin: 0;
   min-height: 100vh;
-  /* Deep, rich background gradient fallback */
-  background: #020617;
+  background-color: var(--bg);
+  /* Fallback gradient */
+  background-image: radial-gradient(circle at 50% 0%, #111827, #030712);
   overflow-x: hidden;
 }
 
