@@ -1159,7 +1159,9 @@ function App() {
     thirdPartyExtensionsEnabled: false,
     extensionStoreEnabled: false,
     iotRemoteControlEnabled: false,
-    featureSwitchesEnabled: false
+    featureSwitchesEnabled: false,
+    beaconFirstEnabled: true,
+    emergencyWebEnabled: true
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1438,7 +1440,9 @@ function App() {
         thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? false,
         extensionStoreEnabled: data.extensionStoreEnabled ?? false,
         iotRemoteControlEnabled: data.iotRemoteControlEnabled ?? false,
-        featureSwitchesEnabled: data.featureSwitchesEnabled ?? false
+        featureSwitchesEnabled: data.featureSwitchesEnabled ?? false,
+        beaconFirstEnabled: data.beaconFirstEnabled ?? true,
+        emergencyWebEnabled: data.emergencyWebEnabled ?? true
       });
 
       // Check for theme and avatar unlocks
@@ -2127,6 +2131,8 @@ function App() {
         extensionStoreEnabled: remoteSettings.extensionStoreEnabled,
         iotRemoteControlEnabled: remoteSettings.iotRemoteControlEnabled,
         featureSwitchesEnabled: remoteSettings.featureSwitchesEnabled,
+        beaconFirstEnabled: remoteSettings.beaconFirstEnabled,
+        emergencyWebEnabled: remoteSettings.emergencyWebEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -2857,15 +2863,16 @@ function App() {
                 </div>
                 <div className="settings-card">
                   <h4>How to build an extension (preview)</h4>
-                  <ol className="settings-note" style={{ paddingLeft: 18, marginTop: 8 }}>
-                    <li>Authenticate in mobile app and toggle “Enable 3rd-party extensions”.</li>
-                    <li>Use this Dev panel to turn on “Extensions Store” and “Feature Switches”.</li>
-                    <li>Target the PulseLink webhook: <code>https://api.pulselink.app/extensions</code> (per-extension auth token required).</li>
-                    <li>Extension manifest (YAML/JSON) should declare: name, version, scopes (sms, contacts, beacon_control, iot_control), and webhook URL.</li>
-                    <li>Actions return JSON with status, message, and optional payload; errors must include code + reason.</li>
+                  <ol className="settings-note" style={{ paddingLeft: 18, marginTop: 8, display: 'grid', gap: 6 }}>
+                    <li><strong>Enable capabilities</strong>: turn on Extensions + Store + Feature Switches here (syncs to mobile via your login).</li>
+                    <li><strong>Manifest</strong>: YAML/JSON with <code>name</code>, <code>version</code>, <code>scopes</code> (sms, contacts, beacon_control, iot_control, theme), <code>webhook</code>, and optional <code>settings</code> schema.</li>
+                    <li><strong>Auth</strong>: each extension gets a signed token (bearer) per user/device. Server calls include <code>X-PulseLink-User</code>, <code>X-PulseLink-Device</code>, <code>X-PulseLink-Signature</code>.</li>
+                    <li><strong>Lifecycle</strong>: /install → store manifest, /enable → set feature switches, /event → receive SMS/contact/beacon/iot events, /uninstall → cleanup.</li>
+                    <li><strong>UI hooks</strong>: use Feature Switches to expose toggles in web/mobile Settings; IoT remote control enables device cards in Beacon.</li>
+                    <li><strong>Testing</strong>: coming soon — sandbox runner and log viewer in this Dev panel; use “Beacon-first” + “Emergency-ready” switches to simulate user-facing gates.</li>
                   </ol>
                   <div className="settings-note">
-                    Coming soon: publish to the Extensions Store, sandbox test harness, and sample IoT device control (lights/locks) via secure MQTT bridge.
+                    Coming soon: publish to the Extensions Store, sandbox test harness, IoT device simulator (lights/locks), and webhook request replay.
                   </div>
                 </div>
                 <div className="settings-card">
@@ -2877,6 +2884,33 @@ function App() {
   "deviceIds": ["garage-door", "front-lights"],
   "allowFromWeb": true
 }`}
+                  </pre>
+                </div>
+                <div className="settings-card">
+                  <h4>Sample extension manifest</h4>
+                  <pre className="code-block" aria-label="extension manifest example">
+{`name: Beacon IoT Bridge
+version: 0.2.0
+scopes:
+  - iot_control
+  - beacon_control
+webhook: https://yourapp.com/pulselink/hooks
+settings:
+  required:
+    - mqtt_url
+  fields:
+    mqtt_url:
+      label: MQTT broker URL
+      type: url
+    api_key:
+      label: API key
+      type: secret
+events:
+  - sms.received
+  - beacon.command
+feature_switches:
+  - beaconFirstEnabled
+  - emergencyWebEnabled`}
                   </pre>
                 </div>
               </div>
@@ -3501,6 +3535,47 @@ function App() {
                       onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
                     />
                     Enable 3rd-party extensions (beta)
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.extensionStoreEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, extensionStoreEnabled: e.target.checked }))}
+                      disabled={!remoteSettings.thirdPartyExtensionsEnabled}
+                    />
+                    Enable Extensions Store (web + mobile)
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.featureSwitchesEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, featureSwitchesEnabled: e.target.checked }))}
+                    />
+                    Enable Feature Switches sync
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.beaconFirstEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, beaconFirstEnabled: e.target.checked }))}
+                    />
+                    Beacon-first web dashboard
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.emergencyWebEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, emergencyWebEnabled: e.target.checked }))}
+                    />
+                    Emergency-ready on web
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.iotRemoteControlEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, iotRemoteControlEnabled: e.target.checked }))}
+                    />
+                    Allow IoT remote control (beta)
                   </label>
                   <label className="login-field">
                     Time format
