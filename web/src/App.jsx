@@ -280,44 +280,56 @@ const buildAlertSnippet = (body = '') => {
 };
 
 // Bolt: Optimized MapAlertItem to prevent re-renders of the alert list
-const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
-  <div
-    className={`map-item ${isActive ? 'active' : ''}`}
-    onClick={() => onFocus(alert)}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onFocus(alert);
-      }
-    }}
-  >
-    <div className="map-item-header">
-      <div className="map-item-title">{alert.address}</div>
-      <span
-        className="map-badge"
-        style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-      >
-        {alertBadgeCopy[alert.severity] ?? 'Alert'}
-      </span>
+const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleClearClick = async (event) => {
+    event.stopPropagation();
+    setIsClearing(true);
+    await onClear(alert.id);
+    if (document.body.contains(event.target)) {
+      setIsClearing(false);
+    }
+  };
+
+  return (
+    <div
+      className={`map-item ${isActive ? 'active' : ''}`}
+      onClick={() => onFocus(alert)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onFocus(alert);
+        }
+      }}
+    >
+      <div className="map-item-header">
+        <div className="map-item-title">{alert.address}</div>
+        <span
+          className="map-badge"
+          style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+        >
+          {alertBadgeCopy[alert.severity] ?? 'Alert'}
+        </span>
+      </div>
+      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+      <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+      <div className="map-item-actions">
+        <button
+          className="secondary-btn"
+          type="button"
+          onClick={handleClearClick}
+          disabled={isClearing}
+          aria-label={`Clear alert from ${alert.address}`}
+        >
+          {isClearing ? <Spinner /> : "Clear"}
+        </button>
+      </div>
     </div>
-    <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-    <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-    <div className="map-item-actions">
-      <button
-        className="secondary-btn"
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onClear(alert.id);
-        }}
-      >
-        Clear
-      </button>
-    </div>
-  </div>
-), (prev, next) => {
+  );
+}, (prev, next) => {
   return prev.isActive === next.isActive &&
     prev.alert.id === next.alert.id &&
     prev.alert.address === next.alert.address &&
@@ -2995,51 +3007,13 @@ feature_switches:
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
-                    <Fragment key={alert.id}>
-                      <MapAlertItem
-                        alert={alert}
-                        isActive={selectedAlertId === alert.id}
-                        onFocus={handleAlertFocus}
-                        onClear={handleClearAlert}
-                      />
-                      <div
-                        className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
-                        onClick={() => handleAlertFocus(alert)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            handleAlertFocus(alert);
-                          }
-                        }}
-                      >
-                        <div className="map-item-header">
-                          <div className="map-item-title">{alert.address}</div>
-                          <span
-                            className="map-badge"
-                            style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-                          >
-                            {alertBadgeCopy[alert.severity] ?? 'Alert'}
-                          </span>
-                        </div>
-                        <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-                        <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-                        <div className="map-item-actions">
-                          <button
-                            className="secondary-btn"
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleClearAlert(alert.id);
-                            }}
-                            aria-label={`Clear alert from ${alert.address}`}
-                          >
-                            Clear
-                          </button>
-                        </div>
-                      </div>
-                    </Fragment>
+                    <MapAlertItem
+                      key={alert.id}
+                      alert={alert}
+                      isActive={selectedAlertId === alert.id}
+                      onFocus={handleAlertFocus}
+                      onClear={handleClearAlert}
+                    />
                   ))}
                   {filteredAlerts.length === 0 && (
                     <div className="map-empty">
