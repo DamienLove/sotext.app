@@ -17,6 +17,7 @@ import com.pulselink.data.assistant.NaturalLanguageCommandProcessor
 import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.link.ContactLinkManager
+import com.pulselink.data.contacts.DeviceContact
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
@@ -279,6 +280,26 @@ class MainViewModel @Inject constructor(
                 _deleteAccountState.value = DeleteAccountState.Error(e.message ?: "Unknown error")
             }
         }
+    }
+
+    suspend fun ensureContactForDeviceContact(deviceContact: DeviceContact): Long {
+        val normalized = normalizePhone(deviceContact.phoneNumber)
+        val existing = contactRepository.getByPhone(normalized)
+            ?: contactRepository.getByPhone(deviceContact.phoneNumber)
+
+        val target = existing?.copy(
+            displayName = if (existing.displayName.isBlank()) deviceContact.displayName else existing.displayName,
+            phoneNumber = if (existing.phoneNumber.isBlank()) deviceContact.phoneNumber else existing.phoneNumber
+        ) ?: Contact(
+            displayName = deviceContact.displayName.ifBlank { deviceContact.phoneNumber },
+            phoneNumber = deviceContact.phoneNumber
+        )
+
+        contactRepository.upsert(target)
+        val stored = contactRepository.getByPhone(normalized)
+            ?: contactRepository.getByPhone(deviceContact.phoneNumber)
+            ?: target
+        return stored.id
     }
 
     fun resetDeleteAccountState() {

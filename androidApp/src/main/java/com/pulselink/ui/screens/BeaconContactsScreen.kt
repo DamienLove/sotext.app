@@ -24,16 +24,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.pulselink.data.contacts.DeviceContact
 import com.pulselink.domain.model.Contact
-import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.util.parseColorOr
 
 @Composable
 fun BeaconContactsScreen(
-    contacts: List<Contact>,
+    contacts: List<DeviceContact>,
     theme: ThemePreferences,
-    onSelect: (Contact) -> Unit
+    onSelect: (DeviceContact) -> Unit
 ) {
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val onPrimary = parseColorOr(MaterialTheme.colorScheme.onPrimary, theme.onBubbleOutgoing)
@@ -48,17 +48,17 @@ fun BeaconContactsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Contacts",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onTopBarColor)
-            )
-            Text(
-                text = "Synced from PulseLink. Tap to jump to messaging.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
-            )
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Contacts",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onTopBarColor)
+                )
+                Text(
+                    text = "Phone & Google contacts. Tap to view or edit.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
+                )
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(contacts.sortedBy { it.displayName.lowercase() }) { contact ->
                     Card(
                         modifier = Modifier
@@ -98,24 +98,6 @@ fun BeaconContactsScreen(
                                         )
                                     }
                                 }
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    if (contact.linkStatus == LinkStatus.LINKED) {
-                                        StatusChip(
-                                            text = "Linked",
-                                            primary = primary,
-                                            onPrimary = onPrimary,
-                                            leading = { Icon(Icons.Filled.CheckCircle, contentDescription = null) }
-                                        )
-                                    }
-                                    if (!contact.linkCode.isNullOrBlank()) {
-                                        StatusChip(
-                                            text = "Code ${contact.linkCode.takeLast(4)}",
-                                            primary = primary.copy(alpha = 0.12f),
-                                            onPrimary = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
-                                            leading = { Icon(Icons.Filled.Link, contentDescription = null) }
-                                        )
-                                    }
-                                }
                             }
                         }
                     }
@@ -123,7 +105,7 @@ fun BeaconContactsScreen(
                 if (contacts.isEmpty()) {
                     item {
                         Text(
-                            text = "No contacts yet. Add trusted contacts from the PulseLink home screen.",
+                            text = "No contacts found. Check Contacts permission or sync your phone/Google contacts.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
                         )
