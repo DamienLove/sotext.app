@@ -36,4 +36,14 @@
     <string name="extension_third_party_desc">Enable downloadable add-ons from trusted partners (beta). Requires Premium.</string>
     <string name="extension_merged_title">Unified Navigation</string>
     <string name="extension_merged_desc">Merge PulseLink Home and Beacon Inbox into a single bottom-tabbed interface.</string>
+
+    <!-- New Strings for Presets and Private Safe -->
+    <string name="extension_private_safe_title">Private Safe</string>
+    <string name="extension_private_safe_desc">Lock sensitive threads behind a PIN code and hide them from the main list.</string>
+
+    <string name="store_preset_basic">Essentials</string>
+    <string name="store_preset_pro">Power User</string>
+    <string name="store_preset_custom">Custom</string>
+    <string name="store_preset_basic_desc">Simple, safe messaging.</string>
+    <string name="store_preset_pro_desc">Unlock everything.</string>
 </resources>
