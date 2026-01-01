@@ -22,11 +22,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Send
@@ -37,6 +40,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -62,6 +66,14 @@ import kotlinx.coroutines.launch
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+sealed interface ThreadUiItem {
+    data class Message(val message: SmsMessageItem) : ThreadUiItem
+    data class Header(val text: String, val id: String) : ThreadUiItem
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,16 +99,37 @@ fun ThreadScreen(
         }
     }
 
-        val listState = remember(address) { LazyListState() }
-            val scope = rememberCoroutineScope()
-                var initialScrollDone by remember(address) { mutableStateOf(false) }
-                    val isNearBottom by remember {
-                                derivedStateOf {
-                                                val layout = listState.layoutInfo
-                                                            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
-                                                                        lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
-                                                                                }
-                                                                                    }
+    val listState = remember(address) { LazyListState() }
+    val scope = rememberCoroutineScope()
+    var initialScrollDone by remember(address) { mutableStateOf(false) }
+    val isNearBottom by remember {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+        }
+    }
+
+    // Transform messages to UI items with headers
+    val uiItems = remember(messages) {
+        val list = mutableListOf<ThreadUiItem>()
+        messages.forEachIndexed { index, msg ->
+            list.add(ThreadUiItem.Message(msg))
+            val nextMsg = messages.getOrNull(index + 1)
+            // If nextMsg is null (top of list) or different day, add header
+            if (nextMsg == null || !isSameDay(msg.timestamp, nextMsg.timestamp)) {
+                val headerText = getDateHeader(msg.timestamp)
+                // Use headerText as key since it's unique per day and stable.
+                // We add a prefix to ensure it doesn't collide with message IDs if they were strings (though unlikely).
+                list.add(ThreadUiItem.Header(headerText, "header_$headerText"))
+            }
+        }
+        list
+    }
+
+    val smartReplies = remember {
+        listOf("Yes", "No", "OK", "Thanks", "Can't talk now", "Call me later", "On my way!")
+    }
 
     Scaffold(
         topBar = {
@@ -108,6 +141,12 @@ fun ThreadScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$address"))
+                        context.startActivity(intent)
+                    }) {
+                        Icon(Icons.Default.Call, contentDescription = "Call", tint = iconTint)
+                    }
                     IconButton(onClick = onCustomize) {
                         Icon(Icons.Default.Palette, contentDescription = "Customize theme", tint = iconTint)
                     }
@@ -138,15 +177,21 @@ fun ThreadScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
+                state = listState,
                 reverseLayout = true,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 8.dp, top = 8.dp)
-                                state = listState,
-                                            reverseLayout = true,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(messages, key = { it.id }) { msg ->
-                    MessageBubble(message = msg, theme = theme)
+                items(uiItems, key = {
+                    when(it) {
+                        is ThreadUiItem.Message -> it.message.id
+                        is ThreadUiItem.Header -> it.id
+                    }
+                }) { item ->
+                    when (item) {
+                        is ThreadUiItem.Message -> MessageBubble(message = item.message, theme = theme)
+                        is ThreadUiItem.Header -> DateHeader(text = item.text, theme = theme)
+                    }
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
@@ -161,12 +206,29 @@ fun ThreadScreen(
                 }
             }
 
-                    LaunchedEffect(messages.size) {
-                                    if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
-                                                        listState.animateScrollToItem(messages.size - 1)
-                                                                        initialScrollDone = true
-                                                                                    }
-                                                                                            }
+            LaunchedEffect(messages.size) {
+                if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
+                    // With reverseLayout, index 0 is bottom.
+                    listState.animateScrollToItem(0)
+                    initialScrollDone = true
+                }
+            }
+
+            // Smart Replies
+            if (draft.isEmpty()) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    items(smartReplies) { reply ->
+                        SuggestionChip(
+                            onClick = { onSend(reply) },
+                            label = { Text(reply) }
+                        )
+                    }
+                }
+            }
 
             Surface(
                 tonalElevation = 2.dp,
@@ -209,6 +271,27 @@ fun ThreadScreen(
 }
 
 @Composable
+private fun DateHeader(text: String, theme: ThemePalette) {
+    Box(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = theme.frameColor.copy(alpha = 0.1f),
+            modifier = Modifier.padding(4.dp)
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = theme.frameColor.copy(alpha = 0.8f),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
     val isOutgoing = message.outgoing
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
@@ -237,11 +320,13 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                Text(
-                    text = message.body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black
-                )
+                SelectionContainer {
+                    Text(
+                        text = message.body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Black
+                    )
+                }
                 if (message.isMms && message.mediaParts.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     message.mediaParts.filter { it.dataUri != null && it.contentType.startsWith("image") }
@@ -257,11 +342,11 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                         }
                 }
                 Text(
-                    text = DateUtils.getRelativeTimeSpanString(
+                    text = DateUtils.formatDateTime(
+                        LocalContext.current,
                         message.timestamp,
-                        System.currentTimeMillis(),
-                        DateUtils.MINUTE_IN_MILLIS
-                    ).toString(),
+                        DateUtils.FORMAT_SHOW_TIME
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Light,
                     color = Color.DarkGray,
@@ -269,6 +354,28 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                 )
             }
         }
+    }
+}
+
+private fun isSameDay(t1: Long, t2: Long): Boolean {
+    // Note: SimpleDateFormat is not thread-safe but safe here as it's thread-local in this execution context.
+    // However, instantiating it frequently in a loop is sub-optimal.
+    // Since we can't easily lift it out without thread-safety concerns or ThreadLocal complexity,
+    // and given list sizes < 100, this is acceptable for UI responsiveness.
+    // Ideally, we would use java.time.LocalDate but that requires API 26+ (which we have).
+    val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
+    return fmt.format(Date(t1)) == fmt.format(Date(t2))
+}
+
+private fun getDateHeader(t: Long): String {
+    val now = System.currentTimeMillis()
+    // Optimization: reuse formatter if possible, but keep simple for now.
+    return if (isSameDay(t, now)) {
+        "Today"
+    } else if (isSameDay(t, now - 86400000)) {
+        "Yesterday"
+    } else {
+        SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(t))
     }
 }
 
