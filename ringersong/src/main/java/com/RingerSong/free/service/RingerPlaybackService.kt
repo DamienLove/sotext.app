@@ -37,6 +37,7 @@ class RingerPlaybackService : Service() {
     private var isSpotifyPlaying = false
     private var audioManager: AudioManager? = null
     private var audioFocusRequest: AudioFocusRequest? = null
+    private var originalRingVolume: Int = -1
 
     companion object {
         private const val TAG = "RingerPlayback"
@@ -144,48 +145,71 @@ class RingerPlaybackService : Service() {
         }
     }
 
+    private fun muteSystemRinger() {
+        val manager = audioManager ?: return
+        try {
+            if (originalRingVolume == -1) {
+                originalRingVolume = manager.getStreamVolume(AudioManager.STREAM_RING)
+            }
+            // Attempt to mute the ringer stream to prevent the default ringtone from playing over the music
+            manager.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
+            Log.d(TAG, "Muted system ringer (Original volume: $originalRingVolume)")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Could not mute ringer - Do Not Disturb policy access required?", e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error muting ringer", e)
+        }
+    }
+
+    private fun restoreSystemRinger() {
+        val manager = audioManager ?: return
+        if (originalRingVolume != -1) {
+            try {
+                manager.setStreamVolume(AudioManager.STREAM_RING, originalRingVolume, 0)
+                Log.d(TAG, "Restored system ringer to volume: $originalRingVolume")
+                originalRingVolume = -1
+            } catch (e: Exception) {
+                Log.e(TAG, "Error restoring ringer volume", e)
+            }
+        }
+    }
+
     private fun playSegment(segment: SegmentPlay) {
         Log.d(TAG, "playSegment called for URI: ${segment.song.uri}")
         stopPlayback()
 
-        // Request audio focus to try to duck/stop the system ringtone
+        // Mute the system ringer immediately to prevent conflict
+        muteSystemRinger()
+
+        // Request audio focus to try to duck/stop other media/system sounds
         if (!requestAudioFocus()) {
             Log.w(TAG, "Failed to get audio focus, but continuing anyway")
         }
 
         if (segment.song.uri.startsWith("spotify:")) {
-            Log.d(TAG, "Spotify URI detected")
-            // PRIORITY 1: Try downloaded offline file first (no Spotify app needed!)
-            val downloader = com.RingerSong.free.data.SpotifyDownloaderRepository(this)
-            val localPath = downloader.getLocalFilePathFromUri(segment.song.uri)
+            Log.d(TAG, "Spotify URI detected - Using Spotify App Remote")
 
-            if (localPath != null) {
-                Log.d(TAG, "Found local file: $localPath")
-                // Play from downloaded MP3 - NO SPOTIFY APP REQUIRED!
-                playLocalFile(localPath, segment.startMs, segment.durationMs)
-            } else {
-                Log.d(TAG, "No local file, trying Spotify App Remote")
-                // PRIORITY 2: Fallback to Spotify App Remote (requires app + Premium)
-                scope.launch {
-                    runCatching {
-                        val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
-                        remote.playerApi.play(segment.song.uri)
-                        delay(500)
-                        remote.playerApi.seekTo(segment.startMs)
-                        isSpotifyPlaying = true
-                        Log.d(TAG, "Spotify App Remote playback started")
-                    }.onFailure { e ->
-                        Log.e(TAG, "Spotify App Remote failed", e)
-                        // No offline file AND Spotify App Remote failed
-                        stopPlayback()
-                    }
+            // DIRECT STREAMING: Skip download check and use Spotify App Remote directly
+            // This relies on the user's active Spotify session/membership.
+            scope.launch {
+                runCatching {
+                    val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
+                    remote.playerApi.play(segment.song.uri)
+                    // Seek after a short delay to ensure playback has initialized
+                    delay(500)
+                    remote.playerApi.seekTo(segment.startMs)
+                    isSpotifyPlaying = true
+                    Log.d(TAG, "Spotify App Remote playback started")
+                }.onFailure { e ->
+                    Log.e(TAG, "Spotify App Remote failed", e)
+                    stopPlayback()
                 }
             }
         } else if (segment.song.uri.startsWith("youtube:")) {
             Log.w(TAG, "YouTube URI not supported yet")
-            // YouTube Music - will need implementation
             stopPlayback()
         } else {
+            // Local file playback (for non-Spotify URIs)
             Log.d(TAG, "Local file URI: ${segment.song.uri}")
             val uri = Uri.parse(segment.song.uri)
             val mediaPlayer = MediaPlayer()
@@ -193,7 +217,7 @@ class RingerPlaybackService : Service() {
             runCatching {
                 mediaPlayer.setAudioAttributes(
                     AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                        .setUsage(AudioAttributes.USAGE_MEDIA) // Use MEDIA for music, not RINGTONE, as we muted RINGTONE
                         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                         .build()
                 )
@@ -228,7 +252,7 @@ class RingerPlaybackService : Service() {
         runCatching {
             mediaPlayer.setAudioAttributes(
                 AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setUsage(AudioAttributes.USAGE_MEDIA) // Use MEDIA since we muted RINGTONE
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .build()
             )
@@ -253,6 +277,8 @@ class RingerPlaybackService : Service() {
 
     private fun stopPlayback() {
         abandonAudioFocus()
+        restoreSystemRinger() // Restore ringer volume!
+
         stopJob?.cancel()
         stopJob = null
         player?.runCatching {
@@ -266,8 +292,6 @@ class RingerPlaybackService : Service() {
                 runCatching {
                     val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
                     remote.playerApi.pause()
-                    // Optionally disconnect if we don't want to keep the connection
-                    // SpotifyRemoteManager.disconnect()
                 }
             }
             isSpotifyPlaying = false
