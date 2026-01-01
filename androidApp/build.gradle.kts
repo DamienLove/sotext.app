@@ -221,7 +221,7 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 97
+        versionCode = 98
         versionName = "97"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

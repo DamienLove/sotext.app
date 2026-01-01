@@ -1,6 +1,8 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2025-12-31: v98 Release: Premium fully embedded (Emergency PIN Override, Remote Web Access, Unified Nav, Premium Sync fixes); Beacon Contacts tab displays real contacts + detail screen; UI refresh with Theme/Contact icons in Beacon; file attachments enabled. RingerSong v22 maintenance update. Web app v98 deployed with premium gates and improved flows.
+- 2025-12-31: Beacon Contacts tab now lists phone/Google contacts, opens contact detail, and no longer blanks UI.
 - 2025-12-31: Repaired SmsInboxViewModel merge regression (restored pagination flags, load-more messages) and added LinePicker/MultiLine indicators; fixed "Signed in as" spacing in web settings; rebuilt PulseLink v95 free/pro AABs (androidApp/build/outputs/bundle/{freeRelease,proRelease}/androidApp-*-release.aab).
 - 2025-12-31: Fixed Beacon crash on open (TabsRow double horizontalScroll causing infinite width); rebuilt PulseLink v95 bundles.
 - 2025-12-30: RingerSong download robustness — added typed DownloadError/DownloadResult, network checks, retry for Spotify, and surfaced download errors to UI via snackbar with friendly messages.
@@ -64,10 +66,10 @@ Current SMS features
 - Telephony provider writes for inbound/outbound SMS.
 - Inbox/thread UI with live refresh + contact resolution; time-format preference.
 
- Outstanding (carry-over for next session)
- - Beacon free: handle default-SMS role result callback UX, improve permission rationale, add contact avatars, interstitial trigger points, and run lint/unit tests once finalized. Consider launcher/icon entry to inbox from PulseLink home per request.
+ Outstanding (carry-over for next session) 
+ - Beacon free: handle default-SMS role result callback UX, improve permission rationale, add contact avatars, interstitial trigger points, and run lint/unit tests once finalized. Consider launcher/icon entry to inbox from PulseLink home per request. 
  - Beacon MMS: current CarrierMessagingService is a stub (immediate OK); implement real carrier-grade MMS download/send pipeline and verify with device/carrier.
-- SMS: Add MMS send/receive UI + compliance tests; enhance inbox with unread badges, delete/archive, and better date formatting; consider content observer cleanup.
+- SMS: Add MMS send/receive UI + compliance tests; enhance inbox with unread badges, delete/archive, and better date formatting; consider content observer cleanup. 
  - Beacon visual customization: gradients, icon sizing, and presets polishing; add tests for theme persistence and per-contact overrides.
 - Caller ID: ✅ Truecaller lookup implemented (priority 2 provider). Outstanding: in-call overlay UI, permission flow refinement, additional provider integrations if needed.
 - Private contacts/chats: enforce PIN when opening private threads, store messages securely/encrypted, filter UI lists, add "make private" toggles.
@@ -94,11 +96,16 @@ Current SMS features
 - Web portal: added Emergency Map panel that parses synced SMS alert locations, loads Google Maps when VITE_GOOGLE_MAPS_API_KEY is set, and added UI filters + map list.
 2025-12-28
 - Sms inbox polish + perf: SmsInboxViewModel refresh runs on IO with parallel thread/archive loads; SmsThreadViewModel refresh moves Telephony queries + contact lookup off main.
-- Sms inbox UI: thread rows now have bordered cards with unread accent + avatar dot indicator; filter tabs restyled as pill chips with optional unread badge.
+-Sms inbox UI: thread rows now have bordered cards with unread accent + avatar dot indicator; filter tabs restyled as pill chips with optional unread badge.
 
 2025-12-31
 - Installed Claude Code CLI globally via npm (`@anthropic-ai/claude-code` v2.0.76).
 - Beacon: warm message cache in inbox to preload recent thread history and speed conversation open.
 - Beacon: added unread message count badges on thread previews (local + synced lines).
-\n2025-12-31\n- Web: fixed broken emergency map list (removed duplicate MapAlertItem blocks) and Beacon tab structure; deployed hosting (pulselink-24899.web.app).\n- UI: theme picker tiles now show preview swatches; restored visibility of Beacon sections in web app.\n- Android branding: PulseLink/Beacon now display Premium/Pro names + gold logos when subscription active; SmsInbox and splash updated to accept premium/pro flags.\n- Settings: persisted mergedExperienceEnabled and exposed toggle in Extensions Store; added network toggle plumbing for brand features.\n- Release: bumped app versionCode/name to 97 (free/pro) and RingerSong to 21; built AABs at androidApp/build/outputs/bundle/{freeRelease,proRelease}/ and ringersong/build/outputs/bundle/release/.\n
-- 2025-12-31: Beacon Contacts tab now lists phone/Google contacts, opens contact detail, and no longer blanks UI.
+
+2025-12-31
+- Web: fixed broken emergency map list (removed duplicate MapAlertItem blocks) and Beacon tab structure; deployed hosting (pulselink-24899.web.app).
+- UI: theme picker tiles now show preview swatches; restored visibility of Beacon sections in web app.
+- Android branding: PulseLink/Beacon now display Premium/Pro names + gold logos when subscription active; SmsInbox and splash updated to accept premium/pro flags.
+- Settings: persisted mergedExperienceEnabled and exposed toggle in Extensions Store; added network toggle plumbing for brand features.
+- Release: bumped app versionCode/name to 97 (free/pro) and RingerSong to 21; built AABs at androidApp/build/outputs/bundle/{freeRelease,proRelease}/ and ringersong/build/outputs/bundle/release/.

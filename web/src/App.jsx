@@ -68,12 +68,9 @@ const CopyButton = ({ text, label }) => {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
     }
-  };
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
+    catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
