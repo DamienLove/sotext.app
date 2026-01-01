@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback, Fragment } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -2283,6 +2283,7 @@ function App() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   autoComplete="email"
+                  aria-invalid={!!authError}
                 />
               </label>
               <div className="login-field">
@@ -2296,6 +2297,7 @@ function App() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="password"
                     autoComplete="current-password"
+                    aria-invalid={!!authError}
                   />
                   <button
                     type="button"
@@ -3127,7 +3129,12 @@ feature_switches:
                                 disabled={isSearchingSpotify}
                                 aria-busy={isSearchingSpotify}
                             >
-                                {isSearchingSpotify ? "Searching..." : "Search"}
+                                {isSearchingSpotify ? (
+                                  <>
+                                    <Spinner />
+                                    Searching...
+                                  </>
+                                ) : "Search"}
                             </button>
                         </div>
                     </div>
@@ -3694,7 +3701,12 @@ feature_switches:
                             disabled={isSending || isLoggingIn}
                             className="primary-btn"
                           >
-                            {isSending ? "Sending..." : "Send"}
+                            {isSending ? (
+                              <>
+                                <Spinner />
+                                Sending...
+                              </>
+                            ) : "Send"}
                           </button>
                         </div>
                         {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
