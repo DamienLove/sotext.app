@@ -1367,6 +1367,12 @@ function App() {
     });
   }, [deviceContacts, contactSearch]);
 
+  // Bolt: Stable handler to prevent ghost content when switching threads
+  const handleThreadSelect = useCallback((thread) => {
+    setMessages([]); // Clear previous messages immediately
+    setSelectedThread(thread);
+  }, []);
+
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const threadListElements = useMemo(() => {
     if (threads.length === 0) {
@@ -1386,11 +1392,11 @@ function App() {
         key={thread.id}
         thread={thread}
         isActive={selectedThread?.id === thread.id}
-        onSelect={setSelectedThread}
+        onSelect={handleThreadSelect}
         showPreviews={showPreviews}
       />
     ));
-  }, [threads, selectedThread?.id, showPreviews]);
+  }, [threads, selectedThread?.id, showPreviews, handleThreadSelect]);
 
   const messageListElements = useMemo(() => (
     messages.map(msg => (
@@ -2268,13 +2274,6 @@ function App() {
       setIsSending(false);
     }
   };
-
-  // Bolt: Stable handler to prevent ghost content when switching threads
-  // eslint-disable-next-line no-unused-vars
-  const handleThreadSelect = useCallback((thread) => {
-    setMessages([]); // Clear previous messages immediately
-    setSelectedThread(thread);
-  }, []);
 
   if (!user) {
     return (
