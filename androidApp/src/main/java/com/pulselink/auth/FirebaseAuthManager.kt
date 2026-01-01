@@ -2,6 +2,7 @@ package com.pulselink.auth
 
 import android.util.Log
 import androidx.activity.ComponentActivity
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -81,6 +82,19 @@ class FirebaseAuthManager @Inject constructor(
             user
         }.onFailure { error ->
             Log.w(TAG, "Firebase account creation failed", error)
+        }
+    }
+
+    suspend fun linkEmailAccount(email: String, password: String): Result<FirebaseUser> {
+        return runCatching {
+            val credential = EmailAuthProvider.getCredential(email, password)
+            val user = auth.currentUser?.linkWithCredential(credential)?.await()?.user
+                ?: error("Account linking succeeded without user payload")
+            updateAuthState(user)
+            Log.i(TAG, "Account linking success uid=${user.uid}")
+            user
+        }.onFailure { error ->
+            Log.w(TAG, "Firebase account linking failed", error)
         }
     }
 

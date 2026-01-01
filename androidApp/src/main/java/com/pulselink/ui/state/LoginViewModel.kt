@@ -75,7 +75,9 @@ class LoginViewModel @Inject constructor(
             val sanitizedEmail = state.email.trim()
             val sanitizedPassword = state.password.trim()
             val result = withTimeoutOrNull(LOGIN_TIMEOUT_MS) {
-                if (state.mode == LoginMode.SIGN_IN) {
+                if (state.mode == LoginMode.CREATE_ACCOUNT && authManager.currentUser()?.isAnonymous == true) {
+                    authManager.linkEmailAccount(sanitizedEmail, sanitizedPassword)
+                } else if (state.mode == LoginMode.SIGN_IN) {
                     authManager.signIn(sanitizedEmail, sanitizedPassword)
                 } else {
                     authManager.register(sanitizedEmail, sanitizedPassword)

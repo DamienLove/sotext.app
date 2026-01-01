@@ -1312,6 +1312,13 @@ class MainViewModel @Inject constructor(
         val osVersion = Build.VERSION.RELEASE ?: "unknown"
         val apiLevel = Build.VERSION.SDK_INT
 
+        val flavor = when {
+            BuildConfig.PREMIUM_FEATURES -> "premium"
+            BuildConfig.ADS_ENABLED -> "free"
+            else -> "pro"
+        }
+        val buildType = if (BuildConfig.DEBUG) "debug" else "release"
+
         val formattedBody = buildString {
             appendLine("Summary: ${bugReportData.summary}")
             appendLine()
@@ -1331,11 +1338,12 @@ class MainViewModel @Inject constructor(
             }
             appendLine()
             appendLine("App Version: $versionName ($versionCode)")
+            appendLine("Build Flavor: $flavor ($buildType)")
             appendLine("Device: $manufacturer $model")
             appendLine("OS: Android $osVersion (API $apiLevel)")
         }
 
-        val subjectSuffix = bugReportData.summary.ifBlank { "General issue" }
+        val subjectSuffix = "[$flavor] ${bugReportData.summary.ifBlank { "General issue" }}"
 
         return Uri.parse(BUG_REPORT_PAGE_URL).buildUpon()
             .appendQueryParameter("summary", bugReportData.summary)
@@ -1347,14 +1355,7 @@ class MainViewModel @Inject constructor(
             .appendQueryParameter("reporter", bugReportData.userEmail)
             .appendQueryParameter("version_name", versionName)
             .appendQueryParameter("version_code", versionCode.toString())
-            .appendQueryParameter(
-                "build_flavor",
-                when {
-                    BuildConfig.PREMIUM_FEATURES -> "premium"
-                    BuildConfig.ADS_ENABLED -> "free"
-                    else -> "pro"
-                }
-            )
+            .appendQueryParameter("build_flavor", "$flavor ($buildType)")
             .appendQueryParameter("device", "$manufacturer $model")
             .appendQueryParameter("os_version", "Android $osVersion (API $apiLevel)")
             .appendQueryParameter("summary_suffix", subjectSuffix)
