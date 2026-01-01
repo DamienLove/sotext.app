@@ -600,6 +600,47 @@
   line-height: 1.5;
 }
 
+.extensions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.extension-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.extension-card-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.extension-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.extension-name {
+  font-weight: 700;
+}
+
+.extension-desc {
+  color: var(--muted);
+  font-size: 0.92em;
+}
+
 .settings-row {
   font-size: 0.95em;
 }

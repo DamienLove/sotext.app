@@ -189,6 +189,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var callStateMonitor: CallStateMonitor
     @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
+    private val allowFullScreenAds = false
     private val inboxShortcutFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private fun updateBeaconLauncher(enable: Boolean, variant: String) {
         BeaconIconManager.apply(this, variant, enable)
@@ -746,8 +747,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                LaunchedEffect(state.onboardingComplete, state.showAds) {
-                    if (state.onboardingComplete && !hasHandledOnboardingCompletionAd) {
+                LaunchedEffect(state.onboardingComplete, state.showAds) {       
+                    if (
+                        state.onboardingComplete &&
+                        allowFullScreenAds &&
+                        !hasHandledOnboardingCompletionAd
+                    ) {
                         hasHandledOnboardingCompletionAd = true
                         if (state.showAds) {
                             appOpenAdController.maybeShow(activity)
@@ -758,7 +763,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 LaunchedEffect(state.showAds) {
-                    appOpenAdController.updateAvailability(state.showAds)
+                    appOpenAdController.updateAvailability(state.showAds && allowFullScreenAds)
                 }
 
                 LaunchedEffect(
@@ -2129,7 +2134,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (viewModel.uiState.value.onboardingComplete) {
+        if (allowFullScreenAds && viewModel.uiState.value.onboardingComplete) {
             appOpenAdController.maybeShow(this)
         }
     }

@@ -788,6 +788,37 @@ const themePresets = [
   }
 ];
 
+const extensionCatalog = [
+  {
+    id: "guardian-ai",
+    name: "Guardian AI Summaries",
+    icon: "🤖",
+    description: "Generate concise summaries for long SMS threads and alerts.",
+    scopes: ["sms", "ai"],
+  },
+  {
+    id: "iot-bridge",
+    name: "Beacon IoT Bridge",
+    icon: "🛜",
+    description: "Trigger home devices (locks/lights) from Beacon emergency flows.",
+    scopes: ["iot_control", "beacon_control"],
+  },
+  {
+    id: "spam-shield",
+    name: "Spam Shield",
+    icon: "🛡️",
+    description: "Enhanced caller/spam screening layered on Truecaller + local rules.",
+    scopes: ["sms", "contacts"],
+  },
+  {
+    id: "theme-sync",
+    name: "Theme Sync Pro",
+    icon: "🎨",
+    description: "Sync themes across web/mobile and publish to teammates.",
+    scopes: ["theme"],
+  }
+];
+
 const specialThemePresets = [
   // Premium Themes
   {
@@ -1212,6 +1243,8 @@ function App() {
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
+  const [extensionStates, setExtensionStates] = useState({});
+  const [extensionStatus, setExtensionStatus] = useState('');
 
   useEffect(() => {
     const unifiedEnabled = remoteSettings.beaconFirstEnabled && remoteSettings.emergencyWebEnabled;
@@ -1439,7 +1472,13 @@ function App() {
       setRemoteSettings({
         remoteWebAccessEnabled: false,
         autoUpdateContactInfo: true,
-        timeFormat: 'AUTO'
+        timeFormat: 'AUTO',
+        thirdPartyExtensionsEnabled: false,
+        extensionStoreEnabled: false,
+        iotRemoteControlEnabled: false,
+        featureSwitchesEnabled: false,
+        beaconFirstEnabled: true,
+        emergencyWebEnabled: true
       });
       return;
     }
@@ -1453,6 +1492,8 @@ function App() {
         email: data.email ?? user.email ?? '',
         phoneNumber: data.phoneNumber ?? ''
       });
+      const extensions = data.extensions ?? {};
+      setExtensionStates(extensions);
       if (data.themePreferences) {
         setThemePrefs(normalizeTheme(data.themePreferences));
       } else {
@@ -1479,7 +1520,12 @@ function App() {
       
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
-      const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
+      const isPremium =
+        data.subscriptionStatus === 'premium' ||
+        data.subscriptionStatus === 'active' ||
+        data.premiumStatus === 'active' ||
+        data.premiumUnlocked === true ||
+        data.hasPremiumHistory === true;
       setIsPremiumUser(isPremium);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
@@ -2166,6 +2212,28 @@ function App() {
       setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleExtensionToggle = async (extensionId, enabled) => {
+    if (!user) return;
+    const prevState = extensionStates[extensionId];
+    const nextState = { ...(prevState ?? {}), enabled, updatedAt: serverTimestamp() };
+    setExtensionStatus('');
+    setExtensionStates((prev) => ({ ...prev, [extensionId]: nextState }));
+    try {
+      await setDoc(doc(db, "users", user.uid), {
+        extensions: {
+          [extensionId]: nextState
+        }
+      }, { merge: true });
+      const extName = extensionCatalog.find((ext) => ext.id === extensionId)?.name || 'Extension';
+      setExtensionStatus(`${enabled ? 'Enabled' : 'Disabled'} ${extName}.`);
+    } catch (error) {
+      console.error("Failed to update extension", error);
+      // revert local state on failure
+      setExtensionStates((prev) => ({ ...prev, [extensionId]: prevState ?? {} }));
+      setExtensionStatus(error?.message ?? "Failed to update extension.");
     }
   };
 
@@ -3420,6 +3488,70 @@ feature_switches:
                 </button>
                 {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
               </div>
+
+              {remoteSettings.thirdPartyExtensionsEnabled ? (
+                <div className="settings-card">
+                  <div className="settings-header" style={{ marginBottom: 12 }}>
+                    <h4>Extension Store</h4>
+                    <p className="settings-note">Enable/disable add-ons that sync across web and mobile.</p>
+                  </div>
+                  {!remoteSettings.extensionStoreEnabled && (
+                    <div className="settings-note" style={{ marginBottom: 12 }}>
+                      Turn on "Extensions Store" above to manage extensions.
+                    </div>
+                  )}
+                  <div className="extensions-grid">
+                    {extensionCatalog.map((ext) => {
+                      const state = extensionStates[ext.id] || {};
+                      const enabled = !!state.enabled;
+                      return (
+                        <div className="extension-card" key={ext.id}>
+                          <div className="extension-card-header">
+                            <div className="extension-icon" aria-hidden="true">{ext.icon}</div>
+                            <div>
+                              <div className="extension-name">{ext.name}</div>
+                              <div className="extension-desc">{ext.description}</div>
+                            </div>
+                          </div>
+                          <div className="extension-scopes">
+                            {ext.scopes.map((scope) => (
+                              <span
+                                key={scope}
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '4px 8px',
+                                  marginRight: 6,
+                                  marginBottom: 6,
+                                  borderRadius: 999,
+                                  background: 'var(--panel)',
+                                  fontSize: 12,
+                                  color: 'var(--muted)'
+                                }}
+                              >
+                                {scope}
+                              </span>
+                            ))}
+                          </div>
+                          <label className="settings-toggle" style={{ marginTop: 12 }}>
+                            <input
+                              type="checkbox"
+                              checked={enabled}
+                              onChange={(e) => handleExtensionToggle(ext.id, e.target.checked)}
+                              disabled={!remoteSettings.extensionStoreEnabled}
+                            />
+                            {enabled ? 'Enabled' : 'Disabled'}
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {extensionStatus && <div className="settings-status" role="status" aria-live="polite">{extensionStatus}</div>}
+                </div>
+              ) : (
+                <div className="settings-card">
+                  <p className="settings-note">Enable 3rd-party extensions above to configure the store and feature switches.</p>
+                </div>
+              )}
             </div>
           )}
 

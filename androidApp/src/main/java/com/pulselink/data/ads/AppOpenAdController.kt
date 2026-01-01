@@ -86,7 +86,7 @@ class AppOpenAdController @Inject constructor(
     }
 
     companion object {
-        // Cooldown to avoid blocking navigation with frequent full-screen ads
-        private const val MIN_INTERVAL_MS = 30 * 60 * 1000L // 30 minutes
+        // Cooldown to avoid blocking navigation with frequent full-screen ads  
+        private const val MIN_INTERVAL_MS = 12 * 60 * 60 * 1000L // 12 hours   
     }
 }

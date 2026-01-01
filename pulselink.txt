@@ -128,3 +128,4 @@ Current SMS features
 - Web: Added Beacon-forward home hero with red emergency CTA + widget; Beacon inbox/contacts shortcuts prioritized on landing; built web dist.
 2026-01-01
 - Web deployed to pulselink-24899.web.app with Beacon-forward hero/CTA and unified Beacon inbox shortcuts.
+- 2026-01-01: Web Extensions panel now shows a full Extension Store with toggles per add-on synced to Firestore; IoT/feature switches remain in settings. App-open/full-screen ads suppressed (banners only) and cooldown raised to 12h to stop blocking Beacon inbox; Android versionCode/Name bumped to 100 and free/pro AABs rebuilt (copied to disposable_aabs/ with release-notes-2026-01-01-v100.txt). Bug report button continues to open https://damiennichols.com/report-bug.
