@@ -59,6 +59,7 @@ const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="no
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
 const CopyIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
 const CheckIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+const PuzzleIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 14a3 3 0 0 1-3 3h-1a2 2 0 0 0-2 2v1a3 3 0 0 1-6 0v-1a2 2 0 0 0-2-2H6a3 3 0 0 1 0-6h1a2 2 0 0 0 2-2V6a3 3 0 0 1 6 0v1a2 2 0 0 0 2 2h1a3 3 0 0 1 3 3Z"></path></svg>;
 const Spinner = () => <span className="spinner" aria-hidden="true" />;
 
 const CopyButton = ({ text, label }) => {
@@ -1525,7 +1526,8 @@ function App() {
         data.subscriptionStatus === 'active' ||
         data.premiumStatus === 'active' ||
         data.premiumUnlocked === true ||
-        data.hasPremiumHistory === true;
+        data.hasPremiumHistory === true ||
+        data.remoteWebAccessEnabled === true;
       setIsPremiumUser(isPremium);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
@@ -2533,6 +2535,15 @@ function App() {
             >
               <ContactIcon />
               <span>Contacts</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
+              onClick={() => setActivePanel('extensions')}
+              title="Extensions"
+              aria-current={activePanel === 'extensions' ? 'page' : undefined}
+            >
+              <PuzzleIcon />
+              <span>Extensions</span>
             </button>
             <button
               className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
