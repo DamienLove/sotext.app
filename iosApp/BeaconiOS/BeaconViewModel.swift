@@ -35,6 +35,7 @@ final class BeaconViewModel: ObservableObject {
                     guard let self = self else { return }
                     if let uid = user?.uid {
                         self.isLoggedIn = true
+                        Task { await DeviceManager.shared.registerDevice(userId: uid) }
                         self.provider = FirestoreBeaconConversationProvider(userId: uid)
                         self.startListeningToThreads()
                     } else {

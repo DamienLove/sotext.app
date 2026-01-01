@@ -94,6 +94,7 @@ final class AlertRelayViewModel: ObservableObject {
                     guard let self = self else { return }
                     if let uid = user?.uid {
                         self.isLoggedIn = true
+                        Task { await DeviceManager.shared.registerDevice(userId: uid) }
                         self.conversationProvider = FirestoreConversationProvider(userId: uid)
                         self.startListeningToThreads()
                     } else {
