@@ -26,8 +26,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,8 +44,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.DropdownMenu
@@ -124,8 +123,6 @@ fun SmsInboxScreen(
     isBeaconMode: Boolean = false,
     onOpenSettings: () -> Unit = {},
     onOpenPrivate: () -> Unit = {},
-    onCustomizeTheme: () -> Unit = {},
-    onOpenContacts: () -> Unit = {},
     privateThreadIds: Set<Long> = emptySet(),
     showPrivateOnly: Boolean = false,
     hideOtpInAll: Boolean = false,
@@ -187,31 +184,27 @@ fun SmsInboxScreen(
     val archivedIds = remember(gatedArchivedThreads, localDeviceId) {
         gatedArchivedThreads.map { threadKey(it) }.toSet()
     }
-    val filtered = remember(filter, gatedThreads, gatedArchivedThreads, privateThreadIds, showPrivateOnly, hideOtpInAll) {
+    val filtered = remember(filter, gatedThreads, gatedArchivedThreads, privateThreadIds, showPrivateOnly) {
         val base = when (filter) {
             InboxFilter.ARCHIVED -> gatedArchivedThreads
+            InboxFilter.ALL -> gatedThreads
             else -> gatedThreads
         }
         val source = base.filter { thread ->
             val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
             if (showPrivateOnly) isPrivate else !isPrivate
         }
-        val otpAware = if (hideOtpInAll && filter != InboxFilter.OTP) {
+        val otpFiltered = if (hideOtpInAll) {
             source.filterNot { it.isOtp }
         } else {
             source
         }
-        otpAware.filter { thread ->
-            val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
+        otpFiltered.filter { thread ->
             when (filter) {
                 InboxFilter.ALL -> true
                 InboxFilter.READ -> !thread.unread
                 InboxFilter.UNREAD -> thread.unread
                 InboxFilter.ARCHIVED -> true
-                InboxFilter.OTP -> thread.isOtp
-                InboxFilter.TRUSTED -> thread.isTrusted
-                InboxFilter.FAVORITES -> thread.isFavorite
-                InboxFilter.PRIVATE -> isPrivate
             }
         }
     }
@@ -241,8 +234,7 @@ fun SmsInboxScreen(
         )
     }
     val backgroundImageUrl = theme.backgroundImageUrl?.takeIf { it.isNotBlank() }
-    // Make background images more legible in unified/Beacon modes
-    val overlayAlpha = if (backgroundImageUrl != null) 0.6f else 1f
+    val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
     val bgModifier = remember(theme, colorScheme) {
         if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
             Modifier.background(
@@ -312,29 +304,13 @@ fun SmsInboxScreen(
                         )
                     },
                     actions = {
-                        IconButton(onClick = onCustomizeTheme) {
-                            Icon(
-                                imageVector = Icons.Filled.Palette,
-                                contentDescription = "Theme",
-                                tint = topBarForeground,
-                                modifier = Modifier.size(iconSize)
-                            )
-                        }
-                        IconButton(onClick = onOpenContacts) {
-                            Icon(
-                                imageVector = Icons.Filled.People,
-                                contentDescription = "Contacts",
-                                tint = topBarForeground,
-                                modifier = Modifier.size(iconSize)
-                            )
-                        }
                         IconButton(onClick = onOpenPrivate) {
                             ThemeIcon(
                                 iconKey = ThemeIconKey.LOCK,
                                 theme = theme,
                                 imageVector = Icons.Filled.Lock,
                                 contentDescription = "Private inbox",
-                                tint = topBarForeground,
+                                tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
                                 modifier = Modifier.size(iconSize)
                             )
                         }
@@ -509,25 +485,13 @@ fun SmsInboxScreen(
                 )
             }
             val unreadCount = remember(threads) { threads.count { it.unread } }
-            val otpCount = remember(threads) { threads.count { it.isOtp } }
-            val trustedCount = remember(threads) { threads.count { it.isTrusted } }
-            val favoriteCount = remember(threads) { threads.count { it.isFavorite } }
-            val privateCount = remember(threads, privateThreadIds) {
-                threads.count { it.isPrivate || privateThreadIds.contains(it.threadId) }
-            }
             if (showFilterTabs) {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    TabsRow(
-                        filter = filter,
-                        unreadCount = unreadCount,
-                        otpCount = otpCount,
-                        trustedCount = trustedCount,
-                        favoriteCount = favoriteCount,
-                        privateCount = privateCount,
-                        onFilterChange = { filter = it },
-                        theme = theme
-                    )
-                }
+                TabsRow(
+                    filter = filter,
+                    unreadCount = unreadCount,
+                    onFilterChange = { filter = it },
+                    theme = theme
+                )
             }
 
             LazyColumn(
@@ -742,11 +706,7 @@ private fun ThreadRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AvatarCircle(
-                        text = displayName,
-                        theme = theme,
-                        onClick = { onAvatarClick(thread) }
-                    )
+                    AvatarCircle(text = displayName, theme = theme)
                     Column(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -879,18 +839,13 @@ private fun ThreadRowSkeleton(
 }
 
 @Composable
-private fun AvatarCircle(
-    text: String,
-    theme: ThemePreferences,
-    onClick: () -> Unit = {}
-) {
+private fun AvatarCircle(text: String, theme: ThemePreferences) {
     val initial = text.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     Box(
         modifier = Modifier
             .size(44.dp)
             .clip(CircleShape)
             .background(parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)), // Reuse outgoing bubble color for avatar bg? Or Primary?
-            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -1065,43 +1020,31 @@ private fun splitDisplay(address: String): Pair<String, String?> = splitSmsDispl
 private fun TabsRow(
     filter: InboxFilter,
     unreadCount: Int,
-    otpCount: Int,
-    trustedCount: Int,
-    favoriteCount: Int,
-    privateCount: Int,
     onFilterChange: (InboxFilter) -> Unit,
     theme: ThemePreferences
 ) {
+    val scrollState = rememberScrollState()
     val unreadBadge = unreadCount.takeIf { it > 0 }?.toString()
-    val otpBadge = otpCount.takeIf { it > 0 }?.toString()
-    val trustedBadge = trustedCount.takeIf { it > 0 }?.toString()
-    val favoriteBadge = favoriteCount.takeIf { it > 0 }?.toString()
-    val privateBadge = privateCount.takeIf { it > 0 }?.toString()
-    val tabs = listOf(
-        Triple("All", InboxFilter.ALL, null as String?),
-        Triple("Unread", InboxFilter.UNREAD, unreadBadge),
-        Triple("2-step", InboxFilter.OTP, otpBadge),
-        Triple("Trusted", InboxFilter.TRUSTED, trustedBadge),
-        Triple("Favorites", InboxFilter.FAVORITES, favoriteBadge),
-        Triple("Private", InboxFilter.PRIVATE, privateBadge),
-        Triple("Archived", InboxFilter.ARCHIVED, null as String?)
-    )
-
-    LazyRow(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .selectableGroup(),
+            .selectableGroup()
+            .horizontalScroll(scrollState)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        items(tabs) { (label, tabFilter, badge) ->
-            TabText(
-                label = label,
-                badge = badge,
-                selected = filter == tabFilter,
-                theme = theme
-            ) { onFilterChange(tabFilter) }
+        TabText(label = "All Messages", selected = filter == InboxFilter.ALL, theme = theme) {
+            onFilterChange(InboxFilter.ALL)
+        }
+        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
+            onFilterChange(InboxFilter.READ)
+        }
+        TabText(label = "Unread", badge = unreadBadge, selected = filter == InboxFilter.UNREAD, theme = theme) {
+            onFilterChange(InboxFilter.UNREAD)
+        }
+        TabText(label = "Archived", selected = filter == InboxFilter.ARCHIVED, theme = theme) {
+            onFilterChange(InboxFilter.ARCHIVED)
         }
     }
 }
@@ -1337,5 +1280,5 @@ private fun LinePickerRow(
     }
 }
 
-private enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED, OTP, TRUSTED, FAVORITES, PRIVATE }
+private enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED }
 

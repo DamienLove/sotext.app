@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -26,7 +26,6 @@ import {
 import { httpsCallable } from "firebase/functions";
 import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
-import unifiedLogo from './assets/unified-premium-beacon.png';
 import beaconLogo from './assets/beacon-logo.png';
 import ringersongLogo from './assets/ringersong-logo.png';
 import auroraBg from './assets/themes/aurora.svg';
@@ -59,7 +58,6 @@ const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="no
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
 const CopyIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
 const CheckIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
-const PuzzleIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 14a3 3 0 0 1-3 3h-1a2 2 0 0 0-2 2v1a3 3 0 0 1-6 0v-1a2 2 0 0 0-2-2H6a3 3 0 0 1 0-6h1a2 2 0 0 0 2-2V6a3 3 0 0 1 6 0v1a2 2 0 0 0 2 2h1a3 3 0 0 1 3 3Z"></path></svg>;
 const Spinner = () => <span className="spinner" aria-hidden="true" />;
 
 const CopyButton = ({ text, label }) => {
@@ -69,10 +67,8 @@ const CopyButton = ({ text, label }) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-    catch (err) {
-      console.error('Failed to copy:', err);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
     }
   };
 
@@ -92,46 +88,6 @@ const CopyButton = ({ text, label }) => {
       style={{ padding: 4 }}
     >
       {copied ? <CheckIcon /> : <CopyIcon />}
-    </button>
-  );
-};
-
-// Bolt: Reusable confirmation button to handle race conditions and prevent duplication
-const ConfirmButton = ({
-  isConfirming,
-  onConfirm,
-  onRequestConfirm,
-  onCancel,
-  confirmText,
-  normalText,
-  loadingText,
-  isLoading,
-  className,
-  disabled
-}) => {
-  if (isConfirming) {
-    return (
-      <button
-        className={className}
-        type="button"
-        onClick={onConfirm}
-        onBlur={onCancel}
-        onMouseDown={(e) => e.preventDefault()} // Prevent blur from firing before click
-        autoFocus
-      >
-        {confirmText}
-      </button>
-    );
-  }
-
-  return (
-    <button
-      className={className}
-      type="button"
-      onClick={onRequestConfirm}
-      disabled={disabled}
-    >
-      {isLoading ? loadingText : normalText}
     </button>
   );
 };
@@ -322,56 +278,44 @@ const buildAlertSnippet = (body = '') => {
 };
 
 // Bolt: Optimized MapAlertItem to prevent re-renders of the alert list
-const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
-  const [isClearing, setIsClearing] = useState(false);
-
-  const handleClearClick = async (event) => {
-    event.stopPropagation();
-    setIsClearing(true);
-    await onClear(alert.id);
-    if (document.body.contains(event.target)) {
-      setIsClearing(false);
-    }
-  };
-
-  return (
-    <div
-      className={`map-item ${isActive ? 'active' : ''}`}
-      onClick={() => onFocus(alert)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onFocus(alert);
-        }
-      }}
-    >
-      <div className="map-item-header">
-        <div className="map-item-title">{alert.address}</div>
-        <span
-          className="map-badge"
-          style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-        >
-          {alertBadgeCopy[alert.severity] ?? 'Alert'}
-        </span>
-      </div>
-      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-      <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-      <div className="map-item-actions">
-        <button
-          className="secondary-btn"
-          type="button"
-          onClick={handleClearClick}
-          disabled={isClearing}
-          aria-label={`Clear alert from ${alert.address}`}
-        >
-          {isClearing ? <Spinner /> : "Clear"}
-        </button>
-      </div>
+const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
+  <div
+    className={`map-item ${isActive ? 'active' : ''}`}
+    onClick={() => onFocus(alert)}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onFocus(alert);
+      }
+    }}
+  >
+    <div className="map-item-header">
+      <div className="map-item-title">{alert.address}</div>
+      <span
+        className="map-badge"
+        style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+      >
+        {alertBadgeCopy[alert.severity] ?? 'Alert'}
+      </span>
     </div>
-  );
-}, (prev, next) => {
+    <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+    <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+    <div className="map-item-actions">
+      <button
+        className="secondary-btn"
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onClear(alert.id);
+        }}
+      >
+        Clear
+      </button>
+    </div>
+  </div>
+), (prev, next) => {
   return prev.isActive === next.isActive &&
     prev.alert.id === next.alert.id &&
     prev.alert.address === next.alert.address &&
@@ -441,20 +385,20 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
 ThemeGalleryItem.displayName = 'ThemeGalleryItem';
 
 const defaultTheme = {
-  primaryColor: "#22d3ee",
-  secondaryColor: "#0ea5e9",
-  bubbleOutgoing: "#22d3ee",
-  bubbleIncoming: "#1a2236",
-  backgroundColor: "#05070f",
+  primaryColor: "#5e6fff",
+  secondaryColor: "#00f3ff",
+  bubbleOutgoing: "#5e6fff",
+  bubbleIncoming: "#161b2e",
+  backgroundColor: "#030407",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 16,
-  inboxIconVariant: "midnight_oled",
-  onBubbleOutgoing: "#04101c",
-  onBubbleIncoming: "#eef2fb",
-  onBackground: "#eef2fb",
-  topBarColor: "#0c1326",
-  onTopBarColor: "#eef2fb",
+  bubbleCornerRadius: 20,
+  inboxIconVariant: "Default",
+  onBubbleOutgoing: "#ffffff",
+  onBubbleIncoming: "#f0f4ff",
+  onBackground: "#f0f4ff",
+  topBarColor: "#0e121e",
+  onTopBarColor: "#f0f4ff",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
@@ -829,43 +773,6 @@ const themePresets = [
   }
 ];
 
-const showExtensionPricingPreview = false;
-
-const extensionCatalog = [
-  {
-    id: "guardian-ai",
-    name: "Guardian AI Summaries",
-    icon: "🤖",
-    description: "Generate concise summaries for long SMS threads and alerts.",
-    plannedPriceLabel: "$4.99/mo (planned)",
-    scopes: ["sms", "ai"],
-  },
-  {
-    id: "iot-bridge",
-    name: "Beacon IoT Bridge",
-    icon: "🛜",
-    description: "Trigger home devices (locks/lights) from Beacon emergency flows.",
-    plannedPriceLabel: "$1.99/mo (planned)",
-    scopes: ["iot_control", "beacon_control"],
-  },
-  {
-    id: "spam-shield",
-    name: "Spam Shield",
-    icon: "🛡️",
-    description: "Enhanced caller/spam screening layered on Truecaller + local rules.",
-    plannedPriceLabel: "$2.99/mo (planned)",
-    scopes: ["sms", "contacts"],
-  },
-  {
-    id: "theme-sync",
-    name: "Theme Sync Pro",
-    icon: "🎨",
-    description: "Sync themes across web/mobile and publish to teammates.",
-    plannedPriceLabel: "$0.99/mo (planned)",
-    scopes: ["theme"],
-  }
-];
-
 const specialThemePresets = [
   // Premium Themes
   {
@@ -1198,151 +1105,6 @@ const loadGoogleMaps = (() => {
   };
 })();
 
-// Bolt: Sidebar component extracted to prevent re-renders on App state changes (e.g. typing in search)
-// This significantly improves responsiveness when the main content updates frequently.
-const Sidebar = memo(({
-  activePanel,
-  setActivePanel,
-  onLogout,
-  onNewThread,
-  threadList,
-  logo,
-  beaconLogo,
-  ringersongLogo
-}) => (
-  <div className="sidebar">
-    <div className="sidebar-header">
-      <div className="sidebar-brand">
-        <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
-        <div>
-          <div className="brand-title">PulseLink Suite</div>
-          <div className="brand-subtitle">Premium Web Access</div>
-        </div>
-      </div>
-      <div className="sidebar-actions">
-        {activePanel === 'beacon' && (
-          <button
-            onClick={onNewThread}
-            className="secondary-btn"
-            aria-label="Start new conversation"
-          >
-            New
-          </button>
-        )}
-        <button onClick={onLogout} className="ghost-btn">Logout</button>
-      </div>
-    </div>
-    <div className="sidebar-nav">
-      <button
-        className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
-        onClick={() => setActivePanel('home')}
-        title="Home"
-        aria-current={activePanel === 'home' ? 'page' : undefined}
-      >
-        <HomeIcon />
-        <span>Home</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
-        onClick={() => setActivePanel('pulselink')}
-        title="PulseLink"
-        aria-current={activePanel === 'pulselink' ? 'page' : undefined}
-      >
-        <img src={logo} alt="PulseLink" />
-        <span>PulseLink</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-        onClick={() => setActivePanel('beacon')}
-        title="Beacon"
-        aria-current={activePanel === 'beacon' ? 'page' : undefined}
-      >
-        <img src={beaconLogo} alt="Beacon" />
-        <span>Beacon</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
-        onClick={() => setActivePanel('ringersong')}
-        title="RingerSong"
-        aria-current={activePanel === 'ringersong' ? 'page' : undefined}
-      >
-        <img src={ringersongLogo} alt="RingerSong" />
-        <span>RingerSong</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
-        onClick={() => setActivePanel('map')}
-        title="Map"
-        aria-current={activePanel === 'map' ? 'page' : undefined}
-      >
-        <MapIcon />
-        <span>Map</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
-        onClick={() => setActivePanel('contacts')}
-        title="Contacts"
-        aria-current={activePanel === 'contacts' ? 'page' : undefined}
-      >
-        <ContactIcon />
-        <span>Contacts</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
-        onClick={() => setActivePanel('extensions')}
-        title="Extensions"
-        aria-current={activePanel === 'extensions' ? 'page' : undefined}
-      >
-        <PuzzleIcon />
-        <span>Extensions</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
-        onClick={() => setActivePanel('themes')}
-        title="Themes"
-        aria-current={activePanel === 'themes' ? 'page' : undefined}
-      >
-        <ThemeIcon />
-        <span>Themes</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
-        onClick={() => setActivePanel('settings')}
-        title="Settings"
-        aria-current={activePanel === 'settings' ? 'page' : undefined}
-      >
-        <SettingsIcon />
-        <span>Settings</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'dev' ? 'active' : ''}`}
-        onClick={() => setActivePanel('dev')}
-        title="Developer"
-        aria-current={activePanel === 'dev' ? 'page' : undefined}
-      >
-        <span role="img" aria-label="Dev">🧰</span>
-        <span>Dev</span>
-      </button>
-    </div>
-    {activePanel === 'beacon' ? (
-      <div className="thread-list">
-        {threadList}
-      </div>
-    ) : (
-      <div className="sidebar-placeholder">
-        <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
-        <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
-      </div>
-    )}
-  </div>
-), (prev, next) => {
-  return prev.activePanel === next.activePanel &&
-         prev.threadList === next.threadList &&
-         prev.onLogout === next.onLogout &&
-         prev.onNewThread === next.onNewThread;
-});
-Sidebar.displayName = 'Sidebar';
-
 function App() {
   const [user, setUser] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -1392,12 +1154,7 @@ function App() {
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
     timeFormat: 'AUTO',
-    thirdPartyExtensionsEnabled: false,
-    extensionStoreEnabled: false,
-    iotRemoteControlEnabled: false,
-    featureSwitchesEnabled: false,
-    beaconFirstEnabled: true,
-    emergencyWebEnabled: true
+    thirdPartyExtensionsEnabled: false
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1424,25 +1181,16 @@ function App() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
-  const [confirmDeleteAction, setConfirmDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [isPremiumUser, setIsPremiumUser] = useState(null); // null = loading   
+  const [isPremiumUser, setIsPremiumUser] = useState(null); // null = loading
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [navLogoState, setNavLogoState] = useState(logo);
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
-  const [extensionStates, setExtensionStates] = useState({});
-  const [extensionStatus, setExtensionStatus] = useState('');
-
-  useEffect(() => {
-    const unifiedEnabled = remoteSettings.beaconFirstEnabled && remoteSettings.emergencyWebEnabled;
-    setNavLogoState(unifiedEnabled ? unifiedLogo : logo);
-  }, [remoteSettings.beaconFirstEnabled, remoteSettings.emergencyWebEnabled]);
 
   useEffect(() => {
     if (!user) {
@@ -1600,25 +1348,16 @@ function App() {
     });
   }, [deviceContacts, contactSearch]);
 
-  // Bolt: Stable handler to prevent ghost content when switching threads
-  const handleThreadSelect = useCallback((thread) => {
-    setMessages([]); // Clear previous messages immediately
-    setSelectedThread(thread);
-  }, []);
-
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const threadListElements = useMemo(() => {
     if (threads.length === 0) {
       return (
         <div className="sidebar-placeholder">
-          <div className="empty-state" style={{ padding: '20px 0' }}>
-            <div className="empty-logo" style={{ width: 48, height: 48, marginBottom: 12 }}>
-              <img src={beaconLogo} alt="No threads" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            </div>
-            <div className="sidebar-tip">No conversations found.</div>
-            <div className="sidebar-tip muted" style={{ fontSize: '0.8em' }}>
-              Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings.
-            </div>
+          <div className="sidebar-tip muted">
+            No conversations found.
+          </div>
+          <div className="sidebar-tip muted">
+            Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
           </div>
         </div>
       );
@@ -1628,11 +1367,11 @@ function App() {
         key={thread.id}
         thread={thread}
         isActive={selectedThread?.id === thread.id}
-        onSelect={handleThreadSelect}
+        onSelect={setSelectedThread}
         showPreviews={showPreviews}
       />
     ));
-  }, [threads, selectedThread?.id, showPreviews, handleThreadSelect]);
+  }, [threads, selectedThread?.id, showPreviews]);
 
   const messageListElements = useMemo(() => (
     messages.map(msg => (
@@ -1645,25 +1384,6 @@ function App() {
       />
     ))
   ), [messages, showPreviews, selectedThread?.address]);
-
-  // Bolt: Stable logout handler to prevent Sidebar re-renders
-  const handleLogout = useCallback(async () => {
-    await signOut(auth);
-    setSelectedThread(null);
-    setComposeAddress('');
-    setComposeBody('');
-    setSendStatus('');
-    setActivePanel('home');
-  }, []);
-
-  // Bolt: Stable "New Thread" handler to prevent Sidebar re-renders
-  const handleNewThread = useCallback(() => {
-    setActivePanel('beacon');
-    setSelectedThread(null);
-    setComposeAddress('');
-    setComposeBody('');
-    setSendStatus('');
-  }, []);
 
   const contactListElements = useMemo(() => (
     filteredDeviceContacts.map((contact) => (
@@ -1687,13 +1407,7 @@ function App() {
       setRemoteSettings({
         remoteWebAccessEnabled: false,
         autoUpdateContactInfo: true,
-        timeFormat: 'AUTO',
-        thirdPartyExtensionsEnabled: false,
-        extensionStoreEnabled: false,
-        iotRemoteControlEnabled: false,
-        featureSwitchesEnabled: false,
-        beaconFirstEnabled: true,
-        emergencyWebEnabled: true
+        timeFormat: 'AUTO'
       });
       return;
     }
@@ -1707,8 +1421,6 @@ function App() {
         email: data.email ?? user.email ?? '',
         phoneNumber: data.phoneNumber ?? ''
       });
-      const extensions = data.extensions ?? {};
-      setExtensionStates(extensions);
       if (data.themePreferences) {
         setThemePrefs(normalizeTheme(data.themePreferences));
       } else {
@@ -1718,12 +1430,7 @@ function App() {
         remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? false,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
-        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? false,
-        extensionStoreEnabled: data.extensionStoreEnabled ?? false,
-        iotRemoteControlEnabled: data.iotRemoteControlEnabled ?? false,
-        featureSwitchesEnabled: data.featureSwitchesEnabled ?? false,
-        beaconFirstEnabled: data.beaconFirstEnabled ?? true,
-        emergencyWebEnabled: data.emergencyWebEnabled ?? true
+        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? false
       });
 
       // Check for theme and avatar unlocks
@@ -1735,13 +1442,7 @@ function App() {
       
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
-      const isPremium =
-        data.subscriptionStatus === 'premium' ||
-        data.subscriptionStatus === 'active' ||
-        data.premiumStatus === 'active' ||
-        data.premiumUnlocked === true ||
-        data.hasPremiumHistory === true ||
-        data.remoteWebAccessEnabled === true;
+      const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
       setIsPremiumUser(isPremium);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
@@ -2415,11 +2116,6 @@ function App() {
         autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
         timeFormat: remoteSettings.timeFormat,
         thirdPartyExtensionsEnabled: remoteSettings.thirdPartyExtensionsEnabled,
-        extensionStoreEnabled: remoteSettings.extensionStoreEnabled,
-        iotRemoteControlEnabled: remoteSettings.iotRemoteControlEnabled,
-        featureSwitchesEnabled: remoteSettings.featureSwitchesEnabled,
-        beaconFirstEnabled: remoteSettings.beaconFirstEnabled,
-        emergencyWebEnabled: remoteSettings.emergencyWebEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -2431,31 +2127,11 @@ function App() {
     }
   };
 
-  const handleExtensionToggle = async (extensionId, enabled) => {
-    if (!user) return;
-    const prevState = extensionStates[extensionId];
-    const nextState = { ...(prevState ?? {}), enabled, updatedAt: serverTimestamp() };
-    setExtensionStatus('');
-    setExtensionStates((prev) => ({ ...prev, [extensionId]: nextState }));
-    try {
-      await setDoc(doc(db, "users", user.uid), {
-        extensions: {
-          [extensionId]: nextState
-        }
-      }, { merge: true });
-      const extName = extensionCatalog.find((ext) => ext.id === extensionId)?.name || 'Extension';
-      setExtensionStatus(`${enabled ? 'Enabled' : 'Disabled'} ${extName}.`);
-    } catch (error) {
-      console.error("Failed to update extension", error);
-      // revert local state on failure
-      setExtensionStates((prev) => ({ ...prev, [extensionId]: prevState ?? {} }));
-      setExtensionStatus(error?.message ?? "Failed to update extension.");
-    }
-  };
-
   const handleDeleteAccount = async () => {
     if (!user) return;
-    setConfirmDeleteAction(null);
+    if (!window.confirm("Delete your account and all cloud data? This cannot be undone.")) {
+      return;
+    }
     setDeleteAction('account');
     setDeleteStatus("Requesting account deletion...");
     try {
@@ -2473,7 +2149,9 @@ function App() {
 
   const handleDeleteAccountData = async () => {
     if (!user) return;
-    setConfirmDeleteAction(null);
+    if (!window.confirm("Clear synced messages, device contacts, and trusted contacts from the cloud?")) {
+      return;
+    }
     setDeleteAction('data');
     setDeleteStatus("Deleting account data...");
     try {
@@ -2509,13 +2187,13 @@ function App() {
     }
   };
 
-  const openBeaconUnified = () => {
-    setActivePanel('beacon');
-    setBeaconTab('messages');
+  const handleLogout = async () => {
+    await signOut(auth);
     setSelectedThread(null);
     setComposeAddress('');
     setComposeBody('');
     setSendStatus('');
+    setActivePanel('home');
   };
 
   const handleSendMessage = async () => {
@@ -2553,6 +2231,13 @@ function App() {
     }
   };
 
+  // Bolt: Stable handler to prevent ghost content when switching threads
+  // eslint-disable-next-line no-unused-vars
+  const handleThreadSelect = useCallback((thread) => {
+    setMessages([]); // Clear previous messages immediately
+    setSelectedThread(thread);
+  }, []);
+
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
@@ -2572,7 +2257,6 @@ function App() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   autoComplete="email"
-                  aria-invalid={!!authError}
                 />
               </label>
               <div className="login-field">
@@ -2586,7 +2270,6 @@ function App() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="password"
                     autoComplete="current-password"
-                    aria-invalid={!!authError}
                   />
                   <button
                     type="button"
@@ -2652,36 +2335,137 @@ function App() {
 
   return (
     <div className="app-shell" style={themeVars}>
-      <a href="#main-content" className="skip-link">Skip to main content</a>  
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
-        <Sidebar
-          activePanel={activePanel}
-          setActivePanel={setActivePanel}
-          onLogout={handleLogout}
-          onNewThread={handleNewThread}
-          threadList={threadListElements}
-          logo={navLogoState}
-          beaconLogo={beaconLogo}
-          ringersongLogo={ringersongLogo}
-        />
+        <div className="sidebar">
+          <div className="sidebar-header">
+            <div className="sidebar-brand">
+              <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
+              <div>
+                <div className="brand-title">PulseLink Suite</div>
+                <div className="brand-subtitle">Premium Web Access</div>
+              </div>
+            </div>
+            <div className="sidebar-actions">
+              {activePanel === 'beacon' && (
+                <button
+                  onClick={() => {
+                    setActivePanel('beacon');
+                    setSelectedThread(null);
+                    setComposeAddress('');
+                    setComposeBody('');
+                    setSendStatus('');
+                  }}
+                  className="secondary-btn"
+                  aria-label="Start new conversation"
+                >
+                  New
+                </button>
+              )}
+              <button onClick={handleLogout} className="ghost-btn">Logout</button>
+            </div>
+          </div>
+          <div className="sidebar-nav">
+            <button
+              className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
+              onClick={() => setActivePanel('home')}
+              title="Home"
+              aria-current={activePanel === 'home' ? 'page' : undefined}
+            >
+              <HomeIcon />
+              <span>Home</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
+              onClick={() => setActivePanel('pulselink')}
+              title="PulseLink"
+              aria-current={activePanel === 'pulselink' ? 'page' : undefined}
+            >
+              <img src={logo} alt="PulseLink" />
+              <span>PulseLink</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+              onClick={() => setActivePanel('beacon')}
+              title="Beacon"
+              aria-current={activePanel === 'beacon' ? 'page' : undefined}
+            >
+              <img src={beaconLogo} alt="Beacon" />
+              <span>Beacon</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
+              onClick={() => setActivePanel('ringersong')}
+              title="RingerSong"
+              aria-current={activePanel === 'ringersong' ? 'page' : undefined}
+            >
+              <img src={ringersongLogo} alt="RingerSong" />
+              <span>RingerSong</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+              onClick={() => setActivePanel('map')}
+              title="Map"
+              aria-current={activePanel === 'map' ? 'page' : undefined}
+            >
+              <MapIcon />
+              <span>Map</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
+              onClick={() => setActivePanel('contacts')}
+              title="Contacts"
+              aria-current={activePanel === 'contacts' ? 'page' : undefined}
+            >
+              <ContactIcon />
+              <span>Contacts</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+              onClick={() => setActivePanel('themes')}
+              title="Themes"
+              aria-current={activePanel === 'themes' ? 'page' : undefined}
+            >
+              <ThemeIcon />
+              <span>Themes</span>
+            </button>
+            <button
+              className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
+              onClick={() => setActivePanel('settings')}
+              title="Settings"
+              aria-current={activePanel === 'settings' ? 'page' : undefined}
+            >
+              <SettingsIcon />
+              <span>Settings</span>
+            </button>
+          </div>
+          {activePanel === 'beacon' ? (
+            <div className="thread-list">
+              {threadListElements}
+            </div>
+          ) : (
+            <div className="sidebar-placeholder">
+              <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
+              <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
+            </div>
+          )}
+        </div>
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
-              <div className="home-hero beacon-forward">
-                <div>
-                  <p className="eyebrow">Unified Beacon + PulseLink</p>
-                  <h2>Beacon-first web dashboard</h2>
-                  <p>Jump into Beacon inbox, keep emergency tools handy, and manage PulseLink themes and contacts in one place.</p>
-                  <div className="hero-actions">
-                    <button className="beacon-primary" onClick={openBeaconUnified}>
-                      Open Beacon / Emergency
-                    </button>
-                    <button className="ghost-btn" onClick={() => setActivePanel('map')}>
-                      View emergency map
-                    </button>
-                  </div>
+              <div className="home-hero">
+                <h2>Welcome back</h2>
+                <p>Choose what you want to manage on PulseLink Web.</p>
+              </div>
+              {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
+              {/* QA TEST: Visit web app home screen after login */}
+              {/* EXPECTED: Blue info banner should be visible explaining web.pulselink.app access */}
+              {/* EXPECTED: Banner should display icon, bold heading, and feature description */}
+              <div className="web-app-hint">
+                <div className="hint-icon">ℹ️</div>
+                <div className="hint-content">
+                  <strong>Access PulseLink Web anytime:</strong> Visit web.pulselink.app from any browser to manage your contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
                 </div>
-                <div className="hero-chip">Beacon ready · Red emergency button</div>
               </div>
             <div className="home-grid">
               <button className="home-card" onClick={() => setActivePanel('pulselink')}>
@@ -2712,13 +2496,13 @@ function App() {
                   <h3>RingerSong</h3>
                   <p>Manage ringtone progressions and streaming.</p>
                 </button>
-              <button className="home-card" onClick={() => setActivePanel('map')}>
-                <div className="home-icon pulselink">
-                  <img src={logo} alt="PulseLink map" />
-                </div>
-                <h3>Emergency Map</h3>
-                <p>Track shared locations from PulseLink alerts.</p>    
-              </button>
+                <button className="home-card" onClick={() => setActivePanel('map')}>
+                  <div className="home-icon pulselink">
+                    <img src={logo} alt="PulseLink map" />
+                  </div>
+                  <h3>Emergency Map</h3>
+                  <p>Track shared locations from PulseLink alerts.</p>
+                </button>
               <button className="home-card" onClick={() => setActivePanel('themes')}>
                 <div className="home-icon pulselink">
                   <img src={logo} alt="PulseLink themes" />
@@ -2726,19 +2510,17 @@ function App() {
                 <h3>Theme Gallery</h3>
                 <p>Browse, import, and publish custom themes.</p>
               </button>
-              <button className="home-card" onClick={() => setActivePanel('extensions')}>
-                <div className="home-icon">
-                  <span role="img" aria-label="Extensions">🧩</span>
+              <button
+                className="home-card"
+                onClick={() => setActivePanel('extensions')}
+                disabled={!remoteSettings.thirdPartyExtensionsEnabled}
+                title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
+              >
+                <div className="home-icon pulselink">
+                  <img src={logo} alt="Extensions" />
                 </div>
-                <h3>Extensions Store</h3>
-                <p>Browse and toggle add-ons across PulseLink and Beacon.</p>
-              </button>
-              <button className="home-card" onClick={() => setActivePanel('dev')}>
-                <div className="home-icon">
-                  <span role="img" aria-label="Developer">🧰</span>
-                </div>
-                <h3>Developer Console</h3>
-                <p>Build & test extensions, feature switches, and IoT hooks.</p>
+                <h3>Extensions</h3>
+                <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Attach 3rd-party add-ons (coming soon)" : "Enable 3rd-party extensions to start."}</p>
               </button>
             </div>
           </div>
@@ -2959,126 +2741,6 @@ function App() {
             </div>
           )}
 
-          {activePanel === 'dev' && (
-            <div className="pulselink-panel">
-              <div className="panel-header">
-                <h3>Developer</h3>
-                <p>Build extensions and remotely control PulseLink/Beacon features and IoT hooks.</p>
-              </div>
-              <div className="settings-grid">
-                <div className="settings-card">
-                  <h4>Capability Switches</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.thirdPartyExtensionsEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
-                    />
-                    Enable 3rd-party extensions
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.extensionStoreEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, extensionStoreEnabled: e.target.checked }))}
-                    />
-                    Enable Extensions Store (web + mobile)
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.featureSwitchesEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, featureSwitchesEnabled: e.target.checked }))}
-                    />
-                    Enable Feature Switches sync
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.iotRemoteControlEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, iotRemoteControlEnabled: e.target.checked }))}
-                    />
-                    Allow IoT remote control (beta)
-                  </label>
-                  <button
-                    className="primary-btn"
-                    type="button"
-                    onClick={handleRemoteSettingsSave}
-                    disabled={isSavingSettings}
-                    aria-busy={isSavingSettings}
-                  >
-                    {isSavingSettings ? (
-                      <>
-                        <Spinner />
-                        Saving...
-                      </>
-                    ) : 'Save dev switches'}
-                  </button>
-                  {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>How to build an extension (preview)</h4>
-                  <ol className="settings-note" style={{ paddingLeft: 18, marginTop: 8, display: 'grid', gap: 6 }}>
-                    <li><strong>Enable capabilities</strong>: turn on Extensions + Store + Feature Switches here (syncs to mobile via your login).</li>
-                    <li><strong>Manifest</strong>: YAML/JSON with <code>name</code>, <code>version</code>, <code>scopes</code> (sms, contacts, beacon_control, iot_control, theme), <code>webhook</code>, and optional <code>settings</code> schema.</li>
-                    <li><strong>Auth</strong>: each extension gets a signed token (bearer) per user/device. Server calls include <code>X-PulseLink-User</code>, <code>X-PulseLink-Device</code>, <code>X-PulseLink-Signature</code>.</li>
-                    <li><strong>Lifecycle</strong>: /install → store manifest, /enable → set feature switches, /event → receive SMS/contact/beacon/iot events, /uninstall → cleanup.</li>
-                    <li><strong>UI hooks</strong>: use Feature Switches to expose toggles in web/mobile Settings; IoT remote control enables device cards in Beacon.</li>
-                    <li><strong>Testing</strong>: coming soon — sandbox runner and log viewer in this Dev panel; use “Beacon-first” + “Emergency-ready” switches to simulate user-facing gates.</li>
-                  </ol>
-                  <div className="settings-note">
-                    Coming soon: publish to the Extensions Store, sandbox test harness, IoT device simulator (lights/locks), and webhook request replay.
-                  </div>
-                </div>
-                <div className="settings-card">
-                  <h4>&quot;Future Deep&quot; Theme</h4>
-                  <p className="settings-desc">
-                    The signature look of PulseLink. Glassmorphism, deep dark backgrounds, and electric cyan accents.
-                    Designed to look like it&apos;s from 2050.
-                  </p>
-                </div>
-                <div className="settings-card">
-                  <h4>Sample feature switch payload</h4>
-                  <pre className="code-block" aria-label="feature switch example">
-{`{
-  "feature": "beacon_iot_remote",
-  "enabled": true,
-  "deviceIds": ["garage-door", "front-lights"],
-  "allowFromWeb": true
-}`}
-                  </pre>
-                </div>
-                <div className="settings-card">
-                  <h4>Sample extension manifest</h4>
-                  <pre className="code-block" aria-label="extension manifest example">
-{`name: Beacon IoT Bridge
-version: 0.2.0
-scopes:
-  - iot_control
-  - beacon_control
-webhook: https://yourapp.com/pulselink/hooks
-settings:
-  required:
-    - mqtt_url
-  fields:
-    mqtt_url:
-      label: MQTT broker URL
-      type: url
-    api_key:
-      label: API key
-      type: secret
-events:
-  - sms.received
-  - beacon.command
-feature_switches:
-  - beaconFirstEnabled
-  - emergencyWebEnabled`}
-                  </pre>
-                </div>
-              </div>
-            </div>
-          )}
-
           {activePanel === 'contacts' && (
             <div className="contacts-panel">
               <div className="panel-header">
@@ -3275,12 +2937,7 @@ feature_switches:
                                 disabled={isSearchingSpotify}
                                 aria-busy={isSearchingSpotify}
                             >
-                                {isSearchingSpotify ? (
-                                  <>
-                                    <Spinner />
-                                    Searching...
-                                  </>
-                                ) : "Search"}
+                                {isSearchingSpotify ? "Searching..." : "Search"}
                             </button>
                         </div>
                     </div>
@@ -3529,132 +3186,24 @@ feature_switches:
             <div className="pulselink-panel">
               <div className="panel-header">
                 <h3>Extensions</h3>
-                <p>Attach third-party add-ons and remotely toggle IoT/feature switches. Web access mirrors the mobile toggle.</p>
+                <p>Attach third-party add-ons to PulseLink / Beacon once enabled. Web access mirrors the mobile toggle.</p>
               </div>
               <div className="settings-card">
                 <p className="settings-note" style={{ marginBottom: 12 }}>
                   Status: {remoteSettings.thirdPartyExtensionsEnabled ? "Enabled (beta)" : "Disabled"}.
+                  Turn this on in Settings to allow extensions in both the app and web.
                 </p>
-                <label className="settings-toggle">
-                  <input
-                    type="checkbox"
-                    checked={remoteSettings.thirdPartyExtensionsEnabled}
-                    onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
-                  />
-                  Enable 3rd-party extensions (mirrors mobile)
-                </label>
-                <label className="settings-toggle">
-                  <input
-                    type="checkbox"
-                    checked={remoteSettings.extensionStoreEnabled}
-                    onChange={(e) => setRemoteSettings((prev) => ({ ...prev, extensionStoreEnabled: e.target.checked }))}
-                    disabled={!remoteSettings.thirdPartyExtensionsEnabled}
-                  />
-                  Enable Extensions Store (web + mobile)
-                </label>
-                <label className="settings-toggle">
-                  <input
-                    type="checkbox"
-                    checked={remoteSettings.featureSwitchesEnabled}
-                    onChange={(e) => setRemoteSettings((prev) => ({ ...prev, featureSwitchesEnabled: e.target.checked }))}
-                    disabled={!remoteSettings.thirdPartyExtensionsEnabled}
-                  />
-                  Enable Feature Switches sync
-                </label>
-                <label className="settings-toggle">
-                  <input
-                    type="checkbox"
-                    checked={remoteSettings.iotRemoteControlEnabled}
-                    onChange={(e) => setRemoteSettings((prev) => ({ ...prev, iotRemoteControlEnabled: e.target.checked }))}
-                    disabled={!remoteSettings.thirdPartyExtensionsEnabled}
-                  />
-                  Allow IoT remote control (beta)
-                </label>
-                <button
-                  className="primary-btn"
-                  type="button"
-                  onClick={handleRemoteSettingsSave}
-                  disabled={isSavingSettings}
-                  aria-busy={isSavingSettings}
-                >
-                  {isSavingSettings ? (
-                    <>
-                      <Spinner />
-                      Saving...
-                    </>
-                  ) : 'Save extension settings'}
-                </button>
-                {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
+                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                  <button className="primary-btn" type="button" onClick={() => setActivePanel('settings')}>
+                    Enable in Settings
+                  </button>
+                )}
+                {remoteSettings.thirdPartyExtensionsEnabled && (
+                  <div className="settings-note">
+                    Extension marketplace coming soon. Admins can still side-load trusted extensions via mobile until then.
+                  </div>
+                )}
               </div>
-
-              {remoteSettings.thirdPartyExtensionsEnabled ? (
-                <div className="settings-card">
-                  <div className="settings-header" style={{ marginBottom: 12 }}>
-                    <h4>Extension Store</h4>
-                    <p className="settings-note">Enable/disable add-ons that sync across web and mobile.</p>
-                  </div>
-                  {!remoteSettings.extensionStoreEnabled && (
-                    <div className="settings-note" style={{ marginBottom: 12 }}>
-                      Turn on &quot;Extensions Store&quot; above to manage extensions.
-                    </div>
-                  )}
-                  <div className="extensions-grid">
-                    {extensionCatalog.map((ext) => {
-                      const state = extensionStates[ext.id] || {};
-                      const enabled = !!state.enabled;
-                      return (
-                        <div className="extension-card" key={ext.id}>
-                          <div className="extension-card-header">
-                            <div className="extension-icon" aria-hidden="true">{ext.icon}</div>
-                            <div>
-                              <div className="extension-name">{ext.name}</div>
-                              <div className="extension-desc">{ext.description}</div>
-                              {showExtensionPricingPreview && ext.plannedPriceLabel && (
-                                <div className="extension-desc" style={{ fontStyle: 'italic' }}>
-                                  {ext.plannedPriceLabel}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="extension-scopes">
-                            {ext.scopes.map((scope) => (
-                              <span
-                                key={scope}
-                                style={{
-                                  display: 'inline-block',
-                                  padding: '4px 8px',
-                                  marginRight: 6,
-                                  marginBottom: 6,
-                                  borderRadius: 999,
-                                  background: 'var(--panel)',
-                                  fontSize: 12,
-                                  color: 'var(--muted)'
-                                }}
-                              >
-                                {scope}
-                              </span>
-                            ))}
-                          </div>
-                          <label className="settings-toggle" style={{ marginTop: 12 }}>
-                            <input
-                              type="checkbox"
-                              checked={enabled}
-                              onChange={(e) => handleExtensionToggle(ext.id, e.target.checked)}
-                              disabled={!remoteSettings.extensionStoreEnabled}
-                            />
-                            {enabled ? 'Enabled' : 'Disabled'}
-                          </label>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {extensionStatus && <div className="settings-status" role="status" aria-live="polite">{extensionStatus}</div>}
-                </div>
-              ) : (
-                <div className="settings-card">
-                  <p className="settings-note">Enable 3rd-party extensions above to configure the store and feature switches.</p>
-                </div>
-              )}
             </div>
           )}
 
@@ -3734,47 +3283,6 @@ feature_switches:
                     />
                     Enable 3rd-party extensions (beta)
                   </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.extensionStoreEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, extensionStoreEnabled: e.target.checked }))}
-                      disabled={!remoteSettings.thirdPartyExtensionsEnabled}
-                    />
-                    Enable Extensions Store (web + mobile)
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.featureSwitchesEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, featureSwitchesEnabled: e.target.checked }))}
-                    />
-                    Enable Feature Switches sync
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.beaconFirstEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, beaconFirstEnabled: e.target.checked }))}
-                    />
-                    Beacon-first web dashboard
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.emergencyWebEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, emergencyWebEnabled: e.target.checked }))}
-                    />
-                    Emergency-ready on web
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.iotRemoteControlEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, iotRemoteControlEnabled: e.target.checked }))}
-                    />
-                    Allow IoT remote control (beta)
-                  </label>
                   <label className="login-field">
                     Time format
                     <select
@@ -3809,30 +3317,22 @@ feature_switches:
                     Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
                   </p>
                   <div className="contact-actions">
-                    <ConfirmButton
-                      isConfirming={confirmDeleteAction === 'data'}
-                      onConfirm={handleDeleteAccountData}
-                      onRequestConfirm={() => setConfirmDeleteAction('data')}
-                      onCancel={() => setConfirmDeleteAction(null)}
-                      confirmText="Confirm clear?"
-                      normalText="Clear cloud data"
-                      loadingText="Clearing..."
-                      isLoading={deleteAction === 'data'}
+                    <button
                       className="secondary-btn"
-                      disabled={!!deleteAction || confirmDeleteAction === 'account'}
-                    />
-                    <ConfirmButton
-                      isConfirming={confirmDeleteAction === 'account'}
-                      onConfirm={handleDeleteAccount}
-                      onRequestConfirm={() => setConfirmDeleteAction('account')}
-                      onCancel={() => setConfirmDeleteAction(null)}
-                      confirmText="Confirm delete?"
-                      normalText="Delete account"
-                      loadingText="Deleting..."
-                      isLoading={deleteAction === 'account'}
+                      type="button"
+                      onClick={handleDeleteAccountData}
+                      disabled={!!deleteAction}
+                    >
+                      {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
+                    </button>
+                    <button
                       className="primary-btn"
-                      disabled={!!deleteAction || confirmDeleteAction === 'data'}
-                    />
+                      type="button"
+                      onClick={handleDeleteAccount}
+                      disabled={!!deleteAction}
+                    >
+                      {deleteAction === 'account' ? "Deleting..." : "Delete account"}
+                    </button>
                   </div>
                   {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
                 </div>
@@ -3858,120 +3358,115 @@ feature_switches:
                     Check Subscription
                   </button>
                 </div>
-              ) : (
+              ) : (<><>
+              <div className="beacon-tabs">
+                <button
+                  className={`beacon-tab ${beaconTab === 'messages' ? 'active' : ''}`}
+                  onClick={() => setBeaconTab('messages')}
+                >
+                  Messages
+                </button>
+                <button
+                  className={`beacon-tab ${beaconTab === 'contacts' ? 'active' : ''}`}
+                  onClick={() => setBeaconTab('contacts')}
+                >
+                  Contacts
+                </button>
+              </div>
+              {beaconTab === 'messages' ? (
                 <>
-                  <div className="beacon-tabs">
-                    <button
-                      className={`beacon-tab ${beaconTab === 'messages' ? 'active' : ''}`}
-                      onClick={() => setBeaconTab('messages')}
-                    >
-                      Messages
-                    </button>
-                    <button
-                      className={`beacon-tab ${beaconTab === 'contacts' ? 'active' : ''}`}
-                      onClick={() => setBeaconTab('contacts')}
-                    >
-                      Contacts
-                    </button>
-                  </div>
-                  {beaconTab === 'messages' ? (
+                  {selectedThread ? (
                     <>
-                      {selectedThread ? (
-                        <>
-                          <div className="chat-header">
-                            <h3>{selectedThread.address}</h3>
-                            <button
-                              className="secondary-btn"
-                              onClick={() => setViewingContactAddress(selectedThread.address)}
-                              aria-label="View contact info"
-                            >
-                              Info
-                            </button>
-                          </div>
-                          <div className="messages-list">
-                            {messageListElements}
-                            <div ref={messagesEndRef} />
-                          </div>
-                        </>
-                      ) : (
-                        <div className="empty-state">
-                          <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                          <div>Select a thread or start a new message</div>
-                        </div>
-                      )}
-                      <div className="composer">
-                        <div className="composer-row">
-                          <label className="composer-label" htmlFor="compose-address">To</label>
-                          <input
-                            id="compose-address"
-                            className="composer-input"
-                            type="tel"
-                            placeholder="Phone number"
-                            value={composeAddress}
-                            onChange={(e) => setComposeAddress(e.target.value)}
-                          />
-                        </div>
-                        <div className="composer-row composer-actions">
-                          <textarea
-                            className="composer-textarea"
-                            placeholder="Type a message..."
-                            aria-label="Message body"
-                            value={composeBody}
-                            onChange={(e) => setComposeBody(e.target.value)}
-                          />
-                          <button
-                            onClick={handleSendMessage}
-                            disabled={isSending || isLoggingIn}
-                            className="primary-btn"
-                          >
-                            {isSending ? (
-                              <>
-                                <Spinner />
-                                Sending...
-                              </>
-                            ) : "Send"}
-                          </button>
-                        </div>
-                        {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
-                        <div className="compose-hint">
-                          Messages are sent from your phone when it&apos;s online and signed in.
-                        </div>
+                      <div className="chat-header">
+                        <h3>{selectedThread.address}</h3>
+                        <button
+                          className="secondary-btn"
+                          onClick={() => setViewingContactAddress(selectedThread.address)}
+                          aria-label="View contact info"
+                        >
+                          Info
+                        </button>
+                      </div>
+                      <div className="messages-list">
+                        {messageListElements}
+                        <div ref={messagesEndRef} />
                       </div>
                     </>
                   ) : (
-                    <div className="contacts-panel">
-                      <div className="panel-header">
-                        <h3>Contacts</h3>
-                        <p>All device contacts synced from your phone.</p>
-                      </div>
-                      <div className="contacts-toolbar">
-                        <div className="contact-count">
-                          {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
-                        </div>
-                        <input
-                          className="login-input contact-search"
-                          placeholder="Search by name, phone, or email"
-                          aria-label="Search contacts"
-                          value={contactSearch}
-                          onChange={(e) => setContactSearch(e.target.value)}
-                        />
-                      </div>
-                      <div className="contact-list contact-list--full">
-                        {contactListElements}
-                        {filteredDeviceContacts.length === 0 && (
-                          <div className="settings-note">
-                            {contactSearch.trim()
-                              ? 'No contacts match that search.'
-                              : 'No device contacts synced yet.'}
-                          </div>
-                        )}
-                      </div>
+                    <div className="empty-state">
+                      <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                      <div>Select a thread or start a new message</div>
                     </div>
                   )}
+                  <div className="composer">
+                    <div className="composer-row">
+                      <label className="composer-label" htmlFor="compose-address">To</label>
+                      <input
+                        id="compose-address"
+                        className="composer-input"
+                        type="tel"
+                        placeholder="Phone number"
+                        value={composeAddress}
+                        onChange={(e) => setComposeAddress(e.target.value)}
+                      />
+                    </div>
+                    <div className="composer-row composer-actions">
+                      <textarea
+                        className="composer-textarea"
+                        placeholder="Type a message..."
+                        aria-label="Message body"
+                        value={composeBody}
+                        onChange={(e) => setComposeBody(e.target.value)}
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={isSending || isLoggingIn}
+                        className="primary-btn"
+                      >
+                        {isSending ? "Sending..." : "Send"}
+                      </button>
+                    </div>
+                    {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
+                    <div className="compose-hint">
+                      Messages are sent from your phone when it&apos;s online and signed in.
+                    </div>
+                  </div>
                 </>
+              ) : (
+                <div className="contacts-panel">
+                  <div className="panel-header">
+                    <h3>Contacts</h3>
+                    <p>All device contacts synced from your phone.</p>
+                  </div>
+                  <div className="contacts-toolbar">
+                    <div className="contact-count">
+                      {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
+                    </div>
+                    <input
+                      className="login-input contact-search"
+                      placeholder="Search by name, phone, or email"
+                      aria-label="Search contacts"
+                      value={contactSearch}
+                      onChange={(e) => setContactSearch(e.target.value)}
+                    />
+                  </div>
+                  <div className="contact-list contact-list--full">
+                    {contactListElements}
+                    {filteredDeviceContacts.length === 0 && (
+                      <div className="settings-note">
+                        {contactSearch.trim()
+                          ? 'No contacts match that search.'
+                          : 'No device contacts synced yet.'}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </>
           )}
+                  </>)}
+                </>
+              )}
         </div>
       </div>
 

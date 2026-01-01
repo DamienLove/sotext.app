@@ -57,7 +57,6 @@ data class PulseLinkSettings(
     val emailFallbackEnabled: Boolean = false,
     val thirdPartyExtensionsEnabled: Boolean = false,
     val mergedExperienceEnabled: Boolean = false,
-    val unifiedDisplayName: String? = null,
     val messagingChannelPriority: List<MessageChannel> = listOf(MessageChannel.FIREBASE, MessageChannel.SMS, MessageChannel.EMAIL),
     val crashDetectionEnabled: Boolean = false,
     val aiSummariesEnabled: Boolean = false,
@@ -71,8 +70,7 @@ data class PulseLinkSettings(
     val defaultSendLineId: String? = null,
     val lineSendPreference: LineSendPreference = LineSendPreference.LAST_USED,
     val threadLineOverrides: Map<String, String> = emptyMap(),
-    val devicePhoneNumber: String? = null,
-    val customVibrationPatterns: List<com.pulselink.util.CustomVibrationPattern> = emptyList()
+    val devicePhoneNumber: String? = null
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

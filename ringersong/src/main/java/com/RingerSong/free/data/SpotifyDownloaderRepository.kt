@@ -2,7 +2,6 @@ package com.RingerSong.free.data
 
 import android.content.Context
 import android.util.Log
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.RingerSong.free.BuildConfig
 import com.RingerSong.free.util.NetworkUtils
 import com.RingerSong.free.util.RetryUtils
@@ -124,7 +123,6 @@ class SpotifyDownloaderRepository(private val context: Context) {
                 Log.d(TAG, "Downloaded: ${localFile.absolutePath}")
                 DownloadResult.Success(localFile.absolutePath)
             } catch (e: Exception) {
-                FirebaseCrashlytics.getInstance().recordException(e)
                 Log.e(TAG, "Download error", e)
                 DownloadResult.Failure(DownloadError.UnknownError(e.message))
             }

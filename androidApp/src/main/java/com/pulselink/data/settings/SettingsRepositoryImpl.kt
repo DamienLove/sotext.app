@@ -74,8 +74,6 @@ private val WEB_ACCESS_HINT_DISMISSED = booleanPreferencesKey("web_access_hint_d
 private val FIREBASE_MESSAGING_ENABLED = booleanPreferencesKey("firebase_messaging_enabled")
 private val EMAIL_FALLBACK_ENABLED = booleanPreferencesKey("email_fallback_enabled")
 private val THIRD_PARTY_EXTENSIONS_ENABLED = booleanPreferencesKey("third_party_extensions_enabled")
-private val MERGED_EXPERIENCE_ENABLED = booleanPreferencesKey("merged_experience_enabled")
-private val UNIFIED_DISPLAY_NAME = stringPreferencesKey("unified_display_name")
 private val MESSAGING_CHANNEL_PRIORITY = stringPreferencesKey("messaging_channel_priority")
 private val CRASH_DETECTION_ENABLED = booleanPreferencesKey("crash_detection_enabled")
 private val AI_SUMMARIES_ENABLED = booleanPreferencesKey("ai_summaries_enabled")
@@ -90,7 +88,6 @@ private val DEFAULT_SEND_LINE_ID = stringPreferencesKey("default_send_line_id")
 private val LINE_SEND_PREFERENCE = stringPreferencesKey("line_send_preference")
 private val THREAD_LINE_OVERRIDES = stringPreferencesKey("thread_line_overrides")
 private val DEVICE_PHONE_NUMBER = stringPreferencesKey("device_phone_number")
-private val CUSTOM_VIBRATIONS = stringPreferencesKey("custom_vibration_patterns")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -165,9 +162,6 @@ class SettingsRepositoryImpl @Inject constructor(
             themePreferences = decodeJsonOrNull(prefs[THEME_PREFERENCES]) {
                 json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it)
             } ?: PulseLinkSettings().themePreferences,
-            customVibrationPatterns = decodeJsonOrNull(prefs[CUSTOM_VIBRATIONS]) {
-                json.decodeFromString<List<com.pulselink.util.CustomVibrationPattern>>(it)
-            } ?: PulseLinkSettings().customVibrationPatterns,
             remoteWebAccessEnabled = prefs[REMOTE_WEB_ACCESS] ?: PulseLinkSettings().remoteWebAccessEnabled,
             otpCleanupEnabled = prefs[OTP_CLEANUP_ENABLED] ?: PulseLinkSettings().otpCleanupEnabled,
             otpCleanupDays = prefs[OTP_CLEANUP_DAYS] ?: PulseLinkSettings().otpCleanupDays,
@@ -181,8 +175,6 @@ class SettingsRepositoryImpl @Inject constructor(
             firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
             emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
             thirdPartyExtensionsEnabled = prefs[THIRD_PARTY_EXTENSIONS_ENABLED] ?: PulseLinkSettings().thirdPartyExtensionsEnabled,
-            mergedExperienceEnabled = prefs[MERGED_EXPERIENCE_ENABLED] ?: PulseLinkSettings().mergedExperienceEnabled,
-            unifiedDisplayName = prefs[UNIFIED_DISPLAY_NAME] ?: PulseLinkSettings().unifiedDisplayName,
             messagingChannelPriority = decodeJsonOrNull(prefs[MESSAGING_CHANNEL_PRIORITY]) {
                 json.decodeFromString<List<MessageChannel>>(it)
             } ?: PulseLinkSettings().messagingChannelPriority,
@@ -252,9 +244,6 @@ class SettingsRepositoryImpl @Inject constructor(
                     updated.themePreferences
                 )
             }
-            prefs[CUSTOM_VIBRATIONS] = encodeJson {
-                json.encodeToString(updated.customVibrationPatterns)
-            }
             prefs[REMOTE_WEB_ACCESS] = updated.remoteWebAccessEnabled
             prefs[OTP_CLEANUP_ENABLED] = updated.otpCleanupEnabled
             prefs[OTP_CLEANUP_DAYS] = updated.otpCleanupDays
@@ -268,8 +257,6 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[FIREBASE_MESSAGING_ENABLED] = updated.firebaseMessagingEnabled
             prefs[EMAIL_FALLBACK_ENABLED] = updated.emailFallbackEnabled
             prefs[THIRD_PARTY_EXTENSIONS_ENABLED] = updated.thirdPartyExtensionsEnabled
-            prefs[MERGED_EXPERIENCE_ENABLED] = updated.mergedExperienceEnabled
-            updated.unifiedDisplayName?.let { prefs[UNIFIED_DISPLAY_NAME] = it } ?: prefs.remove(UNIFIED_DISPLAY_NAME)
             prefs[MESSAGING_CHANNEL_PRIORITY] = encodeJson {
                 json.encodeToString(updated.messagingChannelPriority)
             }
@@ -589,12 +576,6 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun setMergedExperienceEnabled(enabled: Boolean) {
-        editOnIo { prefs ->
-            prefs[MERGED_EXPERIENCE_ENABLED] = enabled
-        }
-    }
-
     override suspend fun setMessagingChannelPriority(priority: List<MessageChannel>) {
         editOnIo { prefs ->
             prefs[MESSAGING_CHANNEL_PRIORITY] = encodeJson { json.encodeToString(priority) }
@@ -654,18 +635,9 @@ class SettingsRepositoryImpl @Inject constructor(
             webAccessHintDismissed = prefs[WEB_ACCESS_HINT_DISMISSED] ?: PulseLinkSettings().webAccessHintDismissed,
             firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
             emailFallbackEnabled = prefs[EMAIL_FALLBACK_ENABLED] ?: PulseLinkSettings().emailFallbackEnabled,
-            thirdPartyExtensionsEnabled = prefs[THIRD_PARTY_EXTENSIONS_ENABLED] ?: PulseLinkSettings().thirdPartyExtensionsEnabled,
-            mergedExperienceEnabled = prefs[MERGED_EXPERIENCE_ENABLED] ?: PulseLinkSettings().mergedExperienceEnabled,
-            unifiedDisplayName = prefs[UNIFIED_DISPLAY_NAME] ?: PulseLinkSettings().unifiedDisplayName,
             messagingChannelPriority = decodeJsonOrNull(prefs[MESSAGING_CHANNEL_PRIORITY]) {
                 json.decodeFromString<List<MessageChannel>>(it)
             } ?: PulseLinkSettings().messagingChannelPriority,
-            crashDetectionEnabled = prefs[CRASH_DETECTION_ENABLED] ?: PulseLinkSettings().crashDetectionEnabled,
-            aiSummariesEnabled = prefs[AI_SUMMARIES_ENABLED] ?: PulseLinkSettings().aiSummariesEnabled,
-            aiComposeEnabled = prefs[AI_COMPOSE_ENABLED] ?: PulseLinkSettings().aiComposeEnabled,
-            aiUrgencyEnabled = prefs[AI_URGENCY_ENABLED] ?: PulseLinkSettings().aiUrgencyEnabled,
-            aiUrgencyBypassDnd = prefs[AI_URGENCY_BYPASS_DND] ?: PulseLinkSettings().aiUrgencyBypassDnd,
-            aiUrgencyIncludeUnknown = prefs[AI_URGENCY_INCLUDE_UNKNOWN] ?: PulseLinkSettings().aiUrgencyIncludeUnknown,
             lineInboxMode = prefs[LINE_INBOX_MODE]?.let { runCatching { LineInboxMode.valueOf(it) }.getOrNull() }
                 ?: PulseLinkSettings().lineInboxMode,
             lineInboxModeChosen = prefs[LINE_INBOX_MODE_CHOSEN] ?: PulseLinkSettings().lineInboxModeChosen,

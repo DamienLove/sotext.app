@@ -22,14 +22,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Send
@@ -40,7 +37,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -59,28 +55,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pulselink.beacon.R
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-import java.util.concurrent.TimeUnit
-
-sealed interface ThreadUiItem {
-    data class Message(val message: SmsMessageItem) : ThreadUiItem
-    data class Header(val text: String, val id: String) : ThreadUiItem
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,51 +87,16 @@ fun ThreadScreen(
         }
     }
 
-    val listState = remember(address) { LazyListState() }
-    val scope = rememberCoroutineScope()
-    var initialScrollDone by remember(address) { mutableStateOf(false) }
-    val isNearBottom by remember {
-        derivedStateOf {
-            val layout = listState.layoutInfo
-            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
-        }
-    }
-
-    // Transform messages to UI items with headers
-    val uiItems by remember {
-        derivedStateOf {
-            val list = mutableListOf<ThreadUiItem>()
-            messages.forEachIndexed { index, msg ->
-                list.add(ThreadUiItem.Message(msg))
-                val nextMsg = messages.getOrNull(index + 1)
-                // If nextMsg is null (top of list) or different day, add header
-                if (nextMsg == null || !isSameDay(msg.timestamp, nextMsg.timestamp)) {
-                    val headerText = getDateHeader(msg.timestamp, context)
-                    // Use day's timestamp (midnight) as unique ID to prevent duplicates across months/years
-                    val zone = ZoneId.systemDefault()
-                    val dayStart = Instant.ofEpochMilli(msg.timestamp)
-                        .atZone(zone)
-                        .toLocalDate()
-                        .atStartOfDay(zone)
-                        .toInstant()
-                        .toEpochMilli()
-                    list.add(ThreadUiItem.Header(headerText, "header_$dayStart"))
-                }
-            }
-            list
-        }
-    }
-
-    val smartReplies = listOf(
-        stringResource(R.string.smart_reply_yes),
-        stringResource(R.string.smart_reply_no),
-        stringResource(R.string.smart_reply_ok),
-        stringResource(R.string.smart_reply_thanks),
-        stringResource(R.string.smart_reply_cant_talk),
-        stringResource(R.string.smart_reply_call_later),
-        stringResource(R.string.smart_reply_on_way)
-    )
+        val listState = remember(address) { LazyListState() }
+            val scope = rememberCoroutineScope()
+                var initialScrollDone by remember(address) { mutableStateOf(false) }
+                    val isNearBottom by remember {
+                                derivedStateOf {
+                                                val layout = listState.layoutInfo
+                                                            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
+                                                                        lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+                                                                                }
+                                                                                    }
 
     Scaffold(
         topBar = {
@@ -158,40 +104,18 @@ fun ThreadScreen(
                 title = { Text(address, maxLines = 1, color = theme.frameColor) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back), tint = iconTint)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = iconTint)
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        try {
-                            // Sanitize phone number to prevent URI injection
-                            val sanitizedAddress = address.filter { it.isDigit() || it in setOf('+', '#', '*') }
-                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$sanitizedAddress"))
-                            context.startActivity(intent)
-                        } catch (e: ActivityNotFoundException) {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.toast_no_dialer),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } catch (e: Exception) {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.toast_unable_to_call),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
-                    }) {
-                        Icon(Icons.Default.Call, contentDescription = stringResource(R.string.content_desc_call), tint = iconTint)
-                    }
                     IconButton(onClick = onCustomize) {
-                        Icon(Icons.Default.Palette, contentDescription = stringResource(R.string.content_desc_customize_theme), tint = iconTint)
+                        Icon(Icons.Default.Palette, contentDescription = "Customize theme", tint = iconTint)
                     }
                     IconButton(onClick = onEditNotificationSound) {
-                        Icon(Icons.Default.NotificationsActive, contentDescription = stringResource(R.string.content_desc_notification_sound), tint = iconTint)
+                        Icon(Icons.Default.NotificationsActive, contentDescription = "Notification sound", tint = iconTint)
                     }
                     IconButton(onClick = onDeleteThread) {
-                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.content_desc_delete_thread), tint = iconTint)
+                        Icon(Icons.Default.Delete, contentDescription = "Delete thread", tint = iconTint)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -214,21 +138,15 @@ fun ThreadScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
-                state = listState,
                 reverseLayout = true,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 8.dp, top = 8.dp)
+                                state = listState,
+                                            reverseLayout = true,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(uiItems, key = {
-                    when(it) {
-                        is ThreadUiItem.Message -> it.message.id
-                        is ThreadUiItem.Header -> it.id
-                    }
-                }) { item ->
-                    when (item) {
-                        is ThreadUiItem.Message -> MessageBubble(message = item.message, theme = theme)
-                        is ThreadUiItem.Header -> DateHeader(text = item.text, theme = theme)
-                    }
+                items(messages, key = { it.id }) { msg ->
+                    MessageBubble(message = msg, theme = theme)
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
@@ -243,33 +161,12 @@ fun ThreadScreen(
                 }
             }
 
-            LaunchedEffect(messages.size) {
-                if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
-                    // With reverseLayout, index 0 is bottom.
-                    // Sort order is Newest -> Oldest (0 is newest), so scroll to 0 to show latest.
-                    listState.animateScrollToItem(0)
-                    initialScrollDone = true
-                }
-            }
-
-            // Smart Replies
-            if (draft.isEmpty()) {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(bottom = 4.dp)
-                ) {
-                    items(smartReplies) { reply ->
-                        SuggestionChip(
-                            onClick = {
-                                onSend(reply)
-                                draft = ""  // Clear draft state after sending
-                            },
-                            label = { Text(reply) }
-                        )
-                    }
-                }
-            }
+                    LaunchedEffect(messages.size) {
+                                    if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
+                                                        listState.animateScrollToItem(messages.size - 1)
+                                                                        initialScrollDone = true
+                                                                                    }
+                                                                                            }
 
             Surface(
                 tonalElevation = 2.dp,
@@ -282,13 +179,13 @@ fun ThreadScreen(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     IconButton(onClick = { attachmentPicker.launch("*/*") }) {
-                        Icon(Icons.Default.AttachFile, contentDescription = stringResource(R.string.content_desc_attach_file), tint = iconTint)
+                        Icon(Icons.Default.AttachFile, contentDescription = "Attach file", tint = iconTint)
                     }
                     TextField(
                         value = draft,
                         onValueChange = { draft = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text(stringResource(R.string.hint_write_message)) },
+                        placeholder = { Text("Write your message") },
                         colors = androidx.compose.material3.TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent
@@ -303,34 +200,10 @@ fun ThreadScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = stringResource(R.string.content_desc_send), tint = iconTint)
+                        Icon(Icons.Default.Send, contentDescription = "Send", tint = iconTint)
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun DateHeader(text: String, theme: ThemePalette) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .semantics { heading() },
-        contentAlignment = Alignment.Center
-    ) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = theme.frameColor.copy(alpha = 0.1f),
-            modifier = Modifier.padding(4.dp)
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium,
-                color = theme.frameColor.copy(alpha = 0.8f),
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-            )
         }
     }
 }
@@ -364,20 +237,18 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                SelectionContainer {
-                    Text(
-                        text = message.body,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Black
-                    )
-                }
+                Text(
+                    text = message.body,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Black
+                )
                 if (message.isMms && message.mediaParts.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     message.mediaParts.filter { it.dataUri != null && it.contentType.startsWith("image") }
                         .forEach { part ->
                             AsyncImage(
                                 model = part.dataUri,
-                                contentDescription = stringResource(R.string.content_desc_mms_image),
+                                contentDescription = "MMS image",
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(200.dp)
@@ -386,11 +257,11 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                         }
                 }
                 Text(
-                    text = DateUtils.formatDateTime(
-                        LocalContext.current,
+                    text = DateUtils.getRelativeTimeSpanString(
                         message.timestamp,
-                        DateUtils.FORMAT_SHOW_TIME
-                    ),
+                        System.currentTimeMillis(),
+                        DateUtils.MINUTE_IN_MILLIS
+                    ).toString(),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Light,
                     color = Color.DarkGray,
@@ -398,27 +269,6 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                 )
             }
         }
-    }
-}
-
-private fun isSameDay(t1: Long, t2: Long): Boolean {
-    val zone = ZoneId.systemDefault()
-    val date1 = Instant.ofEpochMilli(t1).atZone(zone).toLocalDate()
-    val date2 = Instant.ofEpochMilli(t2).atZone(zone).toLocalDate()
-    return date1 == date2
-}
-
-private fun getDateHeader(t: Long, context: Context): String {
-    val now = System.currentTimeMillis()
-    val oneDayMillis = TimeUnit.DAYS.toMillis(1)
-    return if (isSameDay(t, now)) {
-        context.getString(R.string.date_header_today)
-    } else if (isSameDay(t, now - oneDayMillis)) {
-        context.getString(R.string.date_header_yesterday)
-    } else {
-        val date = Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).toLocalDate()
-        val formatter = DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
-        date.format(formatter)
     }
 }
 
@@ -449,11 +299,11 @@ private fun sendAttachmentViaSms(
     }
 
     try {
-        context.startActivity(Intent.createChooser(intent, context.getString(R.string.chooser_send_attachment)))
+        context.startActivity(Intent.createChooser(intent, "Send attachment via SMS/MMS"))
     } catch (e: ActivityNotFoundException) {
         Toast.makeText(
             context,
-            context.getString(R.string.toast_no_messaging_app),
+            "No messaging app found to send attachments",
             Toast.LENGTH_LONG
         ).show()
     }

@@ -63,7 +63,6 @@ import androidx.navigation.navArgument
 import com.pulselink.BuildConfig
 import com.pulselink.billing.SubscriptionManager
 import com.pulselink.ui.ads.BannerAdSlot
-import com.pulselink.ui.screens.BeaconContactsScreen
 import com.pulselink.ui.screens.BeaconNavBar
 import com.pulselink.ui.screens.BeaconNavRoute
 import com.pulselink.ui.screens.BeaconSettingsScreen
@@ -78,7 +77,6 @@ import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.ExtensionsStoreScreen
-import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.ui.state.DeviceContactsViewModel
 import com.pulselink.ui.state.MainViewModel
@@ -117,7 +115,6 @@ class BeaconInboxActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val linesViewModel: SmsLinesViewModel = hiltViewModel()
-                val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
                 val lines by linesViewModel.lines.collectAsStateWithLifecycle()
                 val lineDevices by linesViewModel.devices.collectAsStateWithLifecycle()
                 val activeLineId by linesViewModel.activeLineId.collectAsStateWithLifecycle()
@@ -152,7 +149,6 @@ class BeaconInboxActivity : ComponentActivity() {
                             .thenBy { it.createdAt }
                     )
                 }
-                val deviceContacts by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
                 val maxLines = 2
                 val showLineLimit = hasPremium && orderedLines.size > maxLines && !lineLimitDismissed
                 val showLineSetup = hasPremium && orderedLines.size > 1 &&
@@ -206,7 +202,6 @@ class BeaconInboxActivity : ComponentActivity() {
                             if (hasPremium) {
                                 linesViewModel.touchPresence(activeLineId ?: deviceLineId)
                             }
-                            deviceContactsViewModel.refresh()
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
@@ -314,14 +309,15 @@ class BeaconInboxActivity : ComponentActivity() {
 
                                     key(currentRoute) {
                                         if (currentRoute == BeaconNavRoute.Contacts) {
+                                            // Show contacts list instead of messages
                                             Column(modifier = Modifier.fillMaxSize()) {
                                                 BeaconContactsScreen(
-                                                    contacts = deviceContacts,
+                                                    contacts = state.contacts,
                                                     theme = state.settings.themePreferences,
-                                                    onSelect = { deviceContact ->
-                                                        scope.launch {
-                                                            val contactId = viewModel.ensureContactForDeviceContact(deviceContact)
-                                                            navController.navigate("contact_detail/$contactId")
+                                                    onSelect = { contact ->
+                                                        // Navigate to thread with this contact's phone number
+                                                        if (contact.phoneNumber.isNotBlank()) {
+                                                            navController.navigate("sms/thread/0/${Uri.encode(contact.phoneNumber)}")
                                                         }
                                                     }
                                                 )
@@ -375,9 +371,6 @@ class BeaconInboxActivity : ComponentActivity() {
                                             isPremium = hasPremium,
                                             isPro = isPro,
                                             onOpenSettings = { navController.navigate("beacon_settings") },
-                                            onCustomizeTheme = { navController.navigate("visual_settings") },
-                                            onOpenContacts = { currentRoute = BeaconNavRoute.Contacts },
-                                            onOpenPrivate = {},
                                             onOpenPrivate = {},
                                             privateThreadIds = privateThreads,
                                             showPrivateOnly = currentRoute == BeaconNavRoute.Private,
@@ -838,49 +831,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
                                         onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                                         onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
-                                        onToggleMergedExperience = { enabled -> viewModel.setMergedExperienceEnabled(enabled) },
                                         onBack = { navController.popBackStack() }
-                                    )
-                                }
-                                composable(
-                                    route = "contact_detail/{contactId}",
-                                    arguments = listOf(navArgument("contactId") { type = NavType.LongType })
-                                ) { entry ->
-                                    val contactId = entry.arguments?.getLong("contactId") ?: return@composable
-                                    val contact = state.contacts.firstOrNull { it.id == contactId }
-                                    ContactDetailScreen(
-                                        contact = contact,
-                                        showAds = state.showAds,
-                                        onBack = { navController.popBackStack() },
-                                        onCallContact = { },
-                                        onEditContact = { newName, newPhone, newEmail ->
-                                            contact?.let {
-                                                viewModel.saveContact(
-                                                    it.copy(
-                                                        displayName = newName,
-                                                        phoneNumber = newPhone,
-                                                        email = newEmail
-                                                    )
-                                                )
-                                            }
-                                        },
-                                        onEditEmergencyAlert = { },
-                                        onEditCheckInAlert = { },
-                                        onToggleLocation = { enabled -> contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) } },
-                                        onToggleCamera = { enabled -> contact?.let { viewModel.updateContact(it.copy(cameraEnabled = enabled)) } },
-                                        onToggleAutoCall = { enabled -> contact?.let { viewModel.updateContact(it.copy(autoCall = enabled)) } },
-                                        onToggleFavorite = { enabled -> contact?.let { viewModel.updateContact(it.copy(isFavorite = enabled)) } },
-                                        onTogglePrivate = { enabled -> contact?.let { viewModel.updateContact(it.copy(isPrivate = enabled)) } },
-                                        onToggleRemoteOverride = { allow -> contact?.let { viewModel.setRemoteOverridePermission(contactId, allow) } },
-                                        onToggleRemoteSound = { allow -> contact?.let { viewModel.setRemoteSoundPermission(contactId, allow) } },
-                                        onSendLink = { },
-                                        onApproveLink = { viewModel.approveLink(contactId) },
-                                        onSetRemotePin = { pin -> viewModel.setRemotePin(contactId, pin) },
-                                        onPing = suspend { viewModel.sendPing(contactId) },
-                                        onDelete = {
-                                            viewModel.deleteContact(contactId)
-                                            navController.popBackStack()
-                                        }
                                     )
                                 }
                                 composable(

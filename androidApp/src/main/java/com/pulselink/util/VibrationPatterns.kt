@@ -7,11 +7,10 @@ data class VibrationPatternOption(
     val isCustom: Boolean = false
 )
 
-@kotlinx.serialization.Serializable
 data class CustomVibrationPattern(
     val id: String,
     val name: String,
-    val pattern: List<Long>
+    val pattern: LongArray
 )
 
 object VibrationPatterns {

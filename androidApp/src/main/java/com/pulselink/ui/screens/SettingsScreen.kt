@@ -105,7 +105,6 @@ fun SettingsScreen(
     onEditEmergencyVibration: () -> Unit,
     checkInVibrationLabel: String,
     onEditCheckInVibration: () -> Unit,
-    onEditCustomVibration: () -> Unit = {},
     onToggleMessageVibrate: (Boolean) -> Unit,
     onReportBug: () -> Unit,
     onBetaTesters: () -> Unit,
@@ -199,7 +198,7 @@ fun SettingsScreen(
                 if (settings.crashDetectionEnabled) {
                     SettingsToggleRow(
                         title = "Crash Detection",
-                        subtitle = "Alert trusted contacts if a vehicle crash is detected.",
+                        subtitle = "Alert trusted contacts if a vehicle crash is detected. (Temporarily unavailable)",
                         checked = settings.crashDetectionEnabled,
                         enabled = false,
                         onCheckedChange = onToggleCrashDetection
@@ -264,12 +263,6 @@ fun SettingsScreen(
                     onAction = onEditMessageVibration
                 )
                 SettingsActionRow(
-                    title = "Create custom vibration",
-                    subtitle = "Tap to design your own pattern.",
-                    actionLabel = "Open",
-                    onAction = onEditCustomVibration
-                )
-                SettingsActionRow(
                     title = stringResource(R.string.dnd_override_title),
                     subtitle = if (hasDndAccess) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
@@ -311,25 +304,6 @@ fun SettingsScreen(
                 title = "Permissions & System",
                 initiallyExpanded = false
             ) {
-                SettingsActionRow(
-                    title = stringResource(R.string.dnd_override_title),
-                    subtitle = if (hasDndAccess) {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                            stringResource(R.string.dnd_override_android15_note)
-                        } else {
-                            stringResource(R.string.dnd_override_ready)
-                        }
-                    } else {
-                        stringResource(R.string.dnd_override_permission_prompt)
-                    },
-                    actionLabel = if (hasDndAccess) {
-                        stringResource(R.string.dnd_override_action_manage)
-                    } else {
-                        stringResource(R.string.dnd_override_action_allow)
-                    },
-                    onAction = onRequestDndAccess,
-                    leadingIcon = Icons.Filled.NotificationsActive
-                )
                 SettingsActionRow(
                     title = stringResource(R.string.permission_battery_opt_title),
                     subtitle = null,
@@ -416,6 +390,17 @@ fun SettingsScreen(
                     title = "Beacon Feature",
                     initiallyExpanded = false
                 ) {
+                val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
+                val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                SettingsActionRow(
+                    title = "Default SMS Check",
+                    subtitle = if (isDefaultSmsApp) "PulseLink is your default SMS app" else "PulseLink is NOT set as default",
+                    actionLabel = "Check",
+                    onAction = onRequestDefaultSms,
+                    leadingIcon = smsStatusIcon,
+                    iconTint = smsStatusColor
+                )
+
                 SettingsToggleRow(
                     title = stringResource(id = R.string.settings_beacon_icon_title),
                     subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),

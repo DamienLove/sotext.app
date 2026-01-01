@@ -135,58 +135,50 @@ private struct BeaconTab: View {
 
                 Group {
                     if filter == .private && !isUnlocked {
-                        VStack(spacing: 20) {
-                            Image(systemName: "lock.circle.fill")
-                                .font(.system(size: 60))
-                                .foregroundStyle(.secondary)
-                            Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
-                                .font(.title2.bold())
-                            Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
-                                showPinSheet = true
-                            }
-                            .buttonStyle(.borderedProminent)
+                    VStack(spacing: 20) {
+                        Image(systemName: "lock.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundStyle(.secondary)
+                        Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
+                            .font(.title2.bold())
+                        Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
+                            showPinSheet = true
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        List(filteredContacts) { contact in
-                            NavigationLink(value: contact) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(contact.name).font(.headline)
-                                        Text(contact.role).font(.caption).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if contact.unread > 0 {
-                                        Text("\(contact.unread)")
-                                            .font(.caption.bold())
-                                            .foregroundStyle(.white)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .background(themeColor.color)
-                                            .clipShape(Capsule())
-                                    }
+                        .buttonStyle(.borderedProminent)
+                    }
+                } else {
+                    List(filteredContacts) { contact in
+                        NavigationLink(value: contact) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(contact.name).font(.headline)
+                                    Text(contact.role).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                if contact.unread > 0 {
+                                    Text("\(contact.unread)")
+                                        .font(.caption.bold())
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(themeColor.color)
+                                        .clipShape(Capsule())
                                 }
                             }
                         }
-                        .searchable(text: $searchText)
-                        .overlay {
-                            if filteredContacts.isEmpty {
-                                ContentUnavailableView(
-                                    "No conversations",
-                                    systemImage: "bubble.left.and.bubble.right",
-                                    description: Text("Start a new chat on your Android device.")
-                                )
-                            }
+                    }
+                    .searchable(text: $searchText)
+                    .overlay {
+                        if filteredContacts.isEmpty {
+                            ContentUnavailableView(
+                                "No conversations",
+                                systemImage: "bubble.left.and.bubble.right",
+                                description: Text("Start a new chat on your Android device.")
+                            )
                         }
                     }
                 }
             }
-            // Future Deep look for Beacon: dark background support if possible
-            // We use standard list styles but enforce dark scheme preference if desired,
-            // or let system handle it. The user requested "near android look".
-            // Android uses Future Deep (black/dark blue).
-            .background(Color(red: 0.01, green: 0.02, blue: 0.03).ignoresSafeArea())
-            .preferredColorScheme(.dark)
             .navigationDestination(for: BeaconContactCard.self) { contact in
                 ConversationView(
                     contact: contact,
@@ -343,8 +335,6 @@ private struct SettingsTab: View {
                     Text("Beacon iOS")
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Color(red: 0.01, green: 0.02, blue: 0.03).ignoresSafeArea())
             .navigationTitle("Settings")
         }
     }

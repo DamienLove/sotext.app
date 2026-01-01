@@ -1,86 +1,46 @@
-/* Font Face Declarations */
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('./assets/fonts/Inter-Regular.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('./assets/fonts/Inter-Medium.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('./assets/fonts/Inter-SemiBold.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('./assets/fonts/Inter-Bold.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('./assets/fonts/SpaceGrotesk-Medium.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('./assets/fonts/SpaceGrotesk-SemiBold.ttf') format('truetype');
-}
-@font-face {
-  font-family: 'Space Grotesk';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('./assets/fonts/SpaceGrotesk-Bold.ttf') format('truetype');
-}
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap");
 
 :root {
-  /* Future Deep v2 Palette */
-  --bg: #05070f;
-  --bg-accent: #0d1224;
-  --surface: #0c1326;
-  --surface-alt: #0f1a30;
-  --ink: #eef2fb;
-  --muted: #9fb3c8;
-  --accent: #22d3ee;
-  --accent-strong: #0ea5e9;
+  /* Core Palette: "Future Deep" */
+  --bg: #030407;
+  --bg-accent: #0a0e17;
+  --surface: #0e121e;
+  --surface-alt: #161b2e;
 
-  /* Glass & Borders */
-  --border: rgba(255, 255, 255, 0.06);
-  --glass: rgba(12, 19, 38, 0.78);
+  /* Text & Ink */
+  --ink: #f0f4ff;
+  --ink-dim: #b0b8d1;
+  --muted: #6b7a99;
+
+  /* Accents */
+  --accent: #5e6fff;        /* Primary Blue-Purple */
+  --accent-glow: rgba(94, 111, 255, 0.5);
+  --accent-strong: #7d8aff;
+
+  --secondary: #00f3ff;     /* Neon Cyan */
+  --secondary-glow: rgba(0, 243, 255, 0.4);
+
+  --tertiary: #bc13fe;      /* Neon Purple */
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.15);
+  --bg-radial-start: #1a0b2e;
+
+  /* Glassmorphism */
+  --glass-bg: rgba(14, 18, 30, 0.65);
   --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
 
-  /* Functional Colors */
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
+  /* Shadows */
+  --shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.7);
+  --shadow-soft: 0 12px 24px -8px rgba(0, 0, 0, 0.5);
+  --glow: 0 0 20px var(--accent-glow);
 
-  /* Layout */
-  --radius: 16px;
-  --shadow: 0 26px 68px -22px rgba(0, 0, 0, 0.65);
-  --shadow-soft: 0 12px 30px -12px rgba(0, 0, 0, 0.55);
+  /* Typography */
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "DM Sans", sans-serif;
 
-  /* Opacity Levels */
-  --opacity-high: 0.9;
-  --opacity-medium: 0.7;
-  --opacity-low: 0.4;
-
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   line-height: 1.6;
   font-weight: 400;
   color: var(--ink);
@@ -95,29 +55,16 @@
   box-sizing: border-box;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--surface-alt);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--border);
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: "Space Grotesk", sans-serif;
-  margin: 0 0 0.5em 0;
-  line-height: 1.2;
+body {
+  background: radial-gradient(circle at 10% 20%, var(--bg-radial-start) 0%, var(--bg) 40%, #020203 100%);
+  background-attachment: fixed;
 }
 
 a {
@@ -127,14 +74,8 @@ a {
 }
 
 a:hover {
-  color: var(--accent);
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: radial-gradient(circle at 20% 20%, #12203a 0%, var(--bg) 52%, #04060c 100%);
-  overflow-x: hidden;
+  color: var(--secondary);
+  text-shadow: 0 0 8px var(--secondary-glow);
 }
 
 button,
@@ -142,10 +83,47 @@ input,
 textarea,
 select {
   font-family: inherit;
+  outline: none;
 }
 
-/* Focus styles for keyboard navigation */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+/* Scrollbar Polish */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Global Animation Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  70% { box-shadow: 0 0 15px 5px rgba(94, 111, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+}
+
+.animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+.animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-scale-in { animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }

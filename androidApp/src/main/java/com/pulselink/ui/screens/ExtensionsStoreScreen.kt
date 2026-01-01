@@ -31,15 +31,12 @@ data class FeatureToggle(
     val isEnabled: Boolean,
     val onToggle: (Boolean) -> Unit,
     val isAvailable: Boolean = true,
-    val requiresPremium: Boolean = false,
-    val plannedPriceLabel: String? = null
+    val requiresPremium: Boolean = false
 )
 
 private enum class StoreFilter {
     ALL, INSTALLED, PREMIUM
 }
-
-private const val SHOW_PRICE_PREVIEW = false
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,8 +74,7 @@ fun ExtensionsStoreScreen(
                 icon = Icons.Filled.Laptop,
                 isEnabled = settings.remoteWebAccessEnabled,
                 onToggle = onToggleRemoteWebAccess,
-                requiresPremium = true,
-                plannedPriceLabel = "$4.99/mo (planned)"
+                requiresPremium = true
             ),
             FeatureToggle(
                 id = "ai",
@@ -87,8 +83,7 @@ fun ExtensionsStoreScreen(
                 icon = Icons.Filled.SmartToy,
                 isEnabled = settings.aiSummariesEnabled,
                 onToggle = onToggleAiSummaries,
-                requiresPremium = true,
-                plannedPriceLabel = "$4.99/mo (planned)"
+                requiresPremium = true
             ),
             FeatureToggle(
                 id = "relay",
@@ -121,8 +116,7 @@ fun ExtensionsStoreScreen(
                 icon = Icons.Filled.Extension,
                 isEnabled = settings.thirdPartyExtensionsEnabled,
                 onToggle = onToggleThirdPartyExtensions,
-                requiresPremium = true,
-                plannedPriceLabel = "$1.99/mo (planned)"
+                requiresPremium = true
             ),
             FeatureToggle(
                 id = "merged_experience",
@@ -140,7 +134,7 @@ fun ExtensionsStoreScreen(
                 icon = Icons.Filled.CarCrash,
                 isEnabled = settings.crashDetectionEnabled,
                 onToggle = onToggleCrashDetection,
-                isAvailable = true,
+                isAvailable = false, // Temporarily unavailable
                 requiresPremium = true
             )
         )
@@ -153,40 +147,6 @@ fun ExtensionsStoreScreen(
             StoreFilter.ALL -> features
             StoreFilter.INSTALLED -> features.filter { it.isEnabled }
             StoreFilter.PREMIUM -> features.filter { it.requiresPremium }
-        }
-    }
-
-    // Preset Logic
-    val applyEssentials = remember {
-        {
-            onToggleBeaconLauncher(true)
-            onToggleOtpCleanup(true)
-            onToggleFirebaseMessaging(true)
-
-            // Disable heavy/advanced features
-            onToggleAiSummaries(false)
-            onToggleRemoteWebAccess(false)
-            onToggleCrashDetection(false)
-            onToggleThirdPartyExtensions(false)
-            onToggleMergedExperience(false)
-        }
-    }
-
-    val applyPowerUser = remember(premiumActive) {
-        {
-            onToggleBeaconLauncher(true)
-            onToggleOtpCleanup(true)
-            onToggleFirebaseMessaging(true)
-
-            // Enable premium features for premium users
-            if (premiumActive) {
-                onToggleAiSummaries(true)
-                onToggleRemoteWebAccess(true)
-                onToggleCrashDetection(true)
-                onToggleThirdPartyExtensions(true)
-                onToggleEmailFallback(true)
-                onToggleMergedExperience(true)
-            }
         }
     }
 
@@ -207,53 +167,6 @@ fun ExtensionsStoreScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Presets Header
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.store_quick_setup_header),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilledTonalButton(
-                            onClick = { applyEssentials() },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Filled.Bolt, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.store_preset_basic))
-                        }
-                        Button(
-                            onClick = { applyPowerUser() },
-                            modifier = Modifier.weight(1f),
-                            enabled = premiumActive
-                        ) {
-                            Icon(Icons.Filled.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.store_preset_pro))
-                        }
-                    }
-                    if (!premiumActive) {
-                        Text(
-                            text = stringResource(R.string.store_preset_upgrade_message),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
-            }
-
             // Filter Chips
             Row(
                 modifier = Modifier
@@ -304,14 +217,11 @@ fun StoreItemCard(feature: FeatureToggle, premiumActive: Boolean) {
 
     Card(
         colors = CardDefaults.cardColors(
-            containerColor = if (feature.isEnabled)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-            else
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
+            .height(IntrinsicSize.Min) // Try to keep heights uniform if possible, though text varies
     ) {
         Column(
             modifier = Modifier
@@ -326,14 +236,14 @@ fun StoreItemCard(feature: FeatureToggle, premiumActive: Boolean) {
                 ) {
                     Surface(
                         shape = MaterialTheme.shapes.medium,
-                        color = if (feature.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        color = if (feature.isEnabled) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = feature.icon,
                                 contentDescription = null,
-                                tint = if (feature.isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = if (feature.isEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -372,7 +282,7 @@ fun StoreItemCard(feature: FeatureToggle, premiumActive: Boolean) {
             ) {
                 if (feature.requiresPremium) {
                     Text(
-                        text = "PREMIUM",
+                        text = "PRO",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -381,7 +291,7 @@ fun StoreItemCard(feature: FeatureToggle, premiumActive: Boolean) {
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     )
                 } else {
-                    Spacer(Modifier.width(1.dp))
+                    Spacer(Modifier.width(1.dp)) // Spacer to keep layout if no badge
                 }
 
                 if (feature.isEnabled) {

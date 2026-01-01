@@ -247,18 +247,6 @@ private fun LinkStatusSection(
     val canSendLink = contact.phoneNumber.isNotBlank() || contact.email?.isNotBlank() == true
     val context = LocalContext.current
     var showPinDialog by remember { mutableStateOf(false) }
-    val pinInstructions = remember(contact.remotePin) {
-        contact.remotePin?.let { pin ->
-            """
-            You’ve been set as a trusted contact. If you can’t install PulseLink, you can still trigger my emergency siren by texting:
-
-            'pulselink $pin emergency'
-
-            to my number. You can also install PulseLink here:
-            https://play.google.com/store/apps/details?id=com.pulselink
-            """.trimIndent()
-        }
-    }
 
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -274,7 +262,7 @@ private fun LinkStatusSection(
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f))
                     Text(text = "Or set up SMS override:", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                     Text(text = "If they don't have the app, set a PIN so they can text 'pulselink <PIN> emergency' to trigger an alert.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    
+
                     val hasPin = !contact.remotePin.isNullOrBlank()
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(onClick = { showPinDialog = true }, modifier = Modifier.weight(1f)) {
@@ -291,7 +279,7 @@ private fun LinkStatusSection(
                                         putExtra(Intent.EXTRA_SUBJECT, "Override Instructions")
                                         putExtra(
                                             Intent.EXTRA_TEXT,
-                                            pinInstructions ?: ""
+                                            "You have been set as a trusted contact. Even without the PulseLink app, you can trigger an emergency alert on my phone by texting exactly:\n\n'pulselink ${contact.remotePin} emergency'\n\nto my number."
                                         )
                                     }
                                     try {
@@ -327,32 +315,6 @@ private fun LinkStatusSection(
                         Icon(Icons.Filled.Share, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Share Download Link")
-                    }
-
-                    if (contact.phoneNumber.isNotBlank()) {
-                        OutlinedButton(
-                            onClick = {
-                                if (!hasPin) {
-                                    Toast.makeText(context, "Set a PIN first.", Toast.LENGTH_SHORT).show()
-                                    showPinDialog = true
-                                    return@OutlinedButton
-                                }
-                                val smsIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                    data = Uri.parse("smsto:${contact.phoneNumber}")
-                                    putExtra("sms_body", pinInstructions)
-                                }
-                                try {
-                                    context.startActivity(smsIntent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "No SMS app found", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.Filled.Send, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Text PIN + Download Link")
-                        }
                     }
                 }
                 LinkStatus.OUTBOUND_PENDING -> {

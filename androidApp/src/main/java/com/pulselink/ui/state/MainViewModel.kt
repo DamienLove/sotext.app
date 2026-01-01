@@ -17,7 +17,6 @@ import com.pulselink.data.assistant.NaturalLanguageCommandProcessor
 import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.data.alert.SoundCatalog
 import com.pulselink.data.link.ContactLinkManager
-import com.pulselink.data.contacts.DeviceContact
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.EscalationTier
@@ -31,15 +30,13 @@ import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.BetaAgreementRepository
 import com.pulselink.domain.repository.BlockedContactRepository
 import com.pulselink.domain.repository.ContactRepository
-import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.domain.repository.MessageRepository
-import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.service.AlertRouter
 import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.state.DndStatusMessage
 import com.pulselink.util.AudioOverrideManager
 import com.pulselink.widget.WidgetStateManager
-import java.util.UUID
 import com.pulselink.util.BeaconIconManager
 import com.pulselink.util.normalizeSmsAddress
 import com.pulselink.util.stripSmsDisplayName
@@ -103,7 +100,6 @@ class MainViewModel @Inject constructor(
     private var remoteSettingsListener: ListenerRegistration? = null
     private var remoteSettingsUserId: String? = null
     private var pushedThemeFromDevice = false
-    private var themePushJob: Job? = null
 
     private val _uiState = MutableStateFlow(PulseLinkUiState())
     val uiState: StateFlow<PulseLinkUiState> = _uiState
@@ -165,7 +161,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             firebaseAuthManager.authState.collect { state ->
                 val user = (state as? AuthState.Authenticated)?.user
-                if (user != null) {
+                if (user != null && !user.isAnonymous) {
                     syncProfileFromCloud(user)
                     syncContactsFromCloud(user)
                     linkManager.syncLinksOnLogin()
@@ -215,10 +211,8 @@ class MainViewModel @Inject constructor(
             }
 
             // Mirror to cloud for authenticated users
-            firebaseAuthManager.currentUser()?.let { user ->
-                if (!user.isAnonymous) {
-                    upsertContactInCloud(user, storedContact)
-                }
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                upsertContactInCloud(user, storedContact)
             }
 
             if (isNewContact) {
@@ -240,6 +234,12 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
+
+    fun markAlertsAsRead(alertIds: List<Long>) {
+        viewModelScope.launch {
+            alertRepository.markAsRead(alertIds)
+        }
+    }
     }
 
     fun markAlertsAsRead(alertIds: List<Long>) {
@@ -275,31 +275,10 @@ class MainViewModel @Inject constructor(
                 _deleteAccountState.value = DeleteAccountState.Success
                 firebaseAuthManager.signOut()
             } catch (e: Exception) {
-                FirebaseCrashlytics.getInstance().recordException(e)
                 Log.e(TAG, "Account deletion failed", e)
                 _deleteAccountState.value = DeleteAccountState.Error(e.message ?: "Unknown error")
             }
         }
-    }
-
-    suspend fun ensureContactForDeviceContact(deviceContact: DeviceContact): Long {
-        val normalized = normalizePhone(deviceContact.phoneNumber)
-        val existing = contactRepository.getByPhone(normalized)
-            ?: contactRepository.getByPhone(deviceContact.phoneNumber)
-
-        val target = existing?.copy(
-            displayName = if (existing.displayName.isBlank()) deviceContact.displayName else existing.displayName,
-            phoneNumber = if (existing.phoneNumber.isBlank()) deviceContact.phoneNumber else existing.phoneNumber
-        ) ?: Contact(
-            displayName = deviceContact.displayName.ifBlank { deviceContact.phoneNumber },
-            phoneNumber = deviceContact.phoneNumber
-        )
-
-        contactRepository.upsert(target)
-        val stored = contactRepository.getByPhone(normalized)
-            ?: contactRepository.getByPhone(deviceContact.phoneNumber)
-            ?: target
-        return stored.id
     }
 
     fun resetDeleteAccountState() {
@@ -395,7 +374,6 @@ class MainViewModel @Inject constructor(
                 settingsRepository.setBetaAgreementAcceptance(BETA_AGREEMENT_VERSION)
                 settingsRepository.setBetaTesterStatus(true)
             }.onFailure { error ->
-                FirebaseCrashlytics.getInstance().recordException(error)
                 Log.e(TAG, "Unable to persist local beta agreement acceptance", error)
             }.isSuccess
 
@@ -412,7 +390,6 @@ class MainViewModel @Inject constructor(
                         betaAgreementRepository.recordAgreement(name, BETA_AGREEMENT_VERSION)
                     }
                 }.onFailure { error ->
-                    FirebaseCrashlytics.getInstance().recordException(error)
                     Log.w(TAG, "Unable to upload beta agreement acceptance", error)
                 }
             }
@@ -465,23 +442,6 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.update { settings ->
                 settings.copy(messageNotificationVibrationPattern = key)
-            }
-        }
-    }
-
-    fun addCustomVibrationPattern(name: String, pattern: List<Long>) {
-        viewModelScope.launch {
-            val newPattern = com.pulselink.util.CustomVibrationPattern(
-                id = UUID.randomUUID().toString(),
-                name = name,
-                pattern = pattern
-            )
-            settingsRepository.update { settings ->
-                val updatedList = settings.customVibrationPatterns + newPattern
-                settings.copy(
-                    customVibrationPatterns = updatedList,
-                    messageNotificationVibrationPattern = newPattern.id
-                )
             }
         }
     }
@@ -1331,13 +1291,6 @@ class MainViewModel @Inject constructor(
         val osVersion = Build.VERSION.RELEASE ?: "unknown"
         val apiLevel = Build.VERSION.SDK_INT
 
-        val flavor = when {
-            BuildConfig.PREMIUM_FEATURES -> "premium"
-            BuildConfig.ADS_ENABLED -> "free"
-            else -> "pro"
-        }
-        val buildType = if (BuildConfig.DEBUG) "debug" else "release"
-
         val formattedBody = buildString {
             appendLine("Summary: ${bugReportData.summary}")
             appendLine()
@@ -1357,12 +1310,11 @@ class MainViewModel @Inject constructor(
             }
             appendLine()
             appendLine("App Version: $versionName ($versionCode)")
-            appendLine("Build Flavor: $flavor ($buildType)")
             appendLine("Device: $manufacturer $model")
             appendLine("OS: Android $osVersion (API $apiLevel)")
         }
 
-        val subjectSuffix = "[$flavor] ${bugReportData.summary.ifBlank { "General issue" }}"
+        val subjectSuffix = bugReportData.summary.ifBlank { "General issue" }
 
         return Uri.parse(BUG_REPORT_PAGE_URL).buildUpon()
             .appendQueryParameter("summary", bugReportData.summary)
@@ -1374,7 +1326,14 @@ class MainViewModel @Inject constructor(
             .appendQueryParameter("reporter", bugReportData.userEmail)
             .appendQueryParameter("version_name", versionName)
             .appendQueryParameter("version_code", versionCode.toString())
-            .appendQueryParameter("build_flavor", "$flavor ($buildType)")
+            .appendQueryParameter(
+                "build_flavor",
+                when {
+                    BuildConfig.PREMIUM_FEATURES -> "premium"
+                    BuildConfig.ADS_ENABLED -> "free"
+                    else -> "pro"
+                }
+            )
             .appendQueryParameter("device", "$manufacturer $model")
             .appendQueryParameter("os_version", "Android $osVersion (API $apiLevel)")
             .appendQueryParameter("summary_suffix", subjectSuffix)
@@ -1454,18 +1413,13 @@ class MainViewModel @Inject constructor(
     fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences) {
         viewModelScope.launch {
             val currentSettings = settingsRepository.settings.first()
-            if (currentSettings.themePreferences == theme) return@launch
-            
-            // Update local immediately
+            val oldTheme = currentSettings.themePreferences
             settingsRepository.setThemePreferences(theme)
-            
-            // Debounce cloud sync
-            themePushJob?.cancel()
-            themePushJob = viewModelScope.launch {
-                delay(500)
-                (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
-                    pushThemeToCloud(user, theme)
-                }
+            if (currentSettings.beaconLauncherEnabled && oldTheme.inboxIconVariant != theme.inboxIconVariant) {
+                applyInboxIconVariant(theme.inboxIconVariant, enabled = true)
+            }
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushThemeToCloud(user, theme)
             }
         }
     }
@@ -1474,7 +1428,6 @@ class MainViewModel @Inject constructor(
         try {
             BeaconIconManager.apply(context, variant, enabled)
         } catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
             Log.e(TAG, "Failed to update app icon", e)
         }
     }
@@ -1563,18 +1516,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun setMergedExperienceEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.setMergedExperienceEnabled(enabled)
-        }
-    }
-
-    fun setUnifiedDisplayName(name: String?) {
-        viewModelScope.launch {
-            settingsRepository.update { it.copy(unifiedDisplayName = name) }
-        }
-    }
-
     fun setCrashDetectionEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setCrashDetectionEnabled(enabled)
@@ -1634,9 +1575,7 @@ class MainViewModel @Inject constructor(
         private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
-        // Use the owned bug-report landing page on damiennichols.com to avoid any
-        // third-party redirects or wrong destinations.
-        const val BUG_REPORT_PAGE_URL = "https://damiennichols.com/report-bug"
+        const val BUG_REPORT_PAGE_URL = "https://pulselink.app/bug-report/"
     }
 }
 

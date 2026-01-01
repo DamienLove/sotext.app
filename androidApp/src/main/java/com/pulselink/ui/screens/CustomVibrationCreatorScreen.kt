@@ -60,7 +60,7 @@ import java.util.UUID
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomVibrationCreatorScreen(
-    onSave: (String, List<Long>) -> Unit,
+    onSave: (String, LongArray) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -328,7 +328,7 @@ fun CustomVibrationCreatorScreen(
                     onClick = {
                         if (patternName.isNotBlank()) {
                             val pattern = buildPattern()
-                            onSave(patternName, pattern.toList())
+                            onSave(patternName, pattern)
                             showSaveDialog = false
                             onBack()
                         }

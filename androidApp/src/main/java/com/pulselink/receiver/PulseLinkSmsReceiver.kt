@@ -89,14 +89,14 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                         if (otpCode != null) {
                             OtpNotifier.notify(context, origin, otpCode)
                         }
-                        
+
                         val pinMatch = PIN_REGEX.find(body)
                         if (pinMatch != null) {
                             val pin = pinMatch.groupValues[1]
                             val normalized = PhoneNumberUtils.normalizeNumber(origin)
                             val contact = contactRepository.getByPhone(origin)
                                 ?: contactRepository.getByPhone(normalized)
-                            
+
                             if (contact != null && contact.remotePin == pin) {
                                 val tier = EscalationTier.EMERGENCY
                                 remoteActionHandler.playAttentionTone(

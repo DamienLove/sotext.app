@@ -39,7 +39,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import android.app.role.RoleManager
-import android.app.Activity
 import android.content.pm.PackageManager
 import android.content.Intent
 import android.net.Uri
@@ -114,24 +113,24 @@ private fun BeaconNav(
     var notificationsSilent by remember {
         mutableStateOf(com.pulselink.beacon.notifications.MessageNotificationManager.isMessageChannelSilent(context))
     }
-
-    val runSmsCheck: suspend (Int) -> Unit = { attempts ->
-        val latest = checkDefaultSmsWithRetry(context, maxAttempts = attempts)
-        isDefaultSms = latest
+    val refreshDefaultSms = remember {
+        suspend {
+            val latest = checkDefaultSmsWithRetry(context)
+            isDefaultSms = latest
+            latest
+        }
     }
-
-    val launchDefaultSmsCheck: (Int) -> Unit = { attempts ->
-        if (defaultSmsCheckJob?.isActive != true) {
-            isCheckingDefaultSms = true
-            defaultSmsCheckJob = scope.launch {
-                try {
-                    runSmsCheck(attempts)
-                    missingPerms = requiredPermissions(context)
-                    missingReadPerms = requiredReadPermissions(context)
-                } finally {
-                    isCheckingDefaultSms = false
-                    defaultSmsCheckJob = null
-                }
+    val launchDefaultSmsCheck: () -> Unit = {
+        if (defaultSmsCheckJob?.isActive == true) return@launchDefaultSmsCheck
+        isCheckingDefaultSms = true
+        defaultSmsCheckJob = scope.launch {
+            try {
+                refreshDefaultSms()
+                missingPerms = requiredPermissions(context)
+                missingReadPerms = requiredReadPermissions(context)
+            } finally {
+                isCheckingDefaultSms = false
+                defaultSmsCheckJob = null
             }
         }
     }
@@ -145,14 +144,12 @@ private fun BeaconNav(
 
     val defaultSmsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            launchDefaultSmsCheck(7)
-        }
+    ) {
+        launchDefaultSmsCheck()
     }
 
     LaunchedEffect(Unit) {
-        launchDefaultSmsCheck(1)
+        launchDefaultSmsCheck()
     }
 
     LaunchedEffect(isDefaultSms, missingReadPerms) {
@@ -173,7 +170,7 @@ private fun BeaconNav(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                launchDefaultSmsCheck(1)
+                launchDefaultSmsCheck()
                 notificationsEnabled = com.pulselink.beacon.notifications.MessageNotificationManager.areNotificationsEnabled(context)
                 notificationsSilent = com.pulselink.beacon.notifications.MessageNotificationManager.isMessageChannelSilent(context)
             }
@@ -215,9 +212,9 @@ private fun BeaconNav(
                     onRequestDefault = {
                         buildDefaultSmsRequestIntent(context)?.let { intent ->
                             defaultSmsLauncher.launch(intent)
-                        } ?: launchDefaultSmsCheck(7)
+                        } ?: launchDefaultSmsCheck()
                     },
-                    onRefreshDefaultStatus = { launchDefaultSmsCheck(7) },
+                    onRefreshDefaultStatus = launchDefaultSmsCheck,
                     onOpenThread = { id, address ->
                         vm.openThread(id, address)
                         navController.navigate("thread/$id/${Uri.encode(address)}")
@@ -353,6 +350,24 @@ private fun BeaconNav(
 }
 
 private fun buildDefaultSmsRequestIntent(context: android.content.Context): Intent? {
+    val packageName = context.packageName
+    if (isDefaultSmsRoleHeld(context)) return null
+
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val roleManager = context.getSystemService(RoleManager::class.java)
+        if (roleManager?.isRoleAvailable(RoleManager.ROLE_SMS) == true) {
+            roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
+        } else {
+            null
+        }
+    } else {
+        Intent(Telephony.Sms.Intents.ACTION_CHANGE_DEFAULT).apply {
+            putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, packageName)
+        }
+    }
+}
+
+private fun requestDefaultSms(context: android.content.Context) {
     val packageName = context.packageName
     if (isDefaultSmsRoleHeld(context)) return null
 
