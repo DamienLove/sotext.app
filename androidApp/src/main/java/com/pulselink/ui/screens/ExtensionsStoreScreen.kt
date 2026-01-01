@@ -31,12 +31,15 @@ data class FeatureToggle(
     val isEnabled: Boolean,
     val onToggle: (Boolean) -> Unit,
     val isAvailable: Boolean = true,
-    val requiresPremium: Boolean = false
+    val requiresPremium: Boolean = false,
+    val plannedPriceLabel: String? = null
 )
 
 private enum class StoreFilter {
     ALL, INSTALLED, PREMIUM
 }
+
+private const val SHOW_PRICE_PREVIEW = false
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +77,8 @@ fun ExtensionsStoreScreen(
                 icon = Icons.Filled.Laptop,
                 isEnabled = settings.remoteWebAccessEnabled,
                 onToggle = onToggleRemoteWebAccess,
-                requiresPremium = true
+                requiresPremium = true,
+                plannedPriceLabel = "$4.99/mo (planned)"
             ),
             FeatureToggle(
                 id = "ai",
@@ -83,7 +87,8 @@ fun ExtensionsStoreScreen(
                 icon = Icons.Filled.SmartToy,
                 isEnabled = settings.aiSummariesEnabled,
                 onToggle = onToggleAiSummaries,
-                requiresPremium = true
+                requiresPremium = true,
+                plannedPriceLabel = "$4.99/mo (planned)"
             ),
             FeatureToggle(
                 id = "relay",
@@ -116,7 +121,8 @@ fun ExtensionsStoreScreen(
                 icon = Icons.Filled.Extension,
                 isEnabled = settings.thirdPartyExtensionsEnabled,
                 onToggle = onToggleThirdPartyExtensions,
-                requiresPremium = true
+                requiresPremium = true,
+                plannedPriceLabel = "$1.99/mo (planned)"
             ),
             FeatureToggle(
                 id = "merged_experience",
@@ -270,6 +276,15 @@ fun StoreItemCard(feature: FeatureToggle, premiumActive: Boolean) {
                     overflow = TextOverflow.Ellipsis,
                     minLines = 2
                 )
+                if (SHOW_PRICE_PREVIEW && feature.plannedPriceLabel != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = feature.plannedPriceLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

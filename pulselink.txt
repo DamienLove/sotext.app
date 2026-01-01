@@ -130,3 +130,4 @@ Current SMS features
 - Web deployed to pulselink-24899.web.app with Beacon-forward hero/CTA and unified Beacon inbox shortcuts.
 - 2026-01-01: Web Extensions panel now shows a full Extension Store with toggles per add-on synced to Firestore; IoT/feature switches remain in settings. App-open/full-screen ads suppressed (banners only) and cooldown raised to 12h to stop blocking Beacon inbox; Android versionCode/Name bumped to 100 and free/pro AABs rebuilt (copied to disposable_aabs/ with release-notes-2026-01-01-v100.txt). Bug report button continues to open https://damiennichols.com/report-bug.
 - 2026-01-01: Extension badges now state Premium (not Pro) in Android Extension Store; version bump to 101 and rebuilt free/pro AABs (copied to disposable_aabs/, release-notes-2026-01-01-v101.txt).
+- 2026-01-01: Pre-wired extension pricing metadata (planned price labels) on web + Android Extension Store; pricing preview remains hidden until enabled.

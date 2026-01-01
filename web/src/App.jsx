@@ -789,12 +789,15 @@ const themePresets = [
   }
 ];
 
+const showExtensionPricingPreview = false;
+
 const extensionCatalog = [
   {
     id: "guardian-ai",
     name: "Guardian AI Summaries",
     icon: "🤖",
     description: "Generate concise summaries for long SMS threads and alerts.",
+    plannedPriceLabel: "$4.99/mo (planned)",
     scopes: ["sms", "ai"],
   },
   {
@@ -802,6 +805,7 @@ const extensionCatalog = [
     name: "Beacon IoT Bridge",
     icon: "🛜",
     description: "Trigger home devices (locks/lights) from Beacon emergency flows.",
+    plannedPriceLabel: "$1.99/mo (planned)",
     scopes: ["iot_control", "beacon_control"],
   },
   {
@@ -809,6 +813,7 @@ const extensionCatalog = [
     name: "Spam Shield",
     icon: "🛡️",
     description: "Enhanced caller/spam screening layered on Truecaller + local rules.",
+    plannedPriceLabel: "$2.99/mo (planned)",
     scopes: ["sms", "contacts"],
   },
   {
@@ -816,6 +821,7 @@ const extensionCatalog = [
     name: "Theme Sync Pro",
     icon: "🎨",
     description: "Sync themes across web/mobile and publish to teammates.",
+    plannedPriceLabel: "$0.99/mo (planned)",
     scopes: ["theme"],
   }
 ];
@@ -3522,6 +3528,11 @@ feature_switches:
                             <div>
                               <div className="extension-name">{ext.name}</div>
                               <div className="extension-desc">{ext.description}</div>
+                              {showExtensionPricingPreview && ext.plannedPriceLabel && (
+                                <div className="extension-desc" style={{ fontStyle: 'italic' }}>
+                                  {ext.plannedPriceLabel}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="extension-scopes">
