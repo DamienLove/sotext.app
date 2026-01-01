@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback, Fragment } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -1243,7 +1243,7 @@ function App() {
   const [isPremiumUser, setIsPremiumUser] = useState(null); // null = loading   
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [navLogo, setNavLogo] = useState(logo);
+  const [navLogoState, setNavLogoState] = useState(logo);
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
@@ -1255,7 +1255,7 @@ function App() {
 
   useEffect(() => {
     const unifiedEnabled = remoteSettings.beaconFirstEnabled && remoteSettings.emergencyWebEnabled;
-    setNavLogo(unifiedEnabled ? unifiedLogo : logo);
+    setNavLogoState(unifiedEnabled ? unifiedLogo : logo);
   }, [remoteSettings.beaconFirstEnabled, remoteSettings.emergencyWebEnabled]);
 
   useEffect(() => {
@@ -2462,7 +2462,7 @@ function App() {
         <div className="sidebar">
           <div className="sidebar-header">
             <div className="sidebar-brand">
-              <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
+              <img src={navLogoState} alt="PulseLink Suite" className="brand-logo small" />
               <div>
                 <div className="brand-title">PulseLink Suite</div>
                 <div className="brand-subtitle">Premium Web Access</div>
@@ -2955,6 +2955,13 @@ function App() {
                   <div className="settings-note">
                     Coming soon: publish to the Extensions Store, sandbox test harness, IoT device simulator (lights/locks), and webhook request replay.
                   </div>
+                </div>
+                <div className="settings-card">
+                  <h4>&quot;Future Deep&quot; Theme</h4>
+                  <p className="settings-desc">
+                    The signature look of PulseLink. Glassmorphism, deep dark backgrounds, and electric cyan accents.
+                    Designed to look like it&apos;s from 2050.
+                  </p>
                 </div>
                 <div className="settings-card">
                   <h4>Sample feature switch payload</h4>
@@ -3514,7 +3521,7 @@ feature_switches:
                   </div>
                   {!remoteSettings.extensionStoreEnabled && (
                     <div className="settings-note" style={{ marginBottom: 12 }}>
-                      Turn on "Extensions Store" above to manage extensions.
+                      Turn on &quot;Extensions Store&quot; above to manage extensions.
                     </div>
                   )}
                   <div className="extensions-grid">
