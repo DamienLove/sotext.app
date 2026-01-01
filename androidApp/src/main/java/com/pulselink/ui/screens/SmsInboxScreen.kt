@@ -241,7 +241,8 @@ fun SmsInboxScreen(
         )
     }
     val backgroundImageUrl = theme.backgroundImageUrl?.takeIf { it.isNotBlank() }
-    val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
+    // Make background images more legible in unified/Beacon modes
+    val overlayAlpha = if (backgroundImageUrl != null) 0.6f else 1f
     val bgModifier = remember(theme, colorScheme) {
         if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
             Modifier.background(

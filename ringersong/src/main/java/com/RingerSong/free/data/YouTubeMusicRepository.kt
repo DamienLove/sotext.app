@@ -2,6 +2,7 @@ package com.RingerSong.free.data
 
 import android.content.Context
 import android.util.Log
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.RingerSong.free.BuildConfig
 import com.RingerSong.free.util.NetworkUtils
 import com.google.gson.Gson
@@ -112,6 +113,7 @@ class YouTubeMusicRepository(private val context: Context) {
             Log.d(TAG, "Fetched ${playlistResponse.data?.videos?.size ?: 0} videos")
             return@withContext playlistResponse.data?.videos
         } catch (e: Exception) {
+            FirebaseCrashlytics.getInstance().recordException(e)
             Log.e(TAG, "Error fetching playlist", e)
             return@withContext null
         }

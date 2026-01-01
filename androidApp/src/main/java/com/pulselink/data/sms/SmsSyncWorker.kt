@@ -11,6 +11,7 @@ import com.google.firebase.firestore.SetOptions
 import com.pulselink.data.contacts.DeviceContactsRepository
 import com.pulselink.BuildConfig
 import com.pulselink.domain.repository.SettingsRepository
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import android.os.Build
@@ -127,6 +128,7 @@ class SmsSyncWorker @AssistedInject constructor(
             }
             Result.success()
         } catch (e: Exception) {
+            FirebaseCrashlytics.getInstance().recordException(e)
             e.printStackTrace()
             Result.retry()
         }

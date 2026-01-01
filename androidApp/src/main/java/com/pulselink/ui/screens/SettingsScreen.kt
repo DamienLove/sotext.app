@@ -199,7 +199,7 @@ fun SettingsScreen(
                 if (settings.crashDetectionEnabled) {
                     SettingsToggleRow(
                         title = "Crash Detection",
-                        subtitle = "Alert trusted contacts if a vehicle crash is detected. (Temporarily unavailable)",
+                        subtitle = "Alert trusted contacts if a vehicle crash is detected.",
                         checked = settings.crashDetectionEnabled,
                         enabled = false,
                         onCheckedChange = onToggleCrashDetection
@@ -416,17 +416,6 @@ fun SettingsScreen(
                     title = "Beacon Feature",
                     initiallyExpanded = false
                 ) {
-                val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
-                val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                SettingsActionRow(
-                    title = "Default SMS Check",
-                    subtitle = if (isDefaultSmsApp) "PulseLink is your default SMS app" else "PulseLink is NOT set as default",
-                    actionLabel = "Check",
-                    onAction = onRequestDefaultSms,
-                    leadingIcon = smsStatusIcon,
-                    iconTint = smsStatusColor
-                )
-
                 SettingsToggleRow(
                     title = stringResource(id = R.string.settings_beacon_icon_title),
                     subtitle = stringResource(id = R.string.settings_beacon_icon_subtitle),

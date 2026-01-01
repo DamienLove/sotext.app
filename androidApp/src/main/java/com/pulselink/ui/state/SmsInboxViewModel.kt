@@ -20,6 +20,7 @@ import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.util.normalizeSmsAddress
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -91,13 +92,20 @@ class SmsInboxViewModel @Inject constructor(
             val deviceId = deviceLineId.value.ifBlank {
                 settingsRepository.ensureDeviceId().also { deviceLineId.value = it }
             }
-            val (threads, archived) = withContext(Dispatchers.IO) {
-                smsRepository.listThreadsAndArchived(
-                    limit = currentThreadLimit,
-                    fromSmsOnly = false,
-                    forceRefresh = force
-                )
-            }
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    smsRepository.listThreadsAndArchived(
+                        limit = currentThreadLimit,
+                        fromSmsOnly = false,
+                        forceRefresh = force
+                    )
+                }
+            }.onFailure { error ->
+                FirebaseCrashlytics.getInstance().recordException(error)
+            }.getOrNull()
+
+            if (result == null) return@launch
+            val (threads, archived) = result
             if (!force &&
                 threads.isEmpty() &&
                 archived.isEmpty() &&
@@ -210,11 +218,13 @@ class SmsInboxViewModel @Inject constructor(
             deviceLineId.value = settingsRepository.ensureDeviceId()
         }
 
-        settingsRepository.settings
-            .onEach { settings ->
+        combine(settingsRepository.settings, deviceLineId) { settings, deviceId ->
+            Pair(settings, deviceId)
+        }
+            .onEach { (settings, deviceId) ->
                 _inboxMode.value = settings.lineInboxMode
-                _activeLineId.value = settings.activeLineId ?: settings.deviceId.ifBlank { deviceLineId.value }
-                if (settings.deviceId.isNotBlank() && deviceLineId.value != settings.deviceId) {
+                _activeLineId.value = settings.activeLineId ?: settings.deviceId.ifBlank { deviceId }
+                if (settings.deviceId.isNotBlank() && deviceId != settings.deviceId) {
                     deviceLineId.value = settings.deviceId
                 }
             }
@@ -464,6 +474,7 @@ class SmsThreadViewModel @Inject constructor(
                                 anySuccess = anySuccess || sent
                             }
                         } catch (e: Exception) {
+                            FirebaseCrashlytics.getInstance().recordException(e)
                             e.printStackTrace()
                         }
                     }

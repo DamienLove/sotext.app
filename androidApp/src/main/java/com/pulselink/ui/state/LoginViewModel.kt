@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.installations.FirebaseInstallationsException
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.pulselink.R
 import com.pulselink.auth.AuthState
 import com.pulselink.auth.FirebaseAuthManager
@@ -90,6 +91,9 @@ class LoginViewModel @Inject constructor(
                 }
                 delay(AUTH_SYNC_DELAY_MS)
             } else {
+                result.exceptionOrNull()?.let {
+                    FirebaseCrashlytics.getInstance().recordException(it)
+                }
                 Log.w(TAG, "Auth ${state.mode} failed", result.exceptionOrNull())
             }
             _uiState.update {

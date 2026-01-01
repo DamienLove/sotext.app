@@ -31,8 +31,9 @@ import com.pulselink.domain.repository.AlertRepository
 import com.pulselink.domain.repository.BetaAgreementRepository
 import com.pulselink.domain.repository.BlockedContactRepository
 import com.pulselink.domain.repository.ContactRepository
-import com.pulselink.domain.repository.MessageRepository
 import com.pulselink.domain.repository.SettingsRepository
+import com.pulselink.domain.repository.MessageRepository
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.pulselink.service.AlertRouter
 import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.state.DndStatusMessage
@@ -102,6 +103,7 @@ class MainViewModel @Inject constructor(
     private var remoteSettingsListener: ListenerRegistration? = null
     private var remoteSettingsUserId: String? = null
     private var pushedThemeFromDevice = false
+    private var themePushJob: Job? = null
 
     private val _uiState = MutableStateFlow(PulseLinkUiState())
     val uiState: StateFlow<PulseLinkUiState> = _uiState
@@ -214,7 +216,9 @@ class MainViewModel @Inject constructor(
 
             // Mirror to cloud for authenticated users
             firebaseAuthManager.currentUser()?.let { user ->
-                upsertContactInCloud(user, storedContact)
+                if (!user.isAnonymous) {
+                    upsertContactInCloud(user, storedContact)
+                }
             }
 
             if (isNewContact) {
@@ -236,12 +240,6 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
-
-    fun markAlertsAsRead(alertIds: List<Long>) {
-        viewModelScope.launch {
-            alertRepository.markAsRead(alertIds)
-        }
-    }
     }
 
     fun markAlertsAsRead(alertIds: List<Long>) {
@@ -277,6 +275,7 @@ class MainViewModel @Inject constructor(
                 _deleteAccountState.value = DeleteAccountState.Success
                 firebaseAuthManager.signOut()
             } catch (e: Exception) {
+                FirebaseCrashlytics.getInstance().recordException(e)
                 Log.e(TAG, "Account deletion failed", e)
                 _deleteAccountState.value = DeleteAccountState.Error(e.message ?: "Unknown error")
             }
@@ -396,6 +395,7 @@ class MainViewModel @Inject constructor(
                 settingsRepository.setBetaAgreementAcceptance(BETA_AGREEMENT_VERSION)
                 settingsRepository.setBetaTesterStatus(true)
             }.onFailure { error ->
+                FirebaseCrashlytics.getInstance().recordException(error)
                 Log.e(TAG, "Unable to persist local beta agreement acceptance", error)
             }.isSuccess
 
@@ -412,6 +412,7 @@ class MainViewModel @Inject constructor(
                         betaAgreementRepository.recordAgreement(name, BETA_AGREEMENT_VERSION)
                     }
                 }.onFailure { error ->
+                    FirebaseCrashlytics.getInstance().recordException(error)
                     Log.w(TAG, "Unable to upload beta agreement acceptance", error)
                 }
             }
@@ -1452,13 +1453,18 @@ class MainViewModel @Inject constructor(
     fun setThemePreferences(theme: com.pulselink.domain.model.ThemePreferences) {
         viewModelScope.launch {
             val currentSettings = settingsRepository.settings.first()
-            val oldTheme = currentSettings.themePreferences
+            if (currentSettings.themePreferences == theme) return@launch
+            
+            // Update local immediately
             settingsRepository.setThemePreferences(theme)
-            if (currentSettings.beaconLauncherEnabled && oldTheme.inboxIconVariant != theme.inboxIconVariant) {
-                applyInboxIconVariant(theme.inboxIconVariant, enabled = true)
-            }
-            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
-                pushThemeToCloud(user, theme)
+            
+            // Debounce cloud sync
+            themePushJob?.cancel()
+            themePushJob = viewModelScope.launch {
+                delay(500)
+                (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                    pushThemeToCloud(user, theme)
+                }
             }
         }
     }
@@ -1467,6 +1473,7 @@ class MainViewModel @Inject constructor(
         try {
             BeaconIconManager.apply(context, variant, enabled)
         } catch (e: Exception) {
+            FirebaseCrashlytics.getInstance().recordException(e)
             Log.e(TAG, "Failed to update app icon", e)
         }
     }

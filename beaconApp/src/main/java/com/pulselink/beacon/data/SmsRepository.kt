@@ -9,6 +9,7 @@ import android.os.Build
 import android.app.role.RoleManager
 import android.provider.ContactsContract
 import android.provider.Telephony
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import androidx.core.content.ContextCompat
 import com.pulselink.beacon.data.MmsPart
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -109,6 +110,7 @@ class SmsRepository(private val context: Context) {
             runCatching {
                 context.contentResolver.query(Telephony.Threads.CONTENT_URI, projection, selection, selectionArgs, "${Telephony.Threads.DATE} DESC")
             }.getOrElse {
+                FirebaseCrashlytics.getInstance().recordException(it)
                 android.util.Log.e("SmsRepository", "Error fetching specific threads", it)
                 null
             }?.use { c ->
@@ -155,6 +157,7 @@ class SmsRepository(private val context: Context) {
                 "${Telephony.Threads.DATE} DESC"
             )
         }.getOrElse {
+            FirebaseCrashlytics.getInstance().recordException(it)
             android.util.Log.e("SmsRepository", "Error fetching threads", it)
             null
         }?.use { c ->

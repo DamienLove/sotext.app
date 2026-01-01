@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import coil.compose.AsyncImage
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.util.parseColorOr
@@ -42,6 +43,13 @@ fun VisualSettingsScreen(
 ) {
     var activeTab by remember { mutableStateOf(0) }
     var tempTheme by remember(theme) { mutableStateOf(theme) }
+
+    LaunchedEffect(tempTheme) {
+        if (activeTab == 1 && tempTheme != theme) { // Customize tab
+            delay(300)
+            onSelectTheme(tempTheme)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -68,14 +76,14 @@ fun VisualSettingsScreen(
             if (activeTab == 0) {
                 ThemesTab(onSelect = {
                     tempTheme = it
-                    onSelectTheme(it)
+                    onSelectTheme(it) // Immediate update for presets
                 })
             } else {
                 CustomizeTab(
                     theme = tempTheme,
                     onUpdate = {
                         tempTheme = it
-                        onSelectTheme(it)
+                        // Debounced via LaunchedEffect
                     },
                     isGlobal = isGlobal
                 )
