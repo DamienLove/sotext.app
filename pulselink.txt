@@ -118,9 +118,12 @@ Current SMS features
 - 2026-01-01: Bug report entry in MainViewModel now points to https://damiennichols.com/report-bug so in-app report opens our owned page instead of an external site.
 - 2026-01-01: Rebuilt PulseLink free/pro AABs after bug-report link fix; copied to disposable_aabs/ (premium flavor now skipped by default).
 - 2026-01-01: Reduced app-open ads to at most once every 30 minutes per session to prevent blocking Beacon inbox; version bumped to 99.
+- 2026-01-01: Web portal now exposes Extensions Store/Feature Switches/IoT Remote Control toggles; values stored on user doc alongside thirdPartyExtensionsEnabled for remote control. Premium flavor build disabled by default; use -PenablePremiumBuild to generate.
 2026-01-01
 - Unified home quick actions now collapse instead of disappearing; big red emergency + check-in buttons stay visible (scaled) in unified mode.
 - Header/mini widget switch to Beacon-forward styling when mergedExperienceEnabled, with shortcut to Beacon inbox and contacts.
 - Home start destination respects onboarding and merged experience (defaults to unified_inbox when enabled).
 2026-01-01
 - Web: Added Beacon-forward home hero with red emergency CTA + widget; Beacon inbox/contacts shortcuts prioritized on landing; built web dist.
+2026-01-01
+- Web deployed to pulselink-24899.web.app with Beacon-forward hero/CTA and unified Beacon inbox shortcuts.

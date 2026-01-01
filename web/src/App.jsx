@@ -1156,7 +1156,10 @@ function App() {
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
     timeFormat: 'AUTO',
-    thirdPartyExtensionsEnabled: false
+    thirdPartyExtensionsEnabled: false,
+    extensionStoreEnabled: false,
+    iotRemoteControlEnabled: false,
+    featureSwitchesEnabled: false
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1432,7 +1435,10 @@ function App() {
         remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? false,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
-        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? false
+        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? false,
+        extensionStoreEnabled: data.extensionStoreEnabled ?? false,
+        iotRemoteControlEnabled: data.iotRemoteControlEnabled ?? false,
+        featureSwitchesEnabled: data.featureSwitchesEnabled ?? false
       });
 
       // Check for theme and avatar unlocks
@@ -2118,6 +2124,9 @@ function App() {
         autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
         timeFormat: remoteSettings.timeFormat,
         thirdPartyExtensionsEnabled: remoteSettings.thirdPartyExtensionsEnabled,
+        extensionStoreEnabled: remoteSettings.extensionStoreEnabled,
+        iotRemoteControlEnabled: remoteSettings.iotRemoteControlEnabled,
+        featureSwitchesEnabled: remoteSettings.featureSwitchesEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -2449,6 +2458,15 @@ function App() {
               <SettingsIcon />
               <span>Settings</span>
             </button>
+            <button
+              className={`nav-item ${activePanel === 'dev' ? 'active' : ''}`}
+              onClick={() => setActivePanel('dev')}
+              title="Developer"
+              aria-current={activePanel === 'dev' ? 'page' : undefined}
+            >
+              <span role="img" aria-label="Dev">🧰</span>
+              <span>Dev</span>
+            </button>
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
@@ -2775,6 +2793,91 @@ function App() {
                     </button>
                   </div>
                   {contactStatus && <div className="settings-status" role="status" aria-live="polite">{contactStatus}</div>}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activePanel === 'dev' && (
+            <div className="pulselink-panel">
+              <div className="panel-header">
+                <h3>Developer</h3>
+                <p>Build extensions and remotely control PulseLink/Beacon features and IoT hooks.</p>
+              </div>
+              <div className="settings-grid">
+                <div className="settings-card">
+                  <h4>Capability Switches</h4>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.thirdPartyExtensionsEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
+                    />
+                    Enable 3rd-party extensions
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.extensionStoreEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, extensionStoreEnabled: e.target.checked }))}
+                    />
+                    Enable Extensions Store (web + mobile)
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.featureSwitchesEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, featureSwitchesEnabled: e.target.checked }))}
+                    />
+                    Enable Feature Switches sync
+                  </label>
+                  <label className="settings-toggle">
+                    <input
+                      type="checkbox"
+                      checked={remoteSettings.iotRemoteControlEnabled}
+                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, iotRemoteControlEnabled: e.target.checked }))}
+                    />
+                    Allow IoT remote control (beta)
+                  </label>
+                  <button
+                    className="primary-btn"
+                    type="button"
+                    onClick={handleRemoteSettingsSave}
+                    disabled={isSavingSettings}
+                    aria-busy={isSavingSettings}
+                  >
+                    {isSavingSettings ? (
+                      <>
+                        <Spinner />
+                        Saving...
+                      </>
+                    ) : 'Save dev switches'}
+                  </button>
+                  {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
+                </div>
+                <div className="settings-card">
+                  <h4>How to build an extension (preview)</h4>
+                  <ol className="settings-note" style={{ paddingLeft: 18, marginTop: 8 }}>
+                    <li>Authenticate in mobile app and toggle “Enable 3rd-party extensions”.</li>
+                    <li>Use this Dev panel to turn on “Extensions Store” and “Feature Switches”.</li>
+                    <li>Target the PulseLink webhook: <code>https://api.pulselink.app/extensions</code> (per-extension auth token required).</li>
+                    <li>Extension manifest (YAML/JSON) should declare: name, version, scopes (sms, contacts, beacon_control, iot_control), and webhook URL.</li>
+                    <li>Actions return JSON with status, message, and optional payload; errors must include code + reason.</li>
+                  </ol>
+                  <div className="settings-note">
+                    Coming soon: publish to the Extensions Store, sandbox test harness, and sample IoT device control (lights/locks) via secure MQTT bridge.
+                  </div>
+                </div>
+                <div className="settings-card">
+                  <h4>Sample feature switch payload</h4>
+                  <pre className="code-block" aria-label="feature switch example">
+{`{
+  "feature": "beacon_iot_remote",
+  "enabled": true,
+  "deviceIds": ["garage-door", "front-lights"],
+  "allowFromWeb": true
+}`}
+                  </pre>
                 </div>
               </div>
             </div>
@@ -3263,23 +3366,62 @@ function App() {
             <div className="pulselink-panel">
               <div className="panel-header">
                 <h3>Extensions</h3>
-                <p>Attach third-party add-ons to PulseLink / Beacon once enabled. Web access mirrors the mobile toggle.</p>
+                <p>Attach third-party add-ons and remotely toggle IoT/feature switches. Web access mirrors the mobile toggle.</p>
               </div>
               <div className="settings-card">
                 <p className="settings-note" style={{ marginBottom: 12 }}>
                   Status: {remoteSettings.thirdPartyExtensionsEnabled ? "Enabled (beta)" : "Disabled"}.
-                  Turn this on in Settings to allow extensions in both the app and web.
                 </p>
-                {!remoteSettings.thirdPartyExtensionsEnabled && (
-                  <button className="primary-btn" type="button" onClick={() => setActivePanel('settings')}>
-                    Enable in Settings
-                  </button>
-                )}
-                {remoteSettings.thirdPartyExtensionsEnabled && (
-                  <div className="settings-note">
-                    Extension marketplace coming soon. Admins can still side-load trusted extensions via mobile until then.
-                  </div>
-                )}
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={remoteSettings.thirdPartyExtensionsEnabled}
+                    onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
+                  />
+                  Enable 3rd-party extensions (mirrors mobile)
+                </label>
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={remoteSettings.extensionStoreEnabled}
+                    onChange={(e) => setRemoteSettings((prev) => ({ ...prev, extensionStoreEnabled: e.target.checked }))}
+                    disabled={!remoteSettings.thirdPartyExtensionsEnabled}
+                  />
+                  Enable Extensions Store (web + mobile)
+                </label>
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={remoteSettings.featureSwitchesEnabled}
+                    onChange={(e) => setRemoteSettings((prev) => ({ ...prev, featureSwitchesEnabled: e.target.checked }))}
+                    disabled={!remoteSettings.thirdPartyExtensionsEnabled}
+                  />
+                  Enable Feature Switches sync
+                </label>
+                <label className="settings-toggle">
+                  <input
+                    type="checkbox"
+                    checked={remoteSettings.iotRemoteControlEnabled}
+                    onChange={(e) => setRemoteSettings((prev) => ({ ...prev, iotRemoteControlEnabled: e.target.checked }))}
+                    disabled={!remoteSettings.thirdPartyExtensionsEnabled}
+                  />
+                  Allow IoT remote control (beta)
+                </label>
+                <button
+                  className="primary-btn"
+                  type="button"
+                  onClick={handleRemoteSettingsSave}
+                  disabled={isSavingSettings}
+                  aria-busy={isSavingSettings}
+                >
+                  {isSavingSettings ? (
+                    <>
+                      <Spinner />
+                      Saving...
+                    </>
+                  ) : 'Save extension settings'}
+                </button>
+                {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
               </div>
             </div>
           )}
