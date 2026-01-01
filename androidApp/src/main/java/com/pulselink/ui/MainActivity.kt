@@ -2049,23 +2049,23 @@ class MainActivity : AppCompatActivity() {
                     }
                     composable("bug_report") {
                         val context = LocalContext.current
-                        val uri = remember(context) {
-                            viewModel.buildBugReportUri(
-                                context,
-                                BugReportData(
-                                    summary = "",
-                                    stepsToReproduce = "",
-                                    expectedBehavior = "",
-                                    actualBehavior = "",
-                                    frequency = "",
-                                    severity = "",
-                                    userEmail = ""
-                                )
-                            )
+                        var bugReportData by rememberSaveable(stateaver = com.pulselink.ui.screens.BugReportDataSaver) {
+                            mutableStateOf(com.pulselink.ui.screens.BugReportData())
                         }
-                        BugReportWebScreen(
-                            url = uri.toString(),
-                            onBack = { navController.popBackStack() }
+                        com.pulselink.ui.screens.BugReportScreen(
+                            data = bugReportData,
+                            onDataChange = { bugReportData = it },
+                            onBack = { navController.popBackStack() },
+                            onSubmit = { data ->
+                                val uri = viewModel.buildBugReportUri(context, data)
+                                val intent = Intent(Intent.ACTION_VIEW, uri)
+                                try {
+                                    context.startActivity(intent)
+                                    navController.popBackStack()
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Unable to open bug report page", Toast.LENGTH_LONG).show()
+                                }
+                            }
                         )
                     }
                     composable("beta_testers") {
