@@ -10,7 +10,7 @@ Recent work
 - 2025-12-30: Bumped PulseLink to v93 (free/pro); rebuilt release AABs at androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab and .../proRelease/androidApp-pro-release.aab. RingerSong remains v20 (bundle rebuilt).
 - 2025-12-30: Added SMS attachment picker in Beacon threads (paperclip button opens file picker + SMS/MMS send intent); rebuilt PulseLink v92 (free/pro) and RingerSong v20 release bundles.
 - 2025-12-30: Version bump — PulseLink v92 (free/pro) and RingerSong v20; premium branding shows gold logos/badges on splash/login and Beacon inbox logo now blue (free) or gold (premium) unless overridden by theme.
-- 2025-12-30: Premium branding refresh: splash/login now use gold logo when premium is active; Beacon inbox logo tints blue (free) or gold (premium) while respecting theme overrides; added 3rd-party extensions toggle (premium-gated) across Android/Web settings.
+- 2025-12-30: Premium branding refresh: splash/login now use gold logo when premium is active; Beacon inbox logo treints blue (free) or gold (premium) while respecting theme overrides; added 3rd-party extensions toggle (premium-gated) across Android/Web settings.
 - 2025-12-30: Premium gating added to Features screen (web access, AI, crash) so non-premium users can’t enable locked items; Beacon settings now collapsible by default with dedicated Profile/Themes sections and Features entry.
 - 2025-12-30: Beacon settings cleaned: everything collapsible by default (Profile, Themes, General, Notifications, Permissions, Contacts, Beacon Feature, Support), with Features link as separate page entry and themes now routed to visual settings.
 - 2025-12-30: Renamed in-app “Extensions” UI to “Features” (built-in toggles) and added messaging for attachable third-party extensions; updated Android Feature/Extensions screen copy and callout.
@@ -109,3 +109,16 @@ Current SMS features
 - Android branding: PulseLink/Beacon now display Premium/Pro names + gold logos when subscription active; SmsInbox and splash updated to accept premium/pro flags.
 - Settings: persisted mergedExperienceEnabled and exposed toggle in Extensions Store; added network toggle plumbing for brand features.
 - Release: bumped app versionCode/name to 97 (free/pro) and RingerSong to 21; built AABs at androidApp/build/outputs/bundle/{freeRelease,proRelease}/ and ringersong/build/outputs/bundle/release/.
+
+2026-01-01
+- Unified inbox route (Home/Messages bottom nav) now used when mergedExperienceEnabled; start destination and splash nav respect unified flow after onboarding.
+- Sms inbox top bar adds quick actions for Themes and Contacts; new BeaconContactsViewModel + sms/contacts route resolves device contacts into PulseLink contact detail.
+- Persisted unifiedDisplayName setting (data store key + setter); merged experience nav label uses stored custom name.
+- Bumped RingerSong app versionCode to 23 / versionName 22.
+- 2026-01-01: Bug report entry in MainViewModel now points to https://damiennichols.com/report-bug so in-app report opens our owned page instead of an external site.
+- 2026-01-01: Rebuilt PulseLink free/pro AABs after bug-report link fix; copied to disposable_aabs/ (premium flavor now skipped by default).
+- 2026-01-01: Reduced app-open ads to at most once every 30 minutes per session to prevent blocking Beacon inbox; version bumped to 99.
+2026-01-01
+- Unified home quick actions now collapse instead of disappearing; big red emergency + check-in buttons stay visible (scaled) in unified mode.
+- Header/mini widget switch to Beacon-forward styling when mergedExperienceEnabled, with shortcut to Beacon inbox and contacts.
+- Home start destination respects onboarding and merged experience (defaults to unified_inbox when enabled).

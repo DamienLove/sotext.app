@@ -221,8 +221,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 98
-        versionName = "97"
+        versionCode = 99
+        versionName = "99"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "google_maps_key", mapsApiKey)
@@ -368,6 +368,14 @@ android {
             if (targetSigning != null) {
                 signingConfig = targetSigning
             }
+        }
+    }
+
+    // Avoid generating premium builds unless explicitly requested.
+    variantFilter {
+        val isPremium = flavors.any { it.name == "premium" }
+        if (isPremium && !project.hasProperty("enablePremiumBuild")) {
+            ignore = true
         }
     }
 

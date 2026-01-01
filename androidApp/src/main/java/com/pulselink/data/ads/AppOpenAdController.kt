@@ -15,10 +15,11 @@ import javax.inject.Singleton
 class AppOpenAdController @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-
     private var appOpenAd: AppOpenAd? = null
     private var isLoading = false
     private var shouldShowAds = false
+    private var hasShownThisSession = false
+    private var lastShownAt: Long = 0L
 
     fun updateAvailability(showAds: Boolean) {
         val enabled = showAds && AdConfig.isAdsEnabled && AdConfig.appOpenUnitId.isNotBlank()
@@ -32,6 +33,9 @@ class AppOpenAdController @Inject constructor(
 
     fun maybeShow(activity: Activity) {
         if (!shouldShowAds) return
+        val now = System.currentTimeMillis()
+        val tooSoon = hasShownThisSession && now - lastShownAt < MIN_INTERVAL_MS
+        if (tooSoon) return
         val ad = appOpenAd
         if (ad != null) {
             ad.fullScreenContentCallback = object : FullScreenContentCallback() {
@@ -46,6 +50,8 @@ class AppOpenAdController @Inject constructor(
                 }
             }
             ad.show(activity)
+            hasShownThisSession = true
+            lastShownAt = now
         } else {
             loadIfNeeded()
         }
@@ -77,5 +83,10 @@ class AppOpenAdController @Inject constructor(
         appOpenAd?.fullScreenContentCallback = null
         appOpenAd = null
         isLoading = false
+    }
+
+    companion object {
+        // Cooldown to avoid blocking navigation with frequent full-screen ads
+        private const val MIN_INTERVAL_MS = 30 * 60 * 1000L // 30 minutes
     }
 }

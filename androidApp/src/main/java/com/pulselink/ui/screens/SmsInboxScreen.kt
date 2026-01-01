@@ -28,8 +28,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +43,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.DropdownMenu
@@ -124,6 +124,8 @@ fun SmsInboxScreen(
     isBeaconMode: Boolean = false,
     onOpenSettings: () -> Unit = {},
     onOpenPrivate: () -> Unit = {},
+    onCustomizeTheme: () -> Unit = {},
+    onOpenContacts: () -> Unit = {},
     privateThreadIds: Set<Long> = emptySet(),
     showPrivateOnly: Boolean = false,
     hideOtpInAll: Boolean = false,
@@ -305,13 +307,29 @@ fun SmsInboxScreen(
                         )
                     },
                     actions = {
+                        IconButton(onClick = onCustomizeTheme) {
+                            Icon(
+                                imageVector = Icons.Filled.Palette,
+                                contentDescription = "Theme",
+                                tint = topBarForeground,
+                                modifier = Modifier.size(iconSize)
+                            )
+                        }
+                        IconButton(onClick = onOpenContacts) {
+                            Icon(
+                                imageVector = Icons.Filled.People,
+                                contentDescription = "Contacts",
+                                tint = topBarForeground,
+                                modifier = Modifier.size(iconSize)
+                            )
+                        }
                         IconButton(onClick = onOpenPrivate) {
                             ThemeIcon(
                                 iconKey = ThemeIconKey.LOCK,
                                 theme = theme,
                                 imageVector = Icons.Filled.Lock,
                                 contentDescription = "Private inbox",
-                                tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
+                                tint = topBarForeground,
                                 modifier = Modifier.size(iconSize)
                             )
                         }

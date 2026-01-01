@@ -1543,6 +1543,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setUnifiedDisplayName(name: String?) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(unifiedDisplayName = name) }
+        }
+    }
+
     fun setCrashDetectionEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setCrashDetectionEnabled(enabled)
@@ -1602,7 +1608,9 @@ class MainViewModel @Inject constructor(
         private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
-        const val BUG_REPORT_PAGE_URL = "https://pulselink.app/bug-report/"
+        // Use the owned bug-report landing page on damiennichols.com to avoid any
+        // third-party redirects or wrong destinations.
+        const val BUG_REPORT_PAGE_URL = "https://damiennichols.com/report-bug"
     }
 }
 
