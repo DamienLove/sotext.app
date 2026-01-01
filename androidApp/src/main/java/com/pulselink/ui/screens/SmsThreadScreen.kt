@@ -1,5 +1,7 @@
 package com.pulselink.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -77,6 +80,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.widget.Toast
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.pulselink.data.sms.SmsMessageItem
@@ -104,6 +113,7 @@ fun SmsThreadScreen(
     onCustomizeTheme: () -> Unit,
     onEditNotificationSound: () -> Unit = {},
     onEditNotificationVibration: () -> Unit = {},
+    onEditContact: () -> Unit = {},
     onSendMessage: (String, String?) -> Unit,
     lineOptions: List<com.pulselink.domain.model.SmsLine> = emptyList(),
     selectedLineId: String? = null,
@@ -141,6 +151,14 @@ fun SmsThreadScreen(
             val layout = listState.layoutInfo
             val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
             lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+        }
+    }
+    val context = LocalContext.current
+    val attachmentPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            sendAttachmentViaSms(context, address, uri)
         }
     }
     var initialScrollDone by remember(address) { mutableStateOf(false) }
@@ -183,6 +201,7 @@ fun SmsThreadScreen(
                 lineOptions = lineOptions,
                 selectedLineId = selectedLineId,
                 onSelectLine = onSelectLine,
+                onPickAttachment = { attachmentPicker.launch("*/*") },
                 lineStatus = lineStatus,
                 aiEnabled = aiComposeEnabled,
                 aiState = aiComposeState,
@@ -346,7 +365,10 @@ fun SmsThreadScreen(
                             dateFormatter = dateFormatter,
                             theme = effectiveTheme,
                             contact = contact,
-                            onRetry = { failed -> onSendMessage(failed.body, selectedLineId ?: deviceLineId) }
+                            onRetry = { failed -> onSendMessage(failed.body, selectedLineId ?: deviceLineId) },
+                            onAvatarClick = if (!msg.outgoing) {
+                                { onEditContact() }
+                            } else null
                         )
                     }
                 }
@@ -455,6 +477,7 @@ private fun MessageInput(
     lineOptions: List<com.pulselink.domain.model.SmsLine>,
     selectedLineId: String?,
     onSelectLine: (String) -> Unit,
+    onPickAttachment: () -> Unit,
     lineStatus: Map<String, Boolean>,
     aiEnabled: Boolean,
     aiState: AiComposeState,
@@ -539,6 +562,19 @@ private fun MessageInput(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(
+                    onClick = onPickAttachment
+                ) {
+                    ThemeIcon(
+                        iconKey = ThemeIconKey.ATTACH,
+                        theme = theme,
+                        imageVector = Icons.Filled.AttachFile,
+                        contentDescription = "Attach file",
+                        tint = primary,
+                        modifier = Modifier.size(iconSize)
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
                 OutlinedTextField(
                     value = draft,
                     onValueChange = onDraftChange,
@@ -771,7 +807,8 @@ private fun MessageBubble(
     dateFormatter: (Long) -> String,
     theme: ThemePreferences,
     contact: Contact?,
-    onRetry: (SmsMessageItem) -> Unit = {}
+    onRetry: (SmsMessageItem) -> Unit = {},
+    onAvatarClick: (() -> Unit)? = null
 ) {
     val isOutgoing = msg.outgoing
     val bubbleColor = if (isOutgoing) {
@@ -823,7 +860,14 @@ private fun MessageBubble(
                  modifier = Modifier
                      .size(32.dp)
                      .clip(CircleShape)
-                     .background(Color.Gray),
+                     .background(Color.Gray)
+                     .then(
+                         if (onAvatarClick != null) {
+                             Modifier.clickable(onClick = onAvatarClick)
+                         } else {
+                             Modifier
+                         }
+                     ),
                  contentAlignment = Alignment.Center
              ) {
                  val avatarUrl = contact?.avatarUrl
@@ -993,4 +1037,41 @@ private fun LineStatusDot(
             .size(8.dp)
             .background(color, shape = CircleShape)
     )
+}
+
+private fun sendAttachmentViaSms(
+    context: Context,
+    address: String,
+    uri: Uri
+) {
+    val mimeType = context.contentResolver.getType(uri) ?: "*/*"
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = mimeType
+        data = Uri.parse("smsto:$address")
+        putExtra(Intent.EXTRA_STREAM, uri)
+        putExtra("address", address)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    val resolved = context.packageManager.queryIntentActivities(
+        intent,
+        PackageManager.MATCH_DEFAULT_ONLY
+    )
+    resolved.forEach { resolveInfo ->
+        context.grantUriPermission(
+            resolveInfo.activityInfo.packageName,
+            uri,
+            Intent.FLAG_GRANT_READ_URI_PERMISSION
+        )
+    }
+
+    try {
+        context.startActivity(Intent.createChooser(intent, "Send attachment via SMS/MMS"))
+    } catch (e: ActivityNotFoundException) {
+        Toast.makeText(
+            context,
+            "No messaging app found to send attachments",
+            Toast.LENGTH_LONG
+        ).show()
+    }
 }
