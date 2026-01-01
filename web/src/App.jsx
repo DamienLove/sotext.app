@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback, Fragment } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -1158,6 +1158,151 @@ const loadGoogleMaps = (() => {
   };
 })();
 
+// Bolt: Sidebar component extracted to prevent re-renders on App state changes (e.g. typing in search)
+// This significantly improves responsiveness when the main content updates frequently.
+const Sidebar = memo(({
+  activePanel,
+  setActivePanel,
+  onLogout,
+  onNewThread,
+  threadList,
+  logo,
+  beaconLogo,
+  ringersongLogo
+}) => (
+  <div className="sidebar">
+    <div className="sidebar-header">
+      <div className="sidebar-brand">
+        <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
+        <div>
+          <div className="brand-title">PulseLink Suite</div>
+          <div className="brand-subtitle">Premium Web Access</div>
+        </div>
+      </div>
+      <div className="sidebar-actions">
+        {activePanel === 'beacon' && (
+          <button
+            onClick={onNewThread}
+            className="secondary-btn"
+            aria-label="Start new conversation"
+          >
+            New
+          </button>
+        )}
+        <button onClick={onLogout} className="ghost-btn">Logout</button>
+      </div>
+    </div>
+    <div className="sidebar-nav">
+      <button
+        className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
+        onClick={() => setActivePanel('home')}
+        title="Home"
+        aria-current={activePanel === 'home' ? 'page' : undefined}
+      >
+        <HomeIcon />
+        <span>Home</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
+        onClick={() => setActivePanel('pulselink')}
+        title="PulseLink"
+        aria-current={activePanel === 'pulselink' ? 'page' : undefined}
+      >
+        <img src={logo} alt="PulseLink" />
+        <span>PulseLink</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+        onClick={() => setActivePanel('beacon')}
+        title="Beacon"
+        aria-current={activePanel === 'beacon' ? 'page' : undefined}
+      >
+        <img src={beaconLogo} alt="Beacon" />
+        <span>Beacon</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
+        onClick={() => setActivePanel('ringersong')}
+        title="RingerSong"
+        aria-current={activePanel === 'ringersong' ? 'page' : undefined}
+      >
+        <img src={ringersongLogo} alt="RingerSong" />
+        <span>RingerSong</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+        onClick={() => setActivePanel('map')}
+        title="Map"
+        aria-current={activePanel === 'map' ? 'page' : undefined}
+      >
+        <MapIcon />
+        <span>Map</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
+        onClick={() => setActivePanel('contacts')}
+        title="Contacts"
+        aria-current={activePanel === 'contacts' ? 'page' : undefined}
+      >
+        <ContactIcon />
+        <span>Contacts</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
+        onClick={() => setActivePanel('extensions')}
+        title="Extensions"
+        aria-current={activePanel === 'extensions' ? 'page' : undefined}
+      >
+        <PuzzleIcon />
+        <span>Extensions</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+        onClick={() => setActivePanel('themes')}
+        title="Themes"
+        aria-current={activePanel === 'themes' ? 'page' : undefined}
+      >
+        <ThemeIcon />
+        <span>Themes</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
+        onClick={() => setActivePanel('settings')}
+        title="Settings"
+        aria-current={activePanel === 'settings' ? 'page' : undefined}
+      >
+        <SettingsIcon />
+        <span>Settings</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'dev' ? 'active' : ''}`}
+        onClick={() => setActivePanel('dev')}
+        title="Developer"
+        aria-current={activePanel === 'dev' ? 'page' : undefined}
+      >
+        <span role="img" aria-label="Dev">🧰</span>
+        <span>Dev</span>
+      </button>
+    </div>
+    {activePanel === 'beacon' ? (
+      <div className="thread-list">
+        {threadList}
+      </div>
+    ) : (
+      <div className="sidebar-placeholder">
+        <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
+        <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
+      </div>
+    )}
+  </div>
+), (prev, next) => {
+  return prev.activePanel === next.activePanel &&
+         prev.threadList === next.threadList &&
+         prev.onLogout === next.onLogout &&
+         prev.onNewThread === next.onNewThread;
+});
+Sidebar.displayName = 'Sidebar';
+
 function App() {
   const [user, setUser] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -1456,6 +1601,25 @@ function App() {
       />
     ))
   ), [messages, showPreviews, selectedThread?.address]);
+
+  // Bolt: Stable logout handler to prevent Sidebar re-renders
+  const handleLogout = useCallback(async () => {
+    await signOut(auth);
+    setSelectedThread(null);
+    setComposeAddress('');
+    setComposeBody('');
+    setSendStatus('');
+    setActivePanel('home');
+  }, []);
+
+  // Bolt: Stable "New Thread" handler to prevent Sidebar re-renders
+  const handleNewThread = useCallback(() => {
+    setActivePanel('beacon');
+    setSelectedThread(null);
+    setComposeAddress('');
+    setComposeBody('');
+    setSendStatus('');
+  }, []);
 
   const contactListElements = useMemo(() => (
     filteredDeviceContacts.map((contact) => (
@@ -2314,15 +2478,6 @@ function App() {
     setSendStatus('');
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    setSelectedThread(null);
-    setComposeAddress('');
-    setComposeBody('');
-    setSendStatus('');
-    setActivePanel('home');
-  };
-
   const handleSendMessage = async () => {
     if (!user) return;
     if (!isPremiumUser) {
@@ -2459,137 +2614,16 @@ function App() {
     <div className="app-shell" style={themeVars}>
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
-        <div className="sidebar">
-          <div className="sidebar-header">
-            <div className="sidebar-brand">
-              <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
-              <div>
-                <div className="brand-title">PulseLink Suite</div>
-                <div className="brand-subtitle">Premium Web Access</div>
-              </div>
-            </div>
-            <div className="sidebar-actions">
-              {activePanel === 'beacon' && (
-                <button
-                  onClick={() => {
-                    setActivePanel('beacon');
-                    setSelectedThread(null);
-                    setComposeAddress('');
-                    setComposeBody('');
-                    setSendStatus('');
-                  }}
-                  className="secondary-btn"
-                  aria-label="Start new conversation"
-                >
-                  New
-                </button>
-              )}
-              <button onClick={handleLogout} className="ghost-btn">Logout</button>
-            </div>
-          </div>
-          <div className="sidebar-nav">
-            <button
-              className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
-              onClick={() => setActivePanel('home')}
-              title="Home"
-              aria-current={activePanel === 'home' ? 'page' : undefined}
-            >
-              <HomeIcon />
-              <span>Home</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
-              onClick={() => setActivePanel('pulselink')}
-              title="PulseLink"
-              aria-current={activePanel === 'pulselink' ? 'page' : undefined}
-            >
-              <img src={logo} alt="PulseLink" />
-              <span>PulseLink</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-              onClick={() => setActivePanel('beacon')}
-              title="Beacon"
-              aria-current={activePanel === 'beacon' ? 'page' : undefined}
-            >
-              <img src={beaconLogo} alt="Beacon" />
-              <span>Beacon</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
-              onClick={() => setActivePanel('ringersong')}
-              title="RingerSong"
-              aria-current={activePanel === 'ringersong' ? 'page' : undefined}
-            >
-              <img src={ringersongLogo} alt="RingerSong" />
-              <span>RingerSong</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
-              onClick={() => setActivePanel('map')}
-              title="Map"
-              aria-current={activePanel === 'map' ? 'page' : undefined}
-            >
-              <MapIcon />
-              <span>Map</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
-              onClick={() => setActivePanel('contacts')}
-              title="Contacts"
-              aria-current={activePanel === 'contacts' ? 'page' : undefined}
-            >
-              <ContactIcon />
-              <span>Contacts</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
-              onClick={() => setActivePanel('extensions')}
-              title="Extensions"
-              aria-current={activePanel === 'extensions' ? 'page' : undefined}
-            >
-              <PuzzleIcon />
-              <span>Extensions</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
-              onClick={() => setActivePanel('themes')}
-              title="Themes"
-              aria-current={activePanel === 'themes' ? 'page' : undefined}
-            >
-              <ThemeIcon />
-              <span>Themes</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
-              onClick={() => setActivePanel('settings')}
-              title="Settings"
-              aria-current={activePanel === 'settings' ? 'page' : undefined}
-            >
-              <SettingsIcon />
-              <span>Settings</span>
-            </button>
-            <button
-              className={`nav-item ${activePanel === 'dev' ? 'active' : ''}`}
-              onClick={() => setActivePanel('dev')}
-              title="Developer"
-              aria-current={activePanel === 'dev' ? 'page' : undefined}
-            >
-              <span role="img" aria-label="Dev">🧰</span>
-              <span>Dev</span>
-            </button>
-          </div>
-          {activePanel === 'beacon' ? (
-            <div className="thread-list">
-              {threadListElements}
-            </div>
-          ) : (
-            <div className="sidebar-placeholder">
-              <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
-              <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
-            </div>
-          )}
-        </div>
+        <Sidebar
+          activePanel={activePanel}
+          setActivePanel={setActivePanel}
+          onLogout={handleLogout}
+          onNewThread={handleNewThread}
+          threadList={threadListElements}
+          logo={navLogo}
+          beaconLogo={beaconLogo}
+          ringersongLogo={ringersongLogo}
+        />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
@@ -3514,7 +3548,7 @@ feature_switches:
                   </div>
                   {!remoteSettings.extensionStoreEnabled && (
                     <div className="settings-note" style={{ marginBottom: 12 }}>
-                      Turn on "Extensions Store" above to manage extensions.
+                      Turn on &quot;Extensions Store&quot; above to manage extensions.
                     </div>
                   )}
                   <div className="extensions-grid">
