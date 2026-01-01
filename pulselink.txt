@@ -122,3 +122,5 @@ Current SMS features
 - Unified home quick actions now collapse instead of disappearing; big red emergency + check-in buttons stay visible (scaled) in unified mode.
 - Header/mini widget switch to Beacon-forward styling when mergedExperienceEnabled, with shortcut to Beacon inbox and contacts.
 - Home start destination respects onboarding and merged experience (defaults to unified_inbox when enabled).
+2026-01-01
+- Web: Added Beacon-forward home hero with red emergency CTA + widget; Beacon inbox/contacts shortcuts prioritized on landing; built web dist.

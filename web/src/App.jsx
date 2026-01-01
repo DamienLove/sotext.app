@@ -2189,6 +2189,15 @@ function App() {
     }
   };
 
+  const openBeaconUnified = () => {
+    setActivePanel('beacon');
+    setBeaconTab('messages');
+    setSelectedThread(null);
+    setComposeAddress('');
+    setComposeBody('');
+    setSendStatus('');
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     setSelectedThread(null);
@@ -2455,9 +2464,37 @@ function App() {
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
-              <div className="home-hero">
-                <h2>Welcome back</h2>
-                <p>Choose what you want to manage on PulseLink Web.</p>
+              <div className="home-hero beacon-forward">
+                <div>
+                  <p className="eyebrow">Unified Beacon + PulseLink</p>
+                  <h2>Beacon-first web dashboard</h2>
+                  <p>Jump into Beacon inbox, keep emergency tools handy, and manage PulseLink themes and contacts in one place.</p>
+                  <div className="hero-actions">
+                    <button className="beacon-primary" onClick={openBeaconUnified}>
+                      Open Beacon / Emergency
+                    </button>
+                    <button className="ghost-btn" onClick={() => setActivePanel('map')}>
+                      View emergency map
+                    </button>
+                  </div>
+                </div>
+                <div className="hero-chip">Beacon ready · Red emergency button</div>
+              </div>
+              <div className="beacon-cta">
+                <div className="cta-text">
+                  <p className="eyebrow">Beacon is live</p>
+                  <h3>Emergency ready on web</h3>
+                  <p>Beacon inbox, contacts, and emergency map sit front-and-center while PulseLink themes and profiles stay in sync.</p>
+                  <div className="cta-actions">
+                    <button className="beacon-primary" onClick={openBeaconUnified}>
+                      Go to Beacon inbox
+                    </button>
+                    <button className="ghost-btn" onClick={() => setActivePanel('contacts')}>
+                      Manage contacts
+                    </button>
+                  </div>
+                </div>
+                <div className="cta-badge">Beacon-forward view</div>
               </div>
               {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
               {/* QA TEST: Visit web app home screen after login */}
