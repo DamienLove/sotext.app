@@ -77,6 +77,49 @@
             </intent-filter>
         </activity>
 
+        <!-- Unified launcher aliases (enabled at runtime for premium + unified) -->
+        <activity-alias
+            android:name="com.pulselink.UnifiedLauncherMessages"
+            android:enabled="false"
+            android:icon="@drawable/unified_logo"
+            android:label="Messages"
+            android:roundIcon="@drawable/unified_logo"
+            android:exported="true"
+            android:targetActivity=".ui.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.pulselink.UnifiedLauncherPulseLinkPremium"
+            android:enabled="false"
+            android:icon="@drawable/unified_logo"
+            android:label="PulseLink Premium"
+            android:roundIcon="@drawable/unified_logo"
+            android:exported="true"
+            android:targetActivity=".ui.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="com.pulselink.UnifiedLauncherBeaconPremium"
+            android:enabled="false"
+            android:icon="@drawable/unified_logo"
+            android:label="Beacon Premium"
+            android:roundIcon="@drawable/unified_logo"
+            android:exported="true"
+            android:targetActivity=".ui.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <activity-alias
             android:name="com.pulselink.BeaconInboxLogo"
             android:enabled="false"

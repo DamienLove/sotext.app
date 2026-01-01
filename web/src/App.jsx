@@ -26,6 +26,7 @@ import {
 import { httpsCallable } from "firebase/functions";
 import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
+import unifiedLogo from './assets/unified-premium-beacon.png';
 import beaconLogo from './assets/beacon-logo.png';
 import ringersongLogo from './assets/ringersong-logo.png';
 import auroraBg from './assets/themes/aurora.svg';
@@ -1201,15 +1202,21 @@ function App() {
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [isPremiumUser, setIsPremiumUser] = useState(null); // null = loading
+  const [isPremiumUser, setIsPremiumUser] = useState(null); // null = loading   
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [navLogo, setNavLogo] = useState(logo);
   const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
+
+  useEffect(() => {
+    const unifiedEnabled = remoteSettings.beaconFirstEnabled && remoteSettings.emergencyWebEnabled;
+    setNavLogo(unifiedEnabled ? unifiedLogo : logo);
+  }, [remoteSettings.beaconFirstEnabled, remoteSettings.emergencyWebEnabled]);
 
   useEffect(() => {
     if (!user) {

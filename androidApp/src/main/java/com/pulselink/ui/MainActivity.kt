@@ -159,6 +159,7 @@ import com.pulselink.BuildConfig
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.DefaultSmsHelper
 import com.pulselink.util.BeaconIconManager
+import com.pulselink.util.UnifiedLauncherManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import com.pulselink.util.splitSmsDisplayAddress
@@ -758,6 +759,26 @@ class MainActivity : AppCompatActivity() {
 
                 LaunchedEffect(state.showAds) {
                     appOpenAdController.updateAvailability(state.showAds)
+                }
+
+                LaunchedEffect(
+                    state.settings.mergedExperienceEnabled,
+                    state.settings.premiumUnlocked,
+                    state.settings.unifiedDisplayName
+                ) {
+                    val unifiedEnabled = state.settings.mergedExperienceEnabled &&
+                        (BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked)
+                    UnifiedLauncherManager.apply(
+                        context = activity,
+                        unifiedEnabled = unifiedEnabled,
+                        preferredLabel = state.settings.unifiedDisplayName
+                    )
+                    // Disable Beacon launcher when unified is on
+                    BeaconIconManager.apply(
+                        context = activity,
+                        variant = state.settings.themePreferences.inboxIconVariant,
+                        enabled = !unifiedEnabled && state.settings.beaconLauncherEnabled
+                    )
                 }
 
                 LaunchedEffect(state.settings.crashDetectionEnabled) {
