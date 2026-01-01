@@ -2504,32 +2504,6 @@ function App() {
                 </div>
                 <div className="hero-chip">Beacon ready · Red emergency button</div>
               </div>
-              <div className="beacon-cta">
-                <div className="cta-text">
-                  <p className="eyebrow">Beacon is live</p>
-                  <h3>Emergency ready on web</h3>
-                  <p>Beacon inbox, contacts, and emergency map sit front-and-center while PulseLink themes and profiles stay in sync.</p>
-                  <div className="cta-actions">
-                    <button className="beacon-primary" onClick={openBeaconUnified}>
-                      Go to Beacon inbox
-                    </button>
-                    <button className="ghost-btn" onClick={() => setActivePanel('contacts')}>
-                      Manage contacts
-                    </button>
-                  </div>
-                </div>
-                <div className="cta-badge">Beacon-forward view</div>
-              </div>
-              {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
-              {/* QA TEST: Visit web app home screen after login */}
-              {/* EXPECTED: Blue info banner should be visible explaining web.pulselink.app access */}
-              {/* EXPECTED: Banner should display icon, bold heading, and feature description */}
-              <div className="web-app-hint">
-                <div className="hint-icon">ℹ️</div>
-                <div className="hint-content">
-                  <strong>Access PulseLink Web anytime:</strong> Visit web.pulselink.app from any browser to manage your contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
-                </div>
-              </div>
             <div className="home-grid">
               <button className="home-card" onClick={() => setActivePanel('pulselink')}>
                 <div className="home-icon pulselink">
@@ -2559,13 +2533,13 @@ function App() {
                   <h3>RingerSong</h3>
                   <p>Manage ringtone progressions and streaming.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('map')}>
-                  <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink map" />
-                  </div>
-                  <h3>Emergency Map</h3>
-                  <p>Track shared locations from PulseLink alerts.</p>
-                </button>
+              <button className="home-card" onClick={() => setActivePanel('map')}>
+                <div className="home-icon pulselink">
+                  <img src={logo} alt="PulseLink map" />
+                </div>
+                <h3>Emergency Map</h3>
+                <p>Track shared locations from PulseLink alerts.</p>    
+              </button>
               <button className="home-card" onClick={() => setActivePanel('themes')}>
                 <div className="home-icon pulselink">
                   <img src={logo} alt="PulseLink themes" />
@@ -2573,17 +2547,19 @@ function App() {
                 <h3>Theme Gallery</h3>
                 <p>Browse, import, and publish custom themes.</p>
               </button>
-              <button
-                className="home-card"
-                onClick={() => setActivePanel('extensions')}
-                disabled={!remoteSettings.thirdPartyExtensionsEnabled}
-                title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
-              >
-                <div className="home-icon pulselink">
-                  <img src={logo} alt="Extensions" />
+              <button className="home-card" onClick={() => setActivePanel('extensions')}>
+                <div className="home-icon">
+                  <span role="img" aria-label="Extensions">🧩</span>
                 </div>
-                <h3>Extensions</h3>
-                <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Attach 3rd-party add-ons (coming soon)" : "Enable 3rd-party extensions to start."}</p>
+                <h3>Extensions Store</h3>
+                <p>Browse and toggle add-ons across PulseLink and Beacon.</p>
+              </button>
+              <button className="home-card" onClick={() => setActivePanel('dev')}>
+                <div className="home-icon">
+                  <span role="img" aria-label="Developer">🧰</span>
+                </div>
+                <h3>Developer Console</h3>
+                <p>Build & test extensions, feature switches, and IoT hooks.</p>
               </button>
             </div>
           </div>
