@@ -242,12 +242,14 @@ fun InboxScreen(
                 )
             )
 
-            TabsRow(
-                filter = filter,
-                unreadCount = unreadCount,
-                onFilterChange = onFilterChange,
-                theme = theme
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                TabsRow(
+                    filter = filter,
+                    unreadCount = unreadCount,
+                    onFilterChange = onFilterChange,
+                    theme = theme
+                )
+            }
 
             when (searchState) {
                 is SearchResultState.Messages -> SearchResults(

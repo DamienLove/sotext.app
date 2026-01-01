@@ -162,11 +162,14 @@ fun ThreadScreen(
             }
 
                     LaunchedEffect(messages.size) {
-                                    if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
-                                                        listState.animateScrollToItem(messages.size - 1)
-                                                                        initialScrollDone = true
-                                                                                    }
-                                                                                            }
+                if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
+                    // List is reverseLayout = true (0 is bottom).
+                    // Sort order is Newest -> Oldest (0 is newest).
+                    // So we scroll to 0 to show the newest message.
+                    listState.animateScrollToItem(0)
+                    initialScrollDone = true
+                }
+            }
 
             Surface(
                 tonalElevation = 2.dp,

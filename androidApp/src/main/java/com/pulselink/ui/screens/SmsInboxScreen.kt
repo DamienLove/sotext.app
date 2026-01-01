@@ -516,16 +516,18 @@ fun SmsInboxScreen(
                 threads.count { it.isPrivate || privateThreadIds.contains(it.threadId) }
             }
             if (showFilterTabs) {
-                TabsRow(
-                    filter = filter,
-                    unreadCount = unreadCount,
-                    otpCount = otpCount,
-                    trustedCount = trustedCount,
-                    favoriteCount = favoriteCount,
-                    privateCount = privateCount,
-                    onFilterChange = { filter = it },
-                    theme = theme
-                )
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    TabsRow(
+                        filter = filter,
+                        unreadCount = unreadCount,
+                        otpCount = otpCount,
+                        trustedCount = trustedCount,
+                        favoriteCount = favoriteCount,
+                        privateCount = privateCount,
+                        onFilterChange = { filter = it },
+                        theme = theme
+                    )
+                }
             }
 
             LazyColumn(

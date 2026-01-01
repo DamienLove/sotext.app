@@ -10,11 +10,14 @@ import android.app.role.RoleManager
 import android.provider.ContactsContract
 import android.provider.Telephony
 import com.google.firebase.crashlytics.FirebaseCrashlytics
+import android.util.LruCache
 import androidx.core.content.ContextCompat
 import com.pulselink.beacon.data.MmsPart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.withContext
 import kotlin.jvm.Volatile
 
 class SmsRepository(private val context: Context) {
@@ -23,6 +26,10 @@ class SmsRepository(private val context: Context) {
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val otpRegex = Regex("\\b\\d{4,8}\\b")
     private val inboxPrefs = InboxPreferencesRepository(context)
+
+    // Caches to optimize performance and reduce main-thread blocking queries
+    private val contactCache = LruCache<String, String>(200)
+    private val threadAddressCache = LruCache<Long, String>(200)
 
     // Expose flow directly to be collected by ViewModel scope
     val inboxStateFlow = inboxPrefs.flow
@@ -44,8 +51,8 @@ class SmsRepository(private val context: Context) {
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
 
-    fun listInboxThreads(limit: Int = 50, state: InboxState): List<SmsThreadItem> {
-        if (!hasReadPerms()) return emptyList()
+    suspend fun listInboxThreads(limit: Int = 50, state: InboxState): List<SmsThreadItem> = withContext(Dispatchers.IO) {
+        if (!hasReadPerms()) return@withContext emptyList()
         ensureObserversRegistered()
 
         val items = mutableListOf<SmsThreadItem>()
@@ -73,19 +80,19 @@ class SmsRepository(private val context: Context) {
 
         items.addAll(fetchThreads(limit, selection, selectionArgs, state, excludeIds = items.map { it.threadId }.toSet()))
 
-        return items.sortedWith(
+        items.sortedWith(
             compareByDescending<SmsThreadItem> { it.isPinned }
                 .thenByDescending { it.timestamp }
         )
     }
 
-    fun listArchivedThreads(limit: Int = 50, state: InboxState): List<SmsThreadItem> {
-        if (!hasReadPerms()) return emptyList()
+    suspend fun listArchivedThreads(limit: Int = 50, state: InboxState): List<SmsThreadItem> = withContext(Dispatchers.IO) {
+        if (!hasReadPerms()) return@withContext emptyList()
         ensureObserversRegistered()
         val archivedIds = state.archivedThreadIds.filter { it > 0 }
-        if (archivedIds.isEmpty()) return emptyList()
+        if (archivedIds.isEmpty()) return@withContext emptyList()
 
-        return fetchSpecificThreads(archivedIds, state)
+        fetchSpecificThreads(archivedIds, state)
             .sortedByDescending { it.timestamp }
             .take(limit)
     }
@@ -196,6 +203,9 @@ class SmsRepository(private val context: Context) {
     }
 
     private fun resolveThreadAddress(threadId: Long): String {
+        // Check cache first
+        threadAddressCache.get(threadId)?.let { return it }
+
         val cursor = runCatching {
             context.contentResolver.query(
                 Telephony.Sms.CONTENT_URI,
@@ -209,7 +219,9 @@ class SmsRepository(private val context: Context) {
         cursor.use { c ->
             if (c.moveToFirst()) {
                 val addr = c.getString(c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS))
-                return resolveAddress(addr)
+                val resolved = resolveAddress(addr)
+                threadAddressCache.put(threadId, resolved)
+                return resolved
             }
         }
         return ""
@@ -317,7 +329,7 @@ class SmsRepository(private val context: Context) {
         return parts
     }
 
-    fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> {
+    suspend fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> = withContext(Dispatchers.IO) {
         val projection = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.THREAD_ID,
@@ -326,7 +338,7 @@ class SmsRepository(private val context: Context) {
             Telephony.Sms.DATE,
             Telephony.Sms.TYPE
         )
-        if (!hasReadPerms()) return emptyList()
+        if (!hasReadPerms()) return@withContext emptyList()
         ensureObserversRegistered()
         val smsCursor = runCatching {
             context.contentResolver.query(
@@ -370,11 +382,12 @@ class SmsRepository(private val context: Context) {
 
         val mmsItems = readMmsMessages(threadId, limit)
 
-        return (smsItems + mmsItems).sortedBy { it.timestamp }.take(limit)
+        // Return Newest -> Oldest (Descending)
+        (smsItems + mmsItems).sortedByDescending { it.timestamp }.take(limit)
     }
 
-    fun searchMessages(query: String, limit: Int = 40): List<SmsMessageItem> {
-        if (!hasReadPerms() || query.isBlank()) return emptyList()
+    suspend fun searchMessages(query: String, limit: Int = 40): List<SmsMessageItem> = withContext(Dispatchers.IO) {
+        if (!hasReadPerms() || query.isBlank()) return@withContext emptyList()
         val pattern = "%${query.trim()}%"
         val projection = arrayOf(
             Telephony.Sms._ID,
@@ -392,7 +405,7 @@ class SmsRepository(private val context: Context) {
                 arrayOf(pattern),
                 "${Telephony.Sms.DATE} DESC"
             )
-        }.getOrNull() ?: return emptyList()
+        }.getOrNull() ?: return@withContext emptyList()
 
         cursor.use { c ->
             val idIdx = c.getColumnIndexOrThrow(Telephony.Sms._ID)
@@ -415,20 +428,20 @@ class SmsRepository(private val context: Context) {
                 )
                 count++
             }
-            return hits
+            return@withContext hits
         }
     }
 
-    fun sendSms(address: String, body: String): Boolean {
-        if (!hasSendPerms()) return false
-        return runCatching {
+    suspend fun sendSms(address: String, body: String): Boolean = withContext(Dispatchers.IO) {
+        if (!hasSendPerms()) return@withContext false
+        runCatching {
             val smsManager = android.telephony.SmsManager.getDefault()
             smsManager.sendTextMessage(address, null, body, null, null)
             true
         }.getOrDefault(false)
     }
 
-    fun purgeExpiredOneTimeCodes(expiryMillis: Long = 10 * 60 * 1000L) {
+    private fun purgeExpiredOneTimeCodes(expiryMillis: Long = 10 * 60 * 1000L) {
         if (!hasWritePerms()) return
         val cutoff = System.currentTimeMillis() - expiryMillis
         val projection = arrayOf(
@@ -474,8 +487,8 @@ class SmsRepository(private val context: Context) {
         }
     }
 
-    fun markThreadRead(threadId: Long) {
-        if (!hasWritePerms()) return
+    suspend fun markThreadRead(threadId: Long) = withContext(Dispatchers.IO) {
+        if (!hasWritePerms()) return@withContext
         val values = android.content.ContentValues().apply {
             put(Telephony.Sms.READ, 1)
             put(Telephony.Sms.SEEN, 1)
@@ -495,8 +508,8 @@ class SmsRepository(private val context: Context) {
         observerFlow.tryEmit(Unit)
     }
 
-    fun deleteThread(threadId: Long) {
-        if (!hasWritePerms()) return
+    suspend fun deleteThread(threadId: Long) = withContext(Dispatchers.IO) {
+        if (!hasWritePerms()) return@withContext
         context.contentResolver.delete(
             Telephony.Sms.CONTENT_URI,
             "${Telephony.Sms.THREAD_ID}=?",
@@ -509,6 +522,10 @@ class SmsRepository(private val context: Context) {
         if (!hasReadPerms()) return raw.orEmpty()
         val number = raw?.trim().orEmpty()
         if (number.isBlank()) return ""
+
+        // Cache Check
+        contactCache.get(number)?.let { return it }
+
         val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
         val lookupUri = Uri.withAppendedPath(uri, Uri.encode(number))
         runCatching {
@@ -525,9 +542,12 @@ class SmsRepository(private val context: Context) {
                 val numIdx = c.getColumnIndexOrThrow(ContactsContract.PhoneLookup.NUMBER)
                 val name = c.getString(nameIdx) ?: ""
                 val formatted = c.getString(numIdx) ?: number
-                return if (name.isNotBlank()) "$name \u2022 $formatted" else formatted
+                val result = if (name.isNotBlank()) "$name \u2022 $formatted" else formatted
+                contactCache.put(number, result)
+                return result
             }
         }
+        contactCache.put(number, number)
         return number
     }
 
@@ -638,4 +658,3 @@ class SmsRepository(private val context: Context) {
         return items
     }
 }
-

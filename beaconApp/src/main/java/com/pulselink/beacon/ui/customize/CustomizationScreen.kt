@@ -286,16 +286,18 @@ private fun PopularColorsRow(onSelect: (Color) -> Unit, iconTint: Color) {
             Spacer(modifier = Modifier.width(6.dp))
             Text("Popular quick-picks")
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(popular.size) { idx ->
-                val color = popular[idx]
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                        .clickable { onSelect(color) }
-                )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(popular.size) { idx ->
+                    val color = popular[idx]
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .clickable { onSelect(color) }
+                    )
+                }
             }
         }
     }
@@ -531,9 +533,11 @@ private fun ThemesRow(onPreset: (ThemePalette) -> Unit) {
     )
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Themes", style = MaterialTheme.typography.titleSmall)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(themes) { preset ->
-                ThemePreviewCard(preset = preset, onSelect = { onPreset(preset.palette) })
+        Box(modifier = Modifier.fillMaxWidth()) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(themes) { preset ->
+                    ThemePreviewCard(preset = preset, onSelect = { onPreset(preset.palette) })
+                }
             }
         }
     }
