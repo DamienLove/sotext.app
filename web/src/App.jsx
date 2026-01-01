@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback, Fragment } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -1200,6 +1200,7 @@ function App() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
+  const [confirmDeleteAction, setConfirmDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [isPremiumUser, setIsPremiumUser] = useState(null); // null = loading
   const [showPreviews, setShowPreviews] = useState(true);
@@ -2164,9 +2165,7 @@ function App() {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-    if (!window.confirm("Delete your account and all cloud data? This cannot be undone.")) {
-      return;
-    }
+    setConfirmDeleteAction(null);
     setDeleteAction('account');
     setDeleteStatus("Requesting account deletion...");
     try {
@@ -2184,9 +2183,7 @@ function App() {
 
   const handleDeleteAccountData = async () => {
     if (!user) return;
-    if (!window.confirm("Clear synced messages, device contacts, and trusted contacts from the cloud?")) {
-      return;
-    }
+    setConfirmDeleteAction(null);
     setDeleteAction('data');
     setDeleteStatus("Deleting account data...");
     try {
@@ -3567,22 +3564,47 @@ feature_switches:
                     Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
                   </p>
                   <div className="contact-actions">
-                    <button
-                      className="secondary-btn"
-                      type="button"
-                      onClick={handleDeleteAccountData}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
-                    </button>
-                    <button
-                      className="primary-btn"
-                      type="button"
-                      onClick={handleDeleteAccount}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'account' ? "Deleting..." : "Delete account"}
-                    </button>
+                    {confirmDeleteAction === 'data' ? (
+                      <button
+                        className="secondary-btn"
+                        type="button"
+                        onClick={handleDeleteAccountData}
+                        onBlur={() => setConfirmDeleteAction(null)}
+                        autoFocus
+                      >
+                        Confirm clear?
+                      </button>
+                    ) : (
+                      <button
+                        className="secondary-btn"
+                        type="button"
+                        onClick={() => setConfirmDeleteAction('data')}
+                        disabled={!!deleteAction || confirmDeleteAction === 'account'}
+                      >
+                        {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
+                      </button>
+                    )}
+
+                    {confirmDeleteAction === 'account' ? (
+                      <button
+                        className="primary-btn"
+                        type="button"
+                        onClick={handleDeleteAccount}
+                        onBlur={() => setConfirmDeleteAction(null)}
+                        autoFocus
+                      >
+                        Confirm delete?
+                      </button>
+                    ) : (
+                      <button
+                        className="primary-btn"
+                        type="button"
+                        onClick={() => setConfirmDeleteAction('account')}
+                        disabled={!!deleteAction || confirmDeleteAction === 'data'}
+                      >
+                        {deleteAction === 'account' ? "Deleting..." : "Delete account"}
+                      </button>
+                    )}
                   </div>
                   {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
                 </div>
