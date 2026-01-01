@@ -32,22 +32,27 @@ class SmsSyncWorker @AssistedInject constructor(
         val settings = settingsRepository.settings.first()
         val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
 
-        if (!isPremium) {
-            return Result.success()
-        }
-
         val user = auth.currentUser
         if (user == null) {
             return Result.failure()
         }
 
         return try {
+            val userRef = firestore.collection("users").document(user.uid)
+
+            // Explicitly sync subscription status to ensure downgrades are handled
+            val status = if (isPremium) "premium" else "free"
+            userRef.set(mapOf("subscriptionStatus" to status), SetOptions.merge()).await()
+
+            if (!isPremium) {
+                return Result.success()
+            }
+
             val deviceId = settingsRepository.ensureDeviceId()
             val phoneNumber = settings.devicePhoneNumber
                 ?: settingsRepository.getLastKnownPhone()
             val lineId = deviceId
 
-            val userRef = firestore.collection("users").document(user.uid)
             val lineRef = userRef.collection("lines").document(lineId)
             val deviceRef = userRef.collection("devices").document(deviceId)
             val linePayload = mutableMapOf<String, Any>(
