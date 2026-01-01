@@ -114,8 +114,10 @@ import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
+import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.state.PulseLinkUiState
+import com.pulselink.util.parseColorOr
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorderAfterLongPress
@@ -143,6 +145,8 @@ fun HomeScreen(
     onFaqClick: () -> Unit = {},
     onBeaconClick: () -> Unit = {},
     onOpenContacts: () -> Unit = {},
+    onOpenNotifications: () -> Unit = {},
+    onOpenThemes: () -> Unit = {},
     isUnifiedMode: Boolean = false,
     showBeaconIcon: Boolean = false,
     showBeaconHint: Boolean = false,
@@ -160,6 +164,8 @@ fun HomeScreen(
     isPro: Boolean = false
 ) {
     val context = LocalContext.current
+    val themePrefs: ThemePreferences = state.settings.themePreferences
+    val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, themePrefs.backgroundColor)
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     val collapseFraction by remember {
@@ -209,7 +215,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing),
-        color = MaterialTheme.colorScheme.background
+        color = backgroundColor
     ) {
         Column(
             modifier = Modifier
@@ -227,7 +233,8 @@ fun HomeScreen(
                 onBeaconClick = onBeaconClick,
                 onUpgradeClick = onUpgradeClick,
                 showBeacon = showBeaconIcon || isUnifiedMode,
-                isUnifiedMode = isUnifiedMode
+                isUnifiedMode = isUnifiedMode,
+                theme = themePrefs
             )
             if (isUnifiedMode) {
                 BeaconUnifiedWidget(
@@ -346,13 +353,17 @@ private fun HeaderSection(
     onBeaconClick: () -> Unit,
     onUpgradeClick: () -> Unit,
     showBeacon: Boolean,
-    isUnifiedMode: Boolean
+    isUnifiedMode: Boolean,
+    theme: ThemePreferences
 ) {
     val heroShape = RoundedCornerShape(32.dp)
+    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val secondary = parseColorOr(MaterialTheme.colorScheme.secondary, theme.secondaryColor)
     val heroBrush = if (isUnifiedMode) {
-        Brush.verticalGradient(listOf(Color(0xFF0D2148), Color(0xFF0A2E6A)))
+        // Beacon-forward: keep emergency red anchored into theme primary
+        Brush.verticalGradient(listOf(Color(0xFFB91C1C), primary))
     } else {
-        Brush.verticalGradient(listOf(Color(0xFF181D35), Color(0xFF0E111E)))
+        Brush.verticalGradient(listOf(primary, secondary))
     }
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -392,6 +403,8 @@ private fun HeaderSection(
                     onSettingsClick = onSettingsClick,
                     onFaqClick = onFaqClick,
                     onBeaconClick = onBeaconClick,
+                    onNotificationsClick = onOpenNotifications,
+                    onThemesClick = onOpenThemes,
                     onUpgradeClick = onUpgradeClick,
                     isProUser = state.isProUser,
                     showBeacon = showBeacon,
@@ -642,6 +655,8 @@ private fun NavigationRow(
     onSettingsClick: () -> Unit,
     onFaqClick: () -> Unit,
     onBeaconClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    onThemesClick: () -> Unit,
     onUpgradeClick: () -> Unit,
     isProUser: Boolean,
     showBeacon: Boolean,
@@ -658,6 +673,8 @@ private fun NavigationRow(
             badgeCount = unreadAlertCount
         )
         NavButton(icon = Icons.Filled.Help, label = stringResource(id = R.string.faq_title), onClick = onFaqClick)
+        NavButton(icon = Icons.Filled.NotificationsActive, label = "Tones", onClick = onNotificationsClick)
+        NavButton(icon = Icons.Filled.Palette, label = "Themes", onClick = onThemesClick)
         if (showBeacon) {
             NavButton(icon = Icons.Outlined.WifiTethering, label = stringResource(id = R.string.home_beacon_label), onClick = onBeaconClick)
         }

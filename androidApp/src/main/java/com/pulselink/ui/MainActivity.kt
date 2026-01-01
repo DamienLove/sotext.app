@@ -106,6 +106,7 @@ import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.screens.BeaconContactsScreen
+import com.pulselink.ui.screens.CustomVibrationCreatorScreen
 import com.pulselink.ui.state.LoginViewModel
 import com.pulselink.ui.state.ContactConversationViewModel
 import com.pulselink.ui.state.MainViewModel
@@ -116,6 +117,7 @@ import com.pulselink.ui.state.SmsThreadViewModel
 import com.pulselink.ui.state.PublicProfile
 import com.pulselink.ui.theme.PulseLinkTheme
 import com.pulselink.util.VibrationPatterns
+import com.pulselink.util.VibrationPatternOption
 import com.pulselink.util.normalizeSmsAddress
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -886,6 +888,8 @@ class MainActivity : AppCompatActivity() {
                                                 onFaqClick = { navController.navigate("faq") },
                                                 onBeaconClick = { selectedTab = 1 },
                                                 onOpenContacts = { navController.navigate("sms/contacts") },
+                                                onOpenNotifications = { navController.navigate("notifications/message_sound") },
+                                                onOpenThemes = { navController.navigate("visual_settings") },
                                                 isUnifiedMode = true,
                                                 showBeaconIcon = false,
                                                 showBeaconHint = false,
@@ -1277,6 +1281,8 @@ class MainActivity : AppCompatActivity() {
                             onFaqClick = { navController.navigate("faq") },
                             onBeaconClick = launchBeaconInbox,
                             onOpenContacts = { navController.navigate("sms/contacts") },
+                            onOpenNotifications = { navController.navigate("notifications/message_sound") },
+                            onOpenThemes = { navController.navigate("visual_settings") },
                             isUnifiedMode = state.settings.mergedExperienceEnabled,
                             showBeaconIcon = state.settings.beaconLauncherEnabled,
                             showBeaconHint = !state.settings.beaconHintDismissed,
@@ -1623,6 +1629,7 @@ class MainActivity : AppCompatActivity() {
                             onEditMessageVibration = {
                                 navController.navigate("notifications/message_vibration")
                             },
+                            onEditCustomVibration = { navController.navigate("notifications/custom_vibration") },
                             emergencyVibrationLabel = emergencyVibrationLabel,
                             onEditEmergencyVibration = {
                                 navController.navigate("alerts/default/emergency_vibration")
@@ -1732,6 +1739,14 @@ class MainActivity : AppCompatActivity() {
                         val normalized = addressArg?.let { normalizeSmsAddress(it) }
                         val overrideKey = normalized?.let { state.settings.messageNotificationVibrationOverrides[it] }
                         val isContact = addressArg != null
+                        val customOptions = state.settings.customVibrationPatterns.map {
+                            VibrationPatternOption(
+                                key = it.id,
+                                label = it.name,
+                                pattern = it.pattern.toLongArray(),
+                                isCustom = true
+                            )
+                        }
                         VibrationPatternPickerScreen(
                             title = if (isContact) "Notification vibration" else "Message vibration pattern",
                             subtitle = if (isContact) {
@@ -1739,7 +1754,7 @@ class MainActivity : AppCompatActivity() {
                             } else {
                                 "Choose the vibration style for incoming texts."
                             },
-                            options = VibrationPatterns.messageOptions,
+                            options = VibrationPatterns.messageOptions + customOptions,
                             selectedKey = if (isContact) overrideKey else state.settings.messageNotificationVibrationPattern,
                             defaultLabel = if (isContact) "Use global message pattern" else null,
                             onSelect = { key ->
@@ -1750,6 +1765,14 @@ class MainActivity : AppCompatActivity() {
                                         key ?: VibrationPatterns.MESSAGE_DEFAULT
                                     )
                                 }
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("notifications/custom_vibration") {
+                        CustomVibrationCreatorScreen(
+                            onSave = { name, pattern ->
+                                viewModel.addCustomVibrationPattern(name, pattern)
                             },
                             onBack = { navController.popBackStack() }
                         )

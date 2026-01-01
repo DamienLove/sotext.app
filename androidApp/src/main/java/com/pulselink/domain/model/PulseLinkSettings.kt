@@ -71,7 +71,8 @@ data class PulseLinkSettings(
     val defaultSendLineId: String? = null,
     val lineSendPreference: LineSendPreference = LineSendPreference.LAST_USED,
     val threadLineOverrides: Map<String, String> = emptyMap(),
-    val devicePhoneNumber: String? = null
+    val devicePhoneNumber: String? = null,
+    val customVibrationPatterns: List<com.pulselink.util.CustomVibrationPattern> = emptyList()
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

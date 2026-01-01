@@ -38,6 +38,7 @@ import com.pulselink.ui.screens.BugReportData
 import com.pulselink.ui.state.DndStatusMessage
 import com.pulselink.util.AudioOverrideManager
 import com.pulselink.widget.WidgetStateManager
+import java.util.UUID
 import com.pulselink.util.BeaconIconManager
 import com.pulselink.util.normalizeSmsAddress
 import com.pulselink.util.stripSmsDisplayName
@@ -162,7 +163,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             firebaseAuthManager.authState.collect { state ->
                 val user = (state as? AuthState.Authenticated)?.user
-                if (user != null && !user.isAnonymous) {
+                if (user != null) {
                     syncProfileFromCloud(user)
                     syncContactsFromCloud(user)
                     linkManager.syncLinksOnLogin()
@@ -212,7 +213,7 @@ class MainViewModel @Inject constructor(
             }
 
             // Mirror to cloud for authenticated users
-            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+            firebaseAuthManager.currentUser()?.let { user ->
                 upsertContactInCloud(user, storedContact)
             }
 
@@ -463,6 +464,23 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.update { settings ->
                 settings.copy(messageNotificationVibrationPattern = key)
+            }
+        }
+    }
+
+    fun addCustomVibrationPattern(name: String, pattern: List<Long>) {
+        viewModelScope.launch {
+            val newPattern = com.pulselink.util.CustomVibrationPattern(
+                id = UUID.randomUUID().toString(),
+                name = name,
+                pattern = pattern
+            )
+            settingsRepository.update { settings ->
+                val updatedList = settings.customVibrationPatterns + newPattern
+                settings.copy(
+                    customVibrationPatterns = updatedList,
+                    messageNotificationVibrationPattern = newPattern.id
+                )
             }
         }
     }

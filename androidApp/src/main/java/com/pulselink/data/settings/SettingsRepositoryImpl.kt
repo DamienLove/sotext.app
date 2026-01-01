@@ -90,6 +90,7 @@ private val DEFAULT_SEND_LINE_ID = stringPreferencesKey("default_send_line_id")
 private val LINE_SEND_PREFERENCE = stringPreferencesKey("line_send_preference")
 private val THREAD_LINE_OVERRIDES = stringPreferencesKey("thread_line_overrides")
 private val DEVICE_PHONE_NUMBER = stringPreferencesKey("device_phone_number")
+private val CUSTOM_VIBRATIONS = stringPreferencesKey("custom_vibration_patterns")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -164,6 +165,9 @@ class SettingsRepositoryImpl @Inject constructor(
             themePreferences = decodeJsonOrNull(prefs[THEME_PREFERENCES]) {
                 json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it)
             } ?: PulseLinkSettings().themePreferences,
+            customVibrationPatterns = decodeJsonOrNull(prefs[CUSTOM_VIBRATIONS]) {
+                json.decodeFromString<List<com.pulselink.util.CustomVibrationPattern>>(it)
+            } ?: PulseLinkSettings().customVibrationPatterns,
             remoteWebAccessEnabled = prefs[REMOTE_WEB_ACCESS] ?: PulseLinkSettings().remoteWebAccessEnabled,
             otpCleanupEnabled = prefs[OTP_CLEANUP_ENABLED] ?: PulseLinkSettings().otpCleanupEnabled,
             otpCleanupDays = prefs[OTP_CLEANUP_DAYS] ?: PulseLinkSettings().otpCleanupDays,
@@ -247,6 +251,9 @@ class SettingsRepositoryImpl @Inject constructor(
                     com.pulselink.domain.model.ThemePreferences.serializer(),
                     updated.themePreferences
                 )
+            }
+            prefs[CUSTOM_VIBRATIONS] = encodeJson {
+                json.encodeToString(updated.customVibrationPatterns)
             }
             prefs[REMOTE_WEB_ACCESS] = updated.remoteWebAccessEnabled
             prefs[OTP_CLEANUP_ENABLED] = updated.otpCleanupEnabled

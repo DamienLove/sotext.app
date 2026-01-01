@@ -187,27 +187,31 @@ fun SmsInboxScreen(
     val archivedIds = remember(gatedArchivedThreads, localDeviceId) {
         gatedArchivedThreads.map { threadKey(it) }.toSet()
     }
-    val filtered = remember(filter, gatedThreads, gatedArchivedThreads, privateThreadIds, showPrivateOnly) {
+    val filtered = remember(filter, gatedThreads, gatedArchivedThreads, privateThreadIds, showPrivateOnly, hideOtpInAll) {
         val base = when (filter) {
             InboxFilter.ARCHIVED -> gatedArchivedThreads
-            InboxFilter.ALL -> gatedThreads
             else -> gatedThreads
         }
         val source = base.filter { thread ->
             val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
             if (showPrivateOnly) isPrivate else !isPrivate
         }
-        val otpFiltered = if (hideOtpInAll) {
+        val otpAware = if (hideOtpInAll && filter != InboxFilter.OTP) {
             source.filterNot { it.isOtp }
         } else {
             source
         }
-        otpFiltered.filter { thread ->
+        otpAware.filter { thread ->
+            val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
             when (filter) {
                 InboxFilter.ALL -> true
                 InboxFilter.READ -> !thread.unread
                 InboxFilter.UNREAD -> thread.unread
                 InboxFilter.ARCHIVED -> true
+                InboxFilter.OTP -> thread.isOtp
+                InboxFilter.TRUSTED -> thread.isTrusted
+                InboxFilter.FAVORITES -> thread.isFavorite
+                InboxFilter.PRIVATE -> isPrivate
             }
         }
     }
@@ -504,10 +508,20 @@ fun SmsInboxScreen(
                 )
             }
             val unreadCount = remember(threads) { threads.count { it.unread } }
+            val otpCount = remember(threads) { threads.count { it.isOtp } }
+            val trustedCount = remember(threads) { threads.count { it.isTrusted } }
+            val favoriteCount = remember(threads) { threads.count { it.isFavorite } }
+            val privateCount = remember(threads, privateThreadIds) {
+                threads.count { it.isPrivate || privateThreadIds.contains(it.threadId) }
+            }
             if (showFilterTabs) {
                 TabsRow(
                     filter = filter,
                     unreadCount = unreadCount,
+                    otpCount = otpCount,
+                    trustedCount = trustedCount,
+                    favoriteCount = favoriteCount,
+                    privateCount = privateCount,
                     onFilterChange = { filter = it },
                     theme = theme
                 )
@@ -725,7 +739,11 @@ private fun ThreadRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AvatarCircle(text = displayName, theme = theme)
+                    AvatarCircle(
+                        text = displayName,
+                        theme = theme,
+                        onClick = { onAvatarClick(thread) }
+                    )
                     Column(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -858,13 +876,18 @@ private fun ThreadRowSkeleton(
 }
 
 @Composable
-private fun AvatarCircle(text: String, theme: ThemePreferences) {
+private fun AvatarCircle(
+    text: String,
+    theme: ThemePreferences,
+    onClick: () -> Unit = {}
+) {
     val initial = text.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
     Box(
         modifier = Modifier
             .size(44.dp)
             .clip(CircleShape)
             .background(parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)), // Reuse outgoing bubble color for avatar bg? Or Primary?
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -1039,14 +1062,25 @@ private fun splitDisplay(address: String): Pair<String, String?> = splitSmsDispl
 private fun TabsRow(
     filter: InboxFilter,
     unreadCount: Int,
+    otpCount: Int,
+    trustedCount: Int,
+    favoriteCount: Int,
+    privateCount: Int,
     onFilterChange: (InboxFilter) -> Unit,
     theme: ThemePreferences
 ) {
     val unreadBadge = unreadCount.takeIf { it > 0 }?.toString()
+    val otpBadge = otpCount.takeIf { it > 0 }?.toString()
+    val trustedBadge = trustedCount.takeIf { it > 0 }?.toString()
+    val favoriteBadge = favoriteCount.takeIf { it > 0 }?.toString()
+    val privateBadge = privateCount.takeIf { it > 0 }?.toString()
     val tabs = listOf(
-        Triple("All Messages", InboxFilter.ALL, null as String?),
-        Triple("Read", InboxFilter.READ, null as String?),
+        Triple("All", InboxFilter.ALL, null as String?),
         Triple("Unread", InboxFilter.UNREAD, unreadBadge),
+        Triple("2-step", InboxFilter.OTP, otpBadge),
+        Triple("Trusted", InboxFilter.TRUSTED, trustedBadge),
+        Triple("Favorites", InboxFilter.FAVORITES, favoriteBadge),
+        Triple("Private", InboxFilter.PRIVATE, privateBadge),
         Triple("Archived", InboxFilter.ARCHIVED, null as String?)
     )
 
@@ -1300,5 +1334,5 @@ private fun LinePickerRow(
     }
 }
 
-private enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED }
+private enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED, OTP, TRUSTED, FAVORITES, PRIVATE }
 

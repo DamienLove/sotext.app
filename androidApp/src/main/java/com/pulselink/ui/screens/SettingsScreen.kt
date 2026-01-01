@@ -105,6 +105,7 @@ fun SettingsScreen(
     onEditEmergencyVibration: () -> Unit,
     checkInVibrationLabel: String,
     onEditCheckInVibration: () -> Unit,
+    onEditCustomVibration: () -> Unit = {},
     onToggleMessageVibrate: (Boolean) -> Unit,
     onReportBug: () -> Unit,
     onBetaTesters: () -> Unit,
@@ -263,6 +264,12 @@ fun SettingsScreen(
                     onAction = onEditMessageVibration
                 )
                 SettingsActionRow(
+                    title = "Create custom vibration",
+                    subtitle = "Tap to design your own pattern.",
+                    actionLabel = "Open",
+                    onAction = onEditCustomVibration
+                )
+                SettingsActionRow(
                     title = stringResource(R.string.dnd_override_title),
                     subtitle = if (hasDndAccess) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
@@ -304,6 +311,25 @@ fun SettingsScreen(
                 title = "Permissions & System",
                 initiallyExpanded = false
             ) {
+                SettingsActionRow(
+                    title = stringResource(R.string.dnd_override_title),
+                    subtitle = if (hasDndAccess) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                            stringResource(R.string.dnd_override_android15_note)
+                        } else {
+                            stringResource(R.string.dnd_override_ready)
+                        }
+                    } else {
+                        stringResource(R.string.dnd_override_permission_prompt)
+                    },
+                    actionLabel = if (hasDndAccess) {
+                        stringResource(R.string.dnd_override_action_manage)
+                    } else {
+                        stringResource(R.string.dnd_override_action_allow)
+                    },
+                    onAction = onRequestDndAccess,
+                    leadingIcon = Icons.Filled.NotificationsActive
+                )
                 SettingsActionRow(
                     title = stringResource(R.string.permission_battery_opt_title),
                     subtitle = null,
