@@ -282,7 +282,7 @@ fun StoreItemCard(feature: FeatureToggle, premiumActive: Boolean) {
             ) {
                 if (feature.requiresPremium) {
                     Text(
-                        text = "PRO",
+                        text = "PREMIUM",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
