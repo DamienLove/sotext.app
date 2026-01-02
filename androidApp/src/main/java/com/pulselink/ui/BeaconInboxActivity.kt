@@ -6,6 +6,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.ContactsContract
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -37,6 +40,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -123,12 +127,12 @@ class BeaconInboxActivity : ComponentActivity() {
                 val defaultSendLineId by linesViewModel.defaultSendLineId.collectAsStateWithLifecycle()
                 val lineSendPreference by linesViewModel.lineSendPreference.collectAsStateWithLifecycle()
                 val threadLineOverrides by linesViewModel.threadLineOverrides.collectAsStateWithLifecycle()
-                val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
-                val hasPremium = subscriptionUiState.isPremiumActive ||
-                    state.settings.premiumUnlocked ||
-                    BuildConfig.PREMIUM_FEATURES
-                val hasPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked
-                val isPro = hasPro || hasPremium
+        val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
+        val hasPremium = subscriptionUiState.isPremiumActive ||
+            state.settings.premiumUnlocked ||
+            BuildConfig.PREMIUM_FEATURES
+        val hasPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || state.settings.premiumUnlocked
+        val isPro = hasPro || hasPremium
                 val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
                 var isCheckingDefaultSms by remember { mutableStateOf(false) }
@@ -240,21 +244,36 @@ class BeaconInboxActivity : ComponentActivity() {
                     }
                 }
 
-                val pendingNotification by notificationTarget
-                LaunchedEffect(pendingNotification) {
-                    val target = pendingNotification ?: return@LaunchedEffect
-                    val encoded = Uri.encode(target.address)
-                    val threadId = target.threadId.takeIf { it > 0 } ?: 0L
-                    navController.navigate("sms/thread/$threadId/$encoded")
-                    notificationTarget.value = null
-                }
+        val pendingNotification by notificationTarget
+        LaunchedEffect(pendingNotification) {
+            val target = pendingNotification ?: return@LaunchedEffect
+            val encoded = Uri.encode(target.address)
+            val threadId = target.threadId.takeIf { it > 0 } ?: 0L
+            navController.navigate("sms/thread/$threadId/$encoded")
+            notificationTarget.value = null
+        }
 
-                Column(modifier = Modifier.fillMaxSize()) {
-                    val bannerHeight = 50.dp
-                    Box(modifier = Modifier.weight(1f)) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+            ) {
+                TextButton(onClick = { finish() }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back to PulseLink"
+                    )
+                    Text(text = "Back to PulseLink", modifier = Modifier.padding(start = 6.dp))
+                }
+            }
+            val bannerHeight = 50.dp
+            Box(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
                                 .padding(bottom = if (state.showAds) bannerHeight else 0.dp)
                         ) {
                             NavHost(navController = navController, startDestination = "sms/inbox") {
@@ -351,6 +370,22 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 navController.navigate(
                                                     "sms/thread/${thread.threadId}/${Uri.encode(thread.address)}?lineId=$lineSuffix"
                                                 )
+                                            },
+                                            onOpenContactForThread = { thread ->
+                                                val (displayName, number) = com.pulselink.util.splitSmsDisplayAddress(thread.address)
+                                                val phone = (number ?: displayName).trim()
+                                                if (phone.isNotBlank()) {
+                                                    val contactIntent = Intent(ContactsContract.Intents.SHOW_OR_CREATE_CONTACT).apply {
+                                                        data = Uri.parse("tel:$phone")
+                                                        putExtra(ContactsContract.Intents.Insert.PHONE, phone)
+                                                        putExtra(ContactsContract.Intents.Insert.NAME, displayName.takeIf { it.isNotBlank() })
+                                                    }
+                                                    runCatching { startActivity(contactIntent) }.onFailure {
+                                                        Toast.makeText(this@BeaconInboxActivity, "Unable to open contact editor", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                } else {
+                                                    Toast.makeText(this@BeaconInboxActivity, "No phone number available for this thread", Toast.LENGTH_SHORT).show()
+                                                }
                                             },
                                             onOpenThreadById = { threadId, address ->
                                                 navController.navigate("sms/thread/$threadId/${Uri.encode(address)}")
@@ -831,6 +866,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleOtpCleanup = viewModel::setOtpCleanupEnabled,
                                         onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
                                         onToggleAiSummaries = viewModel::setAiSummariesEnabled,
+                                        onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                                         onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
                                         onBack = { navController.popBackStack() }
                                     )
@@ -938,9 +974,12 @@ class BeaconInboxActivity : ComponentActivity() {
                                 composable("profile_settings") {
                                     ProfileSettingsScreen(
                                         settings = state.settings,
+                                        ownerEmail = null,
+                                        ownerPhone = state.settings.devicePhoneNumber,
                                         deleteAccountState = deleteAccountState,
                                         onSaveName = { viewModel.setOwnerName(it) },
                                         onSaveAvatar = { viewModel.setOwnerAvatarUrl(it) },
+                                        onSaveContactInfo = viewModel::setOwnerContactInfo,
                                         onDeleteAccount = { viewModel.deleteAccount() },
                                         onResetDeleteAccountState = { viewModel.resetDeleteAccountState() },
                                         onBack = { navController.popBackStack() }
@@ -1056,10 +1095,9 @@ class BeaconInboxActivity : ComponentActivity() {
     }
 
     private fun checkSmsPermissions(context: android.content.Context): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.READ_SMS
-        ) == PackageManager.PERMISSION_GRANTED
+        return requiredSmsPermissions().all { perm ->
+            ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
+        }
     }
 
     private fun requiredSmsPermissions(): Array<String> {
@@ -1068,7 +1106,8 @@ class BeaconInboxActivity : ComponentActivity() {
             Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.RECEIVE_MMS,
-            Manifest.permission.RECEIVE_WAP_PUSH
+            Manifest.permission.RECEIVE_WAP_PUSH,
+            Manifest.permission.READ_CONTACTS
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             perms.add(Manifest.permission.POST_NOTIFICATIONS)

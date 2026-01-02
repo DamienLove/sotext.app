@@ -170,20 +170,6 @@ fun SettingsScreen(
                 )
             }
 
-            // Themes / appearance
-            CollapsibleSettingsSection(
-                title = "Themes & appearance",
-                initiallyExpanded = false
-            ) {
-                SettingsActionRow(
-                    title = "Theme & visuals",
-                    subtitle = "Colors, gradients, typography, and cards",
-                    actionLabel = "Open",
-                    onAction = onOpenThemes,
-                    leadingIcon = Icons.Filled.Palette
-                )
-            }
-
             // General
             CollapsibleSettingsSection(
                 title = "General",
@@ -214,56 +200,11 @@ fun SettingsScreen(
                 )
             }
 
-            // Notifications & Tones
+            // Delivery & permissions
             CollapsibleSettingsSection(
-                title = "Notifications & Tones",
+                title = "Delivery & permissions",
                 initiallyExpanded = false
             ) {
-                SettingsActionRow(
-                    title = "Emergency alert tone",
-                    actionLabel = "Edit",
-                    onAction = onEditEmergencyTone
-                )
-                SettingsActionRow(
-                    title = "Emergency vibration pattern",
-                    subtitle = emergencyVibrationLabel,
-                    actionLabel = "Edit",
-                    onAction = onEditEmergencyVibration
-                )
-                SettingsActionRow(
-                    title = "Check-in alert tone",
-                    actionLabel = "Edit",
-                    onAction = onEditCheckInTone
-                )
-                SettingsActionRow(
-                    title = "Check-in vibration pattern",
-                    subtitle = checkInVibrationLabel,
-                    actionLabel = "Edit",
-                    onAction = onEditCheckInVibration
-                )
-                SettingsActionRow(
-                    title = stringResource(R.string.settings_call_tone_title),
-                    actionLabel = "Edit",
-                    onAction = onEditCallTone
-                )
-                SettingsActionRow(
-                    title = "Message notification sound",
-                    subtitle = messageSoundLabel,
-                    actionLabel = "Edit",
-                    onAction = onEditMessageSound
-                )
-                SettingsToggleRow(
-                    title = "Message vibration",
-                    subtitle = "Vibrate when new texts arrive.",
-                    checked = messageVibrate,
-                    onCheckedChange = onToggleMessageVibrate
-                )
-                SettingsActionRow(
-                    title = "Message vibration pattern",
-                    subtitle = messageVibrationLabel,
-                    actionLabel = "Edit",
-                    onAction = onEditMessageVibration
-                )
                 SettingsActionRow(
                     title = stringResource(R.string.dnd_override_title),
                     subtitle = if (hasDndAccess) {
@@ -283,22 +224,34 @@ fun SettingsScreen(
                     onAction = onRequestDndAccess,
                     leadingIcon = Icons.Filled.NotificationsActive
                 )
-                if (settings.firebaseMessagingEnabled) {
-                    SettingsToggleRow(
-                        title = "Firebase Messaging (Faster)",
-                        subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
-                        checked = settings.firebaseMessagingEnabled,
-                        onCheckedChange = onToggleFirebaseMessaging
+                SettingsActionRow(
+                    title = "Battery optimizations",
+                    subtitle = "Disable optimizations so alerts can always send.",
+                    actionLabel = "Open",
+                    onAction = onRequestBatteryOpt,
+                    leadingIcon = Icons.Filled.BugReport
+                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    SettingsActionRow(
+                        title = "Unused app reminders",
+                        subtitle = "Make sure PulseLink isn’t auto-disabled by Android.",
+                        actionLabel = "Open",
+                        onAction = onRequestUnusedApps,
+                        leadingIcon = Icons.Filled.Schedule
                     )
                 }
-                if (settings.emailFallbackEnabled) {
-                    SettingsToggleRow(
-                        title = "Email Fallback",
-                        subtitle = "Send email if other channels fail.",
-                        checked = settings.emailFallbackEnabled,
-                        onCheckedChange = onToggleEmailFallback
-                    )
-                }
+                SettingsToggleRow(
+                    title = "Firebase Messaging (Faster)",
+                    subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
+                    checked = settings.firebaseMessagingEnabled,
+                    onCheckedChange = onToggleFirebaseMessaging
+                )
+                SettingsToggleRow(
+                    title = "Email Fallback",
+                    subtitle = "Send email if other channels fail.",
+                    checked = settings.emailFallbackEnabled,
+                    onCheckedChange = onToggleEmailFallback
+                )
             }
 
             // Permissions & System

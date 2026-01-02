@@ -228,7 +228,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             HeaderSection(
                 state = state,
@@ -833,6 +833,7 @@ private fun NavButton(
     badgeCount: Int? = null
 ) {
     Column(
+        modifier = Modifier.clickable(role = Role.Button, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {

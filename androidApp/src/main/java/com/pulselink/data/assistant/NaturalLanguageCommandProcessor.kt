@@ -116,7 +116,7 @@ class NaturalLanguageCommandProcessor @Inject constructor(
         if (BuildConfig.PRO_FEATURES) return true
         val user = firebaseAuthManager.currentUser() ?: return false
         val claims = runCatching { user.getIdToken(false).await().claims }.getOrNull() ?: return false
-        return claims["pro"] == true
+        return claims["pro"] == true || claims["premium"] == true
     }
 
     private suspend fun resolveContact(name: String?): Contact? {

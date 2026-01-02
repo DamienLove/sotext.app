@@ -68,6 +68,7 @@ fun ExtensionsStoreScreen(
     onToggleRemoteWebAccess: (Boolean) -> Unit,
     onToggleAiSummaries: (Boolean) -> Unit,
     onToggleThirdPartyExtensions: (Boolean) -> Unit,
+    onToggleMergedExperience: (Boolean) -> Unit,
     onBack: () -> Unit
 ) {
     val premiumActive = remember(settings) {
@@ -125,6 +126,14 @@ fun ExtensionsStoreScreen(
                 isEnabled = settings.aiSummariesEnabled,
                 onToggle = onToggleAiSummaries,
                 requiresPremium = true
+            ),
+            FeatureToggle(
+                id = "unified",
+                titleRes = R.string.extension_merged_title,
+                descriptionRes = R.string.extension_merged_desc,
+                icon = Icons.Filled.Layers,
+                isEnabled = settings.mergedExperienceEnabled,
+                onToggle = onToggleMergedExperience
             ),
             FeatureToggle(
                 id = "third_party_extensions",

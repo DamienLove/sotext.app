@@ -68,12 +68,15 @@ fun ProfileSettingsScreen(
     deleteAccountState: DeleteAccountState,
     onSaveName: (String) -> Unit,
     onSaveAvatar: (String?) -> Unit,
+    onSaveContactInfo: (String?, String?) -> Unit = { _, _ -> },
     onDeleteAccount: () -> Unit,
     onResetDeleteAccountState: () -> Unit,
     onBack: () -> Unit
 ) {
     var name by remember { mutableStateOf(settings.ownerName) }
     var avatarUrl by remember { mutableStateOf(settings.ownerAvatarUrl ?: "") }
+    var phone by remember { mutableStateOf(ownerPhone.orEmpty()) }
+    var email by remember { mutableStateOf(ownerEmail.orEmpty()) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showErrorDialog by remember { mutableStateOf<String?>(null) }
 
@@ -117,6 +120,7 @@ fun ProfileSettingsScreen(
                     TextButton(onClick = {
                         onSaveName(name)
                         onSaveAvatar(avatarUrl.takeIf { it.isNotBlank() })
+                        onSaveContactInfo(phone.trim().ifBlank { null }, email.trim().ifBlank { null })
                         onBack()
                     }) {
                         Text("Save")
@@ -231,6 +235,26 @@ fun ProfileSettingsScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            // Contact info that syncs to linked contacts/devices
+            HorizontalDivider()
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                Text("Contact info", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Phone number") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // Public Profile Preview
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

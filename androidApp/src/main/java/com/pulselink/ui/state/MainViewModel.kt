@@ -1520,6 +1520,22 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setMergedExperienceEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setMergedExperienceEnabled(enabled)
+        }
+    }
+
+    fun setOwnerContactInfo(phone: String?, email: String?) {
+        viewModelScope.launch {
+            settingsRepository.setLastKnownPhone(phone)
+            settingsRepository.setLastKnownEmail(email)
+            settingsRepository.setDevicePhoneNumber(phone)
+            lastKnownPhone = phone
+            lastKnownEmail = email
+        }
+    }
+
     fun setCrashDetectionEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setCrashDetectionEnabled(enabled)

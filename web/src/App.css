@@ -1072,6 +1072,13 @@
   background: linear-gradient(140deg, rgba(34, 211, 238, 0.18), rgba(14, 165, 233, 0.1));
 }
 
+.home-icon img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  display: block;
+}
+
 .panel-header h3 {
   font-size: 1.4rem;
 }

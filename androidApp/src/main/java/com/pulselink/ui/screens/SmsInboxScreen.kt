@@ -102,6 +102,7 @@ import com.pulselink.ui.components.ThemeIcon
 import com.pulselink.ui.components.ThemeIconKey
 import com.pulselink.util.normalizeSmsAddress
 import com.pulselink.util.parseColorOr
+import com.pulselink.util.ensureReadableOnColor
 import com.pulselink.util.splitSmsDisplayAddress
 import com.pulselink.ui.state.SearchResultState
 import com.pulselink.data.sms.SmsMessageItem
@@ -217,6 +218,26 @@ fun SmsInboxScreen(
     val showSkeletons = isDatabaseBusy && threads.isEmpty()
 
     val colorScheme = MaterialTheme.colorScheme
+    val backgroundColor = remember(theme, colorScheme) {
+        parseColorOr(colorScheme.background, theme.backgroundColor)
+    }
+    val onBackgroundColor = remember(theme, colorScheme, backgroundColor) {
+        ensureReadableOnColor(
+            background = backgroundColor,
+            desired = parseColorOr(colorScheme.onSurface, theme.onBackground),
+            fallback = colorScheme.onSurface,
+            minimumContrast = 3.5f
+        )
+    }
+    val onBackgroundMuted = remember(onBackgroundColor) { onBackgroundColor.copy(alpha = 0.7f) }
+    val onBackgroundSubtle = remember(onBackgroundColor) { onBackgroundColor.copy(alpha = 0.8f) }
+    val timestampColor = remember(theme, colorScheme, onBackgroundMuted, backgroundColor) {
+        ensureReadableOnColor(
+            backgroundColor,
+            parseColorOr(colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground),
+            fallback = onBackgroundMuted
+        )
+    }
     val iconSize = (24f * theme.iconSizeFactor).coerceIn(18f, 34f).dp
     val largeIconSize = (64f * theme.iconSizeFactor).coerceIn(48f, 86f).dp
     val beaconCollapsedIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 26f).dp
@@ -238,7 +259,7 @@ fun SmsInboxScreen(
     }
     val backgroundImageUrl = theme.backgroundImageUrl?.takeIf { it.isNotBlank() }
     val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
-    val bgModifier = remember(theme, colorScheme) {
+    val bgModifier = remember(theme, colorScheme, backgroundColor, overlayAlpha) {
         if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
             Modifier.background(
                 brush = Brush.verticalGradient(
@@ -249,7 +270,7 @@ fun SmsInboxScreen(
                 )
             )
         } else {
-            Modifier.background(parseColorOr(colorScheme.background, theme.backgroundColor).copy(alpha = overlayAlpha))
+            Modifier.background(backgroundColor.copy(alpha = overlayAlpha))
         }
     }
     val topAppBarState = rememberTopAppBarState()
@@ -456,11 +477,11 @@ fun SmsInboxScreen(
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor),
-                        unfocusedBorderColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.4f),
+                        unfocusedBorderColor = onBackgroundMuted.copy(alpha = 0.4f),
                         focusedContainerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor),
                         unfocusedContainerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor),
-                        focusedTextColor = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
-                        unfocusedTextColor = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
+                        focusedTextColor = onBackgroundColor,
+                        unfocusedTextColor = onBackgroundColor,
                         cursorColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
                     ),
                     shape = RoundedCornerShape(18.dp)
@@ -481,12 +502,12 @@ fun SmsInboxScreen(
                     is SearchResultState.Searching -> Text(
                         "Searching.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
+                        color = onBackgroundMuted
                     )
                     is SearchResultState.Empty -> Text(
                         "No matches. Try a contact name or phrase.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
+                        color = onBackgroundMuted
                     )
                     is SearchResultState.Contact -> SearchContactResult(
                         result = searchState,
@@ -506,7 +527,7 @@ fun SmsInboxScreen(
                     text = sectionTitle,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+                    color = onBackgroundColor
                 )
             }
             val unreadCount = remember(threads) { threads.count { it.unread } }
@@ -670,7 +691,7 @@ internal fun ThreadRow(
     val actionIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 28f).dp
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val surfaceColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
-    val outlineColor = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground)
+    val outlineColor = onBackgroundColor
         .copy(alpha = if (thread.unread) 0.14f else 0.08f)
     val borderColor = if (thread.unread) primary.copy(alpha = 0.22f) else outlineColor
 
@@ -731,7 +752,11 @@ internal fun ThreadRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AvatarCircle(text = displayName, theme = theme)
+                    Box(
+                        modifier = Modifier.clickable { onAvatarClick(thread) }
+                    ) {
+                        AvatarCircle(text = displayName, theme = theme)
+                    }
                     Column(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -747,20 +772,20 @@ internal fun ThreadRow(
                                 fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground),
-                            fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
+                                color = onBackgroundColor,
+                                fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
                             )
                             Text(
                                 text = dateFormatter(thread.timestamp),
                                 style = MaterialTheme.typography.labelSmall,
-                            color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground).copy(alpha = 0.7f)
+                                color = timestampColor
                             )
                         }
-                        if (!number.isNullOrBlank() && number != displayName) {
+                        if (!number.isNullOrBlank() && number != displayName) { 
                             Text(
                                 text = number,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.7f),
+                                color = onBackgroundMuted,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -770,8 +795,8 @@ internal fun ThreadRow(
                             style = MaterialTheme.typography.bodyMedium,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
-                        color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground).copy(alpha = 0.8f),
-                        fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
+                            color = onBackgroundSubtle,
+                            fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
                         )
                         if (thread.unread) {
                             Spacer(modifier = Modifier.height(4.dp))
@@ -821,7 +846,7 @@ internal fun ThreadRowSkeleton(
         ),
         label = "threadSkeletonAlpha"
     )
-    val shimmer = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
+    val shimmer = onBackgroundMuted
         .copy(alpha = alpha)
 
     Surface(
@@ -1207,7 +1232,7 @@ private fun LinePickerRow(
     val badgeColor = lineColors[selectedIndex % lineColors.size]
     val label = "Line ${selectedIndex + 1}"
     val subtitle = selectedLine?.phoneNumber ?: ""
-    val onBackground = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+    val onBackground = onBackgroundColor
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Surface(

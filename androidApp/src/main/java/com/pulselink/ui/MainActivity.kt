@@ -80,6 +80,9 @@ import com.pulselink.ui.screens.EmergencyMapScreen
 import com.pulselink.ui.screens.AlertTonePickerScreen
 import com.pulselink.ui.screens.BetaAgreementFullScreen
 import com.pulselink.ui.screens.BetaAgreementScreen
+import com.pulselink.ui.screens.BugReportData
+import com.pulselink.ui.screens.BugReportDataSaver
+import com.pulselink.ui.screens.BugReportScreen
 import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.screens.ContactConversationScreen
 import com.pulselink.ui.screens.ContactCreateScreen
@@ -115,6 +118,7 @@ import com.pulselink.ui.state.PublicProfile
 import com.pulselink.ui.theme.PulseLinkTheme
 import com.pulselink.util.VibrationPatterns
 import com.pulselink.util.normalizeSmsAddress
+import com.pulselink.ui.BeaconInboxActivity
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -157,6 +161,7 @@ import com.pulselink.BuildConfig
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.DefaultSmsHelper
 import com.pulselink.util.BeaconIconManager
+import com.pulselink.util.UnifiedLauncherManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import com.pulselink.util.splitSmsDisplayAddress
@@ -400,6 +405,13 @@ class MainActivity : AppCompatActivity() {
                         state.settings.themePreferences.inboxIconVariant
                     )
                 }
+                LaunchedEffect(state.settings.mergedExperienceEnabled, state.settings.unifiedDisplayName) {
+                    UnifiedLauncherManager.apply(
+                        context,
+                        state.settings.mergedExperienceEnabled,
+                        state.settings.unifiedDisplayName
+                    )
+                }
                 LaunchedEffect(navController) {
                     inboxShortcutFlow.collectLatest {
                         pendingInboxNav = true
@@ -526,11 +538,10 @@ class MainActivity : AppCompatActivity() {
                                 error = null
                             )
                         }
-                        navController.navigate("sms/inbox") {
-                            popUpTo(navController.graph.findStartDestination().id) { inclusive = true }
-                            launchSingleTop = true
-                            restoreState = false
+                        val beaconIntent = Intent(context, BeaconInboxActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                         }
+                        context.startActivity(beaconIntent)
                         showBeaconAssist = false
                     }
                 }
@@ -597,9 +608,9 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                val requiredPermissions = remember {
+                val requiredPermissions = remember(isPro) {
                     buildList {
-                        if (BuildConfig.PRO_FEATURES) {
+                        if (isPro) {
                             add(Manifest.permission.SEND_SMS)
                             add(Manifest.permission.RECEIVE_SMS)
                             add(Manifest.permission.READ_SMS)
@@ -796,18 +807,19 @@ class MainActivity : AppCompatActivity() {
                     val premiumBranding = state.settings.premiumUnlocked ||
                         BuildConfig.PREMIUM_FEATURES ||
                         state.isProUser
+                    val proLikeUser = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || state.settings.premiumUnlocked
                     composable("splash") {
                         val brandName = pulseBrandName(
                             isPremium = premiumBranding,
-                            isPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked
+                            isPro = proLikeUser
                         )
                         val badgeText = when {
                             premiumBranding -> "Premium"
-                            BuildConfig.PRO_FEATURES || state.settings.proUnlocked -> "Pro"
+                            proLikeUser -> "Pro"
                             else -> null
                         }
                         SplashScreen(
-                            usePremiumBranding = premiumBranding || BuildConfig.PRO_FEATURES || state.settings.proUnlocked,
+                            usePremiumBranding = premiumBranding || proLikeUser,
                             brandName = brandName,
                             badgeText = badgeText,
                             isUnifiedMode = state.settings.mergedExperienceEnabled
@@ -1068,7 +1080,7 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
 
-                        val smsGranted = if (BuildConfig.PRO_FEATURES) {
+                        val smsGranted = if (isPro) {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
                                     ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
                         } else true
@@ -1083,14 +1095,14 @@ class MainActivity : AppCompatActivity() {
                             ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
 
                         val permissionCards = buildList {
-                            val title = if (BuildConfig.PRO_FEATURES) "SMS & Call" else "Call"
-                            val description = if (BuildConfig.PRO_FEATURES)
+                            val title = if (isPro) "SMS & Call" else "Call"
+                            val description = if (isPro)
                                 "Allow PulseLink to send emergency messages and place calls."
                             else
                                 "Allow PulseLink to place calls."
 
                             val manualHelp = if (!smsGranted || !callPermissionGranted) {
-                                if (BuildConfig.PRO_FEATURES)
+                                if (isPro)
                                     "If SMS or Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap SMS and Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch both to Allow."
                                 else
                                     "If Call stays disabled: open Settings -> Apps -> PulseLink -> Permissions, tap Phone, open the 3-dot menu, choose \"Allow disallowed permissions\", confirm with fingerprint or PIN, then switch to Allow."
@@ -1572,6 +1584,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleOtpCleanup = viewModel::setOtpCleanupEnabled,
                             onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
                             onToggleAiSummaries = viewModel::setAiSummariesEnabled,
+                            onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                             onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
                             onBack = { navController.popBackStack() }
                         )
@@ -1662,6 +1675,7 @@ class MainActivity : AppCompatActivity() {
                             deleteAccountState = deleteAccountState,
                             onSaveName = viewModel::setOwnerName,
                             onSaveAvatar = viewModel::setOwnerAvatarUrl,
+                            onSaveContactInfo = viewModel::setOwnerContactInfo,
                             onDeleteAccount = viewModel::deleteAccount,
                             onResetDeleteAccountState = viewModel::resetDeleteAccountState,
                             onBack = { navController.popBackStack() }
@@ -1913,9 +1927,30 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("bug_report") {
-                        BugReportWebScreen(
-                            url = MainViewModel.BUG_REPORT_PAGE_URL,
-                            onBack = { navController.popBackStack() }
+                        var bugData by rememberSaveable(stateSaver = BugReportDataSaver) {
+                            mutableStateOf(
+                                BugReportData(
+                                    userEmail = (authState as? AuthState.Authenticated)?.user?.email.orEmpty()
+                                )
+                            )
+                        }
+                        BugReportScreen(
+                            data = bugData,
+                            onDataChange = { bugData = it },
+                            onBack = { navController.popBackStack() },
+                            onSubmit = { data ->
+                                val uri = viewModel.buildBugReportUri(context, data)
+                                val intent = Intent(Intent.ACTION_VIEW, uri)
+                                runCatching { context.startActivity(intent) }
+                                    .onSuccess { navController.popBackStack() }
+                                    .onFailure {
+                                        Toast.makeText(
+                                            context,
+                                            "Couldn't open bug report page. Please try again later.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                            }
                         )
                     }
                     composable("beta_testers") {
