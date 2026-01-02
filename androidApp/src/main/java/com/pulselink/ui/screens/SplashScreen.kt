@@ -24,9 +24,10 @@ fun SplashScreen(
     modifier: Modifier = Modifier,
     usePremiumBranding: Boolean = false,
     brandName: String = "PulseLink",
-    badgeText: String? = null
+    badgeText: String? = null,
+    isUnifiedMode: Boolean = false
 ) {
-    val logoRes = brandLogoRes(usePremiumBranding)
+    val logoRes = brandLogoRes(usePremiumBranding, isUnifiedMode)
     Surface(
         modifier = modifier
             .fillMaxSize()

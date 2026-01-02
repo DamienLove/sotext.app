@@ -809,7 +809,8 @@ class MainActivity : AppCompatActivity() {
                         SplashScreen(
                             usePremiumBranding = premiumBranding || BuildConfig.PRO_FEATURES || state.settings.proUnlocked,
                             brandName = brandName,
-                            badgeText = badgeText
+                            badgeText = badgeText,
+                            isUnifiedMode = state.settings.mergedExperienceEnabled
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
                             if (authState is AuthState.Loading) return@LaunchedEffect
