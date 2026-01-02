@@ -38,5 +38,18 @@
       "Bash(gh label:*)",
       "Bash(gh issue edit:*)"
     ]
+  },
+  "mcpServers": {
+    "play-store-mcp": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "/path/to/play-store-mcp-all.jar"
+      ],
+      "env": {
+        "PLAY_STORE_SERVICE_ACCOUNT_KEY_PATH": "C:\\Projects\\pulselink\\secrets\\service-account-key.json",
+        "PLAY_STORE_DEFAULT_TRACK": "internal"
+      }
+    }
   }
 }
