@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
@@ -26,6 +27,7 @@ import com.RingerSong.free.data.SpotifyRemoteManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -38,6 +40,7 @@ class RingerPlaybackService : Service() {
     private var audioManager: AudioManager? = null
     private var audioFocusRequest: AudioFocusRequest? = null
     private var originalRingVolume: Int = -1
+    private lateinit var prefs: SharedPreferences
 
     companion object {
         private const val TAG = "RingerPlayback"
@@ -46,12 +49,24 @@ class RingerPlaybackService : Service() {
         const val EXTRA_PHONE_NUMBER = "phone_number"
         private const val NOTIFICATION_ID = 9002
         private const val CHANNEL_ID = "ringer_playback"
+        private const val PREFS_NAME = "ringer_prefs"
+        private const val KEY_ORIGINAL_VOLUME = "original_ring_volume"
+        private const val SPOTIFY_SEEK_DELAY_MS = 500L
     }
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        // Failsafe: Check if we crashed while muted and restore volume
+        val savedVolume = prefs.getInt(KEY_ORIGINAL_VOLUME, -1)
+        if (savedVolume != -1) {
+            Log.w(TAG, "Found saved volume $savedVolume from previous crash. Restoring...")
+            originalRingVolume = savedVolume
+            restoreSystemRinger()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -75,6 +90,7 @@ class RingerPlaybackService : Service() {
 
     override fun onDestroy() {
         stopPlayback()
+        scope.cancel() // Prevent memory leaks
         super.onDestroy()
     }
 
@@ -110,7 +126,7 @@ class RingerPlaybackService : Service() {
         }
 
         val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+            .setUsage(AudioAttributes.USAGE_MEDIA) // Consistent with playback
             .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
             .build()
 
@@ -126,7 +142,7 @@ class RingerPlaybackService : Service() {
             @Suppress("DEPRECATION")
             manager.requestAudioFocus(
                 null,
-                AudioManager.STREAM_RING,
+                AudioManager.STREAM_MUSIC, // Request focus for MEDIA stream
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
             ) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
         }
@@ -150,12 +166,14 @@ class RingerPlaybackService : Service() {
         try {
             if (originalRingVolume == -1) {
                 originalRingVolume = manager.getStreamVolume(AudioManager.STREAM_RING)
+                // Persist to SharedPreferences for crash recovery
+                prefs.edit().putInt(KEY_ORIGINAL_VOLUME, originalRingVolume).apply()
             }
             // Attempt to mute the ringer stream to prevent the default ringtone from playing over the music
             manager.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
             Log.d(TAG, "Muted system ringer (Original volume: $originalRingVolume)")
         } catch (e: SecurityException) {
-            Log.e(TAG, "Could not mute ringer - Do Not Disturb policy access required?", e)
+            Log.e(TAG, "Could not mute ringer - Do Not Disturb policy access required or permission missing", e)
         } catch (e: Exception) {
             Log.e(TAG, "Error muting ringer", e)
         }
@@ -168,6 +186,8 @@ class RingerPlaybackService : Service() {
                 manager.setStreamVolume(AudioManager.STREAM_RING, originalRingVolume, 0)
                 Log.d(TAG, "Restored system ringer to volume: $originalRingVolume")
                 originalRingVolume = -1
+                // Clear from SharedPreferences
+                prefs.edit().remove(KEY_ORIGINAL_VOLUME).apply()
             } catch (e: Exception) {
                 Log.e(TAG, "Error restoring ringer volume", e)
             }
@@ -196,12 +216,17 @@ class RingerPlaybackService : Service() {
                     val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
                     remote.playerApi.play(segment.song.uri)
                     // Seek after a short delay to ensure playback has initialized
-                    delay(500)
+                    // We need a delay because the Spotify app needs time to start the track before seeking works reliable
+                    delay(SPOTIFY_SEEK_DELAY_MS)
                     remote.playerApi.seekTo(segment.startMs)
                     isSpotifyPlaying = true
                     Log.d(TAG, "Spotify App Remote playback started")
                 }.onFailure { e ->
                     Log.e(TAG, "Spotify App Remote failed", e)
+                    updateNotification("Spotify playback failed. Please check app & premium status.")
+                    // Don't stop immediately if we want the user to see the error,
+                    // but for a ringer, silence is bad. We restore ringer volume in stopPlayback so the default ringer might still be audible if the system un-mutes it or if we hadn't muted it yet.
+                    // Actually, if we fail here, we should probably restore the ringer volume so the user at least hears the default ring (if the OS continues ringing).
                     stopPlayback()
                 }
             }
@@ -246,35 +271,6 @@ class RingerPlaybackService : Service() {
         }
     }
 
-    private fun playLocalFile(filePath: String, startMs: Long, durationMs: Long) {
-        val mediaPlayer = MediaPlayer()
-        player = mediaPlayer
-        runCatching {
-            mediaPlayer.setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA) // Use MEDIA since we muted RINGTONE
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            mediaPlayer.setDataSource(filePath)
-            mediaPlayer.prepare()
-            mediaPlayer.seekTo(startMs.toInt())
-            mediaPlayer.start()
-
-            mediaPlayer.setOnCompletionListener {
-                stopPlayback()
-            }
-
-            stopJob = scope.launch {
-                delay(durationMs)
-                stopPlayback()
-            }
-        }.onFailure {
-            android.util.Log.e("RingerPlayback", "Failed to play local file: $filePath", it)
-            stopPlayback()
-        }
-    }
-
     private fun stopPlayback() {
         abandonAudioFocus()
         restoreSystemRinger() // Restore ringer volume!
@@ -290,6 +286,9 @@ class RingerPlaybackService : Service() {
         if (isSpotifyPlaying) {
              scope.launch {
                 runCatching {
+                    // Check if we are already connected?
+                    // SpotifyRemoteManager.connect actually checks internal state if kept there,
+                    // but let's assume we need to be careful.
                     val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
                     remote.playerApi.pause()
                 }
@@ -299,6 +298,11 @@ class RingerPlaybackService : Service() {
 
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    private fun updateNotification(message: String) {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, buildNotification(message))
     }
 
     private fun lookupContactId(phoneNumber: String): String? {
