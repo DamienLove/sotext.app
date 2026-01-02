@@ -1733,6 +1733,8 @@ class MainActivity : AppCompatActivity() {
                             isDatabaseBusy = inboxBusy,
                             contactsByNumber = contactsByNumber,
                             isPremium = isPremium,
+                            isPro = isPro,
+                            isUnifiedMode = state.settings.mergedExperienceEnabled,
                             banner = {
                                 if (!notificationsEnabled || notificationsSilent) {
                                     Surface(
