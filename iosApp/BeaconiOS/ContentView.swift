@@ -75,7 +75,7 @@ private struct BeaconTab: View {
     @State private var isUnlocked = false
     @State private var showPinSheet = false
     @AppStorage("privateSafePin") private var storedPin: String = ""
-    @AppStorage("themeColor") private var themeColor: ThemeColor = .indigo
+    @AppStorage("themeColor") private var themeColor: ThemeColor = .cyan
     @AppStorage("bubbleStyle") private var bubbleStyle: BubbleStyle = .rounded
 
     var isPro: Bool {
@@ -341,10 +341,11 @@ private struct SettingsTab: View {
 }
 
 enum ThemeColor: String, CaseIterable {
-    case indigo, blue, purple, orange, green, pink
+    case cyan, indigo, blue, purple, orange, green, pink
 
     var color: Color {
         switch self {
+        case .cyan: return .cyan
         case .indigo: return .indigo
         case .blue: return .blue
         case .purple: return .purple

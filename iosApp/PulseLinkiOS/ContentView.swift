@@ -535,9 +535,9 @@ private struct CancelEmergencySheet: View {
 // MARK: - Theme
 
 enum RelayColors {
-    static let primary = Color(red: 0.39, green: 0.40, blue: 0.95)   // Indigo (#6366f1)
-    static let accent  = Color(red: 0.75, green: 0.53, blue: 0.12)   // Gold deep
-    static let deep    = Color(red: 0.01, green: 0.02, blue: 0.03)   // Deep Dark (#030407)
+    static let primary = Color(red: 0.13, green: 0.83, blue: 0.93)   // Cyan (#22D3EE)
+    static let accent  = Color(red: 0.05, green: 0.65, blue: 0.91)   // Sky Blue (#0EA5E9)
+    static let deep    = Color(red: 0.04, green: 0.05, blue: 0.09)   // Future Deep (#0B0E16)
 }
 
 #Preview {
