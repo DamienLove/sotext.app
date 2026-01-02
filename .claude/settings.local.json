@@ -44,7 +44,7 @@
       "command": "java",
       "args": [
         "-jar",
-        "/path/to/play-store-mcp-all.jar"
+        "C:\\Projects\\pulselink\\secrets\\play-store-mcp-all.jar"
       ],
       "env": {
         "PLAY_STORE_SERVICE_ACCOUNT_KEY_PATH": "C:\\Projects\\pulselink\\secrets\\service-account-key.json",
