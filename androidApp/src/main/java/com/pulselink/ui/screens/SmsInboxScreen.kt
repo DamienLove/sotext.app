@@ -106,6 +106,8 @@ import com.pulselink.util.splitSmsDisplayAddress
 import com.pulselink.ui.state.SearchResultState
 import com.pulselink.data.sms.SmsMessageItem
 import com.pulselink.ui.branding.beaconBrandName
+import com.pulselink.ui.branding.brandLogoRes
+import com.pulselink.ui.branding.unifiedBrandName
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -150,7 +152,8 @@ fun SmsInboxScreen(
     onLoadMore: () -> Unit = {},
     hasMoreToLoad: Boolean = true,
     isPremium: Boolean = false,
-    isPro: Boolean = false
+    isPro: Boolean = false,
+    isUnifiedMode: Boolean = false
 ) {
     var filter by rememberSaveable(archivedOnly) {
         mutableStateOf(if (archivedOnly) InboxFilter.ARCHIVED else InboxFilter.ALL)
@@ -279,7 +282,16 @@ fun SmsInboxScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_beacon_inbox),
+                                painter = painterResource(
+                                    id = if (isUnifiedMode) {
+                                        brandLogoRes(
+                                            usePremiumBranding = isPremium || isPro,
+                                            isUnifiedMode = true
+                                        )
+                                    } else {
+                                        R.drawable.ic_beacon_inbox
+                                    }
+                                ),
                                 contentDescription = null,
                                 tint = logoTint,
                                 modifier = Modifier
@@ -288,14 +300,27 @@ fun SmsInboxScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp * beaconExpandedAlpha))
                                 Text(
-                                    beaconBrandName(isPremium, isPro),
+                                    if (isUnifiedMode) {
+                                        unifiedBrandName(isPremium, isPro)
+                                    } else {
+                                        beaconBrandName(isPremium, isPro)
+                                    },
                                     color = topBarForeground
                                 )
                         }
                     },
                     navigationIcon = {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_beacon_inbox),
+                            painter = painterResource(
+                                id = if (isUnifiedMode) {
+                                    brandLogoRes(
+                                        usePremiumBranding = isPremium || isPro,
+                                        isUnifiedMode = true
+                                    )
+                                } else {
+                                    R.drawable.ic_beacon_inbox
+                                }
+                            ),
                             contentDescription = "Beacon",
                             tint = logoTint,
                             modifier = Modifier
@@ -783,7 +808,7 @@ internal fun ThreadRow(
 }
 
 @Composable
-private fun ThreadRowSkeleton(
+internal fun ThreadRowSkeleton(
     theme: ThemePreferences
 ) {
     val transition = rememberInfiniteTransition(label = "threadSkeleton")

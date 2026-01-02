@@ -100,6 +100,7 @@ import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.ExtensionsStoreScreen
 import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.SmsInboxScreen
+import com.pulselink.ui.screens.UnifiedHomeScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
@@ -754,8 +755,17 @@ class MainActivity : AppCompatActivity() {
                     context.stopService(intent)
                 }
 
-                val startDestination = remember(initialInboxShortcut) {
-                    if (initialInboxShortcut) "sms/inbox" else "splash"
+                val startDestination = remember(
+                    initialInboxShortcut,
+                    state.settings.mergedExperienceEnabled,
+                    state.onboardingComplete
+                ) {
+                    when {
+                        initialInboxShortcut -> "sms/inbox"
+                        !state.onboardingComplete -> "splash"
+                        state.settings.mergedExperienceEnabled -> "unified_inbox"
+                        else -> "home"
+                    }
                 }
 
                 val bannerHeight = 50.dp
@@ -788,7 +798,13 @@ class MainActivity : AppCompatActivity() {
                             if (authState is AuthState.Loading) return@LaunchedEffect
                             delay(1200)
                             val destination = when (authState) {
-                                is AuthState.Authenticated -> if (state.onboardingComplete) "home" else "onboarding_intro"
+                                is AuthState.Authenticated -> {
+                                    if (state.onboardingComplete) {
+                                        if (state.settings.mergedExperienceEnabled) "unified_inbox" else "home"
+                                    } else {
+                                        "onboarding_intro"
+                                    }
+                                }
                                 else -> "login"
                             }
                             navController.navigate(destination) {
@@ -796,6 +812,98 @@ class MainActivity : AppCompatActivity() {
                                 launchSingleTop = true
                             }
                         }
+                    }
+                    composable("unified_inbox") {
+                        val contactsByNumber = remember(state.contacts) {
+                            val map = mutableMapOf<String, Contact>()
+                            state.contacts.forEach { contact ->
+                                val numbers = listOf(contact.phoneNumber) + contact.additionalPhones
+                                numbers.filter { it.isNotBlank() }.forEach { number ->
+                                    map.putIfAbsent(normalizeSmsAddress(number), contact)
+                                }
+                            }
+                            map.toMap()
+                        }
+                        
+                        val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
+                        UnifiedHomeScreen(
+                            state = state,
+                            onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
+                            onTriggerEmergency = viewModel::triggerEmergency,
+                            onSendCheckIn = viewModel::sendCheckIn,
+                            onSettingsClick = { navController.navigate("settings") },
+                            onFaqClick = { navController.navigate("faq") },
+                            onOpenContacts = { navController.navigate("sms/contacts") },
+                            onOpenNotifications = { navController.navigate("notifications/message_sound") },
+                            onOpenThemes = { navController.navigate("visual_settings") },
+                            onAddContact = viewModel::saveContact,
+                            onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
+                            onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
+                            onSendLink = { contactId ->
+                                state.contacts.firstOrNull { it.id == contactId }?.let { sendLinkOrInvite(it) }
+                            },
+                            onApproveLink = viewModel::approveLink,
+                            onCallContact = callContactHandler,
+                            onReorderContacts = viewModel::reorderContacts,
+                            onRequestCancelEmergency = cancelEmergencyHandler,
+                            onViewEmergencyMap = { navController.navigate("emergency_map") },
+                            isCancelingEmergency = isCancelingEmergency,
+                            onAlertsClick = { navController.navigate("alerts_history") },
+                            showAddLoginPrompt = isSmsOnlyUser,
+                            onAddLoginClick = {
+                                navController.navigate("login") {
+                                    launchSingleTop = true
+                                }
+                            },
+                            showWebAccessHint = !state.settings.webAccessHintDismissed && isPremium,
+                            onWebAccessHintDismiss = { viewModel.setWebAccessHintDismissed(true) },
+                            onWebAccessHintAction = {
+                                viewModel.setWebAccessHintDismissed(true)
+                                if (isPremium) {
+                                    navController.navigate("sms/inbox")
+                                } else {
+                                    navController.navigate("account_settings")
+                                }
+                            },
+                            onUpgradeClick = {
+                                val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
+                                    data = Uri.parse("market://details?id=com.pulselink.pro")
+                                    setPackage("com.android.vending")
+                                }
+                                try {
+                                    startActivity(playStoreIntent)
+                                } catch (_: ActivityNotFoundException) {
+                                    playStoreIntent.data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                                    playStoreIntent.setPackage(null)
+                                    startActivity(playStoreIntent)
+                                }
+                            },
+                            brandName = pulseDisplayName,
+                            isPremium = isPremium,
+                            isPro = isPro,
+                            onOpenThread = { thread ->
+                                val lineSuffix = thread.lineId?.let { Uri.encode(it) }.orEmpty()
+                                navController.navigate(
+                                    "sms/thread/${thread.threadId}/${Uri.encode(thread.address)}?lineId=$lineSuffix"
+                                )
+                            },
+                            onViewAllMessages = { navController.navigate("sms/inbox") },
+                            onOpenContactForThread = { thread ->
+                                val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
+                                if (contact != null) {
+                                    navController.navigate("contact/${contact.id}/settings")
+                                } else {
+                                    val (displayName, number) = splitSmsDisplayAddress(thread.address)
+                                    val phone = (number ?: displayName).trim()
+                                    val encodedPhone = Uri.encode(phone)
+                                    val encodedName = displayName
+                                        .takeIf { it.isNotBlank() && it != phone }
+                                        ?.let { Uri.encode(it) }
+                                        .orEmpty()
+                                    navController.navigate("contact/new?phone=$encodedPhone&name=$encodedName")
+                                }
+                            }
+                        )
                     }
                     composable("login") {
                         val loginViewModel: LoginViewModel = hiltViewModel()

@@ -87,16 +87,16 @@ fun ThreadScreen(
         }
     }
 
-        val listState = remember(address) { LazyListState() }
-            val scope = rememberCoroutineScope()
-                var initialScrollDone by remember(address) { mutableStateOf(false) }
-                    val isNearBottom by remember {
-                                derivedStateOf {
-                                                val layout = listState.layoutInfo
-                                                            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
-                                                                        lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
-                                                                                }
-                                                                                    }
+    val listState = remember(address) { LazyListState() }
+    val scope = rememberCoroutineScope()
+    var initialScrollDone by remember(address) { mutableStateOf(false) }
+    val isNearBottom by remember {
+        derivedStateOf {
+            val layout = listState.layoutInfo
+            val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -140,11 +140,11 @@ fun ThreadScreen(
                     .padding(horizontal = 12.dp),
                 reverseLayout = true,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 8.dp, top = 8.dp)
-                                state = listState,
-                                            reverseLayout = true,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(bottom = 8.dp, top = 8.dp),
+                state = listState
             ) {
+                // messages is Newest -> Oldest (Index 0 is newest)
+                // reverseLayout = true, so Index 0 is at bottom.
                 items(messages, key = { it.id }) { msg ->
                     MessageBubble(message = msg, theme = theme)
                 }
@@ -161,12 +161,14 @@ fun ThreadScreen(
                 }
             }
 
-                    LaunchedEffect(messages.size) {
-                                    if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
-                                                        listState.animateScrollToItem(messages.size - 1)
-                                                                        initialScrollDone = true
-                                                                                    }
-                                                                                            }
+            LaunchedEffect(messages.size) {
+                // In reverse layout, adding a new message at index 0 (bottom) automatically keeps it visible if we are at the bottom.
+                // But if we want to force scroll to bottom (index 0) on new messages:
+                if (messages.isNotEmpty() && (!initialScrollDone || isNearBottom)) {
+                    listState.animateScrollToItem(0)
+                    initialScrollDone = true
+                }
+            }
 
             Surface(
                 tonalElevation = 2.dp,

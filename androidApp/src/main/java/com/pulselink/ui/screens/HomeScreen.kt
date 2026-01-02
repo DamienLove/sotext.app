@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -116,6 +117,7 @@ import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.ui.ads.NativeAdCard
+import com.pulselink.ui.branding.brandLogoRes
 import com.pulselink.ui.state.PulseLinkUiState
 import com.pulselink.util.parseColorOr
 import kotlinx.coroutines.launch
@@ -161,7 +163,8 @@ fun HomeScreen(
     onUpgradeClick: () -> Unit = {},
     brandName: String = "PulseLink",
     isPremium: Boolean = false,
-    isPro: Boolean = false
+    isPro: Boolean = false,
+    smsPreviewContent: (@Composable () -> Unit)? = null
 ) {
     val context = LocalContext.current
     val themePrefs: ThemePreferences = state.settings.themePreferences
@@ -234,13 +237,21 @@ fun HomeScreen(
                 onUpgradeClick = onUpgradeClick,
                 showBeacon = showBeaconIcon || isUnifiedMode,
                 isUnifiedMode = isUnifiedMode,
-                theme = themePrefs
+                theme = themePrefs,
+                onOpenNotifications = onOpenNotifications,
+                onOpenThemes = onOpenThemes,
+                isPremium = isPremium,
+                isPro = isPro
             )
             if (isUnifiedMode) {
-                BeaconUnifiedWidget(
-                    onOpenInbox = onBeaconClick,
-                    onOpenContacts = onOpenContacts
-                )
+                if (smsPreviewContent != null) {
+                    smsPreviewContent()
+                } else {
+                    BeaconUnifiedWidget(
+                        onOpenInbox = onBeaconClick,
+                        onOpenContacts = onOpenContacts
+                    )
+                }
             }
             if (showBeaconHint) {
                 BeaconHintCard(
@@ -354,7 +365,11 @@ private fun HeaderSection(
     onUpgradeClick: () -> Unit,
     showBeacon: Boolean,
     isUnifiedMode: Boolean,
-    theme: ThemePreferences
+    theme: ThemePreferences,
+    onOpenNotifications: () -> Unit,
+    onOpenThemes: () -> Unit,
+    isPremium: Boolean,
+    isPro: Boolean
 ) {
     val heroShape = RoundedCornerShape(32.dp)
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
@@ -382,7 +397,12 @@ private fun HeaderSection(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_logo),
+                    painter = painterResource(
+                        id = brandLogoRes(
+                            usePremiumBranding = isPremium || isPro,
+                            isUnifiedMode = isUnifiedMode
+                        )
+                    ),
                     contentDescription = "PulseLink logo",
                     modifier = Modifier.size(if (isUnifiedMode) 64.dp else 56.dp)
                 )
@@ -416,7 +436,7 @@ private fun HeaderSection(
 }
 
 @Composable
-private fun BeaconUnifiedWidget(
+internal fun BeaconUnifiedWidget(
     onOpenInbox: () -> Unit,
     onOpenContacts: () -> Unit
 ) {

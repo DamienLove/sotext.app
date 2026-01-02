@@ -33,7 +33,8 @@
       "Bash(npm run build:*)",
       "Bash(firebase deploy:*)",
       "Bash(claude plugin marketplace add:*)",
-      "Bash(claude plugin install:*)"
+      "Bash(claude plugin install:*)",
+      "Bash(git grep:*)"
     ]
   }
 }
