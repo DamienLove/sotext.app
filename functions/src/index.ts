@@ -32,3 +32,4 @@ export {
   getPremiumStatus,
   handlePlayStoreRTDN,
 } from "./billing";
+export {getSpotifyAccessToken} from "./spotify";

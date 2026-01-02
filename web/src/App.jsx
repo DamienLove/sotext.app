@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -56,41 +56,7 @@ const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
-const CopyIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
-const CheckIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
 const Spinner = () => <span className="spinner" aria-hidden="true" />;
-
-const CopyButton = ({ text, label }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-    }
-  };
-
-  useEffect(() => {
-    if (copied) {
-      const timer = setTimeout(() => setCopied(false), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [copied]);
-
-  return (
-    <button
-      className="ghost-btn icon-only"
-      onClick={handleCopy}
-      aria-label={label || "Copy to clipboard"}
-      title={label || "Copy"}
-      style={{ padding: 4 }}
-    >
-      {copied ? <CheckIcon /> : <CopyIcon />}
-    </button>
-  );
-};
 
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
@@ -98,36 +64,22 @@ const areThreadsEqual = (prev, next) => {
          prev.onSelect === next.onSelect &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
-         prev.thread.display_name === next.thread.display_name &&
-         prev.thread.phone_number === next.thread.phone_number &&
          prev.thread.snippet === next.thread.snippet;
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => {
-  const displayName = thread.display_name || thread.address;
-  // Refactored logic for clarity
-  const phoneInfo = thread.display_name ? (thread.phone_number || thread.address) : null;
-  const secondary = phoneInfo || (showPreviews ? thread.snippet : '••••••');
-
-  return (
-    <button
-      className={`thread-item ${isActive ? 'active' : ''}`}
-      onClick={() => onSelect(thread)}
-      aria-current={isActive ? 'true' : undefined}
-      aria-label={`Select conversation with ${displayName}`}
-    >
-      <div className="thread-name">{displayName}</div>
-      <div className="thread-snippet">
-        {thread.display_name && showPreviews ?
-          <span className="thread-preview-meta">{secondary} • {thread.snippet}</span> :
-          secondary
-        }
-      </div>
-    </button>
-  );
-}, areThreadsEqual);
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
+  <button
+    className={`thread-item ${isActive ? 'active' : ''}`}
+    onClick={() => onSelect(thread)}
+    aria-current={isActive ? 'true' : undefined}
+    aria-label={`Select conversation with ${thread.address}`}
+  >
+    <div className="thread-name">{thread.address}</div>
+    <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
+  </button>
+), areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
 
@@ -141,33 +93,16 @@ const areMessagesEqual = (prev, next) => {
 
 // Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
 // or when new messages arrive (which creates new object references).
-const MessageItem = memo(({ msg, showPreviews, onAvatarClick, threadAddress }) => {
-  const isReceived = msg.type === 1;
-  const contactInitial = threadAddress ? threadAddress.charAt(0).toUpperCase() : '?';
-
-  return (
-    <div className={`message ${isReceived ? 'received' : 'sent'}`}>
-      {isReceived && (
-        <button
-          className="message-avatar"
-          onClick={() => onAvatarClick && onAvatarClick(threadAddress)}
-          aria-label={`View contact info for ${threadAddress}`}
-          title="View contact info"
-        >
-          {contactInitial}
-        </button>
-      )}
-      <div className="message-content">
-        <div className="message-bubble">
-          {showPreviews ? msg.body : '••••••'}
-        </div>
-        <div className="message-time">
-          {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </div>
-      </div>
+const MessageItem = memo(({ msg, showPreviews }) => (
+  <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
+    <div className="message-bubble">
+      {showPreviews ? msg.body : '••••••'}
     </div>
-  );
-}, areMessagesEqual);
+    <div className="message-time">
+      {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    </div>
+  </div>
+), areMessagesEqual);
 
 MessageItem.displayName = 'MessageItem';
 
@@ -339,80 +274,21 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
 });
 MapAlertItem.displayName = 'MapAlertItem';
 
-// Bolt: Optimized ThemeGalleryItem to prevent re-renders of the theme list
-const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
-  const previewTheme = useMemo(() => normalizeTheme(themeDoc.theme || {}), [themeDoc.theme]);
-  const previewStyle = useMemo(() => buildThemePreviewStyle(previewTheme), [previewTheme]);
-
-  const authorLabel = themeDoc.anonymous
-    ? 'Anonymous'
-    : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
-
-  return (
-    <div className="theme-card">
-      <div className="theme-preview" style={previewStyle}>
-        <div className="theme-preview-chat">
-          <div
-            className="theme-bubble incoming"
-            style={{
-              background: previewTheme.bubbleIncoming,
-              color: previewTheme.onBubbleIncoming
-            }}
-          >
-            Hey, you good?
-          </div>
-          <div
-            className="theme-bubble outgoing"
-            style={{
-              background: previewTheme.bubbleOutgoing,
-              color: previewTheme.onBubbleOutgoing
-            }}
-          >
-            Yep, on my way!
-          </div>
-        </div>
-      </div>
-      <div className="theme-meta">
-        <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
-        <div className="theme-author">{authorLabel}</div>
-      </div>
-      <button
-        className="primary-btn"
-        type="button"
-        onClick={() => onImport(themeDoc)}
-        aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
-      >
-        Import
-      </button>
-    </div>
-  );
-}, (prev, next) => {
-  // Shallow comparison of themeDoc is sufficient as Firestore updates return new objects
-  // but stable references for unchanged documents in the list
-  // Use strict equality for themeDoc because Firestore updates create new object references
-  // even if the data inside is similar, which is the desired behavior for updates.
-  // Note: Unlike MapAlertItem which uses deep field comparison, we rely on reference equality here
-  // because theme objects are large and deeply comparing them would be expensive.
-  return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
-});
-
-ThemeGalleryItem.displayName = 'ThemeGalleryItem';
-
 const defaultTheme = {
-  primaryColor: "#5e6fff",
-  secondaryColor: "#00f3ff",
-  bubbleOutgoing: "#5e6fff",
-  bubbleIncoming: "#161b2e",
-  backgroundColor: "#030407",
+  primaryColor: "#6750A4",
+  secondaryColor: "#625B71",
+  bubbleOutgoing: "#D0BCFF",
+  bubbleIncoming: "#E8DEF8",
+  backgroundColor: "#FFFFFF",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 20,
+  bubbleCornerRadius: 12,
   inboxIconVariant: "Default",
-  onBubbleOutgoing: "#ffffff",
-  onBubbleIncoming: "#f0f4ff",
-  onBackground: "#f0f4ff",
-  topBarColor: "#0e121e",
-  onTopBarColor: "#f0f4ff",
+  onBubbleOutgoing: "#000000",
+  onBubbleIncoming: "#000000",
+  onBackground: "#000000",
+  topBarColor: "#FFFFFF",
+  onTopBarColor: "#000000",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
@@ -1043,16 +919,11 @@ const buildThemePreviewStyle = (theme) => {
   const style = {
     backgroundColor: active.backgroundColor
   };
-  // Build background layers (gradient + image if both exist)
-  const bgLayers = [];
-  if (active.backgroundImageUrl) {
-    bgLayers.push(`url(${active.backgroundImageUrl})`);
-  }
   if (active.appBackgroundGradientStart && active.appBackgroundGradientEnd) {
-    bgLayers.push(`linear-gradient(135deg, ${active.appBackgroundGradientStart}, ${active.appBackgroundGradientEnd})`);
+    style.backgroundImage = `linear-gradient(135deg, ${active.appBackgroundGradientStart}, ${active.appBackgroundGradientEnd})`;
   }
-  if (bgLayers.length > 0) {
-    style.backgroundImage = bgLayers.join(', ');
+  if (active.backgroundImageUrl) {
+    style.backgroundImage = `url(${active.backgroundImageUrl})`;
     style.backgroundSize = 'cover';
     style.backgroundPosition = 'center';
   }
@@ -1178,9 +1049,8 @@ function App() {
   const [composeBody, setComposeBody] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
-  const [beaconTab, setBeaconTab] = useState('messages'); // 'messages' or 'contacts'
-  const [viewingContactAddress, setViewingContactAddress] = useState(null); // Phone number of contact being viewed
   const [alertLocations, setAlertLocations] = useState([]);
   const [alertStatus, setAlertStatus] = useState('');
   const [severityFilter, setSeverityFilter] = useState('emergency');
@@ -1191,21 +1061,17 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [settingsStatus, setSettingsStatus] = useState('');
   const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [isPremiumUser, setIsPremiumUser] = useState(null); // null = loading
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
-  const spotifyCreds = { clientId: import.meta.env.VITE_SPOTIFY_CLIENT_ID, clientSecret: import.meta.env.VITE_SPOTIFY_CLIENT_SECRET };
   const [spotifyToken, setSpotifyToken] = useState(null);
   const [spotifySearch, setSpotifySearch] = useState('');
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
-  const [deletingSongId, setDeletingSongId] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -1226,33 +1092,21 @@ function App() {
 
   const handleDeleteRingerSong = async (songId) => {
     if (!user) return;
-    setDeletingSongId(songId);
     try {
       await deleteDoc(doc(db, "users", user.uid, "ringer_playlist", songId));
     } catch (e) {
       console.error("Failed to delete song", e);
-      setSettingsStatus("Failed to delete song: " + (e.message || "Unknown error"));
-    } finally {
-      setDeletingSongId(null);
     }
   };
 
   const getSpotifyToken = async () => {
-    if (!spotifyCreds.clientId || !spotifyCreds.clientSecret) {
-        throw new Error("Missing Client ID/Secret");
-    }
-    const response = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': 'Basic ' + btoa(spotifyCreds.clientId + ':' + spotifyCreds.clientSecret)
-      },
-      body: 'grant_type=client_credentials'
-    });
-    const data = await response.json();
-    if (data.error) throw new Error(data.error_description || "Token error");
-    setSpotifyToken(data.access_token);
-    return data.access_token;
+    // Sentinel: Use Cloud Function to fetch token securely, avoiding exposed secrets
+    const callable = httpsCallable(functions, 'getSpotifyAccessToken');
+    const result = await callable();
+    const token = result.data.access_token;
+    if (!token) throw new Error("Failed to retrieve access token");
+    setSpotifyToken(token);
+    return token;
   };
 
   const handleSpotifySearch = async () => {
@@ -1368,41 +1222,13 @@ function App() {
   }, [deviceContacts, contactSearch]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
-  const threadListElements = useMemo(() => {
-    if (threads.length === 0) {
-      return (
-        <div className="sidebar-placeholder">
-          <div className="sidebar-tip muted">
-            No conversations found.
-          </div>
-          <div className="sidebar-tip muted">
-            Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
-          </div>
-        </div>
-      );
-    }
-    return threads.map(thread => (
-      <ThreadItem
-        key={thread.id}
-        thread={thread}
-        isActive={selectedThread?.id === thread.id}
-        onSelect={setSelectedThread}
-        showPreviews={showPreviews}
-      />
-    ));
-  }, [threads, selectedThread?.id, showPreviews]);
+  // const threadListElements = useMemo(() => { ... }); // removed unused
 
   const messageListElements = useMemo(() => (
     messages.map(msg => (
-      <MessageItem
-        key={msg.id}
-        msg={msg}
-        showPreviews={showPreviews}
-        threadAddress={selectedThread?.address}
-        onAvatarClick={setViewingContactAddress}
-      />
+      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
     ))
-  ), [messages, showPreviews, selectedThread?.address]);
+  ), [messages, showPreviews]);
 
   const contactListElements = useMemo(() => (
     filteredDeviceContacts.map((contact) => (
@@ -1462,7 +1288,6 @@ function App() {
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
       const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
-      setIsPremiumUser(isPremium);
       const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
       const isLoyal = tenureDays > 365;
@@ -1624,7 +1449,7 @@ function App() {
   useEffect(() => {
     if (!user) {
       setAlertLocations([]);
-      setAlertStatus('Sign in to view emergency locations.');
+      setAlertStatus('');
       return;
     }
     const alertsRef = collection(db, "users", user.uid, "emergencyLocations");
@@ -2039,7 +1864,7 @@ function App() {
     setConfirmDeleteId(null);
   }, []);
 
-  const handleApplyPreset = useCallback(async (presetTheme) => {
+  const handleApplyPreset = async (presetTheme) => {
     if (!user) return;
     const normalized = normalizeTheme(presetTheme);
     setThemeStatus("Updating theme...");
@@ -2062,13 +1887,13 @@ function App() {
       console.error("Theme update failed", error);
       setThemeStatus(error?.message ?? "Theme update failed.");
     }
-  }, [user]);
+  };
 
-  const handleImportPublicTheme = useCallback(async (themeDoc) => {
+  const handleImportPublicTheme = async (themeDoc) => {
     if (!themeDoc?.theme) return;
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
-  }, [handleApplyPreset]);
+  };
 
   const handlePublishTheme = async () => {
     if (!user) return;
@@ -2134,7 +1959,6 @@ function App() {
         remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
         autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
         timeFormat: remoteSettings.timeFormat,
-        thirdPartyExtensionsEnabled: remoteSettings.thirdPartyExtensionsEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -2217,10 +2041,6 @@ function App() {
 
   const handleSendMessage = async () => {
     if (!user) return;
-    if (!isPremiumUser) {
-      setSendStatus("Premium subscription required.");
-      return;
-    }
     const address = composeAddress.trim();
     const body = composeBody.trim();
     if (!address || !body) {
@@ -2240,18 +2060,13 @@ function App() {
       setSendStatus("Queued for sending from your device.");
     } catch (error) {
       console.error("Send failed", error);
-      if (error?.code === 'permission-denied') {
-        setSendStatus("Premium required to send messages.");
-      } else {
-        setSendStatus("Send failed. Try again.");
-      }
+      setSendStatus("Send failed. Try again.");
     } finally {
       setIsSending(false);
     }
   };
 
   // Bolt: Stable handler to prevent ghost content when switching threads
-  // eslint-disable-next-line no-unused-vars
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
     setSelectedThread(thread);
@@ -2460,7 +2275,26 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threadListElements}
+              {threads.length === 0 ? (
+                <div className="sidebar-placeholder">
+                  <div className="sidebar-tip muted">
+                    No conversations found.
+                  </div>
+                  <div className="sidebar-tip muted">
+                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+                  </div>
+                </div>
+              ) : (
+                threads.map(thread => (
+                  <ThreadItem
+                    key={thread.id}
+                    thread={thread}
+                    isActive={selectedThread?.id === thread.id}
+                    onSelect={handleThreadSelect}
+                    showPreviews={showPreviews}
+                  />
+                ))
+              )}
             </div>
           ) : (
             <div className="sidebar-placeholder">
@@ -2486,11 +2320,11 @@ function App() {
                   <strong>Access PulseLink Web anytime:</strong> Visit web.pulselink.app from any browser to manage your contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
                 </div>
               </div>
-            <div className="home-grid">
-              <button className="home-card" onClick={() => setActivePanel('pulselink')}>
-                <div className="home-icon pulselink">
-                  <img src={logo} alt="PulseLink" />
-                </div>
+              <div className="home-grid">
+                <button className="home-card" onClick={() => setActivePanel('pulselink')}>
+                  <div className="home-icon pulselink">
+                    <img src={logo} alt="PulseLink" />
+                  </div>
                   <h3>PulseLink</h3>
                   <p>Update your profile and trusted contacts.</p>
                 </button>
@@ -2522,28 +2356,28 @@ function App() {
                   <h3>Emergency Map</h3>
                   <p>Track shared locations from PulseLink alerts.</p>
                 </button>
-              <button className="home-card" onClick={() => setActivePanel('themes')}>
-                <div className="home-icon pulselink">
-                  <img src={logo} alt="PulseLink themes" />
-                </div>
-                <h3>Theme Gallery</h3>
-                <p>Browse, import, and publish custom themes.</p>
-              </button>
-              <button
-                className="home-card"
-                onClick={() => setActivePanel('extensions')}
-                disabled={!remoteSettings.thirdPartyExtensionsEnabled}
-                title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
-              >
-                <div className="home-icon pulselink">
-                  <img src={logo} alt="Extensions" />
-                </div>
-                <h3>Extensions</h3>
-                <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Attach 3rd-party add-ons (coming soon)" : "Enable 3rd-party extensions to start."}</p>
-              </button>
+                <button className="home-card" onClick={() => setActivePanel('themes')}>
+                  <div className="home-icon pulselink">
+                    <img src={logo} alt="PulseLink themes" />
+                  </div>
+                  <h3>Theme Gallery</h3>
+                  <p>Browse, import, and publish custom themes.</p>
+                </button>
+                <button
+                  className="home-card"
+                  onClick={() => setActivePanel('extensions')}
+                  disabled={!remoteSettings.thirdPartyExtensionsEnabled}
+                  title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
+                >
+                  <div className="home-icon pulselink">
+                    <img src={logo} alt="Extensions" />
+                  </div>
+                  <h3>Extensions</h3>
+                  <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Attach 3rd-party add-ons (coming soon)" : "Enable 3rd-party extensions to start."}</p>
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
           {activePanel === 'pulselink' && (
             <div className="pulselink-panel">
@@ -2860,13 +2694,51 @@ function App() {
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
-                    <MapAlertItem
-                      key={alert.id}
-                      alert={alert}
-                      isActive={selectedAlertId === alert.id}
-                      onFocus={handleAlertFocus}
-                      onClear={handleClearAlert}
-                    />
+                    <React.Fragment key={alert.id}>
+                      <MapAlertItem
+                        alert={alert}
+                        isActive={selectedAlertId === alert.id}
+                        onFocus={handleAlertFocus}
+                        onClear={handleClearAlert}
+                      />
+                      <div
+                        className={`map-item ${selectedAlertId === alert.id ? 'active' : ''}`}
+                        onClick={() => handleAlertFocus(alert)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleAlertFocus(alert);
+                          }
+                        }}
+                      >
+                        <div className="map-item-header">
+                          <div className="map-item-title">{alert.address}</div>
+                          <span
+                            className="map-badge"
+                            style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+                          >
+                            {alertBadgeCopy[alert.severity] ?? 'Alert'}
+                          </span>
+                        </div>
+                        <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+                        <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+                        <div className="map-item-actions">
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleClearAlert(alert.id);
+                            }}
+                            aria-label={`Clear alert from ${alert.address}`}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    </React.Fragment>
                   ))}
                   {filteredAlerts.length === 0 && (
                     <div className="map-empty">
@@ -2926,12 +2798,11 @@ function App() {
                                     <button
                                         className="ghost-btn icon-only"
                                         onClick={() => handleDeleteRingerSong(song.id)}
-                                        disabled={deletingSongId === song.id}
-                                        title={deletingSongId === song.id ? "Removing..." : "Remove from playlist"}
-                                        aria-label={deletingSongId === song.id ? `Removing ${song.title}` : `Remove ${song.title} from playlist`}
+                                        title="Remove from playlist"
+                                        aria-label={`Remove ${song.title} from playlist`}
                                         style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
                                     >
-                                        {deletingSongId === song.id ? <Spinner /> : <TrashIcon />}
+                                        <TrashIcon />
                                     </button>
                                 </div>
                             ))}
@@ -3009,13 +2880,51 @@ function App() {
                     </button>
                   </div>
                   <div className="theme-gallery-grid">
-                    {filteredThemes.map((themeDoc) => (
-                      <ThemeGalleryItem
-                        key={themeDoc.id}
-                        themeDoc={themeDoc}
-                        onImport={handleImportPublicTheme}
-                      />
-                    ))}
+                    {filteredThemes.map((themeDoc) => {
+                      const previewTheme = normalizeTheme(themeDoc.theme || {});
+                      const previewStyle = buildThemePreviewStyle(previewTheme);
+                      const authorLabel = themeDoc.anonymous
+                        ? 'Anonymous'
+                        : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+                      return (
+                        <div key={themeDoc.id} className="theme-card">
+                          <div className="theme-preview" style={previewStyle}>
+                            <div className="theme-preview-chat">
+                              <div
+                                className="theme-bubble incoming"
+                                style={{
+                                  background: previewTheme.bubbleIncoming,
+                                  color: previewTheme.onBubbleIncoming
+                                }}
+                              >
+                                Hey, you good?
+                              </div>
+                              <div
+                                className="theme-bubble outgoing"
+                                style={{
+                                  background: previewTheme.bubbleOutgoing,
+                                  color: previewTheme.onBubbleOutgoing
+                                }}
+                              >
+                                Yep, on my way!
+                              </div>
+                            </div>
+                          </div>
+                          <div className="theme-meta">
+                            <div className="theme-name">{themeDoc.name || 'Untitled'}</div>
+                            <div className="theme-author">{authorLabel}</div>
+                          </div>
+                          <button
+                            className="primary-btn"
+                            type="button"
+                            onClick={() => handleImportPublicTheme(themeDoc)}
+                            aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
+                          >
+                            Import
+                          </button>
+                        </div>
+                      );
+                    })}
                     {filteredThemes.length === 0 && (
                       <div className="theme-empty">No themes yet. Be the first to publish!</div>
                     )}
@@ -3236,19 +3145,13 @@ function App() {
               <div className="settings-grid">
                 <div className="settings-card">
                   <h4>Account</h4>
-                  <div
-                    className="settings-row"
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <span className="settings-label">Signed in as:</span>
+                  <div className="settings-row">
+                    <span className="settings-label">Signed in as</span>
                     <span className="settings-value">{user.email || 'Unknown'}</span>
                   </div>
                   <div className="settings-row">
                     <span className="settings-label">User ID</span>
-                    <div className="settings-value-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className="settings-value mono">{user.uid}</span>
-                      <CopyButton text={user.uid} label="Copy User ID" />
-                    </div>
+                    <span className="settings-value mono">{user.uid}</span>
                   </div>
                   <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                     Send password reset email
@@ -3362,210 +3265,59 @@ function App() {
 
           {activePanel === 'beacon' && (
             <>
-              {isPremiumUser === null ? (
-                <div className="empty-state">
-                  <Spinner />
-                  <div style={{ marginTop: 16 }}>Checking subscription...</div>
-                </div>
-              ) : !isPremiumUser ? (
-                <div className="empty-state">
-                  <div className="lock-icon" style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
-                  <h3>Premium Required</h3>
-                  <p className="muted" style={{ maxWidth: '300px', margin: '0 auto 20px' }}>
-                    Web access to messages is available exclusively to Premium subscribers.
-                  </p>
-                  <button className="primary-btn" onClick={() => setActivePanel('settings')}>
-                    Check Subscription
-                  </button>
-                </div>
-              ) : (<><>
-              <div className="beacon-tabs">
-                <button
-                  className={`beacon-tab ${beaconTab === 'messages' ? 'active' : ''}`}
-                  onClick={() => setBeaconTab('messages')}
-                >
-                  Messages
-                </button>
-                <button
-                  className={`beacon-tab ${beaconTab === 'contacts' ? 'active' : ''}`}
-                  onClick={() => setBeaconTab('contacts')}
-                >
-                  Contacts
-                </button>
-              </div>
-              {beaconTab === 'messages' ? (
+              {selectedThread ? (
                 <>
-                  {selectedThread ? (
-                    <>
-                      <div className="chat-header">
-                        <h3>{selectedThread.address}</h3>
-                        <button
-                          className="secondary-btn"
-                          onClick={() => setViewingContactAddress(selectedThread.address)}
-                          aria-label="View contact info"
-                        >
-                          Info
-                        </button>
-                      </div>
-                      <div className="messages-list">
-                        {messageListElements}
-                        <div ref={messagesEndRef} />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="empty-state">
-                      <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                      <div>Select a thread or start a new message</div>
-                    </div>
-                  )}
-                  <div className="composer">
-                    <div className="composer-row">
-                      <label className="composer-label" htmlFor="compose-address">To</label>
-                      <input
-                        id="compose-address"
-                        className="composer-input"
-                        type="tel"
-                        placeholder="Phone number"
-                        value={composeAddress}
-                        onChange={(e) => setComposeAddress(e.target.value)}
-                      />
-                    </div>
-                    <div className="composer-row composer-actions">
-                      <textarea
-                        className="composer-textarea"
-                        placeholder="Type a message..."
-                        aria-label="Message body"
-                        value={composeBody}
-                        onChange={(e) => setComposeBody(e.target.value)}
-                      />
-                      <button
-                        onClick={handleSendMessage}
-                        disabled={isSending || isLoggingIn}
-                        className="primary-btn"
-                      >
-                        {isSending ? "Sending..." : "Send"}
-                      </button>
-                    </div>
-                    {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
-                    <div className="compose-hint">
-                      Messages are sent from your phone when it&apos;s online and signed in.
-                    </div>
+                  <div className="chat-header">
+                    <h3>{selectedThread.address}</h3>
+                  </div>
+                  <div className="messages-list">
+                    {messageListElements}
+                    <div ref={messagesEndRef} />
                   </div>
                 </>
               ) : (
-                <div className="contacts-panel">
-                  <div className="panel-header">
-                    <h3>Contacts</h3>
-                    <p>All device contacts synced from your phone.</p>
-                  </div>
-                  <div className="contacts-toolbar">
-                    <div className="contact-count">
-                      {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
-                    </div>
-                    <input
-                      className="login-input contact-search"
-                      placeholder="Search by name, phone, or email"
-                      aria-label="Search contacts"
-                      value={contactSearch}
-                      onChange={(e) => setContactSearch(e.target.value)}
-                    />
-                  </div>
-                  <div className="contact-list contact-list--full">
-                    {contactListElements}
-                    {filteredDeviceContacts.length === 0 && (
-                      <div className="settings-note">
-                        {contactSearch.trim()
-                          ? 'No contacts match that search.'
-                          : 'No device contacts synced yet.'}
-                      </div>
-                    )}
-                  </div>
+                <div className="empty-state">
+                  <img src={beaconLogo} alt="Beacon" className="empty-logo" />
+                  <div>Select a thread or start a new message</div>
                 </div>
               )}
+              <div className="composer">
+                <div className="composer-row">
+                  <label className="composer-label" htmlFor="compose-address">To</label>
+                  <input
+                    id="compose-address"
+                    className="composer-input"
+                    type="tel"
+                    placeholder="Phone number"
+                    value={composeAddress}
+                    onChange={(e) => setComposeAddress(e.target.value)}
+                  />
+                </div>
+                <div className="composer-row composer-actions">
+                  <textarea
+                    className="composer-textarea"
+                    placeholder="Type a message..."
+                    aria-label="Message body"
+                    value={composeBody}
+                    onChange={(e) => setComposeBody(e.target.value)}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={isSending || isLoggingIn}
+                    className="primary-btn"
+                  >
+                    {isSending ? "Sending..." : "Send"}
+                  </button>
+                </div>
+                {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
+                <div className="compose-hint">
+                  Messages are sent from your phone when it&apos;s online and signed in.
+                </div>
+              </div>
             </>
           )}
-                  </>)}
-                </>
-              )}
         </div>
       </div>
-
-      {/* Contact Info Modal */}
-      {viewingContactAddress && (
-        <div className="contact-modal-overlay" onClick={() => setViewingContactAddress(null)}>
-          <div className="contact-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="contact-modal-header">
-              <h4>Contact Info</h4>
-              <button
-                className="contact-modal-close"
-                onClick={() => setViewingContactAddress(null)}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <div className="contact-modal-body">
-              <div className="contact-modal-avatar">
-                {viewingContactAddress.charAt(0).toUpperCase()}
-              </div>
-              <div className="contact-modal-info">
-                {(() => {
-                  const contact = deviceContacts.find(
-                    (c) => c.phoneNumber === viewingContactAddress
-                  );
-                  if (contact) {
-                    return (
-                      <>
-                        {contact.displayName && (
-                          <div className="contact-modal-field">
-                            <div className="contact-modal-label">Name</div>
-                            <div className="contact-modal-value">{contact.displayName}</div>
-                          </div>
-                        )}
-                        <div className="contact-modal-field">
-                          <div className="contact-modal-label">Phone</div>
-                          <div className="contact-modal-value">{contact.phoneNumber}</div>
-                        </div>
-                        {contact.email && (
-                          <div className="contact-modal-field">
-                            <div className="contact-modal-label">Email</div>
-                            <div className="contact-modal-value">{contact.email}</div>
-                          </div>
-                        )}
-                      </>
-                    );
-                  } else {
-                    return (
-                      <div className="contact-modal-field">
-                        <div className="contact-modal-label">Phone</div>
-                        <div className="contact-modal-value">{viewingContactAddress}</div>
-                      </div>
-                    );
-                  }
-                })()}
-              </div>
-              <div className="contact-modal-actions">
-                <button
-                  className="secondary-btn"
-                  onClick={() => {
-                    setComposeAddress(viewingContactAddress);
-                    setViewingContactAddress(null);
-                    setBeaconTab('messages');
-                  }}
-                >
-                  Send Message
-                </button>
-                <button
-                  className="ghost-btn"
-                  onClick={() => setViewingContactAddress(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
