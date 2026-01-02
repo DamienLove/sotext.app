@@ -1438,6 +1438,10 @@ class MainViewModel @Inject constructor(
             (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
                 pushSettingsToCloud(user, mapOf("remoteWebAccessEnabled" to enabled))
             }
+            if (enabled && BuildConfig.PREMIUM_FEATURES) {
+                val request = OneTimeWorkRequest.Builder(com.pulselink.data.sms.SmsSyncWorker::class.java).build()
+                workManager.enqueueUniqueWork("SmsSyncManual", ExistingWorkPolicy.KEEP, request)
+            }
         }
     }
 
