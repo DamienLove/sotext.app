@@ -114,6 +114,18 @@ class MainViewModel @Inject constructor(
             pruneLocalUnreachable()
         }
         viewModelScope.launch {
+            settingsRepository.settings.collect { settings ->
+                val user = firebaseAuthManager.currentUser()
+                if (user != null && !user.isAnonymous) {
+                    val payload = mapOf(
+                        "premiumUnlocked" to settings.premiumUnlocked,
+                        "proUnlocked" to settings.proUnlocked
+                    )
+                    pushSettingsToCloud(user, payload)
+                }
+            }
+        }
+        viewModelScope.launch {
             val baseState = combine(
                 settingsRepository.settings,
                 contactRepository.observeContacts(),
@@ -885,7 +897,7 @@ class MainViewModel @Inject constructor(
                 .map { contactSyncKey(it) }
                 .toSet()
 
-            contactRepository.clear()
+            // Upsert all merged contacts first
             reachableMerged.sortedBy { it.contactOrder }
                 .forEachIndexed { index, contact ->
                     val normalized = contact.copy(contactOrder = index)
@@ -894,6 +906,13 @@ class MainViewModel @Inject constructor(
                         upsertContactInCloud(user, normalized)
                     }
                 }
+            
+            // Safe delete: Remove local contacts that are no longer present (e.g. merged duplicates or removed)
+            val retainedIds = reachableMerged.mapNotNull { it.id.takeIf { id -> id != 0L } }.toSet()
+            localContacts.filter { !retainedIds.contains(it.id) }.forEach { 
+                contactRepository.delete(it.id)
+                messageRepository.clear(it.id)
+            }
             pruneLocalUnreachable()
         }.onFailure { error ->
             Log.w(TAG, "Unable to sync contacts from cloud", error)
@@ -1317,26 +1336,7 @@ class MainViewModel @Inject constructor(
         val subjectSuffix = bugReportData.summary.ifBlank { "General issue" }
 
         return Uri.parse(BUG_REPORT_PAGE_URL).buildUpon()
-            .appendQueryParameter("summary", bugReportData.summary)
-            .appendQueryParameter("steps", bugReportData.stepsToReproduce)
-            .appendQueryParameter("expected", bugReportData.expectedBehavior)
-            .appendQueryParameter("actual", bugReportData.actualBehavior)
-            .appendQueryParameter("frequency", bugReportData.frequency)
-            .appendQueryParameter("severity", bugReportData.severity)
-            .appendQueryParameter("reporter", bugReportData.userEmail)
-            .appendQueryParameter("version_name", versionName)
-            .appendQueryParameter("version_code", versionCode.toString())
-            .appendQueryParameter(
-                "build_flavor",
-                when {
-                    BuildConfig.PREMIUM_FEATURES -> "premium"
-                    BuildConfig.ADS_ENABLED -> "free"
-                    else -> "pro"
-                }
-            )
-            .appendQueryParameter("device", "$manufacturer $model")
-            .appendQueryParameter("os_version", "Android $osVersion (API $apiLevel)")
-            .appendQueryParameter("summary_suffix", subjectSuffix)
+            .appendQueryParameter("title", bugReportData.summary)
             .appendQueryParameter("body", formattedBody)
             .build()
     }
@@ -1575,7 +1575,7 @@ class MainViewModel @Inject constructor(
         private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
-        const val BUG_REPORT_PAGE_URL = "https://pulselink.app/bug-report/"
+        const val BUG_REPORT_PAGE_URL = "https://github.com/DamienLove/pulselink/issues/new"
     }
 }
 
