@@ -11,6 +11,7 @@ import com.google.firebase.firestore.SetOptions
 import com.pulselink.data.contacts.DeviceContactsRepository
 import com.pulselink.BuildConfig
 import com.pulselink.domain.repository.SettingsRepository
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import android.os.Build
@@ -29,9 +30,8 @@ class SmsSyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
-        if (!BuildConfig.PREMIUM_FEATURES) {
-            return Result.success()
-        }
+        val settings = settingsRepository.settings.first()
+        val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
 
         val user = auth.currentUser
         if (user == null) {
@@ -39,13 +39,21 @@ class SmsSyncWorker @AssistedInject constructor(
         }
 
         return try {
-            val settings = settingsRepository.settings.first()
+            val userRef = firestore.collection("users").document(user.uid)
+
+            // Explicitly sync subscription status to ensure downgrades are handled
+            val status = if (isPremium) "premium" else "free"
+            userRef.set(mapOf("subscriptionStatus" to status), SetOptions.merge()).await()
+
+            if (!isPremium) {
+                return Result.success()
+            }
+
             val deviceId = settingsRepository.ensureDeviceId()
             val phoneNumber = settings.devicePhoneNumber
                 ?: settingsRepository.getLastKnownPhone()
             val lineId = deviceId
 
-            val userRef = firestore.collection("users").document(user.uid)
             val lineRef = userRef.collection("lines").document(lineId)
             val deviceRef = userRef.collection("devices").document(deviceId)
             val linePayload = mutableMapOf<String, Any>(
@@ -78,6 +86,7 @@ class SmsSyncWorker @AssistedInject constructor(
                         "snippet" to thread.snippet,
                         "date" to thread.timestamp,
                         "unread" to thread.unread,
+                        "unreadCount" to thread.unreadCount,
                         "isFavorite" to thread.isFavorite,
                         "isPrivate" to thread.isPrivate,
                         "isTrusted" to thread.isTrusted
@@ -119,6 +128,7 @@ class SmsSyncWorker @AssistedInject constructor(
             }
             Result.success()
         } catch (e: Exception) {
+            FirebaseCrashlytics.getInstance().recordException(e)
             e.printStackTrace()
             Result.retry()
         }

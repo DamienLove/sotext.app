@@ -20,6 +20,7 @@ import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.util.normalizeSmsAddress
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -91,13 +92,20 @@ class SmsInboxViewModel @Inject constructor(
             val deviceId = deviceLineId.value.ifBlank {
                 settingsRepository.ensureDeviceId().also { deviceLineId.value = it }
             }
-            val (threads, archived) = withContext(Dispatchers.IO) {
-                smsRepository.listThreadsAndArchived(
-                    limit = currentThreadLimit,
-                    fromSmsOnly = false,
-                    forceRefresh = force
-                )
-            }
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    smsRepository.listThreadsAndArchived(
+                        limit = currentThreadLimit,
+                        fromSmsOnly = false,
+                        forceRefresh = force
+                    )
+                }
+            }.onFailure { error ->
+                FirebaseCrashlytics.getInstance().recordException(error)
+            }.getOrNull()
+
+            if (result == null) return@launch
+            val (threads, archived) = result
             if (!force &&
                 threads.isEmpty() &&
                 archived.isEmpty() &&
@@ -210,11 +218,13 @@ class SmsInboxViewModel @Inject constructor(
             deviceLineId.value = settingsRepository.ensureDeviceId()
         }
 
-        settingsRepository.settings
-            .onEach { settings ->
+        combine(settingsRepository.settings, deviceLineId) { settings, deviceId ->
+            Pair(settings, deviceId)
+        }
+            .onEach { (settings, deviceId) ->
                 _inboxMode.value = settings.lineInboxMode
-                _activeLineId.value = settings.activeLineId ?: settings.deviceId.ifBlank { deviceLineId.value }
-                if (settings.deviceId.isNotBlank() && deviceLineId.value != settings.deviceId) {
+                _activeLineId.value = settings.activeLineId ?: settings.deviceId.ifBlank { deviceId }
+                if (settings.deviceId.isNotBlank() && deviceId != settings.deviceId) {
                     deviceLineId.value = settings.deviceId
                 }
             }
@@ -295,13 +305,11 @@ class SmsThreadViewModel @Inject constructor(
     private val smsOutboxService: SmsOutboxService
 ) : ViewModel() {
     private companion object {
-        const val INITIAL_MESSAGE_LIMIT = 100
-        const val MESSAGE_PAGE_SIZE = 100
         const val PENDING_MATCH_WINDOW_MS = 20_000L
+        const val INITIAL_MESSAGE_LIMIT = 100
+        const val MESSAGE_PAGE_SIZE = 50
     }
     private var currentMessageLimit = INITIAL_MESSAGE_LIMIT
-    private val _hasMoreMessages = MutableStateFlow(true)
-    val hasMoreMessages: StateFlow<Boolean> = _hasMoreMessages
     private val _messages = MutableStateFlow<List<SmsMessageItem>>(emptyList())
     val messages: StateFlow<List<SmsMessageItem>> = _messages
     private val _contact = MutableStateFlow<Contact?>(null)
@@ -314,6 +322,8 @@ class SmsThreadViewModel @Inject constructor(
     val composeState: StateFlow<AiComposeState> = _composeState
     private val _isDatabaseBusy = MutableStateFlow(false)
     val isDatabaseBusy: StateFlow<Boolean> = _isDatabaseBusy
+    private val _hasMoreMessages = MutableStateFlow(false)
+    val hasMoreMessages: StateFlow<Boolean> = _hasMoreMessages
     private var activeThreadId: Long? = null
     private var activeAddress: String = ""
     private var activeLineId: String? = null
@@ -328,7 +338,7 @@ class SmsThreadViewModel @Inject constructor(
     fun load(threadId: Long, address: String, lineId: String? = null) {
         activeThreadId = threadId.takeIf { it > 0 }
         activeAddress = address
-        currentMessageLimit = INITIAL_MESSAGE_LIMIT
+        currentMessageLimit = 100
         resetMessages()
         viewModelScope.launch {
             deviceLineId = settingsRepository.ensureDeviceId()
@@ -378,6 +388,7 @@ class SmsThreadViewModel @Inject constructor(
         updateMessages(msgs)
         _contact.value = contact
         _isArchived.value = archived
+        _hasMoreMessages.value = msgs.size >= currentMessageLimit
     }
 
     fun toggleArchive() {
@@ -463,6 +474,7 @@ class SmsThreadViewModel @Inject constructor(
                                 anySuccess = anySuccess || sent
                             }
                         } catch (e: Exception) {
+                            FirebaseCrashlytics.getInstance().recordException(e)
                             e.printStackTrace()
                         }
                     }
@@ -482,7 +494,6 @@ class SmsThreadViewModel @Inject constructor(
             loadedMessages = messages
             _messages.value = mergeMessages(messages)
         }
-        _hasMoreMessages.value = messages.size >= currentMessageLimit
         val latestMessageId = messages.firstOrNull()?.id
         if (latestMessageId != lastSummaryMessageId) {
             lastSummaryMessageId = null

@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 import java.util.concurrent.atomic.AtomicBoolean
@@ -70,6 +71,11 @@ class SmsRelayService @Inject constructor(
     private fun processMessage(docId: String, address: String, body: String, uid: String, lineId: String?) {
         scope.launch {
             try {
+                val settings = settingsRepository.settings.first()
+                if (!settings.remoteWebAccessEnabled) {
+                    return@launch
+                }
+
                 val deviceId = settingsRepository.ensureDeviceId()
                 if (!lineId.isNullOrBlank() && lineId != deviceId) {
                     return@launch

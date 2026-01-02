@@ -1,7 +1,7 @@
 package com.pulselink.beacon.data
 
 import android.util.Log
-import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.CoroutineScope
@@ -47,6 +47,7 @@ class ThemeSyncManager(private val repository: ThemePreferencesRepository) {
             return try {
                 android.graphics.Color.parseColor(hex).toLong()
             } catch (e: Exception) {
+                FirebaseCrashlytics.getInstance().recordException(e)
                 defaultVal
             }
         }

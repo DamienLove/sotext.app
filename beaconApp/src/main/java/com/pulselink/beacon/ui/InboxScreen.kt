@@ -5,7 +5,8 @@ import android.text.format.DateUtils
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,6 +54,8 @@ import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -99,6 +103,8 @@ fun InboxScreen(
     onOpenThread: (Long, String) -> Unit,
     onCompose: () -> Unit,
     onDeleteThread: (Long) -> Unit,
+    onTogglePin: (Long) -> Unit,
+    onToggleArchive: (Long) -> Unit,
     onRefresh: () -> Unit,
     onSearch: (String) -> Unit,
     onClearSearch: () -> Unit,
@@ -107,10 +113,11 @@ fun InboxScreen(
     notificationsEnabled: Boolean,
     notificationsSilent: Boolean,
     onOpenNotificationSettings: () -> Unit,
+    filter: InboxFilter,
+    onFilterChange: (InboxFilter) -> Unit
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var filter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
     var searchText by rememberSaveable { mutableStateOf("") }
     var navigatedFromSearch by remember { mutableStateOf(false) }
     val iconTint = theme.accentColor
@@ -118,10 +125,12 @@ fun InboxScreen(
     val filtered = remember(filter, threads) {
         threads.filter { thread ->
             when (filter) {
+                // ALL and ARCHIVED modes are pre-filtered by the Repository query.
+                // We trust the repository to return the correct set (Inbox/Pinned vs Archived).
                 InboxFilter.ALL -> true
                 InboxFilter.READ -> !thread.unread
                 InboxFilter.UNREAD -> thread.unread
-                InboxFilter.ARCHIVED -> false // Beacon doesn't support archived yet
+                InboxFilter.ARCHIVED -> true
             }
         }
     }
@@ -239,12 +248,14 @@ fun InboxScreen(
                 )
             )
 
-            TabsRow(
-                filter = filter,
-                unreadCount = unreadCount,
-                onFilterChange = { filter = it },
-                theme = theme
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                TabsRow(
+                    filter = filter,
+                    unreadCount = unreadCount,
+                    onFilterChange = onFilterChange,
+                    theme = theme
+                )
+            }
 
             Crossfade(targetState = searchState, label = "search_results") { state ->
                 when (state) {
@@ -325,7 +336,7 @@ fun InboxScreen(
                         Column(Modifier.weight(1f)) {
                             Text("Permissions needed", fontWeight = FontWeight.SemiBold, color = theme.frameColor)
                             Text(
-                                "Grant SMS permission so Beacon can read and show messages.",
+                                "Beacon needs access to SMS to display your conversations and send messages.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = mutedTint
                             )
@@ -354,7 +365,7 @@ fun InboxScreen(
                         Icon(Icons.Default.Sms, contentDescription = null, tint = iconTint)
                         Column(Modifier.weight(1f)) {
                             Text(
-                                if (isCheckingDefaultSms) "Checking default SMS status..." else "Set as default SMS",
+                                if (isCheckingDefaultSms) "Checking status..." else "Set as default SMS",
                                 fontWeight = FontWeight.SemiBold,
                                 color = theme.frameColor
                             )
@@ -427,9 +438,18 @@ fun InboxScreen(
                         }
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { value ->
-                                if (value == SwipeToDismissBoxValue.EndToStart) {
-                                    onDeleteThread(item.threadId)
-                                    scope.launch { host.showSnackbar("Thread deleted") }
+                                when (value) {
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        onToggleArchive(item.threadId)
+                                        val msg = if (item.isArchived) "Unarchived" else "Archived"
+                                        scope.launch { host.showSnackbar(msg) }
+                                    }
+                                    SwipeToDismissBoxValue.StartToEnd -> {
+                                        onTogglePin(item.threadId)
+                                        val msg = if (item.isPinned) "Unpinned" else "Pinned"
+                                        scope.launch { host.showSnackbar(msg) }
+                                    }
+                                    else -> {}
                                 }
                                 false
                             }
@@ -438,7 +458,10 @@ fun InboxScreen(
                             thread = item,
                             state = dismissState,
                             theme = theme,
-                            onClick = { onOpenThread(item.threadId, item.address) }
+                            onClick = { onOpenThread(item.threadId, item.address) },
+                            onDelete = { onDeleteThread(item.threadId) },
+                            onTogglePin = { onTogglePin(item.threadId) },
+                            onToggleArchive = { onToggleArchive(item.threadId) }
                         )
                     }
                     item { Spacer(modifier = Modifier.height(Spacing.section)) }
@@ -497,38 +520,63 @@ private fun SearchResults(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun SwipeableThreadRow(
     thread: SmsThreadItem,
     state: SwipeToDismissBoxState,
     theme: ThemePalette,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+    onTogglePin: () -> Unit,
+    onToggleArchive: () -> Unit
 ) {
     SwipeToDismissBox(
         state = state,
         backgroundContent = {
-            val color = if (state.targetValue == SwipeToDismissBoxValue.EndToStart) Color(0xFFE53935) else Color.Transparent
+            // Use muted theme color for archive, accent for pin
+            val (color, alignment, icon) = when (state.targetValue) {
+                SwipeToDismissBoxValue.EndToStart -> Triple(theme.frameColor.copy(alpha = 0.5f), Alignment.CenterEnd, Icons.Default.Inbox) // Archive
+                SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor, Alignment.CenterStart, if (thread.isPinned) Icons.Default.PushPin else Icons.Default.PushPin) // Pin/Unpin
+                else -> Triple(Color.Transparent, Alignment.CenterEnd, Icons.Default.Inbox)
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(color, RoundedCornerShape(Layout.cardCornerRadius))
                     .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.CenterEnd
+                contentAlignment = alignment
             ) {
-                if (state.targetValue == SwipeToDismissBoxValue.EndToStart) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                if (state.targetValue != SwipeToDismissBoxValue.Settled) {
+                    Icon(icon, contentDescription = null, tint = Color.White)
                 }
             }
         },
-        content = { ThreadRow(thread = thread, theme = theme, onClick = onClick) },
-        enableDismissFromStartToEnd = false,
+        content = {
+            ThreadRow(
+                thread = thread,
+                theme = theme,
+                onClick = onClick,
+                onDelete = onDelete,
+                onTogglePin = onTogglePin,
+                onToggleArchive = onToggleArchive
+            )
+        },
+        enableDismissFromStartToEnd = true,
         enableDismissFromEndToStart = true
     )
 }
 
-@Composable
-private fun ThreadRow(thread: SmsThreadItem, theme: ThemePalette, onClick: () -> Unit) {
+private fun ThreadRow(
+    thread: SmsThreadItem,
+    theme: ThemePalette,
+    onClick: () -> Unit,
+    onDelete: () -> Unit = {},
+    onTogglePin: () -> Unit = {},
+    onToggleArchive: () -> Unit = {}
+) {
+    var showMenu by remember { mutableStateOf(false) }
     // Determine background color based on unread state for "Future Deep" feel
     val backgroundColor = if (thread.unread) {
         theme.accentColor.copy(alpha = 0.2f)
@@ -542,6 +590,7 @@ private fun ThreadRow(thread: SmsThreadItem, theme: ThemePalette, onClick: () ->
         theme.frameColor.copy(alpha = 0.15f)
     }
 
+
     Surface(
         shape = RoundedCornerShape(Layout.cardCornerRadius),
         // Use manual border for glass effect instead of tonal elevation
@@ -549,13 +598,68 @@ private fun ThreadRow(thread: SmsThreadItem, theme: ThemePalette, onClick: () ->
         color = backgroundColor,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { showMenu = true }
+            )
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = Spacing.medium, vertical = Spacing.medium)
         ) {
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text(if (thread.isPinned) "Unpin" else "Pin") },
+                    onClick = {
+                        onTogglePin()
+                        showMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.PushPin,
+                            contentDescription = if (thread.isPinned) "Unpin conversation" else "Pin conversation"
+                        )
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(if (thread.isArchived) "Unarchive" else "Archive") },
+                    onClick = {
+                        onToggleArchive()
+                        showMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Inbox,
+                            contentDescription = if (thread.isArchived) "Unarchive conversation" else "Archive conversation"
+                        )
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete") },
+                    onClick = {
+                        onDelete()
+                        showMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete conversation"
+                        )
+                    }
+                )
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (thread.isPinned) {
+                    Icon(
+                        Icons.Default.PushPin,
+                        contentDescription = "Pinned",
+                        tint = theme.accentColor,
+                        modifier = Modifier.padding(end = 4.dp).size(16.dp)
+                    )
+                }
                 Text(
                     text = thread.address.ifBlank { "Unknown" },
                     style = MaterialTheme.typography.titleMedium,
@@ -612,6 +716,13 @@ private fun TabsRow(
         ) {
             onFilterChange(InboxFilter.UNREAD)
         }
+        TabText(
+            label = "Archived",
+            selected = filter == InboxFilter.ARCHIVED,
+            theme = theme
+        ) {
+            onFilterChange(InboxFilter.ARCHIVED)
+        }
     }
 }
 
@@ -643,4 +754,4 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePalette, onCli
     }
 }
 
-private enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED }
+enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED }

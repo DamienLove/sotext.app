@@ -63,6 +63,7 @@ import androidx.navigation.navArgument
 import com.pulselink.BuildConfig
 import com.pulselink.billing.SubscriptionManager
 import com.pulselink.ui.ads.BannerAdSlot
+import com.pulselink.ui.screens.BeaconContactsScreen
 import com.pulselink.ui.screens.BeaconNavBar
 import com.pulselink.ui.screens.BeaconNavRoute
 import com.pulselink.ui.screens.BeaconSettingsScreen
@@ -77,6 +78,7 @@ import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.ExtensionsStoreScreen
+import com.pulselink.ui.screens.ContactDetailScreen
 import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.ui.state.DeviceContactsViewModel
 import com.pulselink.ui.state.MainViewModel
@@ -115,6 +117,7 @@ class BeaconInboxActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 val state by viewModel.uiState.collectAsStateWithLifecycle()
                 val linesViewModel: SmsLinesViewModel = hiltViewModel()
+                val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
                 val lines by linesViewModel.lines.collectAsStateWithLifecycle()
                 val lineDevices by linesViewModel.devices.collectAsStateWithLifecycle()
                 val activeLineId by linesViewModel.activeLineId.collectAsStateWithLifecycle()
@@ -123,9 +126,11 @@ class BeaconInboxActivity : ComponentActivity() {
                 val lineSendPreference by linesViewModel.lineSendPreference.collectAsStateWithLifecycle()
                 val threadLineOverrides by linesViewModel.threadLineOverrides.collectAsStateWithLifecycle()
                 val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
-                val isPremium = subscriptionUiState.isPremiumActive ||
+                val hasPremium = subscriptionUiState.isPremiumActive ||
                     state.settings.premiumUnlocked ||
                     BuildConfig.PREMIUM_FEATURES
+                val hasPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked
+                val isPro = hasPro || hasPremium
                 val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
                 var isDefaultSms by remember { mutableStateOf(defaultSmsHelper.isDefaultSms()) }
                 var isCheckingDefaultSms by remember { mutableStateOf(false) }
@@ -147,9 +152,10 @@ class BeaconInboxActivity : ComponentActivity() {
                             .thenBy { it.createdAt }
                     )
                 }
+                val deviceContacts by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
                 val maxLines = 2
-                val showLineLimit = isPremium && orderedLines.size > maxLines && !lineLimitDismissed
-                val showLineSetup = isPremium && orderedLines.size > 1 &&
+                val showLineLimit = hasPremium && orderedLines.size > maxLines && !lineLimitDismissed
+                val showLineSetup = hasPremium && orderedLines.size > 1 &&
                     !state.settings.lineInboxModeChosen && !lineSetupDismissed && !showLineLimit
                 var lineSetupMode by remember { mutableStateOf(state.settings.lineInboxMode) }
                 var lineSetupDefaultLineId by remember { mutableStateOf(state.settings.defaultSendLineId) }
@@ -191,15 +197,16 @@ class BeaconInboxActivity : ComponentActivity() {
                 }
 
                 // Refresh default-SMS status whenever the activity resumes.
-                DisposableEffect(lifecycleOwner, activeLineId, deviceLineId, isPremium) {
+                DisposableEffect(lifecycleOwner, activeLineId, deviceLineId, hasPremium) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
                             launchDefaultSmsCheck()
                             notificationsEnabled = com.pulselink.data.sms.MessageNotificationManager.areNotificationsEnabled(context)
                             notificationsSilent = com.pulselink.data.sms.MessageNotificationManager.isMessageChannelSilent(context)
-                            if (isPremium) {
+                            if (hasPremium) {
                                 linesViewModel.touchPresence(activeLineId ?: deviceLineId)
                             }
+                            deviceContactsViewModel.refresh()
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
@@ -282,13 +289,16 @@ class BeaconInboxActivity : ComponentActivity() {
 
                                     var currentRoute by remember { mutableStateOf(BeaconNavRoute.Inbox) }
 
+                                    val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
+                                    val deviceContacts by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
+
                                     val displayedThreads = when (currentRoute) {
                                         BeaconNavRoute.Inbox -> threads
                                         BeaconNavRoute.Otp -> threads.filter { it.isOtp }
                                         BeaconNavRoute.Trusted -> threads.filter { it.isTrusted }
                                         BeaconNavRoute.Favorites -> threads.filter { it.isFavorite }
                                         BeaconNavRoute.Private -> threads
-                                        BeaconNavRoute.Contacts -> threads
+                                        BeaconNavRoute.Contacts -> emptyList()  // Contacts tab doesn't show threads
                                         BeaconNavRoute.Archived -> emptyList()
                                     }
 
@@ -298,12 +308,45 @@ class BeaconInboxActivity : ComponentActivity() {
                                         BeaconNavRoute.Trusted -> archivedThreads.filter { it.isTrusted }
                                         BeaconNavRoute.Favorites -> archivedThreads.filter { it.isFavorite }
                                         BeaconNavRoute.Private -> archivedThreads
-                                        BeaconNavRoute.Contacts -> archivedThreads
+                                        BeaconNavRoute.Contacts -> emptyList()  // Contacts tab doesn't show archived
                                         BeaconNavRoute.Archived -> archivedThreads
                                     }
 
                                     key(currentRoute) {
-                                        SmsInboxScreen(
+                                        if (currentRoute == BeaconNavRoute.Contacts) {
+                                            Column(modifier = Modifier.fillMaxSize()) {
+                                                BeaconContactsScreen(
+                                                    contacts = deviceContacts,
+                                                    theme = state.settings.themePreferences,
+                                                    onSelect = { deviceContact ->
+                                                        scope.launch {
+                                                            val contactId = viewModel.ensureContactForDeviceContact(deviceContact)
+                                                            navController.navigate("contact_detail/$contactId")
+                                                        }
+                                                    }
+                                                )
+                                                BeaconNavBar(
+                                                    currentRoute = currentRoute,
+                                                    onNavigate = { route ->
+                                                        if (route == BeaconNavRoute.Private && currentRoute != BeaconNavRoute.Private) {
+                                                            if (state.settings.privatePinHash.isNullOrBlank()) {
+                                                                navController.navigate("private_pin")
+                                                            } else {
+                                                                pinInput = ""
+                                                                showPinDialog = true
+                                                            }
+                                                        } else {
+                                                            if (route != BeaconNavRoute.Inbox) {
+                                                                smsInboxViewModel.clearSearch()
+                                                            }
+                                                            currentRoute = route
+                                                        }
+                                                    },
+                                                    theme = state.settings.themePreferences
+                                                )
+                                            }
+                                        } else {
+                                            SmsInboxScreen(
                                             threads = displayedThreads,
                                             archivedThreads = displayedArchived,
                                             onOpenThread = { thread ->
@@ -320,16 +363,21 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
                                             onBack = { finish() },
                                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
-                                            lineOptions = if (isPremium) orderedLines else emptyList(),
+                                            lineOptions = if (hasPremium) orderedLines else emptyList(),
                                             deviceLineId = deviceLineId,
-                                            activeLineId = if (isPremium) activeLineId else null,
+                                            activeLineId = if (hasPremium) activeLineId else null,
                                             onSelectLine = { selected ->
                                                 linesViewModel.setActiveLineId(selected)
                                                 linesViewModel.touchPresence(selected)
                                             },
-                                            showLinePicker = isPremium && state.settings.lineInboxMode == LineInboxMode.PER_LINE && currentRoute == BeaconNavRoute.Inbox,
+                                            showLinePicker = hasPremium && state.settings.lineInboxMode == LineInboxMode.PER_LINE && currentRoute == BeaconNavRoute.Inbox,
                                             isBeaconMode = true,
+                                            isPremium = hasPremium,
+                                            isPro = isPro,
                                             onOpenSettings = { navController.navigate("beacon_settings") },
+                                            onCustomizeTheme = { navController.navigate("visual_settings") },
+                                            onOpenContacts = { currentRoute = BeaconNavRoute.Contacts },
+                                            onOpenPrivate = {},
                                             onOpenPrivate = {},
                                             privateThreadIds = privateThreads,
                                             showPrivateOnly = currentRoute == BeaconNavRoute.Private,
@@ -524,6 +572,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 )
                                             }
                                         )
+                                        }
                                     }
 
                                     if (showPrivate && currentRoute != BeaconNavRoute.Private) {
@@ -666,13 +715,21 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onEditNotificationVibration = {
                                                 navController.navigate("notifications/message_vibration?address=${Uri.encode(decodedAddress)}")
                                             },
+                                            onEditContact = {
+                                                // Navigate to PulseLink main activity to edit contact
+                                                val intent = Intent(context, MainActivity::class.java).apply {
+                                                    putExtra("openContactEdit", decodedAddress)
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                                }
+                                                context.startActivity(intent)
+                                            },
                                             onSendMessage = { body, sendLineId ->
                                                 threadViewModel.sendMessage(decodedAddress, body, sendLineId)
                                             },
-                                            lineOptions = if (isPremium) orderedLines else emptyList(),
-                                            selectedLineId = if (isPremium) selectedLine else null,
+                                            lineOptions = if (hasPremium) orderedLines else emptyList(),
+                                            selectedLineId = if (hasPremium) selectedLine else null,
                                             deviceLineId = deviceLineId,
-                                            lineStatus = if (isPremium) {
+                                            lineStatus = if (hasPremium) {
                                                 val now = System.currentTimeMillis()
                                                 val status = lineDevices
                                                     .groupBy { it.lineId }
@@ -781,7 +838,49 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
                                         onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                                         onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                                        onToggleMergedExperience = { enabled -> viewModel.setMergedExperienceEnabled(enabled) },
                                         onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable(
+                                    route = "contact_detail/{contactId}",
+                                    arguments = listOf(navArgument("contactId") { type = NavType.LongType })
+                                ) { entry ->
+                                    val contactId = entry.arguments?.getLong("contactId") ?: return@composable
+                                    val contact = state.contacts.firstOrNull { it.id == contactId }
+                                    ContactDetailScreen(
+                                        contact = contact,
+                                        showAds = state.showAds,
+                                        onBack = { navController.popBackStack() },
+                                        onCallContact = { },
+                                        onEditContact = { newName, newPhone, newEmail ->
+                                            contact?.let {
+                                                viewModel.saveContact(
+                                                    it.copy(
+                                                        displayName = newName,
+                                                        phoneNumber = newPhone,
+                                                        email = newEmail
+                                                    )
+                                                )
+                                            }
+                                        },
+                                        onEditEmergencyAlert = { },
+                                        onEditCheckInAlert = { },
+                                        onToggleLocation = { enabled -> contact?.let { viewModel.updateContact(it.copy(includeLocation = enabled)) } },
+                                        onToggleCamera = { enabled -> contact?.let { viewModel.updateContact(it.copy(cameraEnabled = enabled)) } },
+                                        onToggleAutoCall = { enabled -> contact?.let { viewModel.updateContact(it.copy(autoCall = enabled)) } },
+                                        onToggleFavorite = { enabled -> contact?.let { viewModel.updateContact(it.copy(isFavorite = enabled)) } },
+                                        onTogglePrivate = { enabled -> contact?.let { viewModel.updateContact(it.copy(isPrivate = enabled)) } },
+                                        onToggleRemoteOverride = { allow -> contact?.let { viewModel.setRemoteOverridePermission(contactId, allow) } },
+                                        onToggleRemoteSound = { allow -> contact?.let { viewModel.setRemoteSoundPermission(contactId, allow) } },
+                                        onSendLink = { },
+                                        onApproveLink = { viewModel.approveLink(contactId) },
+                                        onSetRemotePin = { pin -> viewModel.setRemotePin(contactId, pin) },
+                                        onPing = suspend { viewModel.sendPing(contactId) },
+                                        onDelete = {
+                                            viewModel.deleteContact(contactId)
+                                            navController.popBackStack()
+                                        }
                                     )
                                 }
                                 composable(

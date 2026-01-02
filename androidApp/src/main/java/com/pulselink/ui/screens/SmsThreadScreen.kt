@@ -113,6 +113,7 @@ fun SmsThreadScreen(
     onCustomizeTheme: () -> Unit,
     onEditNotificationSound: () -> Unit = {},
     onEditNotificationVibration: () -> Unit = {},
+    onEditContact: () -> Unit = {},
     onSendMessage: (String, String?) -> Unit,
     lineOptions: List<com.pulselink.domain.model.SmsLine> = emptyList(),
     selectedLineId: String? = null,
@@ -364,7 +365,10 @@ fun SmsThreadScreen(
                             dateFormatter = dateFormatter,
                             theme = effectiveTheme,
                             contact = contact,
-                            onRetry = { failed -> onSendMessage(failed.body, selectedLineId ?: deviceLineId) }
+                            onRetry = { failed -> onSendMessage(failed.body, selectedLineId ?: deviceLineId) },
+                            onAvatarClick = if (!msg.outgoing) {
+                                { onEditContact() }
+                            } else null
                         )
                     }
                 }
@@ -803,7 +807,8 @@ private fun MessageBubble(
     dateFormatter: (Long) -> String,
     theme: ThemePreferences,
     contact: Contact?,
-    onRetry: (SmsMessageItem) -> Unit = {}
+    onRetry: (SmsMessageItem) -> Unit = {},
+    onAvatarClick: (() -> Unit)? = null
 ) {
     val isOutgoing = msg.outgoing
     val bubbleColor = if (isOutgoing) {
@@ -855,7 +860,14 @@ private fun MessageBubble(
                  modifier = Modifier
                      .size(32.dp)
                      .clip(CircleShape)
-                     .background(Color.Gray),
+                     .background(Color.Gray)
+                     .then(
+                         if (onAvatarClick != null) {
+                             Modifier.clickable(onClick = onAvatarClick)
+                         } else {
+                             Modifier
+                         }
+                     ),
                  contentAlignment = Alignment.Center
              ) {
                  val avatarUrl = contact?.avatarUrl

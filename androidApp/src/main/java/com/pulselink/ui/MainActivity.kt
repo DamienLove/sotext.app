@@ -89,6 +89,8 @@ import com.pulselink.ui.screens.OnboardingPermissionState
 import com.pulselink.ui.screens.OtpCleanupOnboardingCard
 import com.pulselink.ui.screens.OnboardingIntroScreen
 import com.pulselink.ui.screens.FaqScreen
+import com.pulselink.ui.state.BeaconContactsViewModel
+import com.pulselink.ui.branding.pulseBrandName
 import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.MessageNotificationSoundScreen
@@ -102,6 +104,9 @@ import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.SmsThreadScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
+import com.pulselink.ui.screens.BugReportData
+import com.pulselink.ui.screens.BeaconContactsScreen
+import com.pulselink.ui.screens.CustomVibrationCreatorScreen
 import com.pulselink.ui.state.LoginViewModel
 import com.pulselink.ui.state.ContactConversationViewModel
 import com.pulselink.ui.state.MainViewModel
@@ -112,6 +117,7 @@ import com.pulselink.ui.state.SmsThreadViewModel
 import com.pulselink.ui.state.PublicProfile
 import com.pulselink.ui.theme.PulseLinkTheme
 import com.pulselink.util.VibrationPatterns
+import com.pulselink.util.VibrationPatternOption
 import com.pulselink.util.normalizeSmsAddress
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -155,9 +161,14 @@ import com.pulselink.BuildConfig
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.DefaultSmsHelper
 import com.pulselink.util.BeaconIconManager
+import com.pulselink.util.UnifiedLauncherManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import com.pulselink.util.splitSmsDisplayAddress
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Message
 
 private data class BeaconAssistState(
     val iconEnabled: Boolean = false,
@@ -180,6 +191,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var callStateMonitor: CallStateMonitor
     @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
+    private val allowFullScreenAds = false
     private val inboxShortcutFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private fun updateBeaconLauncher(enable: Boolean, variant: String) {
         BeaconIconManager.apply(this, variant, enable)
@@ -218,6 +230,8 @@ class MainActivity : AppCompatActivity() {
                 val threadLineOverrides by linesViewModel.threadLineOverrides.collectAsStateWithLifecycle()
                 val authState by viewModel.authState.collectAsStateWithLifecycle()
                 val isPremium = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
+                val isPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || isPremium
+                val pulseDisplayName = pulseBrandName(isPremium, isPro)
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
@@ -723,15 +737,24 @@ class MainActivity : AppCompatActivity() {
                     val shouldNavigateHome = state.onboardingComplete &&
                         (route == "splash" || route.startsWith("onboarding_"))
                     if (shouldNavigateHome) {
-                        navController.navigate("home") {
+                        val destination = if (state.settings.mergedExperienceEnabled) {
+                            "unified_inbox"
+                        } else {
+                            "home"
+                        }
+                        navController.navigate(destination) {
                             popUpTo(0) { inclusive = true }
                             launchSingleTop = true
                         }
                     }
                 }
 
-                LaunchedEffect(state.onboardingComplete, state.showAds) {
-                    if (state.onboardingComplete && !hasHandledOnboardingCompletionAd) {
+                LaunchedEffect(state.onboardingComplete, state.showAds) {       
+                    if (
+                        state.onboardingComplete &&
+                        allowFullScreenAds &&
+                        !hasHandledOnboardingCompletionAd
+                    ) {
                         hasHandledOnboardingCompletionAd = true
                         if (state.showAds) {
                             appOpenAdController.maybeShow(activity)
@@ -742,17 +765,54 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 LaunchedEffect(state.showAds) {
-                    appOpenAdController.updateAvailability(state.showAds)
+                    appOpenAdController.updateAvailability(state.showAds && allowFullScreenAds)
+                }
+
+                LaunchedEffect(
+                    state.settings.mergedExperienceEnabled,
+                    state.settings.premiumUnlocked,
+                    state.settings.unifiedDisplayName
+                ) {
+                    val unifiedEnabled = state.settings.mergedExperienceEnabled &&
+                        (BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked)
+                    UnifiedLauncherManager.apply(
+                        context = activity,
+                        unifiedEnabled = unifiedEnabled,
+                        preferredLabel = state.settings.unifiedDisplayName
+                    )
+                    // Disable Beacon launcher when unified is on
+                    BeaconIconManager.apply(
+                        context = activity,
+                        variant = state.settings.themePreferences.inboxIconVariant,
+                        enabled = !unifiedEnabled && state.settings.beaconLauncherEnabled
+                    )
                 }
 
                 LaunchedEffect(state.settings.crashDetectionEnabled) {
+                    val enabled = state.settings.crashDetectionEnabled
                     val intent = Intent(context, com.pulselink.service.CrashDetectionService::class.java)
-                    // Crash detection is temporarily disabled pending foreground service/location policy work.
-                    context.stopService(intent)
+                    if (enabled) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(intent)
+                        } else {
+                            context.startService(intent)
+                        }
+                    } else {
+                        context.stopService(intent)
+                    }
                 }
 
-                val startDestination = remember(initialInboxShortcut) {
-                    if (initialInboxShortcut) "sms/inbox" else "splash"
+                val startDestination = remember(
+                    initialInboxShortcut,
+                    state.settings.mergedExperienceEnabled,
+                    state.onboardingComplete
+                ) {
+                    when {
+                        initialInboxShortcut -> "sms/inbox"
+                        !state.onboardingComplete -> "splash"
+                        state.settings.mergedExperienceEnabled -> "unified_inbox"
+                        else -> "home"
+                    }
                 }
 
                 val bannerHeight = 50.dp
@@ -763,24 +823,201 @@ class MainActivity : AppCompatActivity() {
                             .padding(bottom = if (state.showAds) bannerHeight else 0.dp)
                     ) {
                         NavHost(navController = navController, startDestination = startDestination) {
-                    val premiumBranding = state.settings.premiumUnlocked ||
-                        BuildConfig.PREMIUM_FEATURES ||
-                        state.isProUser
-                    composable("splash") {
-                        SplashScreen(useProBranding = premiumBranding)
-                        LaunchedEffect(authState, state.onboardingComplete) {
-                            if (authState is AuthState.Loading) return@LaunchedEffect
-                            delay(1200)
-                            val destination = when (authState) {
-                                is AuthState.Authenticated -> if (state.onboardingComplete) "home" else "onboarding_intro"
-                                else -> "login"
+                            val premiumBranding = state.settings.premiumUnlocked ||
+                                BuildConfig.PREMIUM_FEATURES ||
+                                state.isProUser
+
+                            composable("splash") {
+                                val brandName = pulseBrandName(
+                                    isPremium = premiumBranding,
+                                    isPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked
+                                )
+                                val badgeText = when {
+                                    premiumBranding -> "Premium"
+                                    BuildConfig.PRO_FEATURES || state.settings.proUnlocked -> "Pro"
+                                    else -> null
+                                }
+                                SplashScreen(
+                                    usePremiumBranding = premiumBranding || BuildConfig.PRO_FEATURES || state.settings.proUnlocked,
+                                    brandName = brandName,
+                                    badgeText = badgeText
+                                )
+                                LaunchedEffect(authState, state.onboardingComplete) {
+                                    if (authState is AuthState.Loading) return@LaunchedEffect
+                                    delay(1200)
+                                    val destination = when (authState) {
+                                        is AuthState.Authenticated -> {
+                                            if (state.onboardingComplete) {
+                                                if (state.settings.mergedExperienceEnabled) "unified_inbox" else "home"
+                                            } else {
+                                                "onboarding_intro"
+                                            }
+                                        }
+                                        else -> "login"
+                                    }
+                                    navController.navigate(destination) {
+                                        popUpTo(0) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
                             }
-                            navController.navigate(destination) {
-                                popUpTo(0) { inclusive = true }
-                                launchSingleTop = true
+
+                            composable("unified_inbox") {
+                                var selectedTab by rememberSaveable { mutableStateOf(0) } // 0 = Home, 1 = Messages
+                                val messagesLabel = state.settings.unifiedDisplayName?.takeIf { it.isNotBlank() } ?: "Messages"
+
+                                Scaffold(
+                                    bottomBar = {
+                                        NavigationBar {
+                                            NavigationBarItem(
+                                                icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
+                                                label = { Text("Home") },
+                                                selected = selectedTab == 0,
+                                                onClick = { selectedTab = 0 }
+                                            )
+                                            NavigationBarItem(
+                                                icon = { Icon(Icons.Filled.Message, contentDescription = messagesLabel) },
+                                                label = { Text(messagesLabel) },
+                                                selected = selectedTab == 1,
+                                                onClick = { selectedTab = 1 }
+                                            )
+                                        }
+                                    }
+                                ) { innerPadding ->
+                                    Box(modifier = Modifier.padding(innerPadding)) {
+                                        if (selectedTab == 0) {
+                                            val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
+                                            HomeScreen(
+                                                state = state,
+                                                onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
+                                                onTriggerEmergency = viewModel::triggerEmergency,
+                                                onSendCheckIn = viewModel::sendCheckIn,
+                                                onSettingsClick = { navController.navigate("settings") },
+                                                onFaqClick = { navController.navigate("faq") },
+                                                onBeaconClick = { selectedTab = 1 },
+                                                onOpenContacts = { navController.navigate("sms/contacts") },
+                                                onOpenNotifications = { navController.navigate("notifications/message_sound") },
+                                                onOpenThemes = { navController.navigate("visual_settings") },
+                                                isUnifiedMode = true,
+                                                showBeaconIcon = false,
+                                                showBeaconHint = false,
+                                                onBeaconHintDismiss = { },
+                                                onBeaconHintDisable = { },
+                                                onBeaconHintUse = { },
+                                                showWebAccessHint = !state.settings.webAccessHintDismissed && isPremium,
+                                                onWebAccessHintDismiss = { viewModel.setWebAccessHintDismissed(true) },
+                                                onWebAccessHintAction = {
+                                                    viewModel.setWebAccessHintDismissed(true)
+                                                    if (isPremium) {
+                                                        selectedTab = 1
+                                                    } else {
+                                                        navController.navigate("account_settings")
+                                                    }
+                                                },
+                                                onAddContact = viewModel::saveContact,
+                                                onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
+                                                onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
+                                                onSendLink = { contactId ->
+                                                    state.contacts.firstOrNull { it.id == contactId }?.let { sendLinkOrInvite(it) }
+                                                },
+                                                onApproveLink = viewModel::approveLink,
+                                                onCallContact = callContactHandler,
+                                                onReorderContacts = viewModel::reorderContacts,
+                                                onRequestCancelEmergency = cancelEmergencyHandler,
+                                                onViewEmergencyMap = { navController.navigate("emergency_map") },
+                                                isCancelingEmergency = isCancelingEmergency,
+                                                onAlertsClick = { navController.navigate("alerts_history") },
+                                                showAddLoginPrompt = isSmsOnlyUser,
+                                                onAddLoginClick = {
+                                                    navController.navigate("login") {
+                                                        launchSingleTop = true
+                                                    }
+                                                },
+                                                onUpgradeClick = {
+                                                    val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                        data = Uri.parse("market://details?id=com.pulselink.pro")
+                                                        setPackage("com.android.vending")
+                                                    }
+                                                    try {
+                                                        startActivity(playStoreIntent)
+                                                    } catch (_: ActivityNotFoundException) {
+                                                        playStoreIntent.data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                                                        playStoreIntent.setPackage(null)
+                                                        startActivity(playStoreIntent)
+                                                    }
+                                                },
+                                                brandName = pulseDisplayName,
+                                                isPremium = isPremium,
+                                                isPro = isPro
+                                            )
+                                        } else {
+                                            val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
+                                            val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
+                                            val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
+                                            val inboxBusy by smsInboxViewModel.isDatabaseBusy.collectAsStateWithLifecycle()
+                                            val contactsByNumber = remember(state.contacts) {
+                                                val map = mutableMapOf<String, Contact>()
+                                                state.contacts.forEach { contact ->
+                                                    val numbers = listOf(contact.phoneNumber) + contact.additionalPhones
+                                                    numbers.filter { it.isNotBlank() }.forEach { number ->
+                                                        map.putIfAbsent(normalizeSmsAddress(number), contact)
+                                                    }
+                                                }
+                                                map.toMap()
+                                            }
+
+                                            LaunchedEffect(Unit) { smsInboxViewModel.refresh() }
+
+                                            SmsInboxScreen(
+                                                threads = threads,
+                                                archivedThreads = archivedThreads,
+                                                onOpenThread = { thread ->
+                                                    val lineSuffix = thread.lineId?.let { Uri.encode(it) }.orEmpty()
+                                                    navController.navigate(
+                                                        "sms/thread/${thread.threadId}/${Uri.encode(thread.address)}?lineId=$lineSuffix"
+                                                    )
+                                                },
+                                                onOpenContactForThread = { thread ->
+                                                    val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
+                                                    if (contact != null) {
+                                                        navController.navigate("contact/${contact.id}/settings")
+                                                    } else {
+                                                        val (displayName, number) = splitSmsDisplayAddress(thread.address)
+                                                        val phone = (number ?: displayName).trim()
+                                                        val encodedPhone = Uri.encode(phone)
+                                                        val encodedName = displayName
+                                                            .takeIf { it.isNotBlank() && it != phone }
+                                                            ?.let { Uri.encode(it) }
+                                                            .orEmpty()
+                                                        navController.navigate("contact/new?phone=$encodedPhone&name=$encodedName")
+                                                    }
+                                                },
+                                                onBack = { selectedTab = 0 },
+                                                dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                                                isBeaconMode = true,
+                                                onOpenSettings = { navController.navigate("settings") },
+                                                onCustomizeTheme = { navController.navigate("visual_settings") },
+                                                onOpenContacts = { navController.navigate("sms/contacts") },
+                                                onOpenPrivate = { navController.navigate("private_pin") },
+                                                lineOptions = if (isPremium) orderedLines else emptyList(),
+                                                deviceLineId = deviceLineId,
+                                                activeLineId = if (isPremium) activeLineId else null,
+                                                onSelectLine = { selected ->
+                                                    linesViewModel.setActiveLineId(selected)
+                                                    linesViewModel.touchPresence(selected)
+                                                },
+                                                showLinePicker = isPremium && state.settings.lineInboxMode == LineInboxMode.PER_LINE,
+                                                hideOtpInAll = true,
+                                                onImportAll = { smsInboxViewModel.importAllMessages() },
+                                                isDatabaseBusy = inboxBusy,
+                                                contactsByNumber = contactsByNumber,
+                                                isPremium = isPremium,
+                                                isPro = isPro
+                                            )
+                                        }
+                                    }
+                                }
                             }
-                        }
-                    }
                     composable("login") {
                         val loginViewModel: LoginViewModel = hiltViewModel()
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
@@ -1051,6 +1288,10 @@ class MainActivity : AppCompatActivity() {
                             onSettingsClick = { navController.navigate("settings") },
                             onFaqClick = { navController.navigate("faq") },
                             onBeaconClick = launchBeaconInbox,
+                            onOpenContacts = { navController.navigate("sms/contacts") },
+                            onOpenNotifications = { navController.navigate("notifications/message_sound") },
+                            onOpenThemes = { navController.navigate("visual_settings") },
+                            isUnifiedMode = state.settings.mergedExperienceEnabled,
                             showBeaconIcon = state.settings.beaconLauncherEnabled,
                             showBeaconHint = !state.settings.beaconHintDismissed,
                             onBeaconHintDismiss = { viewModel.setBeaconHintDismissed(true) },
@@ -1106,7 +1347,10 @@ class MainActivity : AppCompatActivity() {
                                     playStoreIntent.setPackage(null)
                                     startActivity(playStoreIntent)
                                 }
-                            }
+                            },
+                            brandName = pulseDisplayName,
+                            isPremium = isPremium,
+                            isPro = isPro
                         )
                     }
                     composable("alerts_history") {
@@ -1137,8 +1381,8 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() },
                             onOpenSettings = { navController.navigate("contact/$contactId/settings") },
                             onCallContact = callContactHandler,
-                            onPing = { viewModel.sendPing(contactId) },
-                            onVoiceCommand = { query -> viewModel.processVoiceCommand(query) },
+                            onPing = suspend { viewModel.sendPing(contactId) },
+                            onVoiceCommand = { query: String -> viewModel.processVoiceCommand(query) },
                             onUpgradeClick = {
                                 val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
                                     data = Uri.parse("market://details?id=com.pulselink.pro")
@@ -1189,7 +1433,8 @@ class MainActivity : AppCompatActivity() {
                                 contact?.let { sendLinkOrInvite(it) }
                             },
                             onApproveLink = { viewModel.approveLink(contactId) },
-                            onPing = { viewModel.sendPing(contactId) },
+                            onSetRemotePin = { pin -> viewModel.setRemotePin(contactId, pin) },
+                            onPing = suspend { viewModel.sendPing(contactId) },
                             onDelete = {
                                 viewModel.deleteContact(contactId)
                                 navController.popBackStack()
@@ -1392,6 +1637,7 @@ class MainActivity : AppCompatActivity() {
                             onEditMessageVibration = {
                                 navController.navigate("notifications/message_vibration")
                             },
+                            onEditCustomVibration = { navController.navigate("notifications/custom_vibration") },
                             emergencyVibrationLabel = emergencyVibrationLabel,
                             onEditEmergencyVibration = {
                                 navController.navigate("alerts/default/emergency_vibration")
@@ -1416,6 +1662,24 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() }
                         )
                     }
+                    composable("sms/contacts") {
+                        val viewModel: com.pulselink.ui.state.BeaconContactsViewModel = hiltViewModel()
+                        val contacts by viewModel.contacts.collectAsStateWithLifecycle()
+                        BeaconContactsScreen(
+                            contacts = contacts,
+                            theme = state.settings.themePreferences,
+                            onSelect = { deviceContact ->
+                                // Navigate to contact detail/edit
+                                // We might need to resolve if this DeviceContact already has a PulseLink Contact ID
+                                viewModel.resolveContactAndNavigate(deviceContact) { contactId ->
+                                    navController.navigate("contact/$contactId/settings")
+                                }
+                            }
+                        )
+                        BackHandler {
+                            navController.popBackStack()
+                        }
+                    }
                     composable("extensions_store") {
                         ExtensionsStoreScreen(
                             settings = state.settings,
@@ -1427,6 +1691,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
                             onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                             onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                            onToggleMergedExperience = { enabled -> viewModel.setMergedExperienceEnabled(enabled) },
                             onBack = { navController.popBackStack() }
                         )
                     }
@@ -1482,6 +1747,14 @@ class MainActivity : AppCompatActivity() {
                         val normalized = addressArg?.let { normalizeSmsAddress(it) }
                         val overrideKey = normalized?.let { state.settings.messageNotificationVibrationOverrides[it] }
                         val isContact = addressArg != null
+                        val customOptions = state.settings.customVibrationPatterns.map {
+                            VibrationPatternOption(
+                                key = it.id,
+                                label = it.name,
+                                pattern = it.pattern.toLongArray(),
+                                isCustom = true
+                            )
+                        }
                         VibrationPatternPickerScreen(
                             title = if (isContact) "Notification vibration" else "Message vibration pattern",
                             subtitle = if (isContact) {
@@ -1489,7 +1762,7 @@ class MainActivity : AppCompatActivity() {
                             } else {
                                 "Choose the vibration style for incoming texts."
                             },
-                            options = VibrationPatterns.messageOptions,
+                            options = VibrationPatterns.messageOptions + customOptions,
                             selectedKey = if (isContact) overrideKey else state.settings.messageNotificationVibrationPattern,
                             defaultLabel = if (isContact) "Use global message pattern" else null,
                             onSelect = { key ->
@@ -1500,6 +1773,14 @@ class MainActivity : AppCompatActivity() {
                                         key ?: VibrationPatterns.MESSAGE_DEFAULT
                                     )
                                 }
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable("notifications/custom_vibration") {
+                        CustomVibrationCreatorScreen(
+                            onSave = { name, pattern ->
+                                viewModel.addCustomVibrationPattern(name, pattern)
                             },
                             onBack = { navController.popBackStack() }
                         )
@@ -1589,6 +1870,8 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() },
                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
                             onOpenSettings = { navController.navigate("settings") },
+                            onCustomizeTheme = { navController.navigate("visual_settings") },
+                            onOpenContacts = { navController.navigate("sms/contacts") },
                             lineOptions = if (isPremium) orderedLines else emptyList(),
                             deviceLineId = deviceLineId,
                             activeLineId = if (isPremium) activeLineId else null,
@@ -1765,9 +2048,24 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("bug_report") {
-                        BugReportWebScreen(
-                            url = MainViewModel.BUG_REPORT_PAGE_URL,
-                            onBack = { navController.popBackStack() }
+                        val context = LocalContext.current
+                        var bugReportData by rememberSaveable(stateaver = com.pulselink.ui.screens.BugReportDataSaver) {
+                            mutableStateOf(com.pulselink.ui.screens.BugReportData())
+                        }
+                        com.pulselink.ui.screens.BugReportScreen(
+                            data = bugReportData,
+                            onDataChange = { bugReportData = it },
+                            onBack = { navController.popBackStack() },
+                            onSubmit = { data ->
+                                val uri = viewModel.buildBugReportUri(context, data)
+                                val intent = Intent(Intent.ACTION_VIEW, uri)
+                                try {
+                                    context.startActivity(intent)
+                                    navController.popBackStack()
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Unable to open bug report page", Toast.LENGTH_LONG).show()
+                                }
+                            }
                         )
                     }
                     composable("beta_testers") {
@@ -1867,7 +2165,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (viewModel.uiState.value.onboardingComplete) {
+        if (allowFullScreenAds && viewModel.uiState.value.onboardingComplete) {
             appOpenAdController.maybeShow(this)
         }
     }
@@ -1885,7 +2183,6 @@ class MainActivity : AppCompatActivity() {
             enterPictureInPictureMode(params)
         }
     }
-}
 
 @Composable
 private fun BeaconAssistDialog(
@@ -1997,9 +2294,6 @@ private fun rememberCancelEmergencyLauncher(
     }
 }
 
-private const val CANCEL_EMERGENCY_AUTHENTICATORS =
-    BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-
 private fun Contact.primaryPhone(): String? =
     (listOf(phoneNumber) + additionalPhones).firstOrNull { it.isNotBlank() }
 
@@ -2064,10 +2358,6 @@ private fun CallPreparationDialog() {
         }
     )
 }
-
-private const val REQUEST_CALL_PERMISSIONS = 2001
-private const val NOTIFICATION_POLICY_DETAIL_ACTION =
-    "android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS"
 
 private fun openAppSettings(context: android.content.Context) {
     val intent = Intent(
@@ -2154,11 +2444,11 @@ private fun openBatteryOptimizationSettings(context: android.content.Context) {
 private fun BugReportWebScreen(
     url: String,
     onBack: () -> Unit
-) {
-    val loading = remember { mutableStateOf(true) }
-    BackHandler(onBack = onBack)
-    Scaffold(
-        topBar = {
+    ) {
+        val loading = remember { mutableStateOf(true) }
+        BackHandler(onBack = onBack)
+        Scaffold(
+            topBar = {
             TopAppBar(
                 title = { Text(text = stringResource(id = R.string.settings_report_bug)) },
                 navigationIcon = {
@@ -2196,5 +2486,13 @@ private fun BugReportWebScreen(
                 }
             )
         }
+    }
+}
+    companion object {
+        private const val CANCEL_EMERGENCY_AUTHENTICATORS =
+            BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        private const val REQUEST_CALL_PERMISSIONS = 2001
+        private const val NOTIFICATION_POLICY_DETAIL_ACTION =
+            "android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS"
     }
 }

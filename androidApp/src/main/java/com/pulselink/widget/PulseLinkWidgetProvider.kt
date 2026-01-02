@@ -22,10 +22,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.absoluteValue
 
 @AndroidEntryPoint
 class PulseLinkWidgetProvider : AppWidgetProvider() {
+
+    private val widgetScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @EntryPoint
     @InstallIn(SingletonComponent::class)
@@ -35,7 +38,9 @@ class PulseLinkWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         appWidgetIds.forEach { id ->
-            updateAppWidget(context, appWidgetManager, id)
+            widgetScope.launch {
+                updateAppWidget(context, appWidgetManager, id)
+            }
         }
     }
 
@@ -43,11 +48,11 @@ class PulseLinkWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
     }
 
-    private fun updateAppWidget(
+    private suspend fun updateAppWidget(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetId: Int
-    ) {
+    ) = withContext(Dispatchers.IO) {
         val views = RemoteViews(context.packageName, R.layout.widget_pulselink)
 
         // Header
@@ -158,18 +163,18 @@ class PulseLinkWidgetProvider : AppWidgetProvider() {
         )
         views.setPendingIntentTemplate(R.id.widget_list, clickPendingTemplate)
 
-        appWidgetManager.updateAppWidget(appWidgetId, views)
+        withContext(Dispatchers.Main) {
+            appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
 
         if ((cachedContacts.isEmpty() && !hasContactsCache) || WidgetCache.shouldRefreshContacts(context)) {
-            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
-                val fresh = runCatching { stateManager.getEmergencyContactsForWidget() }
-                    .getOrDefault(emptyList())
-                val payload = fresh.map { contact ->
-                    WidgetContact(id = contact.id, displayName = contact.displayName)
-                }
-                WidgetCache.writeContacts(context, payload)
-                stateManager.requestWidgetUpdate()
+            val fresh = runCatching { stateManager.getEmergencyContactsForWidget() }
+                .getOrDefault(emptyList())
+            val payload = fresh.map { contact ->
+                WidgetContact(id = contact.id, displayName = contact.displayName)
             }
+            WidgetCache.writeContacts(context, payload)
+            stateManager.requestWidgetUpdate()
         }
     }
 

@@ -33,6 +33,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Apps
@@ -74,6 +76,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -87,6 +90,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -105,12 +109,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
+import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.ui.ads.NativeAdCard
 import com.pulselink.ui.state.PulseLinkUiState
+import com.pulselink.util.parseColorOr
 import kotlinx.coroutines.launch
 import org.burnoutcrew.reorderable.ReorderableItem
 import org.burnoutcrew.reorderable.detectReorderAfterLongPress
@@ -137,6 +144,10 @@ fun HomeScreen(
     onSettingsClick: () -> Unit = {},
     onFaqClick: () -> Unit = {},
     onBeaconClick: () -> Unit = {},
+    onOpenContacts: () -> Unit = {},
+    onOpenNotifications: () -> Unit = {},
+    onOpenThemes: () -> Unit = {},
+    isUnifiedMode: Boolean = false,
     showBeaconIcon: Boolean = false,
     showBeaconHint: Boolean = false,
     onBeaconHintDismiss: () -> Unit = {},
@@ -147,11 +158,32 @@ fun HomeScreen(
     showWebAccessHint: Boolean = false,
     onWebAccessHintDismiss: () -> Unit = {},
     onWebAccessHintAction: () -> Unit = {},
-    onUpgradeClick: () -> Unit = {}
+    onUpgradeClick: () -> Unit = {},
+    brandName: String = "PulseLink",
+    isPremium: Boolean = false,
+    isPro: Boolean = false
 ) {
     val context = LocalContext.current
+    val themePrefs: ThemePreferences = state.settings.themePreferences
+    val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, themePrefs.backgroundColor)
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    val collapseFraction by remember {
+        derivedStateOf { (scrollState.value / 420f).coerceIn(0f, 1f) }
+    }
+    val quickActionScale by animateFloatAsState(
+        targetValue = 1f - 0.22f * collapseFraction,
+        label = "quickActionScale"
+    )
+    val quickActionHeight by animateDpAsState(
+        targetValue = lerp(176.dp, 112.dp, collapseFraction),
+        label = "quickActionHeight"
+    )
+    val quickActionAlpha by animateFloatAsState(
+        targetValue = 1f - (0.15f * collapseFraction),
+        label = "quickActionAlpha"
+    )
+    val quickActionsCompact by remember { derivedStateOf { collapseFraction > 0.45f } }
 
     var showAddDialog by remember { mutableStateOf(false) }
     var newContactName by remember { mutableStateOf(TextFieldValue()) }
@@ -183,7 +215,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing),
-        color = MaterialTheme.colorScheme.background
+        color = backgroundColor
     ) {
         Column(
             modifier = Modifier
@@ -200,8 +232,16 @@ fun HomeScreen(
                 onFaqClick = onFaqClick,
                 onBeaconClick = onBeaconClick,
                 onUpgradeClick = onUpgradeClick,
-                showBeacon = showBeaconIcon
+                showBeacon = showBeaconIcon || isUnifiedMode,
+                isUnifiedMode = isUnifiedMode,
+                theme = themePrefs
             )
+            if (isUnifiedMode) {
+                BeaconUnifiedWidget(
+                    onOpenInbox = onBeaconClick,
+                    onOpenContacts = onOpenContacts
+                )
+            }
             if (showBeaconHint) {
                 BeaconHintCard(
                     onDismiss = onBeaconHintDismiss,
@@ -223,12 +263,20 @@ fun HomeScreen(
                 )
             }
             QuickActionsRow(
+                modifier = Modifier
+                    .heightIn(min = quickActionHeight)
+                    .graphicsLayer {
+                        scaleX = quickActionScale
+                        scaleY = quickActionScale
+                        alpha = quickActionAlpha
+                    },
                 onTriggerEmergency = onTriggerEmergency,
                 onSendCheckInAll = onSendCheckIn,
                 isEmergencyActive = state.isEmergencyActive,
                 onCancelEmergency = onRequestCancelEmergency,
                 onViewEmergencyMap = onViewEmergencyMap,
-                isCancelingEmergency = isCancelingEmergency
+                isCancelingEmergency = isCancelingEmergency,
+                compact = quickActionsCompact
             )
             SearchAndAddRow(
                 searchValue = searchValue,
@@ -248,7 +296,12 @@ fun HomeScreen(
                 onReorderContacts = onReorderContacts
             )
             if (state.adsAvailable) {
-                UpgradeCard(isPro = state.isProUser, onUpgradeClick = onUpgradeClick)
+                UpgradeCard(
+                    isPro = state.isProUser,
+                    isPremium = isPremium,
+                    brandName = brandName,
+                    onUpgradeClick = onUpgradeClick
+                )
             }
             if (state.showAds) {
                 NativeAdCard(enabled = true)
@@ -299,12 +352,19 @@ private fun HeaderSection(
     onFaqClick: () -> Unit,
     onBeaconClick: () -> Unit,
     onUpgradeClick: () -> Unit,
-    showBeacon: Boolean
+    showBeacon: Boolean,
+    isUnifiedMode: Boolean,
+    theme: ThemePreferences
 ) {
     val heroShape = RoundedCornerShape(32.dp)
-    val heroBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xFF181D35), Color(0xFF0E111E))
-    )
+    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val secondary = parseColorOr(MaterialTheme.colorScheme.secondary, theme.secondaryColor)
+    val heroBrush = if (isUnifiedMode) {
+        // Beacon-forward: keep emergency red anchored into theme primary
+        Brush.verticalGradient(listOf(Color(0xFFB91C1C), primary))
+    } else {
+        Brush.verticalGradient(listOf(primary, secondary))
+    }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = heroShape,
@@ -324,10 +384,10 @@ private fun HeaderSection(
                 Image(
                     painter = painterResource(id = R.drawable.ic_logo),
                     contentDescription = "PulseLink logo",
-                    modifier = Modifier.size(56.dp)
+                    modifier = Modifier.size(if (isUnifiedMode) 64.dp else 56.dp)
                 )
                 Text(
-                    text = stringResource(id = R.string.app_name),
+                    text = if (isUnifiedMode) "Beacon · PulseLink" else stringResource(id = R.string.app_name),
                     style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                     color = Color.White,
                     maxLines = 1,
@@ -343,11 +403,83 @@ private fun HeaderSection(
                     onSettingsClick = onSettingsClick,
                     onFaqClick = onFaqClick,
                     onBeaconClick = onBeaconClick,
+                    onNotificationsClick = onOpenNotifications,
+                    onThemesClick = onOpenThemes,
                     onUpgradeClick = onUpgradeClick,
                     isProUser = state.isProUser,
                     showBeacon = showBeacon,
                     unreadAlertCount = state.unreadAlertCount
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BeaconUnifiedWidget(
+    onOpenInbox: () -> Unit,
+    onOpenContacts: () -> Unit
+) {
+    val shape = RoundedCornerShape(22.dp)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = shape,
+        tonalElevation = 4.dp,
+        color = Color(0xFF0C1D3D)
+    ) {
+        Column(
+            modifier = Modifier
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF0C1D3D), Color(0xFF0F3F7A))
+                    ),
+                    shape
+                )
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.NotificationsActive,
+                    contentDescription = null,
+                    tint = Color(0xFFFFC857),
+                    modifier = Modifier.size(28.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Beacon unified",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Beacon inbox + PulseLink safety tools are active in this unified view.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = onOpenInbox,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF4A4A),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Open Beacon inbox")
+                }
+                OutlinedButton(
+                    onClick = onOpenContacts,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.6f))
+                ) {
+                    Text("Contacts")
+                }
             }
         }
     }
@@ -523,6 +655,8 @@ private fun NavigationRow(
     onSettingsClick: () -> Unit,
     onFaqClick: () -> Unit,
     onBeaconClick: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    onThemesClick: () -> Unit,
     onUpgradeClick: () -> Unit,
     isProUser: Boolean,
     showBeacon: Boolean,
@@ -539,6 +673,8 @@ private fun NavigationRow(
             badgeCount = unreadAlertCount
         )
         NavButton(icon = Icons.Filled.Help, label = stringResource(id = R.string.faq_title), onClick = onFaqClick)
+        NavButton(icon = Icons.Filled.NotificationsActive, label = "Tones", onClick = onNotificationsClick)
+        NavButton(icon = Icons.Filled.Palette, label = "Themes", onClick = onThemesClick)
         if (showBeacon) {
             NavButton(icon = Icons.Outlined.WifiTethering, label = stringResource(id = R.string.home_beacon_label), onClick = onBeaconClick)
         }
@@ -725,16 +861,21 @@ private fun NavButton(
 
 @Composable
 private fun QuickActionsRow(
+    modifier: Modifier = Modifier,
     onTriggerEmergency: () -> Unit,
     onSendCheckInAll: () -> Unit,
     isEmergencyActive: Boolean,
     onCancelEmergency: () -> Unit,
     onViewEmergencyMap: () -> Unit,
-    isCancelingEmergency: Boolean
+    isCancelingEmergency: Boolean,
+    compact: Boolean = false
 ) {
     val fontScale = LocalDensity.current.fontScale
     val showScrollHint = fontScale >= 1.2f
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 16.dp)
+    ) {
         if (isEmergencyActive) {
             CancelEmergencyCard(
                 isCanceling = isCancelingEmergency,
@@ -751,13 +892,15 @@ private fun QuickActionsRow(
                 label = stringResource(id = R.string.quick_action_emergency_label),
                 background = Brush.verticalGradient(listOf(Color(0xFFFC4D4D), Color(0xFFB60F1F))),
                 onClick = onTriggerEmergency,
-                enabled = !isEmergencyActive
+                enabled = !isEmergencyActive,
+                compact = compact
             )
             QuickActionTile(
                 modifier = Modifier.weight(1f),
                 label = stringResource(id = R.string.quick_action_checkin_label),
                 background = Brush.verticalGradient(listOf(Color(0xFF14C997), Color(0xFF058252))),
-                onClick = onSendCheckInAll
+                onClick = onSendCheckInAll,
+                compact = compact
             )
         }
         if (showScrollHint) {
@@ -772,13 +915,15 @@ private fun QuickActionTile(
     label: String,
     background: Brush,
     onClick: () -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    compact: Boolean = false
 ) {
     val shape = RoundedCornerShape(26.dp)
+    val tileHeight = if (compact) 60.dp else 72.dp
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height(tileHeight)
             .clip(shape)
             .background(background)
             .alpha(if (enabled) 1f else 0.4f)
@@ -787,7 +932,8 @@ private fun QuickActionTile(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+            style = (if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium)
+                .copy(fontWeight = FontWeight.ExtraBold),
             color = Color.White
         )
     }
@@ -1431,7 +1577,12 @@ private fun LinkActionButtons(
 }
 
 @Composable
-private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
+private fun UpgradeCard(
+    isPro: Boolean,
+    isPremium: Boolean,
+    brandName: String,
+    onUpgradeClick: () -> Unit
+) {
     val proShape = RoundedCornerShape(28.dp)
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1451,27 +1602,27 @@ private fun UpgradeCard(isPro: Boolean, onUpgradeClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "PulseLink Pro",
+                text = brandName,
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                 color = Color.White
             )
             Text(
-                text = if (isPro) {
-                    stringResource(id = R.string.upgrade_card_active_copy)
-                } else {
-                    stringResource(id = R.string.upgrade_card_pitch)
+                text = when {
+                    isPremium -> "Subscription active"
+                    isPro -> stringResource(id = R.string.upgrade_card_active_copy)
+                    else -> stringResource(id = R.string.upgrade_card_pitch)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.8f)
             )
-            if (isPro) {
+            if (isPremium || isPro) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = Color(0xFF34D399))
                     Text(
-                        text = "Lifetime access activated",
+                        text = if (isPremium) "Premium subscription active" else "Lifetime access activated",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.White
                     )

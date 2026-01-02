@@ -27,7 +27,7 @@ struct ContentView: View {
                     .tabItem {
                         Label("Home", systemImage: "shield.lefthalf.filled")
                     }
-                    .badge(isPro ? "Pro" : nil)
+                    .badge(isPro ? Text("Pro") : nil)
 
                 if isPro {
                     ContactsTab(viewModel: viewModel, selectedContact: $selectedContact)
@@ -276,6 +276,8 @@ private struct ContactsTab: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(RelayColors.deep.ignoresSafeArea())
             .navigationDestination(for: ContactCard.self) { contact in
                 ConversationView(
                     contact: contact,
@@ -370,40 +372,44 @@ private struct SettingsTab: View {
     @State private var isDeleting = false
 
     var body: some View {
-        Form {
-            Section("Relay") {
-                TextField("Relay base URL", text: Binding(
-                    get: { baseUrlDraft.isEmpty ? viewModel.baseUrl : baseUrlDraft },
-                    set: { baseUrlDraft = $0 }
-                ), prompt: Text("https://example.com"))
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                Button("Apply URL") {
-                    viewModel.baseUrl = baseUrlDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        NavigationStack {
+            Form {
+                Section("Relay") {
+                    TextField("Relay base URL", text: Binding(
+                        get: { baseUrlDraft.isEmpty ? viewModel.baseUrl : baseUrlDraft },
+                        set: { baseUrlDraft = $0 }
+                    ), prompt: Text("https://example.com"))
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                    Button("Apply URL") {
+                        viewModel.baseUrl = baseUrlDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                    }
                 }
-            }
-            Section("Alerts") {
-                Toggle("Override Do Not Disturb", isOn: $viewModel.overrideDND)
-                Toggle("Max volume on urgent", isOn: $viewModel.maxVolumeOnUrgent)
-            }
-            Section("Account") {
-                Button("Sign Out", role: .destructive) {
-                    #if canImport(FirebaseAuth)
-                    try? FirebaseAuth.Auth.auth().signOut()
-                    #endif
+                Section("Alerts") {
+                    Toggle("Override Do Not Disturb", isOn: $viewModel.overrideDND)
+                    Toggle("Max volume on urgent", isOn: $viewModel.maxVolumeOnUrgent)
                 }
+                Section("Account") {
+                    Button("Sign Out", role: .destructive) {
+                        #if canImport(FirebaseAuth)
+                        try? FirebaseAuth.Auth.auth().signOut()
+                        #endif
+                    }
 
-                Button("Delete Account", role: .destructive) {
-                    showDeleteConfirmation = true
+                    Button("Delete Account", role: .destructive) {
+                        showDeleteConfirmation = true
+                    }
+                }
+                Section("About") {
+                    Label("Matches Android experience: emergency, trusted contacts, urgent chat", systemImage: "arrow.left.arrow.right")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
-            Section("About") {
-                Label("Matches Android experience: emergency, trusted contacts, urgent chat", systemImage: "arrow.left.arrow.right")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+            .scrollContentBackground(.hidden)
+            .background(RelayColors.deep.ignoresSafeArea())
+            .navigationTitle("Settings")
         }
-        .navigationTitle("Settings")
         .alert("Delete Account", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
@@ -529,9 +535,9 @@ private struct CancelEmergencySheet: View {
 // MARK: - Theme
 
 enum RelayColors {
-    static let primary = Color(red: 0.96, green: 0.80, blue: 0.43)   // gold light
-    static let accent  = Color(red: 0.75, green: 0.53, blue: 0.12)   // gold deep
-    static let deep    = Color(red: 0.07, green: 0.09, blue: 0.14)   // near-black
+    static let primary = Color(red: 0.39, green: 0.40, blue: 0.95)   // Indigo (#6366f1)
+    static let accent  = Color(red: 0.75, green: 0.53, blue: 0.12)   // Gold deep
+    static let deep    = Color(red: 0.01, green: 0.02, blue: 0.03)   // Deep Dark (#030407)
 }
 
 #Preview {

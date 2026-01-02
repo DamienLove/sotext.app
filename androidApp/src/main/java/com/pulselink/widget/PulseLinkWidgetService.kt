@@ -10,6 +10,7 @@ import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import androidx.core.content.ContextCompat
 import com.pulselink.R
 import com.pulselink.data.sms.SmsRepository
@@ -76,13 +77,15 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
                             address = thread.address,
                             snippet = thread.snippet,
                             timestamp = thread.timestamp,
-                            unread = thread.unread
+                            unread = thread.unread,
+                            unreadCount = thread.unreadCount
                         )
                     }
                 )
                 notifyWidgetDataChanged()
                 requestWidgetUpdate()
             } catch (e: Exception) {
+                FirebaseCrashlytics.getInstance().recordException(e)
                 e.printStackTrace()
             } finally {
                 android.os.Binder.restoreCallingIdentity(identityToken)
@@ -139,6 +142,7 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
 
             return views
         } catch (e: Exception) {
+            FirebaseCrashlytics.getInstance().recordException(e)
             e.printStackTrace()
             // Return a safe empty view in case of crash
             return RemoteViews(context.packageName, R.layout.widget_list_item)
@@ -204,7 +208,8 @@ class PulseLinkWidgetFactory(private val context: Context) : RemoteViewsService.
             address = address,
             snippet = snippet,
             timestamp = timestamp,
-            unread = unread
+            unread = unread,
+            unreadCount = unreadCount
         )
     }
 

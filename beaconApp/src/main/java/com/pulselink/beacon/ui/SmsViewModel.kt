@@ -29,8 +29,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = SmsRepository(app.applicationContext)
     private companion object {
-        const val THREAD_LIMIT = Int.MAX_VALUE
-        const val MESSAGE_LIMIT = Int.MAX_VALUE
+        const val THREAD_LIMIT = 200
+        const val MESSAGE_LIMIT = 200
     }
 
     var threads by mutableStateOf<List<SmsThreadItem>>(emptyList())
@@ -43,9 +43,22 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var searchState: SearchResultState by mutableStateOf(SearchResultState.Idle)
         private set
+    var currentFilter by mutableStateOf(InboxFilter.ALL)
+        private set
+
+    // Track inbox state locally to pass to sync methods
+    private var inboxState = InboxState()
 
     init {
-        refreshThreads()
+        // Collect inbox state and trigger refresh
+        viewModelScope.launch {
+            repo.inboxStateFlow.collectLatest { state ->
+                inboxState = state
+                refreshThreads()
+            }
+        }
+
+        // Listen for DB changes
         viewModelScope.launch {
             repo.changes().collectLatest {
                 refreshThreads()
@@ -54,12 +67,21 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun refreshThreads() {
-        threads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+    fun setFilter(filter: InboxFilter) {
+        currentFilter = filter
+        viewModelScope.launch { refreshThreads() }
+    }
+
+    private suspend fun refreshThreads() {
+        threads = if (currentFilter == InboxFilter.ARCHIVED) {
+            runCatching { repo.listArchivedThreads(limit = THREAD_LIMIT, state = inboxState) }.getOrElse { emptyList() }
+        } else {
+            runCatching { repo.listInboxThreads(limit = THREAD_LIMIT, state = inboxState) }.getOrElse { emptyList() }
+        }
     }
 
     fun openThread(threadId: Long, address: String) {
-                // Handle new conversations
+        // Handle new conversations
         if (threadId == 0L && !address.isNullOrBlank()) {
             currentThreadId = 0L
             currentAddress = address
@@ -69,30 +91,51 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
         currentThreadId = threadId
         currentAddress = address
-        refreshThread(threadId, refreshRead = true)
+        viewModelScope.launch {
+            refreshThread(threadId, refreshRead = true)
+        }
     }
 
-    private fun refreshThread(threadId: Long, refreshRead: Boolean) {
+    private suspend fun refreshThread(threadId: Long, refreshRead: Boolean) {
         messages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
             .getOrElse { emptyList() }
         if (refreshRead) runCatching { repo.markThreadRead(threadId) }
     }
 
-    fun sendMessage(body: String): Boolean {
+    fun sendMessage(body: String) {
         val addr = currentAddress.ifBlank { messages.lastOrNull()?.address.orEmpty() }
-        if (addr.isBlank()) return false
-        val ok = runCatching { repo.sendSms(addr, body) }.getOrDefault(false)
-        if (ok) currentThreadId?.let { refreshThread(it, refreshRead = true) }
-        return ok
+        if (addr.isBlank()) return
+
+        viewModelScope.launch {
+            val ok = runCatching { repo.sendSms(addr, body) }.getOrDefault(false)
+            if (ok) {
+                currentThreadId?.let { refreshThread(it, refreshRead = true) }
+            }
+        }
     }
 
     fun deleteThread(threadId: Long) {
-        repo.deleteThread(threadId)
-        if (currentThreadId == threadId) {
-            currentThreadId = null
-            messages = emptyList()
+        viewModelScope.launch {
+            repo.deleteThread(threadId)
+            if (currentThreadId == threadId) {
+                currentThreadId = null
+                messages = emptyList()
+            }
+            refreshThreads()
         }
-        refreshThreads()
+    }
+
+    fun togglePin(threadId: Long) {
+        viewModelScope.launch {
+            repo.togglePin(threadId)
+            // The repo change flow will trigger refreshThreads
+        }
+    }
+
+    fun toggleArchive(threadId: Long) {
+        viewModelScope.launch {
+            repo.toggleArchive(threadId)
+        }
     }
 
     fun search(query: String) {

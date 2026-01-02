@@ -5,8 +5,8 @@ PulseLink is a personal safety app that listens for discreet trigger phrases and
 [![CI](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml/badge.svg)](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml)
 
 <!-- Donation badges — replace placeholders after you enable them (see instructions below) -->
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-❤_GitHub_Sponsors-ea4aaa?logo=github)](https://github.com/sponsors/YOUR_USERNAME)
-[![Ko‑fi](https://img.shields.io/badge/Buy_me_a_coffee-Ko%E2%80%91fi-29abe0?logo=kofi)](https://ko-fi.com/YOUR_USERNAME)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-❤_GitHub_Sponsors-ea4aaa?logo=github)](https://github.com/sponsors/DamienLove)
+[![Ko‑fi](https://img.shields.io/badge/Buy_me_a_coffee-Ko%E2%80%91fi-29abe0?logo=kofi)](https://ko-fi.com/DamienLove)
 [![PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal)](https://www.paypal.com/donate?hosted_button_id=YOUR_BUTTON_ID)
 
 ## Downloads
@@ -58,8 +58,8 @@ If PulseLink helps you or someone you care about, please consider supporting dev
 
 How to donate:
 
-- GitHub Sponsors: https://github.com/sponsors/YOUR_USERNAME
-- Ko‑fi: https://ko-fi.com/YOUR_USERNAME
+- GitHub Sponsors: https://github.com/sponsors/DamienLove
+- Ko‑fi: https://ko-fi.com/DamienLove
 - PayPal: https://www.paypal.com/donate?hosted_button_id=YOUR_BUTTON_ID
 
 Prefer to contribute code, docs, or testing? See Issues and the iOS Roadmap above—PRs are welcome.

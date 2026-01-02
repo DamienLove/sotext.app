@@ -22,9 +22,11 @@ import com.pulselink.ui.branding.brandLogoRes
 @Composable
 fun SplashScreen(
     modifier: Modifier = Modifier,
-    useProBranding: Boolean = false
+    usePremiumBranding: Boolean = false,
+    brandName: String = "PulseLink",
+    badgeText: String? = null
 ) {
-    val logoRes = brandLogoRes(useProBranding)
+    val logoRes = brandLogoRes(usePremiumBranding)
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -41,16 +43,16 @@ fun SplashScreen(
                 contentDescription = "PulseLink logo"
             )
             Text(
-                text = if (useProBranding) "PulseLink Premium" else "PulseLink",
+                text = brandName,
                 style = MaterialTheme.typography.headlineMedium.copy(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 ),
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
-            if (useProBranding) {
+            if (badgeText != null) {
                 Text(
-                    text = "Premium",
+                    text = badgeText,
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.primary
                 )

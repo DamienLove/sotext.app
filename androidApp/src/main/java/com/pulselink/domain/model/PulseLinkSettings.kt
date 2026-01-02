@@ -46,19 +46,21 @@ data class PulseLinkSettings(
     val timeFormat: TimeFormat = TimeFormat.AUTO,
     val themePreferences: ThemePreferences = ThemePreferences(),
     val remoteWebAccessEnabled: Boolean = false,
-    val otpCleanupEnabled: Boolean = true,
+    val otpCleanupEnabled: Boolean = false,
     val otpCleanupDays: Int = 1,
     val privatePinHash: String? = null,
     val privateThreadIds: List<Long> = emptyList(),
-    val beaconLauncherEnabled: Boolean = true,
+    val beaconLauncherEnabled: Boolean = false,
     val beaconHintDismissed: Boolean = false,
     val webAccessHintDismissed: Boolean = false,
     val firebaseMessagingEnabled: Boolean = true,
     val emailFallbackEnabled: Boolean = false,
     val thirdPartyExtensionsEnabled: Boolean = false,
+    val mergedExperienceEnabled: Boolean = false,
+    val unifiedDisplayName: String? = null,
     val messagingChannelPriority: List<MessageChannel> = listOf(MessageChannel.FIREBASE, MessageChannel.SMS, MessageChannel.EMAIL),
     val crashDetectionEnabled: Boolean = false,
-    val aiSummariesEnabled: Boolean = true,
+    val aiSummariesEnabled: Boolean = false,
     val aiComposeEnabled: Boolean = true,
     val aiUrgencyEnabled: Boolean = true,
     val aiUrgencyBypassDnd: Boolean = false,
@@ -69,7 +71,8 @@ data class PulseLinkSettings(
     val defaultSendLineId: String? = null,
     val lineSendPreference: LineSendPreference = LineSendPreference.LAST_USED,
     val threadLineOverrides: Map<String, String> = emptyMap(),
-    val devicePhoneNumber: String? = null
+    val devicePhoneNumber: String? = null,
+    val customVibrationPatterns: List<com.pulselink.util.CustomVibrationPattern> = emptyList()
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.util.Log
+import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.pulselink.beacon.util.BeaconIconManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -108,6 +110,7 @@ class ThemeViewModel(app: Application) : AndroidViewModel(app) {
                 pm.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
             }
         } catch (e: Exception) {
+            FirebaseCrashlytics.getInstance().recordException(e)
             Log.e("ThemeViewModel", "Failed to update launcher icon", e)
         }
     }
