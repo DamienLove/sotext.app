@@ -604,7 +604,7 @@ fun SmsInboxScreen(
  */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
-private fun ThreadRow(
+internal fun ThreadRow(
     thread: SmsThreadItem,
     onOpen: (SmsThreadItem) -> Unit,
     onAvatarClick: (SmsThreadItem) -> Unit,
