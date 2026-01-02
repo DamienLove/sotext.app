@@ -157,30 +157,36 @@ fun ExtensionsStoreScreen(
     }
 
     // Preset Logic
-    fun applyEssentials() {
-        onToggleBeaconLauncher(true)
-        onToggleOtpCleanup(true)
-        onToggleFirebaseMessaging(true)
+    val applyEssentials = remember {
+        {
+            onToggleBeaconLauncher(true)
+            onToggleOtpCleanup(true)
+            onToggleFirebaseMessaging(true)
 
-        // Disable heavy features
-        onToggleAiSummaries(false)
-        onToggleRemoteWebAccess(false)
-        onToggleCrashDetection(false)
-        onToggleThirdPartyExtensions(false)
+            // Disable heavy/advanced features
+            onToggleAiSummaries(false)
+            onToggleRemoteWebAccess(false)
+            onToggleCrashDetection(false)
+            onToggleThirdPartyExtensions(false)
+            onToggleMergedExperience(false)
+        }
     }
 
-    fun applyPowerUser() {
-        onToggleBeaconLauncher(true)
-        onToggleOtpCleanup(true)
-        onToggleFirebaseMessaging(true)
+    val applyPowerUser = remember(premiumActive) {
+        {
+            onToggleBeaconLauncher(true)
+            onToggleOtpCleanup(true)
+            onToggleFirebaseMessaging(true)
 
-        // Try enabling premium features if possible, or at least toggle them on (the UI handles locking)
-        if (premiumActive) {
-            onToggleAiSummaries(true)
-            onToggleRemoteWebAccess(true)
-            onToggleCrashDetection(true)
-            onToggleThirdPartyExtensions(true)
-            onToggleEmailFallback(true)
+            // Enable premium features for premium users
+            if (premiumActive) {
+                onToggleAiSummaries(true)
+                onToggleRemoteWebAccess(true)
+                onToggleCrashDetection(true)
+                onToggleThirdPartyExtensions(true)
+                onToggleEmailFallback(true)
+                onToggleMergedExperience(true)
+            }
         }
     }
 
@@ -211,7 +217,7 @@ fun ExtensionsStoreScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Quick Setup",
+                        text = stringResource(R.string.store_quick_setup_header),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
@@ -239,8 +245,8 @@ fun ExtensionsStoreScreen(
                         }
                     }
                     if (!premiumActive) {
-                         Text(
-                            text = "Upgrade to Pro to unlock Power User preset",
+                        Text(
+                            text = stringResource(R.string.store_preset_upgrade_message),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.outline
                         )
