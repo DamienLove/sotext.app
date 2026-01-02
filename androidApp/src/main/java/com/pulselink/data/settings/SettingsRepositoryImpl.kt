@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import com.pulselink.BuildConfig
 import com.pulselink.domain.model.AlertProfile
 import com.pulselink.domain.model.LineInboxMode
 import com.pulselink.domain.model.LineSendPreference
@@ -178,7 +179,11 @@ class SettingsRepositoryImpl @Inject constructor(
             messagingChannelPriority = decodeJsonOrNull(prefs[MESSAGING_CHANNEL_PRIORITY]) {
                 json.decodeFromString<List<MessageChannel>>(it)
             } ?: PulseLinkSettings().messagingChannelPriority,
-            crashDetectionEnabled = prefs[CRASH_DETECTION_ENABLED] ?: PulseLinkSettings().crashDetectionEnabled,
+            crashDetectionEnabled = if (BuildConfig.CRASH_DETECTION_ENABLED) {
+                prefs[CRASH_DETECTION_ENABLED] ?: PulseLinkSettings().crashDetectionEnabled
+            } else {
+                false
+            },
             aiSummariesEnabled = prefs[AI_SUMMARIES_ENABLED] ?: PulseLinkSettings().aiSummariesEnabled,
             aiComposeEnabled = prefs[AI_COMPOSE_ENABLED] ?: PulseLinkSettings().aiComposeEnabled,
             aiUrgencyEnabled = prefs[AI_URGENCY_ENABLED] ?: PulseLinkSettings().aiUrgencyEnabled,
@@ -260,7 +265,11 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[MESSAGING_CHANNEL_PRIORITY] = encodeJson {
                 json.encodeToString(updated.messagingChannelPriority)
             }
-            prefs[CRASH_DETECTION_ENABLED] = updated.crashDetectionEnabled
+            prefs[CRASH_DETECTION_ENABLED] = if (BuildConfig.CRASH_DETECTION_ENABLED) {
+                updated.crashDetectionEnabled
+            } else {
+                false
+            }
             prefs[AI_SUMMARIES_ENABLED] = updated.aiSummariesEnabled
             prefs[AI_COMPOSE_ENABLED] = updated.aiComposeEnabled
             prefs[AI_URGENCY_ENABLED] = updated.aiUrgencyEnabled
@@ -280,7 +289,11 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setCrashDetectionEnabled(enabled: Boolean) {
         editOnIo { prefs ->
-            prefs[CRASH_DETECTION_ENABLED] = enabled
+            if (BuildConfig.CRASH_DETECTION_ENABLED) {
+                prefs[CRASH_DETECTION_ENABLED] = enabled
+            } else {
+                prefs[CRASH_DETECTION_ENABLED] = false
+            }
         }
     }
 

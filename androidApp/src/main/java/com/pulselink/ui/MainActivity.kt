@@ -751,7 +751,7 @@ class MainActivity : AppCompatActivity() {
 
                 LaunchedEffect(state.settings.crashDetectionEnabled) {
                     val intent = Intent(context, com.pulselink.service.CrashDetectionService::class.java)
-                    if (state.settings.crashDetectionEnabled) {
+                    if (BuildConfig.CRASH_DETECTION_ENABLED && state.settings.crashDetectionEnabled) {
                         // Check for required permissions first
                         val hasLocationPermission = ContextCompat.checkSelfPermission(
                             context,

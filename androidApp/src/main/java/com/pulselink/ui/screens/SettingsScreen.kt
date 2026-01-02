@@ -195,15 +195,17 @@ fun SettingsScreen(
                     checked = settings.includeLocation,
                     onCheckedChange = onToggleIncludeLocation
                 )
-                if (settings.crashDetectionEnabled) {
-                    SettingsToggleRow(
-                        title = "Crash Detection",
-                        subtitle = "Alert trusted contacts if a vehicle crash is detected. (Temporarily unavailable)",
-                        checked = settings.crashDetectionEnabled,
-                        enabled = false,
-                        onCheckedChange = onToggleCrashDetection
-                    )
-                }
+                SettingsToggleRow(
+                    title = "Crash Detection",
+                    subtitle = if (BuildConfig.CRASH_DETECTION_ENABLED) {
+                        "Alert trusted contacts if a vehicle crash is detected."
+                    } else {
+                        "Temporarily disabled while we finish review materials."
+                    },
+                    checked = settings.crashDetectionEnabled && BuildConfig.CRASH_DETECTION_ENABLED,
+                    enabled = BuildConfig.CRASH_DETECTION_ENABLED,
+                    onCheckedChange = onToggleCrashDetection
+                )
                 SettingsToggleRow(
                     title = "Auto-allow remote sound change",
                     subtitle = null,
