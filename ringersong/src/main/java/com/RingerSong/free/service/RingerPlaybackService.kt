@@ -37,6 +37,7 @@ class RingerPlaybackService : Service() {
     private var player: MediaPlayer? = null
     private var stopJob: Job? = null
     private var isSpotifyPlaying = false
+    private var spotifyAppRemote: com.spotify.android.appremote.api.SpotifyAppRemote? = null
     private var audioManager: AudioManager? = null
     private var audioFocusRequest: AudioFocusRequest? = null
     private var originalRingVolume: Int = -1
@@ -209,24 +210,34 @@ class RingerPlaybackService : Service() {
         if (segment.song.uri.startsWith("spotify:")) {
             Log.d(TAG, "Spotify URI detected - Using Spotify App Remote")
 
-            // DIRECT STREAMING: Skip download check and use Spotify App Remote directly
-            // This relies on the user's active Spotify session/membership.
+            // DIRECT STREAMING: Skip download check and use Spotify App Remote directly.
+            // This approach prioritizes streaming over file downloads, relying on the user's
+            // active Spotify session. If the user wants offline support, they would need to
+            // pre-download tracks, but this feature enforces streaming for better user experience.
             scope.launch {
                 runCatching {
                     val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
+                    spotifyAppRemote = remote
                     remote.playerApi.play(segment.song.uri)
-                    // Seek after a short delay to ensure playback has initialized
-                    // We need a delay because the Spotify app needs time to start the track before seeking works reliable
+                    // Seek after a short delay to ensure playback has initialized.
+                    // We need a delay because the Spotify app needs time to start the track before seeking works reliably.
                     delay(SPOTIFY_SEEK_DELAY_MS)
                     remote.playerApi.seekTo(segment.startMs)
                     isSpotifyPlaying = true
                     Log.d(TAG, "Spotify App Remote playback started")
                 }.onFailure { e ->
                     Log.e(TAG, "Spotify App Remote failed", e)
-                    updateNotification("Spotify playback failed. Please check app & premium status.")
-                    // Don't stop immediately if we want the user to see the error,
-                    // but for a ringer, silence is bad. We restore ringer volume in stopPlayback so the default ringer might still be audible if the system un-mutes it or if we hadn't muted it yet.
-                    // Actually, if we fail here, we should probably restore the ringer volume so the user at least hears the default ring (if the OS continues ringing).
+                    // Provide specific user feedback about the failure reason
+                    val errorMessage = when {
+                        e.message?.contains("not installed", ignoreCase = true) == true ->
+                            "Spotify app not installed"
+                        e.message?.contains("not logged in", ignoreCase = true) == true ->
+                            "Not logged into Spotify"
+                        e.message?.contains("premium", ignoreCase = true) == true ->
+                            "Spotify Premium required for playback"
+                        else -> "Spotify playback failed. Please check app & premium status."
+                    }
+                    updateNotification(errorMessage)
                     stopPlayback()
                 }
             }
@@ -264,6 +275,8 @@ class RingerPlaybackService : Service() {
             }
         }
 
+        // TODO: Consider monitoring Spotify playback state with PlayerStateCallback
+        // to enforce duration limits more reliably and handle unexpected track changes
         stopJob = scope.launch {
             delay(segment.durationMs)
             Log.d(TAG, "Segment duration elapsed, stopping")
@@ -286,14 +299,18 @@ class RingerPlaybackService : Service() {
         if (isSpotifyPlaying) {
              scope.launch {
                 runCatching {
-                    // Check if we are already connected?
-                    // SpotifyRemoteManager.connect actually checks internal state if kept there,
-                    // but let's assume we need to be careful.
-                    val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
-                    remote.playerApi.pause()
+                    // Check if we're already connected before reconnecting to prevent memory leaks
+                    if (spotifyAppRemote?.isConnected == true) {
+                        spotifyAppRemote?.playerApi?.pause()
+                    } else {
+                        // Only reconnect if needed
+                        val remote = SpotifyRemoteManager.connect(this@RingerPlaybackService)
+                        remote.playerApi.pause()
+                    }
                 }
             }
             isSpotifyPlaying = false
+            spotifyAppRemote = null
         }
 
         stopForeground(STOP_FOREGROUND_REMOVE)
