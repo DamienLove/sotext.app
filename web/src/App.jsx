@@ -2277,11 +2277,19 @@ function App() {
             <div className="thread-list">
               {threads.length === 0 ? (
                 <div className="sidebar-placeholder">
-                  <div className="sidebar-tip muted">
-                    No conversations found.
+                  <div className="sidebar-tip">
+                    <strong>No conversations found</strong>
                   </div>
                   <div className="sidebar-tip muted">
-                    Ensure &quot;Sync Messages&quot; is enabled in your mobile app settings (Premium required).
+                    To see your messages here:
+                    <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
+                      <li>Open PulseLink on your phone</li>
+                      <li>Go to Extensions Store</li>
+                      <li>Enable &quot;Remote Web Access&quot;</li>
+                    </ol>
+                    <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
+                      Premium Required
+                    </div>
                   </div>
                 </div>
               ) : (
