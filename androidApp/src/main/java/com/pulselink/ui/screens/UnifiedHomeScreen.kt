@@ -99,12 +99,12 @@ fun UnifiedHomeScreen(
         )
     }
     
-    val lineColors = remember(state.settings.themePreferences, MaterialTheme.colorScheme) {
+    val lineColors = remember(state.settings.themePreferences) {
         listOf(
-            parseColorOr(MaterialTheme.colorScheme.primary, state.settings.themePreferences.primaryColor),
-            parseColorOr(MaterialTheme.colorScheme.secondary, state.settings.themePreferences.secondaryColor),
-            parseColorOr(MaterialTheme.colorScheme.tertiary, state.settings.themePreferences.bubbleOutgoing),
-            parseColorOr(MaterialTheme.colorScheme.primaryContainer, state.settings.themePreferences.bubbleIncoming)
+            parseColorOr(Color(0xFF22d3ee), state.settings.themePreferences.primaryColor),
+            parseColorOr(Color(0xFF0ea5e9), state.settings.themePreferences.secondaryColor),
+            parseColorOr(Color(0xFF22d3ee), state.settings.themePreferences.bubbleOutgoing),
+            parseColorOr(Color(0xFF1a2236), state.settings.themePreferences.bubbleIncoming)
         )
     }
     

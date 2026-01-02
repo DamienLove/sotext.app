@@ -1248,10 +1248,7 @@ class MainActivity : AppCompatActivity() {
                                     playStoreIntent.setPackage(null)
                                     startActivity(playStoreIntent)
                                 }
-                            },
-                            brandName = pulseDisplayName,
-                            isPremium = isPremium,
-                            isPro = isPro
+                            }
                         )
                     }
                     composable("alerts_history") {
@@ -1274,6 +1271,9 @@ class MainActivity : AppCompatActivity() {
                         val contactId = entry.arguments?.getLong("contactId") ?: return@composable
                         val contact = state.contacts.firstOrNull { it.id == contactId }
                         val conversationViewModel: ContactConversationViewModel = hiltViewModel()
+                        val onPingHandler: suspend () -> Boolean = { viewModel.sendPing(contactId) }
+                        val onVoiceHandler: suspend (String) -> com.pulselink.data.assistant.VoiceCommandResult =
+                            { query -> viewModel.processVoiceCommand(query) }
                         ContactConversationScreen(
                             contact = contact,
                             isProUser = state.isProUser,
@@ -1282,8 +1282,8 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() },
                             onOpenSettings = { navController.navigate("contact/$contactId/settings") },
                             onCallContact = callContactHandler,
-                            onPing = { viewModel.sendPing(contactId) },
-                            onVoiceCommand = { query -> viewModel.processVoiceCommand(query) },
+                            onPing = onPingHandler,
+                            onVoiceCommand = onVoiceHandler,
                             onUpgradeClick = {
                                 val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
                                     data = Uri.parse("market://details?id=com.pulselink.pro")
@@ -1297,10 +1297,7 @@ class MainActivity : AppCompatActivity() {
                                     playStoreIntent.setPackage(null)
                                     startActivity(playStoreIntent)
                                 }
-                            },
-                            brandName = pulseDisplayName,
-                            isPremium = isPremium,
-                            isPro = isPro
+                            }
                         )
                     }
                     composable(
@@ -1338,7 +1335,7 @@ class MainActivity : AppCompatActivity() {
                             },
                             onApproveLink = { viewModel.approveLink(contactId) },
                             onSetRemotePin = { pin -> viewModel.setRemotePin(contactId, pin) },
-                            onPing = { viewModel.sendPing(contactId) },
+                            onPing = suspend { viewModel.sendPing(contactId) },
                             onDelete = {
                                 viewModel.deleteContact(contactId)
                                 navController.popBackStack()

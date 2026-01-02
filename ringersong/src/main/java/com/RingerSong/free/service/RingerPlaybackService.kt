@@ -158,7 +158,7 @@ class RingerPlaybackService : Service() {
                     mp.seekTo(0)
                     mp.start()
                     mp.isLooping = true // Ringtones should loop
-                    isPlaying = true
+                    this@RingerPlaybackService.isPlaying = true
                 }
             }
         } catch (e: Exception) {

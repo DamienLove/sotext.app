@@ -34,7 +34,9 @@
       "Bash(firebase deploy:*)",
       "Bash(claude plugin marketplace add:*)",
       "Bash(claude plugin install:*)",
-      "Bash(git grep:*)"
+      "Bash(git grep:*)",
+      "Bash(gh label:*)",
+      "Bash(gh issue edit:*)"
     ]
   }
 }

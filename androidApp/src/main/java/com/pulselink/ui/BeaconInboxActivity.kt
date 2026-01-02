@@ -66,6 +66,7 @@ import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BeaconNavBar
 import com.pulselink.ui.screens.BeaconNavRoute
 import com.pulselink.ui.screens.BeaconSettingsScreen
+import com.pulselink.ui.screens.BeaconContactsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.NewMessageScreen
 import com.pulselink.ui.screens.MessageNotificationSoundScreen

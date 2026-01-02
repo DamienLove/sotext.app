@@ -40,10 +40,7 @@ object MessageNotificationManager {
         val overrideVibration = settings.messageNotificationVibrationOverrides[normalized]
         val soundUri = overrideSound ?: settings.messageNotificationSoundUri
         val vibrationKey = overrideVibration ?: settings.messageNotificationVibrationPattern
-        val vibrationPattern = settings.customVibrationPatterns.firstOrNull { it.id == vibrationKey }
-            ?.pattern
-            ?.toLongArray()
-            ?: VibrationPatterns.messageOption(vibrationKey).pattern
+        val vibrationPattern = VibrationPatterns.messageOption(vibrationKey).pattern
         val hasOverride = overrideSound != null || overrideVibration != null
         val channelId = if (hasOverride) {
             channelIdForContact(normalized)

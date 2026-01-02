@@ -24,16 +24,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.pulselink.data.contacts.DeviceContact
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.util.parseColorOr
 
 @Composable
 fun BeaconContactsScreen(
-    contacts: List<DeviceContact>,
+    contacts: List<Contact>,
     theme: ThemePreferences,
-    onSelect: (DeviceContact) -> Unit
+    onSelect: (Contact) -> Unit
 ) {
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val onPrimary = parseColorOr(MaterialTheme.colorScheme.onPrimary, theme.onBubbleOutgoing)
