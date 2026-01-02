@@ -6,8 +6,8 @@ import FirebaseMessaging
 import UIKit
 #endif
 
-final class DeviceManager {
-    static let shared = DeviceManager()
+final class BeaconDeviceManager {
+    static let shared = BeaconDeviceManager()
 
     private init() {}
 
@@ -31,14 +31,14 @@ final class DeviceManager {
             "name": UIDevice.current.name,
             "model": UIDevice.current.model,
             "platform": "iOS",
-            "app": "PulseLink",
+            "app": "Beacon",
             "fcmToken": token ?? "",
             "updatedAt": FieldValue.serverTimestamp()
         ]
 
         do {
             try await db.collection("devices").document(deviceId).setData(deviceData, merge: true)
-            print("Device registered: \(deviceId)")
+            print("Beacon Device registered: \(deviceId)")
         } catch {
             print("Failed to register device: \(error.localizedDescription)")
         }
