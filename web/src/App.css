@@ -926,6 +926,10 @@
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
 }
+.thread-preview-meta {
+  font-size: 0.85em;
+  color: var(--muted);
+  opacity: 0.8;
 
 /* -------------------------------------------------------------------------- */
 /*  Redesign December 2025: calmer layout, brighter focus, better spacing     */

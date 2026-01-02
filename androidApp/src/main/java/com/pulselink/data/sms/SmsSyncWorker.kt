@@ -11,6 +11,7 @@ import com.google.firebase.firestore.SetOptions
 import com.pulselink.data.contacts.DeviceContactsRepository
 import com.pulselink.BuildConfig
 import com.pulselink.domain.repository.SettingsRepository
+import com.pulselink.util.splitSmsDisplayAddress
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import android.os.Build
@@ -75,8 +76,17 @@ class SmsSyncWorker @AssistedInject constructor(
                 for (thread in threads) {
                     val threadDoc = legacyThreadsRef.document(thread.threadId.toString())
                     val lineThreadDoc = lineThreadsRef.document(thread.threadId.toString())
+
+                    val (namePart, numberPart) = splitSmsDisplayAddress(thread.address)
+                    val displayName = if (numberPart != null && namePart.isNotBlank()) namePart else ""
+                    val phoneNumber = numberPart?.takeIf { it.isNotBlank() } ?: namePart
+
                     val threadData = mapOf(
                         "address" to thread.address,
+                        // Using snake_case for new fields to match cross-platform schema,
+                        // while maintaining camelCase for existing legacy fields.
+                        "display_name" to displayName,
+                        "phone_number" to phoneNumber,
                         "snippet" to thread.snippet,
                         "date" to thread.timestamp,
                         "unread" to thread.unread,
