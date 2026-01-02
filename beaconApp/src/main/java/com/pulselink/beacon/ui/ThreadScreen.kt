@@ -59,16 +59,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.pulselink.beacon.R
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 sealed interface ThreadUiItem {
     data class Message(val message: SmsMessageItem) : ThreadUiItem
@@ -111,25 +118,39 @@ fun ThreadScreen(
     }
 
     // Transform messages to UI items with headers
-    val uiItems = remember(messages) {
-        val list = mutableListOf<ThreadUiItem>()
-        messages.forEachIndexed { index, msg ->
-            list.add(ThreadUiItem.Message(msg))
-            val nextMsg = messages.getOrNull(index + 1)
-            // If nextMsg is null (top of list) or different day, add header
-            if (nextMsg == null || !isSameDay(msg.timestamp, nextMsg.timestamp)) {
-                val headerText = getDateHeader(msg.timestamp)
-                // Use headerText as key since it's unique per day and stable.
-                // We add a prefix to ensure it doesn't collide with message IDs if they were strings (though unlikely).
-                list.add(ThreadUiItem.Header(headerText, "header_$headerText"))
+    val uiItems by remember {
+        derivedStateOf {
+            val list = mutableListOf<ThreadUiItem>()
+            messages.forEachIndexed { index, msg ->
+                list.add(ThreadUiItem.Message(msg))
+                val nextMsg = messages.getOrNull(index + 1)
+                // If nextMsg is null (top of list) or different day, add header
+                if (nextMsg == null || !isSameDay(msg.timestamp, nextMsg.timestamp)) {
+                    val headerText = getDateHeader(msg.timestamp, context)
+                    // Use day's timestamp (midnight) as unique ID to prevent duplicates across months/years
+                    val zone = ZoneId.systemDefault()
+                    val dayStart = Instant.ofEpochMilli(msg.timestamp)
+                        .atZone(zone)
+                        .toLocalDate()
+                        .atStartOfDay(zone)
+                        .toInstant()
+                        .toEpochMilli()
+                    list.add(ThreadUiItem.Header(headerText, "header_$dayStart"))
+                }
             }
+            list
         }
-        list
     }
 
-    val smartReplies = remember {
-        listOf("Yes", "No", "OK", "Thanks", "Can't talk now", "Call me later", "On my way!")
-    }
+    val smartReplies = listOf(
+        stringResource(R.string.smart_reply_yes),
+        stringResource(R.string.smart_reply_no),
+        stringResource(R.string.smart_reply_ok),
+        stringResource(R.string.smart_reply_thanks),
+        stringResource(R.string.smart_reply_cant_talk),
+        stringResource(R.string.smart_reply_call_later),
+        stringResource(R.string.smart_reply_on_way)
+    )
 
     Scaffold(
         topBar = {
@@ -137,24 +158,40 @@ fun ThreadScreen(
                 title = { Text(address, maxLines = 1, color = theme.frameColor) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = iconTint)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.content_desc_back), tint = iconTint)
                     }
                 },
                 actions = {
                     IconButton(onClick = {
-                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$address"))
-                        context.startActivity(intent)
+                        try {
+                            // Sanitize phone number to prevent URI injection
+                            val sanitizedAddress = address.filter { it.isDigit() || it in setOf('+', '#', '*') }
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$sanitizedAddress"))
+                            context.startActivity(intent)
+                        } catch (e: ActivityNotFoundException) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.toast_no_dialer),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.toast_unable_to_call),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }) {
-                        Icon(Icons.Default.Call, contentDescription = "Call", tint = iconTint)
+                        Icon(Icons.Default.Call, contentDescription = stringResource(R.string.content_desc_call), tint = iconTint)
                     }
                     IconButton(onClick = onCustomize) {
-                        Icon(Icons.Default.Palette, contentDescription = "Customize theme", tint = iconTint)
+                        Icon(Icons.Default.Palette, contentDescription = stringResource(R.string.content_desc_customize_theme), tint = iconTint)
                     }
                     IconButton(onClick = onEditNotificationSound) {
-                        Icon(Icons.Default.NotificationsActive, contentDescription = "Notification sound", tint = iconTint)
+                        Icon(Icons.Default.NotificationsActive, contentDescription = stringResource(R.string.content_desc_notification_sound), tint = iconTint)
                     }
                     IconButton(onClick = onDeleteThread) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete thread", tint = iconTint)
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.content_desc_delete_thread), tint = iconTint)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -223,7 +260,10 @@ fun ThreadScreen(
                 ) {
                     items(smartReplies) { reply ->
                         SuggestionChip(
-                            onClick = { onSend(reply) },
+                            onClick = {
+                                onSend(reply)
+                                draft = ""  // Clear draft state after sending
+                            },
                             label = { Text(reply) }
                         )
                     }
@@ -241,13 +281,13 @@ fun ThreadScreen(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     IconButton(onClick = { attachmentPicker.launch("*/*") }) {
-                        Icon(Icons.Default.AttachFile, contentDescription = "Attach file", tint = iconTint)
+                        Icon(Icons.Default.AttachFile, contentDescription = stringResource(R.string.content_desc_attach_file), tint = iconTint)
                     }
                     TextField(
                         value = draft,
                         onValueChange = { draft = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Write your message") },
+                        placeholder = { Text(stringResource(R.string.hint_write_message)) },
                         colors = androidx.compose.material3.TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent
@@ -262,7 +302,7 @@ fun ThreadScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.Default.Send, contentDescription = "Send", tint = iconTint)
+                        Icon(Icons.Default.Send, contentDescription = stringResource(R.string.content_desc_send), tint = iconTint)
                     }
                 }
             }
@@ -273,7 +313,10 @@ fun ThreadScreen(
 @Composable
 private fun DateHeader(text: String, theme: ThemePalette) {
     Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .semantics { heading() },
         contentAlignment = Alignment.Center
     ) {
         Surface(
@@ -333,7 +376,7 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                         .forEach { part ->
                             AsyncImage(
                                 model = part.dataUri,
-                                contentDescription = "MMS image",
+                                contentDescription = stringResource(R.string.content_desc_mms_image),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(200.dp)
@@ -358,24 +401,23 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
 }
 
 private fun isSameDay(t1: Long, t2: Long): Boolean {
-    // Note: SimpleDateFormat is not thread-safe but safe here as it's thread-local in this execution context.
-    // However, instantiating it frequently in a loop is sub-optimal.
-    // Since we can't easily lift it out without thread-safety concerns or ThreadLocal complexity,
-    // and given list sizes < 100, this is acceptable for UI responsiveness.
-    // Ideally, we would use java.time.LocalDate but that requires API 26+ (which we have).
-    val fmt = SimpleDateFormat("yyyyMMdd", Locale.US)
-    return fmt.format(Date(t1)) == fmt.format(Date(t2))
+    val zone = ZoneId.systemDefault()
+    val date1 = Instant.ofEpochMilli(t1).atZone(zone).toLocalDate()
+    val date2 = Instant.ofEpochMilli(t2).atZone(zone).toLocalDate()
+    return date1 == date2
 }
 
-private fun getDateHeader(t: Long): String {
+private fun getDateHeader(t: Long, context: Context): String {
     val now = System.currentTimeMillis()
-    // Optimization: reuse formatter if possible, but keep simple for now.
+    val oneDayMillis = TimeUnit.DAYS.toMillis(1)
     return if (isSameDay(t, now)) {
-        "Today"
-    } else if (isSameDay(t, now - 86400000)) {
-        "Yesterday"
+        context.getString(R.string.date_header_today)
+    } else if (isSameDay(t, now - oneDayMillis)) {
+        context.getString(R.string.date_header_yesterday)
     } else {
-        SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(t))
+        val date = Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).toLocalDate()
+        val formatter = DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
+        date.format(formatter)
     }
 }
 
@@ -406,11 +448,11 @@ private fun sendAttachmentViaSms(
     }
 
     try {
-        context.startActivity(Intent.createChooser(intent, "Send attachment via SMS/MMS"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.chooser_send_attachment)))
     } catch (e: ActivityNotFoundException) {
         Toast.makeText(
             context,
-            "No messaging app found to send attachments",
+            context.getString(R.string.toast_no_messaging_app),
             Toast.LENGTH_LONG
         ).show()
     }
