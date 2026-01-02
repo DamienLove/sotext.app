@@ -7,19 +7,35 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+// Future Deep v2 Palette - Dark Mode Optimized
+private val DeepBackground = Color(0xFF05070F)
+private val DeepSurface = Color(0xFF0C1326)
+private val DeepSurfaceAlt = Color(0xFF0F1A30)
+private val DeepAccent = Color(0xFF22D3EE) // Cyan/Electric Blue
+private val DeepAccentStrong = Color(0xFF0EA5E9)
+private val DeepError = Color(0xFFEF4444)
+private val DeepOnBackground = Color(0xFFEEF2FB)
+private val DeepOnSurface = Color(0xFFEEF2FB)
+private val DeepOnSurfaceVariant = Color(0xFF9FB3C8) // Muted
+
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFF5E6FFF),
-    secondary = Color(0xFFFFEA00),
-    surface = Color(0xFF0F101A),
-    onSurface = Color(0xFFE8EAFF),
-    background = Color(0xFF0B0E16),
-    onBackground = Color(0xFFE8EAFF),
-    surfaceVariant = Color(0xFF1C1F2B),
-    onSurfaceVariant = Color(0xFFBDC1D6),
-    error = Color(0xFFEF6666),
-    onError = Color(0xFF320000)
+    primary = DeepAccent,
+    onPrimary = Color(0xFF04101C), // Deep dark for contrast on bright accent
+    primaryContainer = Color(0xFF0D3642), // Darker cyan container
+    onPrimaryContainer = Color(0xFFCFFAFE),
+    secondary = DeepAccentStrong,
+    onSecondary = Color(0xFF04101C),
+    background = DeepBackground,
+    onBackground = DeepOnBackground,
+    surface = DeepSurface,
+    onSurface = DeepOnSurface,
+    surfaceVariant = DeepSurfaceAlt,
+    onSurfaceVariant = DeepOnSurfaceVariant,
+    error = DeepError,
+    onError = Color(0xFF2B0B0B)
 )
 
+// Legacy Light Mode - Kept for compatibility but design system prefers Dark
 private val LightColors = lightColorScheme(
     primary = Color(0xFF1A237E),
     secondary = Color(0xFFFFEA00),
@@ -38,10 +54,13 @@ fun PulseLinkTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colors = if (darkTheme) DarkColors else LightColors
+    // Future Deep design requires dark mode for full fidelity.
+    // System setting is ignored to ensure brand consistency.
+    val colors = DarkColors
+
     MaterialTheme(
         colorScheme = colors,
-        typography = MaterialTheme.typography,
+        typography = MaterialTheme.typography, // Should be updated in Type.kt ideally, but out of scope for now
         content = content
     )
 }

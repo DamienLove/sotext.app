@@ -132,4 +132,5 @@ Current SMS features
 - 2026-01-01: Extension badges now state Premium (not Pro) in Android Extension Store; version bump to 101 and rebuilt free/pro AABs (copied to disposable_aabs/, release-notes-2026-01-01-v101.txt).
 - 2026-01-01: Pre-wired extension pricing metadata (planned price labels) on web + Android Extension Store; pricing preview remains hidden until enabled.
 - 2026-01-01: Added inbox filters (OTP/Trusted/Favorites/Private) with clickable avatars to open contact edit; home screen now respects theme colors and exposes Notifications/Themes shortcuts; DND permission moved to Permissions section; custom vibration creator wired to settings and message notification patterns; trusted contacts sync now runs for anonymous users too.
-- Closed PR #340 (Future Deep UI overhaul) and PR #335 (Spotify ringer integration) due to extensive conflicts; will reimplement directly on Suite-Beta.
+2026-01-02
+- Merged Suite-Beta into ui-overhaul-suite-v2 branch; resolved conflicts in Beacon inbox (pin/archive swipe + menu with Future Deep styling) and web Future Deep assets (sidebar/layout + design tokens). No builds run yet.
