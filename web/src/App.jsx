@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import {
   GoogleAuthProvider,
@@ -1191,6 +1191,7 @@ function App() {
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
+  const [deletingSongId, setDeletingSongId] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -1211,10 +1212,14 @@ function App() {
 
   const handleDeleteRingerSong = async (songId) => {
     if (!user) return;
+    setDeletingSongId(songId);
     try {
       await deleteDoc(doc(db, "users", user.uid, "ringer_playlist", songId));
     } catch (e) {
       console.error("Failed to delete song", e);
+      setSettingsStatus("Failed to delete song: " + (e.message || "Unknown error"));
+    } finally {
+      setDeletingSongId(null);
     }
   };
 
@@ -2907,11 +2912,12 @@ function App() {
                                     <button
                                         className="ghost-btn icon-only"
                                         onClick={() => handleDeleteRingerSong(song.id)}
-                                        title="Remove from playlist"
-                                        aria-label={`Remove ${song.title} from playlist`}
+                                        disabled={deletingSongId === song.id}
+                                        title={deletingSongId === song.id ? "Removing..." : "Remove from playlist"}
+                                        aria-label={deletingSongId === song.id ? `Removing ${song.title}` : `Remove ${song.title} from playlist`}
                                         style={{width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none'}}
                                     >
-                                        <TrashIcon />
+                                        {deletingSongId === song.id ? <Spinner /> : <TrashIcon />}
                                     </button>
                                 </div>
                             ))}
