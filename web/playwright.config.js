@@ -1,3 +1,4 @@
+/* eslint-env node */
 // @ts-check
 /* eslint-env node */
 import { defineConfig, devices } from '@playwright/test';
