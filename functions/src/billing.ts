@@ -109,10 +109,10 @@ export const handlePlayStoreRTDN = functions.https.onRequest(async (req, res) =>
     const expiryMillis = Number(data?.lineItems?.[0]?.expiryTime || 0);
 
     const snapshot = await admin.firestore()
-      .collection("users")
-      .where("subscriptionPurchaseToken", "==", purchaseToken)
-      .limit(1)
-      .get();
+        .collection("users")
+        .where("subscriptionPurchaseToken", "==", purchaseToken)
+        .limit(1)
+        .get();
 
     if (!snapshot.empty) {
       const doc = snapshot.docs[0];

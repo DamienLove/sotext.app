@@ -1,6 +1,13 @@
 import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
 import {escapeHtml} from "./security";
+
+// Ensure admin is initialized (handled in index.ts, but safe to check)
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
+const db = admin.firestore();
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -10,60 +17,95 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export const sendEmailNotification = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be authenticated");
-  }
+export const sendEmailNotification = functions.https.onCall(
+    async (data, context) => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+            "unauthenticated", "User must be authenticated");
+      }
 
-  const {email, messageType, senderName, payload} = data;
+      const {email, messageType, payload} = data;
 
-  if (!email) {
-    throw new functions.https.HttpsError("invalid-argument", "Email is required");
-  }
+      // Sentinel: Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        throw new functions.https.HttpsError(
+            "invalid-argument", "Valid email is required");
+      }
 
-  // Sentinel: Sanitize inputs to prevent HTML injection
-  const safeSenderName = escapeHtml(senderName || "Unknown");
+      // Sentinel: Fetch verified user identity to prevent spoofing
+      const uid = context.auth.uid;
+      let verifiedName = "PulseLink User";
 
-  let subject = "PulseLink Notification";
-  let text = `You have a new message from ${senderName}`;
-  let html = `<p>You have a new message from <strong>${safeSenderName}</strong></p>`;
+      try {
+        // Try to get name from Firestore profile first (often more up to date)
+        const userDoc = await db.collection("users").doc(uid).get();
+        const userData = userDoc.data();
 
-  if (messageType === "LinkRequest") {
-    subject = "PulseLink Request";
-    const code = payload.code || "unknown";
-    // Sentinel: Encode URI component for link and escape for HTML
-    const deepLink = `https://pulselink.app/link?code=${encodeURIComponent(code)}`;
-    const safeCode = escapeHtml(code);
+        if (userData?.ownerName) {
+          verifiedName = userData.ownerName;
+        } else {
+          // Fallback to Auth profile
+          const userRecord = await admin.auth().getUser(uid);
+          verifiedName = userRecord.displayName ||
+        userRecord.phoneNumber ||
+        userRecord.email ||
+        "PulseLink User";
+        }
+      } catch (error) {
+        console.error("Failed to verify sender identity", error);
+        // Proceed with default name rather than failing,
+        // but do NOT trust client senderName
+      }
 
-    text = `${senderName} wants to link with you on PulseLink.\n\nLink Code: ${code}\n\nTap here to accept: ${deepLink}`;
-    html = `
-            <p><strong>${safeSenderName}</strong> wants to link with you on PulseLink.</p>
-            <p>Link Code: <strong>${safeCode}</strong></p>
-            <p><a href="${deepLink}">Tap here to accept</a></p>
-        `;
-  } else if (messageType === "ManualMessage") {
-    const body = payload.body || "Alert";
-    subject = `PulseLink Alert from ${senderName}`;
-    text = `${senderName}: ${body}`;
+      // Sentinel: Sanitize verified name to prevent HTML injection
+      const safeSenderName = escapeHtml(verifiedName);
 
-    // Sentinel: Escape body content
-    const safeBody = escapeHtml(body);
-    html = `<p><strong>${safeSenderName}</strong>: ${safeBody}</p>`;
-  }
+      let subject = "PulseLink Notification";
+      let text = `You have a new message from ${verifiedName}`;
+      let html = "<p>You have a new message from " +
+        `<strong>${safeSenderName}</strong></p>`;
 
-  const mailOptions = {
-    from: `PulseLink <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: subject,
-    text: text,
-    html: html,
-  };
+      if (messageType === "LinkRequest") {
+        subject = "PulseLink Request";
+        const code = payload?.code || "unknown";
+        // Sentinel: Encode URI component for link and escape for HTML
+        const deepLinkBase = "https://pulselink.app/link?code=";
+        const deepLink = `${deepLinkBase}${encodeURIComponent(code)}`;
+        const safeCode = escapeHtml(code);
 
-  try {
-    await transporter.sendMail(mailOptions);
-    return {success: true};
-  } catch (error) {
-    console.error("Error sending email", error);
-    throw new functions.https.HttpsError("internal", "Failed to send email");
-  }
-});
+        text = `${verifiedName} wants to link with you on PulseLink.\n\n` +
+               `Link Code: ${code}\n\n` +
+               `Tap here to accept: ${deepLink}`;
+        html = `
+            <p><strong>${safeSenderName}</strong> ` +
+            "wants to link with you on PulseLink.</p>" +
+            `<p>Link Code: <strong>${safeCode}</strong></p>` +
+            `<p><a href="${deepLink}">Tap here to accept</a></p>`;
+      } else if (messageType === "ManualMessage") {
+        const body = payload?.body || "Alert";
+        subject = `PulseLink Alert from ${verifiedName}`;
+        text = `${verifiedName}: ${body}`;
+
+        // Sentinel: Escape body content
+        const safeBody = escapeHtml(body);
+        html = `<p><strong>${safeSenderName}</strong>: ${safeBody}</p>`;
+      }
+
+      const mailOptions = {
+        from: `PulseLink <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: subject,
+        text: text,
+        html: html,
+      };
+
+      try {
+        await transporter.sendMail(mailOptions);
+        return {success: true};
+      } catch (error) {
+        console.error("Error sending email", error);
+        throw new functions.https.HttpsError(
+            "internal", "Failed to send email");
+      }
+    });
