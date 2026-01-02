@@ -196,33 +196,33 @@ private fun BeaconNav(
                         isDefaultSms = isDefaultSms,
                         isCheckingDefaultSms = isCheckingDefaultSms,
                         missingPermissions = missingReadPerms,
-                        onRequestPermissions = {
-                            permissionLauncher.launch(missingPerms.toTypedArray())
-                        },
-                        onRequestDefault = {
-                            buildDefaultSmsRequestIntent(context)?.let { intent ->
-                                defaultSmsLauncher.launch(intent)
-                            } ?: launchDefaultSmsCheck()
-                        },
-                        onRefreshDefaultStatus = launchDefaultSmsCheck,
-                        onOpenThread = { id, address ->
-                            vm.openThread(id, address)
-                            navController.navigate("thread/$id/${Uri.encode(address)}")
-                        },
-                        onCompose = { navController.navigate("newMessage") },
-                        onDeleteThread = { vm.deleteThread(it) },
-                        onRefresh = { vm.refreshThreads() },
-                        onSearch = { vm.search(it) },
-                        onClearSearch = { vm.clearSearch() },
-                        onCustomize = { navController.navigate("customize?address=") },
-                        onOpenNotifications = { navController.navigate("notifications") },
                         notificationsEnabled = notificationsEnabled,
                         notificationsSilent = notificationsSilent,
-                        onOpenNotificationSettings = {
-                            val intent = com.pulselink.beacon.notifications.MessageNotificationManager
-                                .buildNotificationSettingsIntent(context)
-                            context.startActivity(intent)
-                        }
+                    onOpenNotificationSettings = {
+                        val intent = com.pulselink.beacon.notifications.MessageNotificationManager
+                            .buildNotificationSettingsIntent(context)
+                        context.startActivity(intent)
+                    },
+                    onRequestPermissions = {
+                        permissionLauncher.launch(missingPerms.toTypedArray())
+                    },
+                    onRequestDefault = {
+                        buildDefaultSmsRequestIntent(context)?.let { intent ->
+                            defaultSmsLauncher.launch(intent)
+                        } ?: launchDefaultSmsCheck()
+                    },
+                    onRefreshDefaultStatus = launchDefaultSmsCheck,
+                    onOpenThread = { id, address ->
+                        vm.openThread(id, address)
+                        navController.navigate("thread/$id/${Uri.encode(address)}")
+                    },
+                    onDeleteThread = { vm.deleteThread(it) },
+                    onRefresh = { vm.refreshThreads() },
+                    onSearch = { vm.search(it) },
+                    onClearSearch = { vm.clearSearch() },
+                    onCustomize = { navController.navigate("customize?address=") },
+                    onCompose = { navController.navigate("newMessage") },
+                    onOpenNotifications = { navController.navigate("notifications") }
                 )
             }
             composable(
@@ -244,6 +244,9 @@ private fun BeaconNav(
                         theme = contactTheme,
                         onBack = { navController.popBackStack() },
                         onSend = { vm.sendMessage(it) },
+                        onScheduleMessage = { body, time ->
+                            vm.scheduleMessage(body, time)
+                        },
                         onDeleteThread = {
                             vm.deleteThread(threadId)
                             navController.popBackStack()

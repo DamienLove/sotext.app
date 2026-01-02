@@ -8,14 +8,22 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsRepository
 import com.pulselink.beacon.data.SmsThreadItem
+import com.pulselink.beacon.data.scheduled.BeaconDatabase
+import com.pulselink.beacon.data.scheduled.ScheduledMessage
+import com.pulselink.beacon.data.scheduled.MessageStatus
+import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 
 sealed class SearchResultState {
     object Idle : SearchResultState()
@@ -28,6 +36,9 @@ sealed class SearchResultState {
 class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private val repo = SmsRepository(app.applicationContext)
+    private val scheduledDao = BeaconDatabase.getDatabase(app).scheduledMessageDao()
+    private val workManager = WorkManager.getInstance(app)
+
     private companion object {
         const val THREAD_LIMIT = Int.MAX_VALUE
         const val MESSAGE_LIMIT = Int.MAX_VALUE
@@ -92,6 +103,38 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 withContext(Dispatchers.Main) {
                     currentThreadId?.let { refreshThread(it, refreshRead = true) }
                 }
+            }
+        }
+    }
+
+    fun scheduleMessage(body: String, scheduledTime: Long) {
+        val addr = currentAddress.ifBlank { messages.lastOrNull()?.address.orEmpty() }
+        if (addr.isBlank()) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val message = ScheduledMessage(
+                address = addr,
+                body = body,
+                scheduledTimeMillis = scheduledTime
+            )
+
+            val delay = scheduledTime - System.currentTimeMillis()
+
+            // If delay is effectively non-positive, consider it failed or send immediately?
+            // Sending immediately might be unexpected if user picked "now".
+            // But if it's in the past (e.g. user spent time in picker), we should probably fail or ask.
+            // For now, let's auto-fail if it's too far in past, or try to send if it's close.
+            // Simpler: if delay <= 0, mark as failed (as per PR feedback recommendation).
+
+            if (delay <= 0) {
+                scheduledDao.insert(message.copy(status = MessageStatus.FAILED))
+            } else {
+                val id = scheduledDao.insert(message)
+                val request = OneTimeWorkRequestBuilder<ScheduledMessageWorker>()
+                    .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                    .setInputData(workDataOf("messageId" to id))
+                    .build()
+                workManager.enqueue(request)
             }
         }
     }

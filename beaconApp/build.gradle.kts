@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     kotlin("android")
+    kotlin("kapt")
     id("com.google.gms.google-services")
     id("org.jetbrains.kotlin.plugin.compose")
 }
@@ -24,6 +25,16 @@ android {
         buildConfigField("String", "AD_UNIT_NATIVE", "\"ca-app-pub-5327057757821609/7042919400\"")
         buildConfigField("String", "AD_UNIT_APP_OPEN", "\"ca-app-pub-5327057757821609/5022248965\"")
         buildConfigField("Boolean", "PREMIUM_SEARCH", "false")
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments += mapOf(
+                    "room.schemaLocation" to "$projectDir/build/room-schemas",
+                    "room.incremental" to "true",
+                    "room.expandProjection" to "true"
+                )
+            }
+        }
     }
 
     buildTypes {
@@ -71,6 +82,11 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("io.coil-kt:coil-compose:2.6.0")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    implementation("androidx.room:room-runtime:2.7.0")
+    implementation("androidx.room:room-ktx:2.7.0")
+    kapt("androidx.room:room-compiler:2.7.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     implementation(project(":shared"))
 
