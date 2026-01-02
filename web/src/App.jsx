@@ -3569,7 +3569,10 @@ feature_switches:
                         className="secondary-btn"
                         type="button"
                         onClick={handleDeleteAccountData}
-                        onBlur={() => setConfirmDeleteAction(null)}
+                        onMouseDown={(e) => {
+                          // Prevent blur from canceling when clicking this button
+                          e.preventDefault();
+                        }}
                         autoFocus
                       >
                         Confirm clear?
@@ -3579,6 +3582,11 @@ feature_switches:
                         className="secondary-btn"
                         type="button"
                         onClick={() => setConfirmDeleteAction('data')}
+                        onBlur={() => {
+                          if (confirmDeleteAction === 'data') {
+                            setConfirmDeleteAction(null);
+                          }
+                        }}
                         disabled={!!deleteAction || confirmDeleteAction === 'account'}
                       >
                         {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
@@ -3590,7 +3598,10 @@ feature_switches:
                         className="primary-btn"
                         type="button"
                         onClick={handleDeleteAccount}
-                        onBlur={() => setConfirmDeleteAction(null)}
+                        onMouseDown={(e) => {
+                          // Prevent blur from canceling when clicking this button
+                          e.preventDefault();
+                        }}
                         autoFocus
                       >
                         Confirm delete?
@@ -3600,6 +3611,11 @@ feature_switches:
                         className="primary-btn"
                         type="button"
                         onClick={() => setConfirmDeleteAction('account')}
+                        onBlur={() => {
+                          if (confirmDeleteAction === 'account') {
+                            setConfirmDeleteAction(null);
+                          }
+                        }}
                         disabled={!!deleteAction || confirmDeleteAction === 'data'}
                       >
                         {deleteAction === 'account' ? "Deleting..." : "Delete account"}
