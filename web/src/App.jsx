@@ -1072,6 +1072,7 @@ function App() {
   const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
+  const [addingTrackId, setAddingTrackId] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -1150,6 +1151,7 @@ function App() {
           return;
       }
       try {
+          setAddingTrackId(track.id);
           setSettingsStatus(`Adding "${track.name}"...`);
           const trackData = {
               spotifyId: track.id,
@@ -1170,6 +1172,8 @@ function App() {
           // Clear search results after adding? Maybe not, user might want to add multiple.
       } catch(e) {
           setSettingsStatus("Error adding: " + e.message);
+      } finally {
+          setAddingTrackId(null);
       }
   };
 
@@ -2842,8 +2846,15 @@ function App() {
                                         <div className="song-title">{track.name}</div>
                                         <div className="song-artist">{track.artists.map(a => a.name).join(', ')}</div>
                                     </div>
-                                    <button className="secondary-btn" style={{padding: '6px 12px', fontSize: '0.85em'}} onClick={() => handlePushSpotifyTrack(track)}>
-                                        Add
+                                    <button
+                                      className="secondary-btn"
+                                      style={{padding: '6px 12px', fontSize: '0.85em'}}
+                                      onClick={() => handlePushSpotifyTrack(track)}
+                                      disabled={addingTrackId === track.id}
+                                      aria-busy={addingTrackId === track.id}
+                                      aria-label={`Add ${track.name} to playlist`}
+                                    >
+                                        {addingTrackId === track.id ? "Adding..." : "Add"}
                                     </button>
                                 </div>
                             ))}

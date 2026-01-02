@@ -1,5 +1,5 @@
 
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 // Note: This test assumes we can reach the settings panel.
 // Since we don't have a robust way to mock auth in this environment without modifying App.jsx,
@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
 // For now, I will write the test to standard.
 
 test.describe('Account Deletion Confirmation', () => {
-  test('should require double-click confirmation for account deletion', async ({ page }) => {
+  test('should require double-click confirmation for account deletion', async () => {
     // This test expects the app to be in a state where Settings is accessible.
     // In a real environment, we'd log in first.
     // await page.goto('/');
@@ -23,7 +23,7 @@ test.describe('Account Deletion Confirmation', () => {
     // await page.getByRole('button', { name: 'Settings' }).click();
 
     // 1. Initial State
-    const deleteBtn = page.getByRole('button', { name: 'Delete account' });
+    // const deleteBtn = page.getByRole('button', { name: 'Delete account' });
     // await expect(deleteBtn).toBeVisible();
 
     // 2. First Click -> Confirmation State
