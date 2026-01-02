@@ -96,6 +96,46 @@ const CopyButton = ({ text, label }) => {
   );
 };
 
+// Bolt: Reusable confirmation button to handle race conditions and prevent duplication
+const ConfirmButton = ({
+  isConfirming,
+  onConfirm,
+  onRequestConfirm,
+  onCancel,
+  confirmText,
+  normalText,
+  loadingText,
+  isLoading,
+  className,
+  disabled
+}) => {
+  if (isConfirming) {
+    return (
+      <button
+        className={className}
+        type="button"
+        onClick={onConfirm}
+        onBlur={onCancel}
+        onMouseDown={(e) => e.preventDefault()} // Prevent blur from firing before click
+        autoFocus
+      >
+        {confirmText}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      className={className}
+      type="button"
+      onClick={onRequestConfirm}
+      disabled={disabled}
+    >
+      {isLoading ? loadingText : normalText}
+    </button>
+  );
+};
+
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
@@ -1384,6 +1424,7 @@ function App() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
+  const [confirmDeleteAction, setConfirmDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [isPremiumUser, setIsPremiumUser] = useState(null); // null = loading   
   const [showPreviews, setShowPreviews] = useState(true);
@@ -2414,9 +2455,7 @@ function App() {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-    if (!window.confirm("Delete your account and all cloud data? This cannot be undone.")) {
-      return;
-    }
+    setConfirmDeleteAction(null);
     setDeleteAction('account');
     setDeleteStatus("Requesting account deletion...");
     try {
@@ -2434,9 +2473,7 @@ function App() {
 
   const handleDeleteAccountData = async () => {
     if (!user) return;
-    if (!window.confirm("Clear synced messages, device contacts, and trusted contacts from the cloud?")) {
-      return;
-    }
+    setConfirmDeleteAction(null);
     setDeleteAction('data');
     setDeleteStatus("Deleting account data...");
     try {
@@ -3772,22 +3809,30 @@ feature_switches:
                     Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
                   </p>
                   <div className="contact-actions">
-                    <button
+                    <ConfirmButton
+                      isConfirming={confirmDeleteAction === 'data'}
+                      onConfirm={handleDeleteAccountData}
+                      onRequestConfirm={() => setConfirmDeleteAction('data')}
+                      onCancel={() => setConfirmDeleteAction(null)}
+                      confirmText="Confirm clear?"
+                      normalText="Clear cloud data"
+                      loadingText="Clearing..."
+                      isLoading={deleteAction === 'data'}
                       className="secondary-btn"
-                      type="button"
-                      onClick={handleDeleteAccountData}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
-                    </button>
-                    <button
+                      disabled={!!deleteAction || confirmDeleteAction === 'account'}
+                    />
+                    <ConfirmButton
+                      isConfirming={confirmDeleteAction === 'account'}
+                      onConfirm={handleDeleteAccount}
+                      onRequestConfirm={() => setConfirmDeleteAction('account')}
+                      onCancel={() => setConfirmDeleteAction(null)}
+                      confirmText="Confirm delete?"
+                      normalText="Delete account"
+                      loadingText="Deleting..."
+                      isLoading={deleteAction === 'account'}
                       className="primary-btn"
-                      type="button"
-                      onClick={handleDeleteAccount}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'account' ? "Deleting..." : "Delete account"}
-                    </button>
+                      disabled={!!deleteAction || confirmDeleteAction === 'data'}
+                    />
                   </div>
                   {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
                 </div>
