@@ -134,3 +134,4 @@ Current SMS features
 - 2026-01-01: Added inbox filters (OTP/Trusted/Favorites/Private) with clickable avatars to open contact edit; home screen now respects theme colors and exposes Notifications/Themes shortcuts; DND permission moved to Permissions section; custom vibration creator wired to settings and message notification patterns; trusted contacts sync now runs for anonymous users too.
 2026-01-02
 - Merged Suite-Beta into ui-overhaul-suite-v2 branch; resolved conflicts in Beacon inbox (pin/archive swipe + menu with Future Deep styling) and web Future Deep assets (sidebar/layout + design tokens). No builds run yet.
+- Closed PR #340 (Future Deep UI overhaul) and PR #335 (Spotify ringer integration) due to conflicts; will reimplement directly on Suite-Beta.
