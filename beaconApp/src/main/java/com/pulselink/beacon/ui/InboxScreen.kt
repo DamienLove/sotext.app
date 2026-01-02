@@ -320,7 +320,7 @@ fun InboxScreen(
                         Column(Modifier.weight(1f)) {
                             Text("Permissions needed", fontWeight = FontWeight.SemiBold)
                             Text(
-                                "Grant SMS permission so Beacon can read and show messages.",
+                                "Beacon needs access to SMS to display your conversations and send messages.",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -346,11 +346,11 @@ fun InboxScreen(
                         Icon(Icons.Default.Sms, contentDescription = null, tint = iconTint)
                         Column(Modifier.weight(1f)) {
                             Text(
-                                if (isCheckingDefaultSms) "Checking default SMS status..." else "Set as default SMS",
+                                if (isCheckingDefaultSms) "Checking status..." else "Set as default SMS",
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                "Required for receiving texts and showing notifications.",
+                                "To send and receive messages, Beacon must be your default SMS app.",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
