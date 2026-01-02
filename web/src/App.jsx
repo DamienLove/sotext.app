@@ -94,6 +94,46 @@ const CopyButton = ({ text, label }) => {
   );
 };
 
+// Bolt: Reusable confirmation button to handle race conditions and prevent duplication
+const ConfirmButton = ({
+  isConfirming,
+  onConfirm,
+  onRequestConfirm,
+  onCancel,
+  confirmText,
+  normalText,
+  loadingText,
+  isLoading,
+  className,
+  disabled
+}) => {
+  if (isConfirming) {
+    return (
+      <button
+        className={className}
+        type="button"
+        onClick={onConfirm}
+        onBlur={onCancel}
+        onMouseDown={(e) => e.preventDefault()} // Prevent blur from firing before click
+        autoFocus
+      >
+        {confirmText}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      className={className}
+      type="button"
+      onClick={onRequestConfirm}
+      disabled={disabled}
+    >
+      {isLoading ? loadingText : normalText}
+    </button>
+  );
+};
+
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
@@ -3564,63 +3604,30 @@ feature_switches:
                     Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
                   </p>
                   <div className="contact-actions">
-                    {confirmDeleteAction === 'data' ? (
-                      <button
-                        className="secondary-btn"
-                        type="button"
-                        onClick={handleDeleteAccountData}
-                        onMouseDown={(e) => {
-                          // Prevent blur from canceling when clicking this button
-                          e.preventDefault();
-                        }}
-                        autoFocus
-                      >
-                        Confirm clear?
-                      </button>
-                    ) : (
-                      <button
-                        className="secondary-btn"
-                        type="button"
-                        onClick={() => setConfirmDeleteAction('data')}
-                        onBlur={() => {
-                          if (confirmDeleteAction === 'data') {
-                            setConfirmDeleteAction(null);
-                          }
-                        }}
-                        disabled={!!deleteAction || confirmDeleteAction === 'account'}
-                      >
-                        {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
-                      </button>
-                    )}
-
-                    {confirmDeleteAction === 'account' ? (
-                      <button
-                        className="primary-btn"
-                        type="button"
-                        onClick={handleDeleteAccount}
-                        onMouseDown={(e) => {
-                          // Prevent blur from canceling when clicking this button
-                          e.preventDefault();
-                        }}
-                        autoFocus
-                      >
-                        Confirm delete?
-                      </button>
-                    ) : (
-                      <button
-                        className="primary-btn"
-                        type="button"
-                        onClick={() => setConfirmDeleteAction('account')}
-                        onBlur={() => {
-                          if (confirmDeleteAction === 'account') {
-                            setConfirmDeleteAction(null);
-                          }
-                        }}
-                        disabled={!!deleteAction || confirmDeleteAction === 'data'}
-                      >
-                        {deleteAction === 'account' ? "Deleting..." : "Delete account"}
-                      </button>
-                    )}
+                    <ConfirmButton
+                      isConfirming={confirmDeleteAction === 'data'}
+                      onConfirm={handleDeleteAccountData}
+                      onRequestConfirm={() => setConfirmDeleteAction('data')}
+                      onCancel={() => setConfirmDeleteAction(null)}
+                      confirmText="Confirm clear?"
+                      normalText="Clear cloud data"
+                      loadingText="Clearing..."
+                      isLoading={deleteAction === 'data'}
+                      className="secondary-btn"
+                      disabled={!!deleteAction || confirmDeleteAction === 'account'}
+                    />
+                    <ConfirmButton
+                      isConfirming={confirmDeleteAction === 'account'}
+                      onConfirm={handleDeleteAccount}
+                      onRequestConfirm={() => setConfirmDeleteAction('account')}
+                      onCancel={() => setConfirmDeleteAction(null)}
+                      confirmText="Confirm delete?"
+                      normalText="Delete account"
+                      loadingText="Deleting..."
+                      isLoading={deleteAction === 'account'}
+                      className="primary-btn"
+                      disabled={!!deleteAction || confirmDeleteAction === 'data'}
+                    />
                   </div>
                   {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
                 </div>
