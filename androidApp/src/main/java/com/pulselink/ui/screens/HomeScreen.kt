@@ -178,15 +178,19 @@ fun HomeScreen(
         derivedStateOf { (scrollState.value / 420f).coerceIn(0f, 1f) }
     }
     val quickActionScale by animateFloatAsState(
-        targetValue = 1f - 0.22f * collapseFraction,
+        targetValue = 1f - 0.18f * collapseFraction,
         label = "quickActionScale"
     )
     val quickActionHeight by animateDpAsState(
-        targetValue = lerp(176.dp, 112.dp, collapseFraction),
+        targetValue = lerp(
+            if (isUnifiedMode) 148.dp else 176.dp,
+            if (isUnifiedMode) 104.dp else 112.dp,
+            collapseFraction
+        ),
         label = "quickActionHeight"
     )
     val quickActionAlpha by animateFloatAsState(
-        targetValue = 1f - (0.15f * collapseFraction),
+        targetValue = 1f - (0.12f * collapseFraction),
         label = "quickActionAlpha"
     )
     val quickActionsCompact by remember { derivedStateOf { collapseFraction > 0.45f } }
@@ -217,7 +221,7 @@ fun HomeScreen(
         }
     }
 
-    val contentPaddingVertical = if (isUnifiedMode) 16.dp else 24.dp
+    val contentPaddingVertical = 14.dp
     Surface(
         modifier = Modifier
             .fillMaxSize()
@@ -407,9 +411,10 @@ private fun HeaderSection(
     } else {
         Brush.verticalGradient(listOf(primary, secondary))
     }
-    val heroPaddingH = if (isUnifiedMode) 16.dp else 20.dp
-    val heroPaddingV = if (isUnifiedMode) 14.dp else 24.dp
-    val headerSpacing = if (isUnifiedMode) 12.dp else 20.dp
+    val compactHeader = true
+    val heroPaddingH = if (compactHeader) 16.dp else 20.dp
+    val heroPaddingV = if (compactHeader) 14.dp else 24.dp
+    val headerSpacing = if (compactHeader) 12.dp else 20.dp
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = heroShape,
@@ -434,11 +439,11 @@ private fun HeaderSection(
                         )
                     ),
                     contentDescription = "PulseLink logo",
-                    modifier = Modifier.size(if (isUnifiedMode) 48.dp else 56.dp)
+                    modifier = Modifier.size(if (compactHeader) 48.dp else 56.dp)
                 )
                 Text(
                     text = if (isUnifiedMode) "Beacon · PulseLink" else stringResource(id = R.string.app_name),
-                    style = (if (isUnifiedMode) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall).copy(fontWeight = FontWeight.Bold),
+                    style = (if (compactHeader) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall).copy(fontWeight = FontWeight.Bold),
                     color = Color.White,
                     maxLines = 1,
                     softWrap = false
@@ -459,7 +464,7 @@ private fun HeaderSection(
                     isProUser = state.isProUser,
                     showBeacon = showBeacon,
                     unreadAlertCount = state.unreadAlertCount,
-                    compact = isUnifiedMode
+                    compact = true
                 )
             }
         }

@@ -12,7 +12,7 @@ object UnifiedLauncherManager {
     ) {
         val pm = context.packageManager
         val pkg = context.packageName
-
+        val pulseLinkLauncher = ComponentName(pkg, "com.pulselink.PulseLinkLauncher")
         val main = ComponentName(pkg, "com.pulselink.ui.MainActivity")
         val inbox = ComponentName(pkg, "com.pulselink.ui.InboxLauncherActivity")
         val inboxLogo = ComponentName(pkg, "com.pulselink.BeaconInboxLogo")
@@ -35,6 +35,7 @@ object UnifiedLauncherManager {
             // Enable unified launcher; keep MainActivity enabled so the alias can open
             enable(pm, targetUnified)
             enable(pm, main)
+            disable(pm, pulseLinkLauncher)
             disable(pm, inbox)
             disable(pm, inboxLogo)
             disable(pm, inboxPro)
@@ -42,6 +43,7 @@ object UnifiedLauncherManager {
         } else {
             // Restore default PulseLink launcher, keep unified aliases hidden
             enable(pm, main)
+            enable(pm, pulseLinkLauncher)
             enable(pm, inbox)
             // Re-enable Beacon launchers so the icon returns when unified is off
             enable(pm, inboxLogo)
