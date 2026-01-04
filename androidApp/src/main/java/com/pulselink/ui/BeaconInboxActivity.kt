@@ -29,12 +29,14 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.runtime.key
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -708,6 +710,20 @@ class BeaconInboxActivity : ComponentActivity() {
                                     }
                                     LaunchedEffect(threadId, decodedAddress, lineId) {
                                         threadViewModel.load(threadId, decodedAddress, lineId)
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.End,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        IconButton(onClick = { navController.navigate("notifications/message_sound") }) {
+                                            Icon(imageVector = Icons.Filled.NotificationsActive, contentDescription = "Message tones")
+                                        }
+                                        IconButton(onClick = { navController.navigate("visual_settings") }) {
+                                            Icon(imageVector = Icons.Filled.Palette, contentDescription = "Themes")
+                                        }
                                     }
                                     SmsThreadScreen(
                                             address = decodedAddress,

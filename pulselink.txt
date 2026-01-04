@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2026-01-04: v110 release — refreshed premium status on login, neutralized pre-sign-in branding, added Beacon thread quick Themes/Tones actions, and kept unified launcher stable; bumped versionCode/Name to 110. Free/pro AABs built (disposable_aabs/androidApp-*-release-v110.aab), uploaded to Play internal → open testing → production, and submitted for review.
 - 2026-01-04: Fixed all open v105 issues (renamed to v106): Unified navigation now keeps both PulseLink and Beacon launchers enabled (#424, #389, #390); added refreshDefaultSms() call when unified mode changes (#386); reduced spacing from 12.dp to 8.dp under emergency buttons (#393); verified Tones button route exists (#394); updated BeaconUnifiedWidget to use theme colors instead of hardcoded values (#395, #331). Fixed SmsInboxScreen compilation errors (color parameters). Bumped free/pro to versionCode/Name 106, built AABs (disposable_aabs/*v106.aab). Ready for Play upload (internal → open testing → production) and web deploy. GitHub issues closed: #424, #389, #390; remaining issues (#386, #393, #391, #395, #331) have fixes and marked "verify fixes in v106".
 - 2026-01-02: Disabled Crash Detection foreground service + FGS permissions for Play review; added BuildConfig flag to keep it off, gated UI, and removed manifest service. Bumped PulseLink free/pro to versionCode/Name 101 and rebuilt release AABs into disposable_aabs/androidApp-free-release-v101.aab and androidApp-pro-release-v101.aab with new release notes. Web app redeployed via firebase hosting.
 - 2026-01-02: Version bump to 102 (free/pro); rebuilt AABs under disposable_aabs/*v102.aab. Removed merged experience toggle entry that lacked a handler; FlowRow now annotated with ExperimentalLayoutApi.
@@ -10,6 +11,7 @@ Recent work
 
 Shorthand / process
 - When I say “build and push pulselink”, do all of this: bump PulseLink (com.free.pulselink + com.pulselink.pro) to the next version, build free/pro AABs, upload to Play internal, promote to open testing, then to production, submit for review (ok if review restarts), build the web app, and deploy it to Firebase Hosting.
+ - When I say “build and push pulselink”, do all of this: bump PulseLink (com.free.pulselink + com.pulselink.pro) to the next version, build free/pro AABs, upload to Play internal, promote to open testing, then to production, submit for review (ok if review restarts), build the web app, and deploy it to Firebase Hosting—and always commit and push.
 - 2025-12-30: Bumped PulseLink to v93 (free/pro); rebuilt release AABs at androidApp/build/outputs/bundle/freeRelease/androidApp-free-release.aab and .../proRelease/androidApp-pro-release.aab. RingerSong remains v20 (bundle rebuilt).
 - 2025-12-30: Added SMS attachment picker in Beacon threads (paperclip button opens file picker + SMS/MMS send intent); rebuilt PulseLink v92 (free/pro) and RingerSong v20 release bundles.
 - 2025-12-30: Version bump — PulseLink v92 (free/pro) and RingerSong v20; premium branding shows gold logos/badges on splash/login and Beacon inbox logo now blue (free) or gold (premium) unless overridden by theme.

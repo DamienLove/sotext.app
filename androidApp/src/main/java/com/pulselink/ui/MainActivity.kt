@@ -187,6 +187,7 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var callStateMonitor: CallStateMonitor
     @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
+    @Inject lateinit var subscriptionManager: com.pulselink.billing.SubscriptionManager
     private val inboxShortcutFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private fun updateBeaconLauncher(enable: Boolean, variant: String) {
         BeaconIconManager.apply(this, variant, enable)
@@ -228,6 +229,13 @@ class MainActivity : AppCompatActivity() {
                 val isPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || isPremium
                 val pulseDisplayName = pulseBrandName(isPremium, isPro)
                 val navController = rememberNavController()
+
+                LaunchedEffect(authState) {
+                    val authenticated = authState as? AuthState.Authenticated
+                    if (authenticated != null && subscriptionManager.subscriptionState.value.available) {
+                        subscriptionManager.refreshPremiumStatus()
+                    }
+                }
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
                 var missingSmsPerms by remember { mutableStateOf(requiredSmsPermissions(context)) }
