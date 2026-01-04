@@ -43,11 +43,10 @@ object UnifiedLauncherManager {
             // Restore default PulseLink launcher, keep unified aliases hidden
             enable(pm, main)
             enable(pm, inbox)
-            disable(pm, inboxLogo)
-            disable(pm, inboxPro)
-            disable(pm, unifiedMessages)
-            disable(pm, unifiedPulseLink)
-            disable(pm, unifiedBeacon)
+            // Re-enable Beacon launchers so the icon returns when unified is off
+            enable(pm, inboxLogo)
+            enable(pm, inboxPro)
+            unifiedTargets.values.forEach { disable(pm, it) }
             // Inbox launcher follows its existing runtime flag elsewhere; leave it untouched
         }
     }
