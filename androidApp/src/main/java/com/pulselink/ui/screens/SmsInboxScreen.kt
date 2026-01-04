@@ -672,14 +672,14 @@ internal fun ThreadRow(
     val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
     val onBackgroundColor = ensureReadableOnColor(
         background = backgroundColor,
-        preferred = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
-        fallback = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White
+        desired = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
+        fallback = Color.White
     )
     val onBackgroundMuted = onBackgroundColor.copy(alpha = 0.7f)
     val onBackgroundSubtle = onBackgroundColor.copy(alpha = 0.8f)
     val timestampColor = ensureReadableOnColor(
-        backgroundColor,
-        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground),
+        background = backgroundColor,
+        desired = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground),
         fallback = onBackgroundMuted
     )
 
@@ -855,8 +855,8 @@ internal fun ThreadRowSkeleton(
     val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
     val onBackgroundColor = ensureReadableOnColor(
         background = backgroundColor,
-        preferred = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
-        fallback = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White
+        desired = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
+        fallback = Color.White
     )
     val onBackgroundMuted = onBackgroundColor.copy(alpha = 0.7f)
 
@@ -1255,8 +1255,8 @@ private fun LinePickerRow(
     val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
     val onBackgroundColor = ensureReadableOnColor(
         background = backgroundColor,
-        preferred = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
-        fallback = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White
+        desired = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
+        fallback = Color.White
     )
 
     var expanded by remember { mutableStateOf(false) }
