@@ -32,10 +32,10 @@ object UnifiedLauncherManager {
         val targetUnified = unifiedTargets[desired] ?: unifiedMessages
 
         if (unifiedEnabled) {
-            // Enable chosen unified launcher, disable others + legacy icons
+            // Enable chosen unified launcher AND keep main PulseLink launcher enabled
             enable(pm, targetUnified)
-            disable(pm, main)
-            disable(pm, inbox)
+            enable(pm, main)  // Keep PulseLink enabled in unified mode
+            // Don't disable inbox - let BeaconIconManager handle it
             disable(pm, inboxLogo)
             disable(pm, inboxPro)
             unifiedTargets.values.filterNot { it == targetUnified }.forEach { disable(pm, it) }
