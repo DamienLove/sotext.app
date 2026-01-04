@@ -668,6 +668,21 @@ internal fun ThreadRow(
     lineCount: Int = 0,
     actionsEnabled: Boolean = true
 ) {
+    // Compute text colors from theme
+    val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
+    val onBackgroundColor = ensureReadableOnColor(
+        background = backgroundColor,
+        preferred = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
+        fallback = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White
+    )
+    val onBackgroundMuted = onBackgroundColor.copy(alpha = 0.7f)
+    val onBackgroundSubtle = onBackgroundColor.copy(alpha = 0.8f)
+    val timestampColor = ensureReadableOnColor(
+        backgroundColor,
+        parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground),
+        fallback = onBackgroundMuted
+    )
+
     val (displayName, number) = splitDisplay(thread.address)
     val resolvedName = contact?.displayName?.takeIf { it.isNotBlank() }
         ?: contact?.remoteDisplayName?.takeIf { it.isNotBlank() }
@@ -836,6 +851,15 @@ internal fun ThreadRow(
 internal fun ThreadRowSkeleton(
     theme: ThemePreferences
 ) {
+    // Compute text colors from theme
+    val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
+    val onBackgroundColor = ensureReadableOnColor(
+        background = backgroundColor,
+        preferred = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
+        fallback = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White
+    )
+    val onBackgroundMuted = onBackgroundColor.copy(alpha = 0.7f)
+
     val transition = rememberInfiniteTransition(label = "threadSkeleton")
     val alpha by transition.animateFloat(
         initialValue = 0.35f,
@@ -1226,6 +1250,15 @@ private fun LinePickerRow(
     onSelectLine: (String) -> Unit
 ) {
     if (lines.isEmpty()) return
+
+    // Compute text colors from theme
+    val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
+    val onBackgroundColor = ensureReadableOnColor(
+        background = backgroundColor,
+        preferred = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
+        fallback = if (backgroundColor.luminance() > 0.5f) Color.Black else Color.White
+    )
+
     var expanded by remember { mutableStateOf(false) }
     val selectedIndex = lines.indexOfFirst { it.id == activeLineId }.takeIf { it >= 0 } ?: 0
     val selectedLine = lines.getOrNull(selectedIndex)
