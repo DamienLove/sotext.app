@@ -17,6 +17,26 @@ object UnifiedLauncherManager {
         val inbox = ComponentName(pkg, "com.pulselink.ui.InboxLauncherActivity")
         val inboxLogo = ComponentName(pkg, "com.pulselink.BeaconInboxLogo")
         val inboxPro = ComponentName(pkg, "com.pulselink.BeaconInboxPro")
+        val beaconVariants = listOf(
+            inboxLogo,
+            inboxPro,
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeDefaultLight"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeMidnightOled"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeOceanDeep"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeRosePetal"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeSunsetFade"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeCitrusPop"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeForestTrail"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeLavenderHaze"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeSlateMono"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeDesertClay"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeNordFrost"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeNeonNoir"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemePaperback"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeMintBreeze"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeAmethystNight"),
+            ComponentName(pkg, "com.pulselink.BeaconInboxThemeAurora")
+        )
 
         val unifiedMessages = ComponentName(pkg, "com.pulselink.UnifiedLauncherMessages")
         val unifiedPulseLink = ComponentName(pkg, "com.pulselink.UnifiedLauncherPulseLinkPremium")
@@ -37,8 +57,7 @@ object UnifiedLauncherManager {
             enable(pm, main)
             disable(pm, pulseLinkLauncher)
             disable(pm, inbox)
-            disable(pm, inboxLogo)
-            disable(pm, inboxPro)
+            beaconVariants.forEach { disable(pm, it) }
             unifiedTargets.values.filterNot { it == targetUnified }.forEach { disable(pm, it) }
         } else {
             // Restore default PulseLink launcher, keep unified aliases hidden
@@ -46,8 +65,7 @@ object UnifiedLauncherManager {
             enable(pm, pulseLinkLauncher)
             enable(pm, inbox)
             // Re-enable Beacon launchers so the icon returns when unified is off
-            enable(pm, inboxLogo)
-            enable(pm, inboxPro)
+            beaconVariants.forEach { enable(pm, it) }
             unifiedTargets.values.forEach { disable(pm, it) }
             // Inbox launcher follows its existing runtime flag elsewhere; leave it untouched
         }
