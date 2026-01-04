@@ -411,6 +411,8 @@ class MainActivity : AppCompatActivity() {
                         state.settings.mergedExperienceEnabled,
                         state.settings.unifiedDisplayName
                     )
+                    // Refresh default SMS status when unified mode changes
+                    refreshDefaultSms()
                 }
                 LaunchedEffect(navController) {
                     inboxShortcutFlow.collectLatest {

@@ -228,7 +228,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             HeaderSection(
                 state = state,
@@ -252,7 +252,8 @@ fun HomeScreen(
                 } else {
                     BeaconUnifiedWidget(
                         onOpenInbox = onBeaconClick,
-                        onOpenContacts = onOpenContacts
+                        onOpenContacts = onOpenContacts,
+                        theme = themePrefs
                     )
                 }
             }
@@ -441,20 +442,24 @@ private fun HeaderSection(
 @Composable
 internal fun BeaconUnifiedWidget(
     onOpenInbox: () -> Unit,
-    onOpenContacts: () -> Unit
+    onOpenContacts: () -> Unit,
+    theme: ThemePreferences = ThemePreferences()
 ) {
     val shape = RoundedCornerShape(22.dp)
+    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val secondary = parseColorOr(MaterialTheme.colorScheme.secondary, theme.secondaryColor)
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = shape,
         tonalElevation = 4.dp,
-        color = Color(0xFF0C1D3D)
+        color = primary.copy(alpha = 0.1f)
     ) {
         Column(
             modifier = Modifier
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFF0C1D3D), Color(0xFF0F3F7A))
+                        listOf(primary.copy(alpha = 0.15f), primary.copy(alpha = 0.25f))
                     ),
                     shape
                 )
@@ -468,7 +473,7 @@ internal fun BeaconUnifiedWidget(
                 Icon(
                     imageVector = Icons.Filled.NotificationsActive,
                     contentDescription = null,
-                    tint = Color(0xFFFFC857),
+                    tint = secondary,
                     modifier = Modifier.size(28.dp)
                 )
                 Column(modifier = Modifier.weight(1f)) {
@@ -489,7 +494,7 @@ internal fun BeaconUnifiedWidget(
                     onClick = onOpenInbox,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF4A4A),
+                        containerColor = primary,
                         contentColor = Color.White
                     )
                 ) {
