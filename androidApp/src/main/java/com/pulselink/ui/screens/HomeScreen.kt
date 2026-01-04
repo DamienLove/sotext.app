@@ -217,6 +217,7 @@ fun HomeScreen(
         }
     }
 
+    val contentPaddingVertical = if (isUnifiedMode) 16.dp else 24.dp
     Surface(
         modifier = Modifier
             .fillMaxSize()
@@ -227,7 +228,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp, vertical = 24.dp),
+                .padding(horizontal = 20.dp, vertical = contentPaddingVertical),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             HeaderSection(
@@ -246,6 +247,26 @@ fun HomeScreen(
                 isPremium = isPremium,
                 isPro = isPro
             )
+            var quickActionsShown = false
+            if (isUnifiedMode && smsPreviewContent != null) {
+                QuickActionsRow(
+                    modifier = Modifier
+                        .heightIn(min = quickActionHeight)
+                        .graphicsLayer {
+                            scaleX = quickActionScale
+                            scaleY = quickActionScale
+                            alpha = quickActionAlpha
+                        },
+                    onTriggerEmergency = onTriggerEmergency,
+                    onSendCheckInAll = onSendCheckIn,
+                    isEmergencyActive = state.isEmergencyActive,
+                    onCancelEmergency = onRequestCancelEmergency,
+                    onViewEmergencyMap = onViewEmergencyMap,
+                    isCancelingEmergency = isCancelingEmergency,
+                    compact = true
+                )
+                quickActionsShown = true
+            }
             if (isUnifiedMode) {
                 if (smsPreviewContent != null) {
                     smsPreviewContent()
@@ -277,22 +298,24 @@ fun HomeScreen(
                     onAddLoginClick = onAddLoginClick
                 )
             }
-            QuickActionsRow(
-                modifier = Modifier
-                    .heightIn(min = quickActionHeight)
-                    .graphicsLayer {
-                        scaleX = quickActionScale
-                        scaleY = quickActionScale
-                        alpha = quickActionAlpha
-                    },
-                onTriggerEmergency = onTriggerEmergency,
-                onSendCheckInAll = onSendCheckIn,
-                isEmergencyActive = state.isEmergencyActive,
-                onCancelEmergency = onRequestCancelEmergency,
-                onViewEmergencyMap = onViewEmergencyMap,
-                isCancelingEmergency = isCancelingEmergency,
-                compact = quickActionsCompact
-            )
+            if (!quickActionsShown) {
+                QuickActionsRow(
+                    modifier = Modifier
+                        .heightIn(min = quickActionHeight)
+                        .graphicsLayer {
+                            scaleX = quickActionScale
+                            scaleY = quickActionScale
+                            alpha = quickActionAlpha
+                        },
+                    onTriggerEmergency = onTriggerEmergency,
+                    onSendCheckInAll = onSendCheckIn,
+                    isEmergencyActive = state.isEmergencyActive,
+                    onCancelEmergency = onRequestCancelEmergency,
+                    onViewEmergencyMap = onViewEmergencyMap,
+                    isCancelingEmergency = isCancelingEmergency,
+                    compact = quickActionsCompact || isUnifiedMode
+                )
+            }
             SearchAndAddRow(
                 searchValue = searchValue,
                 onSearchChange = { searchValue = it },
@@ -384,6 +407,9 @@ private fun HeaderSection(
     } else {
         Brush.verticalGradient(listOf(primary, secondary))
     }
+    val heroPaddingH = if (isUnifiedMode) 16.dp else 20.dp
+    val heroPaddingV = if (isUnifiedMode) 14.dp else 24.dp
+    val headerSpacing = if (isUnifiedMode) 12.dp else 20.dp
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = heroShape,
@@ -392,8 +418,8 @@ private fun HeaderSection(
         Column(
             modifier = Modifier
                 .background(heroBrush, heroShape)
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(horizontal = heroPaddingH, vertical = heroPaddingV),
+            verticalArrangement = Arrangement.spacedBy(headerSpacing)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -408,11 +434,11 @@ private fun HeaderSection(
                         )
                     ),
                     contentDescription = "PulseLink logo",
-                    modifier = Modifier.size(if (isUnifiedMode) 64.dp else 56.dp)
+                    modifier = Modifier.size(if (isUnifiedMode) 48.dp else 56.dp)
                 )
                 Text(
                     text = if (isUnifiedMode) "Beacon · PulseLink" else stringResource(id = R.string.app_name),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    style = (if (isUnifiedMode) MaterialTheme.typography.titleMedium else MaterialTheme.typography.headlineSmall).copy(fontWeight = FontWeight.Bold),
                     color = Color.White,
                     maxLines = 1,
                     softWrap = false
@@ -432,7 +458,8 @@ private fun HeaderSection(
                     onUpgradeClick = onUpgradeClick,
                     isProUser = state.isProUser,
                     showBeacon = showBeacon,
-                    unreadAlertCount = state.unreadAlertCount
+                    unreadAlertCount = state.unreadAlertCount,
+                    compact = isUnifiedMode
                 )
             }
         }
@@ -689,8 +716,10 @@ private fun NavigationRow(
     onUpgradeClick: () -> Unit,
     isProUser: Boolean,
     showBeacon: Boolean,
-    unreadAlertCount: Int
+    unreadAlertCount: Int,
+    compact: Boolean = false
 ) {
+    val iconSize = if (compact) 40.dp else 48.dp
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -700,17 +729,18 @@ private fun NavigationRow(
             icon = Icons.Filled.Notifications,
             label = "Alerts",
             onClick = onAlertsClick,
-            badgeCount = unreadAlertCount
+            badgeCount = unreadAlertCount,
+            compact = compact
         )
-        NavButton(icon = Icons.Filled.Help, label = stringResource(id = R.string.faq_title), onClick = onFaqClick)
-        NavButton(icon = Icons.Filled.NotificationsActive, label = "Tones", onClick = onNotificationsClick)
-        NavButton(icon = Icons.Filled.Palette, label = "Themes", onClick = onThemesClick)
+        NavButton(icon = Icons.Filled.Help, label = stringResource(id = R.string.faq_title), onClick = onFaqClick, compact = compact)
+        NavButton(icon = Icons.Filled.NotificationsActive, label = "Tones", onClick = onNotificationsClick, compact = compact)
+        NavButton(icon = Icons.Filled.Palette, label = "Themes", onClick = onThemesClick, compact = compact)
         if (showBeacon) {
-            NavButton(icon = Icons.Outlined.WifiTethering, label = stringResource(id = R.string.home_beacon_label), onClick = onBeaconClick)
+            NavButton(icon = Icons.Outlined.WifiTethering, label = stringResource(id = R.string.home_beacon_label), onClick = onBeaconClick, compact = compact)
         }
-        NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick)
+        NavButton(icon = Icons.Filled.Settings, label = "Settings", onClick = onSettingsClick, compact = compact)
         if (!isProUser) {
-            NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick)
+            NavButton(icon = Icons.Filled.Star, label = "Pro", onClick = onUpgradeClick, compact = compact)
         }
     }
 }
@@ -835,17 +865,21 @@ private fun NavButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     onClick: () -> Unit,
-    badgeCount: Int? = null
+    badgeCount: Int? = null,
+    compact: Boolean = false
 ) {
+    val chipSize = if (compact) 40.dp else 48.dp
+    val textAlpha = if (compact) 0.78f else 0.85f
+    val spacing = if (compact) 4.dp else 6.dp
     Column(
         modifier = Modifier.clickable(role = Role.Button, onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(spacing)
     ) {
         val chipShape = RoundedCornerShape(16.dp)
         Surface(
             modifier = Modifier
-                .size(48.dp)
+                .size(chipSize)
                 .clip(chipShape)
                 .clickable(onClick = onClick),
             shape = chipShape,
@@ -885,7 +919,7 @@ private fun NavButton(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.85f)
+            color = Color.White.copy(alpha = textAlpha)
         )
     }
 }

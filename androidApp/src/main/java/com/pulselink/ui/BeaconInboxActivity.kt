@@ -254,21 +254,6 @@ class BeaconInboxActivity : ComponentActivity() {
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
-            ) {
-                TextButton(onClick = { finish() }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back to PulseLink"
-                    )
-                    Text(text = "Back to PulseLink", modifier = Modifier.padding(start = 6.dp))
-                }
-            }
             val bannerHeight = 50.dp
             Box(modifier = Modifier.weight(1f)) {
                 Box(

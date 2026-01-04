@@ -224,7 +224,7 @@ class MainActivity : AppCompatActivity() {
                 val lineSendPreference by linesViewModel.lineSendPreference.collectAsStateWithLifecycle()
                 val threadLineOverrides by linesViewModel.threadLineOverrides.collectAsStateWithLifecycle()
                 val authState by viewModel.authState.collectAsStateWithLifecycle()
-                val isPremium = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
+                val isPremium = state.isPremiumUser || BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
                 val isPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || isPremium
                 val pulseDisplayName = pulseBrandName(isPremium, isPro)
                 val navController = rememberNavController()
@@ -973,16 +973,16 @@ class MainActivity : AppCompatActivity() {
 
                         LoginScreen(
                             state = loginUiState,
-                            onEmailChange = loginViewModel::updateEmail,
-                            onPasswordChange = loginViewModel::updatePassword,
+                            onEmailChange = loginViewModel::updateEmail,        
+                            onPasswordChange = loginViewModel::updatePassword,  
                             onConfirmPasswordChange = loginViewModel::updateConfirmPassword,
                             onSubmit = loginViewModel::submit,
                             onToggleMode = loginViewModel::toggleMode,
                             onForgotPassword = loginViewModel::sendPasswordReset,
-                            onSmsOnlyClick = loginViewModel::signInSmsOnly,
+                            onSmsOnlyClick = loginViewModel::signInSmsOnly,     
                             onGoogleClick = { googleLauncher.launch(googleClient.signInIntent) },
                             onMessageConsumed = loginViewModel::clearTransientMessages,
-                            useProBranding = premiumBranding
+                            useProBranding = false
                         )
                         LaunchedEffect(authState, state.onboardingComplete) {
                             val authenticated = authState as? AuthState.Authenticated

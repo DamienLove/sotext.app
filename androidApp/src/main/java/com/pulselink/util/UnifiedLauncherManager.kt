@@ -32,16 +32,17 @@ object UnifiedLauncherManager {
         val targetUnified = unifiedTargets[desired] ?: unifiedMessages
 
         if (unifiedEnabled) {
-            // Enable chosen unified launcher AND keep main PulseLink launcher enabled
+            // Enable unified launcher; keep MainActivity enabled so the alias can open
             enable(pm, targetUnified)
-            enable(pm, main)  // Keep PulseLink enabled in unified mode
-            // Don't disable inbox - let BeaconIconManager handle it
+            enable(pm, main)
+            disable(pm, inbox)
             disable(pm, inboxLogo)
             disable(pm, inboxPro)
             unifiedTargets.values.filterNot { it == targetUnified }.forEach { disable(pm, it) }
         } else {
             // Restore default PulseLink launcher, keep unified aliases hidden
             enable(pm, main)
+            enable(pm, inbox)
             disable(pm, inboxLogo)
             disable(pm, inboxPro)
             disable(pm, unifiedMessages)
