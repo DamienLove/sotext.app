@@ -315,7 +315,7 @@ fun SmsInboxScreen(
                                     }
                                 ),
                                 contentDescription = null,
-                                tint = logoTint,
+                                tint = if (isUnifiedMode) logoTint else Color.Unspecified,
                                 modifier = Modifier
                                     .size(beaconExpandedIconSize * beaconExpandedAlpha)
                                     .alpha(beaconExpandedAlpha)
@@ -344,24 +344,24 @@ fun SmsInboxScreen(
                                 )
                             }
                         } else {
-                            Icon(
-                                painter = painterResource(
-                                    id = if (isUnifiedMode) {
-                                        brandLogoRes(
-                                            usePremiumBranding = isPremium || isPro,
-                                            isUnifiedMode = true
-                                        )
-                                    } else {
-                                        R.drawable.ic_beacon_inbox
-                                    }
-                                ),
-                                contentDescription = "Beacon",
-                                tint = logoTint,
-                                modifier = Modifier
-                                    .size(beaconCollapsedIconSize)
-                                    .alpha(beaconCollapsedAlpha)
-                            )
-                        }
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (isUnifiedMode) {
+                                            brandLogoRes(
+                                                usePremiumBranding = isPremium || isPro,
+                                                isUnifiedMode = true
+                                            )
+                                        } else {
+                                            R.drawable.ic_beacon_inbox
+                                        }
+                                    ),
+                                    contentDescription = "Beacon",
+                                    tint = if (isUnifiedMode) logoTint else Color.Unspecified,
+                                    modifier = Modifier
+                                        .size(beaconCollapsedIconSize)
+                                        .alpha(beaconCollapsedAlpha)
+                                )
+                            }
                     },
                     actions = {
                         IconButton(onClick = onOpenPrivate) {

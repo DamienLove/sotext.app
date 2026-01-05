@@ -79,6 +79,7 @@ fun UnifiedHomeScreen(
     isPremium: Boolean,
     isPro: Boolean,
     // Unified-specific
+    onComposeMessage: () -> Unit,
     onOpenThread: (SmsThreadItem) -> Unit,
     onViewAllMessages: () -> Unit,
     onOpenContactForThread: (SmsThreadItem) -> Unit
@@ -188,6 +189,7 @@ fun UnifiedHomeScreen(
                 onOpenThread = onOpenThread,
                 onViewAll = onViewAllMessages,
                 onOpenContact = onOpenContactForThread,
+                onComposeMessage = onComposeMessage,
                 theme = state.settings.themePreferences,
                 dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
                 contactsByNumber = contactsByNumber,
@@ -207,6 +209,7 @@ fun SmsInboxPreviewSection(
     onOpenThread: (SmsThreadItem) -> Unit,
     onViewAll: () -> Unit,
     onOpenContact: (SmsThreadItem) -> Unit,
+    onComposeMessage: () -> Unit,
     theme: ThemePreferences,
     dateFormatter: (Long) -> String,
     contactsByNumber: Map<String, Contact>,
@@ -275,7 +278,7 @@ fun SmsInboxPreviewSection(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Button(onClick = onViewAll) {
+                        Button(onClick = onComposeMessage) {
                             Text("Start conversation")
                         }
                     }
@@ -325,6 +328,9 @@ fun SmsInboxPreviewSection(
                         modifier = Modifier.padding(start = 4.dp).size(16.dp)
                     )
                 }
+            }
+            TextButton(onClick = onComposeMessage) {
+                Text("Compose")
             }
         }
     }

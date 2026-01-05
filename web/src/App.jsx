@@ -2420,12 +2420,12 @@ function App() {
               </div>
               {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
               {/* QA TEST: Visit web app home screen after login */}
-              {/* EXPECTED: Blue info banner should be visible explaining web.pulselink.app access */}
+              {/* EXPECTED: Blue info banner should be visible explaining web access */}
               {/* EXPECTED: Banner should display icon, bold heading, and feature description */}
               <div className="web-app-hint">
                 <div className="hint-icon">ℹ️</div>
                 <div className="hint-content">
-                  <strong>Access PulseLink Web anytime:</strong> Visit web.pulselink.app from any browser to manage your contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
+                  <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
                 </div>
               </div>
               <div className="home-grid">

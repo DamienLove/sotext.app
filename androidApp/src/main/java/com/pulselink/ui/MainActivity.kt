@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -49,6 +51,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.PackageManagerCompat
 import androidx.core.content.UnusedAppRestrictionsConstants
+import androidx.compose.material3.FloatingActionButton
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -67,10 +70,12 @@ import com.google.android.gms.common.api.ApiException
 import com.pulselink.auth.AuthState
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.data.sms.MessageNotificationManager
+import com.pulselink.data.contacts.DeviceContact
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.LineInboxMode
 import com.pulselink.domain.model.LineSendPreference
+import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.R
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BetaTesterListScreen
@@ -105,12 +110,14 @@ import com.pulselink.ui.screens.SplashScreen
 import com.pulselink.ui.screens.SmsInboxScreen
 import com.pulselink.ui.screens.UnifiedHomeScreen
 import com.pulselink.ui.screens.SmsThreadScreen
+import com.pulselink.ui.screens.NewMessageScreen
 import com.pulselink.ui.screens.VisualSettingsScreen
 import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.state.LoginViewModel
 import com.pulselink.ui.state.ContactConversationViewModel
 import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.MainViewModel.CallInitiationResult
+import com.pulselink.ui.state.DeviceContactsViewModel
 import com.pulselink.ui.state.SmsInboxViewModel
 import com.pulselink.ui.state.SmsLinesViewModel
 import com.pulselink.ui.state.SmsThreadViewModel
@@ -118,6 +125,7 @@ import com.pulselink.ui.state.PublicProfile
 import com.pulselink.ui.theme.PulseLinkTheme
 import com.pulselink.util.VibrationPatterns
 import com.pulselink.util.normalizeSmsAddress
+import com.pulselink.util.parseColorOr
 import com.pulselink.ui.BeaconInboxActivity
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -165,6 +173,14 @@ import com.pulselink.util.UnifiedLauncherManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import com.pulselink.util.splitSmsDisplayAddress
+
+private fun checkContactsPermission(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.READ_CONTACTS
+    ) == PackageManager.PERMISSION_GRANTED
+
+private fun normalizePhone(input: String): String = input.filter { it.isDigit() }
 
 private data class BeaconAssistState(
     val iconEnabled: Boolean = false,
@@ -941,6 +957,7 @@ class MainActivity : AppCompatActivity() {
                             brandName = pulseDisplayName,
                             isPremium = isPremium,
                             isPro = isPro,
+                            onComposeMessage = { navController.navigate("sms/new") },
                             onOpenThread = { thread ->
                                 val lineSuffix = thread.lineId?.let { Uri.encode(it) }.orEmpty()
                                 navController.navigate(
@@ -1796,6 +1813,21 @@ class MainActivity : AppCompatActivity() {
                             isPremium = isPremium,
                             isPro = isPro,
                             isUnifiedMode = unifiedModeActive,
+                            floatingActionButton = {
+                                FloatingActionButton(
+                                    onClick = { navController.navigate("sms/new") },
+                                    containerColor = parseColorOr(
+                                        MaterialTheme.colorScheme.primary,
+                                        state.settings.themePreferences.primaryColor
+                                    ),
+                                    contentColor = parseColorOr(
+                                        MaterialTheme.colorScheme.onPrimary,
+                                        state.settings.themePreferences.onBubbleOutgoing
+                                    )
+                                ) {
+                                    Icon(Icons.Filled.Edit, contentDescription = "New message")
+                                }
+                            },
                             banner = {
                                 if (!notificationsEnabled || notificationsSilent) {
                                     Surface(
@@ -1836,6 +1868,73 @@ class MainActivity : AppCompatActivity() {
                                     }
                                 }
                             }
+                        )
+                    }
+                    composable("sms/new") {
+                        val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
+                        val deviceContacts: List<DeviceContact> by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
+                        var hasContactsPermission by remember { mutableStateOf(checkContactsPermission(context)) }
+                        val contactsPermissionLauncher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.RequestPermission()
+                        ) { granted ->
+                            hasContactsPermission = granted
+                            if (granted) deviceContactsViewModel.refresh()
+                        }
+                        LaunchedEffect(hasContactsPermission) {
+                            if (hasContactsPermission) deviceContactsViewModel.refresh()
+                        }
+                        val recipients = remember(state.contacts, deviceContacts) {
+                            val trustedRecipients = state.contacts.flatMap { contact ->
+                                val phones = (listOf(contact.phoneNumber) + contact.additionalPhones)
+                                    .map { it.trim() }
+                                    .filter { it.isNotBlank() }
+                                phones.mapIndexed { index, phone ->
+                                    MessageRecipient(
+                                        id = (contact.id * 10_000L) + index,
+                                        displayName = contact.displayName,
+                                        phoneNumber = phone,
+                                        isTrusted = true
+                                    )
+                                }
+                            }
+                            val trustedNumbers = trustedRecipients.map { normalizePhone(it.phoneNumber) }.toSet()
+                            val deviceRecipients = deviceContacts.map { device ->
+                                MessageRecipient(
+                                    id = -device.id,
+                                    displayName = device.displayName.ifBlank { device.phoneNumber },
+                                    phoneNumber = device.phoneNumber,
+                                    isTrusted = false
+                                )
+                            }.filter { normalizePhone(it.phoneNumber) !in trustedNumbers }
+                            (trustedRecipients + deviceRecipients)
+                                .distinctBy { normalizePhone(it.phoneNumber) }
+                                .sortedWith(
+                                    compareByDescending<MessageRecipient> { it.isTrusted }
+                                        .thenBy { it.displayName.lowercase() }
+                                )
+                        }
+                        NewMessageScreen(
+                            contacts = recipients,
+                            onBack = { navController.popBackStack() },
+                            onCreateConversation = { selectedNumbers ->
+                                val numbers = selectedNumbers
+                                    .map { it.trim() }
+                                    .filter { it.isNotBlank() }
+                                if (numbers.isNotEmpty()) {
+                                    val address = numbers.joinToString(";")
+                                    navController.navigate("sms/thread/0/${Uri.encode(address)}")
+                                }
+                            },
+                            onManualInput = { manual ->
+                                if (manual.isNotBlank()) {
+                                    navController.navigate("sms/thread/0/${Uri.encode(manual)}")
+                                }
+                            },
+                            hasContactsPermission = hasContactsPermission,
+                            onRequestContactsPermission = {
+                                contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                            },
+                            theme = state.settings.themePreferences
                         )
                     }
                     composable(

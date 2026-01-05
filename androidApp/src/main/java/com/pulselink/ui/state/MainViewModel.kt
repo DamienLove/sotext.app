@@ -83,6 +83,10 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val workManager = WorkManager.getInstance(context)
+    private fun triggerWebSync(reason: String) {
+        val request = OneTimeWorkRequest.Builder(com.pulselink.data.sms.SmsSyncWorker::class.java).build()
+        workManager.enqueueUniqueWork("SmsSync-$reason", ExistingWorkPolicy.REPLACE, request)
+    }
 
     private val _deleteAccountState = MutableStateFlow<DeleteAccountState>(DeleteAccountState.Idle)
     val deleteAccountState: StateFlow<DeleteAccountState> = _deleteAccountState
@@ -114,6 +118,8 @@ class MainViewModel @Inject constructor(
             pruneLocalUnreachable()
         }
         viewModelScope.launch {
+            var lastRemoteWebEnabled = false
+            var lastPremium = false
             settingsRepository.settings.collect { settings ->
                 val user = firebaseAuthManager.currentUser()
                 if (user != null && !user.isAnonymous) {
@@ -122,7 +128,12 @@ class MainViewModel @Inject constructor(
                         "proUnlocked" to settings.proUnlocked
                     )
                     pushSettingsToCloud(user, payload)
+                    if (settings.remoteWebAccessEnabled && (!lastRemoteWebEnabled || settings.premiumUnlocked != lastPremium)) {
+                        triggerWebSync("SettingsChange")
+                    }
                 }
+                lastRemoteWebEnabled = settings.remoteWebAccessEnabled
+                lastPremium = settings.premiumUnlocked
             }
         }
         viewModelScope.launch {
@@ -178,6 +189,10 @@ class MainViewModel @Inject constructor(
                     syncContactsFromCloud(user)
                     linkManager.syncLinksOnLogin()
                     startRemoteSettingsListener(user)
+                    val settings = settingsRepository.settings.first()
+                    if (settings.remoteWebAccessEnabled) {
+                        triggerWebSync("Login")
+                    }
                     val currentPhone = user.phoneNumber
                     val currentEmail = user.email
                     if (currentPhone != lastKnownPhone || currentEmail != lastKnownEmail) {
