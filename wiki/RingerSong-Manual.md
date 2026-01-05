@@ -1,38 +1,44 @@
 # RingerSong Manual
 
-**RingerSong** combines premium audio customization with advanced caller protection.
+**RingerSong** is a free add-on that brings a "Progressive Ringer" experience to your device using your existing streaming subscriptions.
 
 ---
 
-## 🎵 Progressive Ringtones (Spotify)
+## 🎵 Spotify Progressive Ringtones
 
-Use your **Spotify Premium** account to set tracks as gradually increasing ringtones or alarms.
+Use your **Spotify Premium** account to turn your favorite songs into dynamic ringtones that evolve as your phone rings.
 
-1.  **Connect Account:** In RingerSong Settings, tap **Connect Spotify** and log in with your Premium credentials.
-2.  **Select Track:** Browse your playlists or search for a song within RingerSong.
-3.  **Set as Ringtone:** Tap the "Set as Ringtone" or "Set as Alarm" button.
-4.  **How it Works:** When your phone rings, RingerSong streams the track, starting quietly and gradually increasing in volume.
+### The Progressive Logic
+Unlike standard ringtones that loop the same segment, RingerSong plays through your selected track in **30-second increments**:
+1.  **Ring 1-3 (approx):** Plays 0:00 - 0:30 of the song.
+2.  **Continued Ringing:** Moves to 0:30 - 1:00.
+3.  **Extended Ringing:** Continues through the 2nd minute, 3rd minute, etc., until the song ends or the call is handled.
+
+### Setup
+1.  **Connect Spotify:** In RingerSong, navigate to Settings and connect your **Spotify Premium** account.
+2.  **Select a Track:** Use the search feature to find any song in the Spotify library.
+3.  **Set as Progressive Ringer:** Tap the "Set as Ringer" button.
+4.  **No Downloads:** RingerSong streams these segments directly—it does not download files or modify music metadata.
 
 ---
 
 ## 🛡️ Caller ID & Spam Block
 
-RingerSong integrates with Truecaller to screen incoming calls.
+RingerSong includes built-in caller protection.
 
 ### Setup
 1.  Go to **Settings > Caller ID**.
 2.  Enable **Truecaller Integration**.
-3.  Grant **Phone State** and **Call Log** permissions.
+3.  Grant the required phone and overlay permissions.
 
 ### Features
-*   **Live ID:** See names for unknown numbers as they call.
-*   **Spam Warning:** Red overlay warns of reported spammers.
-*   **Lookup:** Manually search numbers in the app to identify them.
+*   **Live ID:** Real-time name display for unknown callers.
+*   **Spam Alert:** Red warning overlay for reported spam numbers.
+*   **Call Log:** Metadata and identification for your recent history.
 
 ---
 
-## 📂 Local Library
-
-*   **Scan:** Automatically finds MP3s on your device.
-*   **Tag Editor:** Fix incorrect Artist/Title metadata.
-*   **Playlists:** Organize your local files into custom playlists.
+## 💡 Important Notes
+*   **Free App:** RingerSong is a free utility and does not require any additional purchases.
+*   **Streaming Only:** A stable internet connection and a valid Spotify Premium subscription are required for the progressive ringer to function.
+*   **Simple & Fun:** This is a fun add-on meant to enhance your phone's personality—no complex playlist management or file editing required.

@@ -13,7 +13,7 @@ Welcome to the **PulseLink** ecosystem—a family of next-generation safety and 
 | **PulseLink Beacon** | `free` | The essential safety app & default SMS handler. Ad-supported. Features Google Assistant integration, Emergency Alerts, Check-Ins, and a unified messaging inbox. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)]() |
 | **PulseLink Pro** | `pro` | The ad-free, definitive safety experience. Unlocks advanced SMS/MMS features, visual customization, and priority support. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)]() |
 | **PulseLink Premium** | `subscription` | The ultimate suite. Adds cloud-powered features: AI Assist (Context-aware DND override, smart replies), Remote Web Portal access via `app.damiennichols.com` or `pulselink.damiennichols.com`, and Caller ID screening. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)]() |
-| **RingerSong** | `RingerSong` | Advanced Audio Utility. Use your Spotify Premium account to create progressive ringtones and alarms. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Coming_Soon-grey?logo=google-play)]() |
+| **RingerSong** | `RingerSong` | Free Audio Add-on. Use your Spotify Premium account to set tracks as "Progressive Ringtones" that play through your favorite songs while you wait to pick up. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Coming_Soon-grey?logo=google-play)]() |
 
 ---
 
@@ -30,9 +30,9 @@ Welcome to the **PulseLink** ecosystem—a family of next-generation safety and 
 *   **Web Portal (Premium):** Access your messages, location, and safety status remotely from `app.damiennichols.com` or `pulselink.damiennichols.com`.
 
 ### RingerSong (Media & Utility)
-*   **Progressive Ringtones:** Connect your Spotify Premium account to set tracks as gradually increasing alarms or ringtones.
+*   **Progressive Ringtones:** Connect your Spotify Premium account to set tracks as ringtones. When someone calls, the song plays through its entire duration in sequential 30-second blocks (0-30s, then 30-60s, etc.) until you answer or the call ends.
 *   **Smart Caller ID:** Identify unknown numbers and block spam using advanced lookup integrations (Truecaller).
-*   **Local Library:** Robust management for your MP3 collection with tag editing and playlist creation.
+*   **Free Add-on:** A simple, fun utility to spice up your incoming calls using the music you already pay for.
 
 ---
 
@@ -52,7 +52,7 @@ Welcome to the **PulseLink** ecosystem—a family of next-generation safety and 
 Explore our [Wiki](wiki/) for detailed guides:
 
 *   [**PulseLink User Guide**](wiki/PulseLink-User-Guide.md): Setup, Assistant Triggers, and Trusted Contacts.
-*   [**RingerSong User Guide**](wiki/RingerSong-Manual.md): Spotify Integration and Caller ID setup.
+*   [**RingerSong Manual**](wiki/RingerSong-Manual.md): Spotify Progressive Ringer setup.
 *   [**Edition Comparison**](wiki/Pro-vs-Premium.md): Understand the differences between Free, Pro, and Premium.
 *   [**Troubleshooting**](wiki/Troubleshooting.md): Permissions, Battery Optimization, and DND issues.
 
