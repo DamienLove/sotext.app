@@ -36,7 +36,9 @@
       "Bash(claude plugin install:*)",
       "Bash(git grep:*)",
       "Bash(gh label:*)",
-      "Bash(gh issue edit:*)"
+      "Bash(gh issue edit:*)",
+      "Bash(gh pr close:*)",
+      "Bash(gh pr list:*)"
     ]
   },
   "mcpServers": {
