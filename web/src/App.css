@@ -1217,6 +1217,15 @@
   background: transparent;
 }
 
+.ghost-btn.icon-only {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .login-card {
   max-width: 520px;
   padding: 44px 42px;
