@@ -170,36 +170,6 @@ fun SettingsScreen(
                 )
             }
 
-            // General
-            CollapsibleSettingsSection(
-                title = "General",
-                initiallyExpanded = false
-            ) {
-                SettingsToggleRow(
-                    title = "Share location in alerts",
-                    subtitle = null,
-                    checked = settings.includeLocation,
-                    onCheckedChange = onToggleIncludeLocation
-                )
-                SettingsToggleRow(
-                    title = "Crash Detection",
-                    subtitle = if (BuildConfig.CRASH_DETECTION_ENABLED) {
-                        "Alert trusted contacts if a vehicle crash is detected."
-                    } else {
-                        "Temporarily disabled while we finish review materials."
-                    },
-                    checked = settings.crashDetectionEnabled && BuildConfig.CRASH_DETECTION_ENABLED,
-                    enabled = BuildConfig.CRASH_DETECTION_ENABLED,
-                    onCheckedChange = onToggleCrashDetection
-                )
-                SettingsToggleRow(
-                    title = "Auto-allow remote sound change",
-                    subtitle = null,
-                    checked = settings.autoAllowRemoteSoundChange,
-                    onCheckedChange = onToggleAutoAllowRemoteSoundChange
-                )
-            }
-
             // Delivery & permissions
             CollapsibleSettingsSection(
                 title = "Delivery & permissions",
@@ -252,6 +222,12 @@ fun SettingsScreen(
                     checked = settings.emailFallbackEnabled,
                     onCheckedChange = onToggleEmailFallback
                 )
+                SettingsToggleRow(
+                    title = "Auto-allow remote sound change",
+                    subtitle = null,
+                    checked = settings.autoAllowRemoteSoundChange,
+                    onCheckedChange = onToggleAutoAllowRemoteSoundChange
+                )
             }
 
             // Permissions & System
@@ -259,6 +235,23 @@ fun SettingsScreen(
                 title = "Permissions & System",
                 initiallyExpanded = false
             ) {
+                SettingsToggleRow(
+                    title = "Share location in alerts",
+                    subtitle = null,
+                    checked = settings.includeLocation,
+                    onCheckedChange = onToggleIncludeLocation
+                )
+                SettingsToggleRow(
+                    title = "Crash Detection",
+                    subtitle = if (BuildConfig.CRASH_DETECTION_ENABLED) {
+                        "Alert trusted contacts if a vehicle crash is detected."
+                    } else {
+                        "Temporarily disabled while we finish review materials."
+                    },
+                    checked = settings.crashDetectionEnabled && BuildConfig.CRASH_DETECTION_ENABLED,
+                    enabled = BuildConfig.CRASH_DETECTION_ENABLED,
+                    onCheckedChange = onToggleCrashDetection
+                )
                 SettingsActionRow(
                     title = stringResource(R.string.permission_battery_opt_title),
                     subtitle = null,

@@ -64,8 +64,7 @@ object UnifiedLauncherManager {
             enable(pm, main)
             enable(pm, pulseLinkLauncher)
             enable(pm, inbox)
-            // Re-enable Beacon launchers so the icon returns when unified is off
-            beaconVariants.forEach { enable(pm, it) }
+            // Beacon variants are managed by BeaconIconManager based on user's theme selection
             unifiedTargets.values.forEach { disable(pm, it) }
             // Inbox launcher follows its existing runtime flag elsewhere; leave it untouched
         }

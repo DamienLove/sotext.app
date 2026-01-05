@@ -1445,7 +1445,10 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) {
+    const isPremiumUser = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
+    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
+
+    if (!user || !isPremiumUser || !hasRemoteAccess) {
       setDeviceContacts([]);
       return;
     }
@@ -1459,11 +1462,14 @@ function App() {
       setDeviceContacts(items);
     });
     return () => unsubscribe();
-  }, [user]);
+  }, [user, userData, remoteSettings.remoteWebAccessEnabled]);
 
   useEffect(() => {
-    if (user) {
-      // Listen to threads
+    const isPremiumUser = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
+    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
+
+    if (user && isPremiumUser && hasRemoteAccess) {
+      // Listen to threads only if user has premium and remote web access enabled
       // Assuming structure: users/{uid}/synced_threads/{threadId}
       const threadsRef = collection(db, "users", user.uid, "synced_threads");
       const q = query(threadsRef, orderBy("date", "desc"));
@@ -1478,7 +1484,7 @@ function App() {
     } else {
       setThreads([]);
     }
-  }, [user]);
+  }, [user, userData, remoteSettings.remoteWebAccessEnabled]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -1501,8 +1507,11 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (user && selectedThread) {
-      // Listen to messages
+    const isPremiumUser = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
+    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
+
+    if (user && selectedThread && isPremiumUser && hasRemoteAccess) {
+      // Listen to messages only if user has premium and remote web access enabled
       const messagesRef = collection(db, "users", user.uid, "synced_threads", selectedThread.id, "messages");
       const q = query(messagesRef, orderBy("date", "asc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -1516,7 +1525,7 @@ function App() {
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread]);
+  }, [user, selectedThread, userData, remoteSettings.remoteWebAccessEnabled]);
 
   useEffect(() => {
     if (selectedThread?.address) {
