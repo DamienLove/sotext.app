@@ -98,6 +98,7 @@ import com.pulselink.util.VibrationPatterns
 import com.pulselink.util.formatTimestamp
 import com.pulselink.util.hashPin
 import com.pulselink.util.parseColorOr
+import com.pulselink.util.sendAttachmentViaSms
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -692,6 +693,10 @@ class BeaconInboxActivity : ComponentActivity() {
                                         hasContactsPermission = hasContactsPermission,
                                         onRequestContactsPermission = {
                                             contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                                        },
+                                        onSendAttachment = { numbers, uri ->
+                                            val address = numbers.joinToString(";")
+                                            sendAttachmentViaSms(this@BeaconInboxActivity, address, uri)
                                         },
                                         theme = state.settings.themePreferences
                                     )

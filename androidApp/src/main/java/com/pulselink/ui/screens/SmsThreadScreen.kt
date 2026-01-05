@@ -80,12 +80,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.widget.Toast
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.pulselink.data.sms.SmsMessageItem
@@ -97,6 +93,7 @@ import com.pulselink.ui.components.ThemeIcon
 import com.pulselink.ui.components.ThemeIconKey
 import com.pulselink.ui.state.AiComposeState
 import com.pulselink.ui.state.AiSummaryState
+import com.pulselink.util.sendAttachmentViaSms
 import com.pulselink.util.parseColorOr
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -131,6 +128,8 @@ fun SmsThreadScreen(
     onClearCompose: () -> Unit = {},
     aiSummaryEnabled: Boolean = false,
     aiComposeEnabled: Boolean = false,
+    aiSignInRequired: Boolean = false,
+    onRequestAiSignIn: () -> Unit = {},
     onLoadMore: () -> Unit = {},
     hasMoreToLoad: Boolean = true
 ) {
@@ -204,6 +203,8 @@ fun SmsThreadScreen(
                 onPickAttachment = { attachmentPicker.launch("*/*") },
                 lineStatus = lineStatus,
                 aiEnabled = aiComposeEnabled,
+                aiSignInRequired = aiSignInRequired,
+                onRequestAiSignIn = onRequestAiSignIn,
                 aiState = aiComposeState,
                 onAiAction = { action ->
                     onRequestCompose(action, draft, lastInbound)
@@ -480,6 +481,8 @@ private fun MessageInput(
     onPickAttachment: () -> Unit,
     lineStatus: Map<String, Boolean>,
     aiEnabled: Boolean,
+    aiSignInRequired: Boolean,
+    onRequestAiSignIn: () -> Unit,
     aiState: AiComposeState,
     onAiAction: (AiComposeAction) -> Unit
 ) {
@@ -502,6 +505,23 @@ private fun MessageInput(
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            if (aiSignInRequired) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Sign in to use AI assist",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = onSurface
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    OutlinedButton(onClick = onRequestAiSignIn) {
+                        Text("Sign in")
+                    }
+                }
+            }
             if (aiEnabled) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1039,39 +1059,3 @@ private fun LineStatusDot(
     )
 }
 
-private fun sendAttachmentViaSms(
-    context: Context,
-    address: String,
-    uri: Uri
-) {
-    val mimeType = context.contentResolver.getType(uri) ?: "*/*"
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = mimeType
-        data = Uri.parse("smsto:$address")
-        putExtra(Intent.EXTRA_STREAM, uri)
-        putExtra("address", address)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-
-    val resolved = context.packageManager.queryIntentActivities(
-        intent,
-        PackageManager.MATCH_DEFAULT_ONLY
-    )
-    resolved.forEach { resolveInfo ->
-        context.grantUriPermission(
-            resolveInfo.activityInfo.packageName,
-            uri,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION
-        )
-    }
-
-    try {
-        context.startActivity(Intent.createChooser(intent, "Send attachment via SMS/MMS"))
-    } catch (e: ActivityNotFoundException) {
-        Toast.makeText(
-            context,
-            "No messaging app found to send attachments",
-            Toast.LENGTH_LONG
-        ).show()
-    }
-}

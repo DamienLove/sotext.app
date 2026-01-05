@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2026-01-05: v119 release — new-message composer now supports attachments (attach button, SMS/MMS intent); AI assist shows sign-in CTA and is gated to authenticated users; unified inbox adds filter chips for 2-step/Trusted/Favorites/Private/Contacts with contacts tab listing device + trusted contacts; free/pro AABs built (disposable_aabs/androidApp-*-release-v119.aab via bundleFreeRelease/bundleProRelease) ready for Play upload (internal → beta → production); web rebuilt and deployed to Firebase Hosting.
 - 2026-01-05: v117 release — bug report button now opens https://damiennichols.com/report-bug/ in-app; added public ToS + Privacy pages to hosting; built free/pro AABs (disposable_aabs/androidApp-*-release-v117.aab), uploaded to Play internal → beta/open → production, review resubmitted; web rebuilt and deployed.
 - 2026-01-05: v118 release — added new message FAB + compose flow to unified home and SMS inbox; refreshed Beacon header logo tint; web banner now references damiennichols.com domains only; forced web-sync trigger on login/premium change; free/pro AABs (disposable_aabs/androidApp-*-release-v118.aab) uploaded to Play internal → beta/open → production and submitted; web rebuilt/deployed.
 - 2026-01-04: v116 release — same payload as v115 (unified launcher → unified home, hide other launchers; home Tones/Themes navigation fixed; remote web sync on enable) rebuilt after prior upload timeouts. Free/pro AABs (disposable_aabs/androidApp-*-release-v116.aab) uploaded to Play internal → open testing → production, review resubmitted.
@@ -78,7 +79,8 @@ Current SMS features
 - Inbox/thread UI with live refresh + contact resolution; time-format preference.
 
 Outstanding (carry-over for next session)
- - GitHub comments/issue updates blocked: need a GitHub token with `repo` scope to post “verify fixed v118” comments and close items. Resume here when token available.
+ - GitHub comments updated with PAT: posted v119 verify-fixed comments and closed #433, #434, #435, #436, #437, #438. Track any remaining web banner / forced web-sync items if separate issue IDs appear.
+ - Env note: CODEX_GITHUB_PERSONAL_ACCESS_TOKEN is saved at the user level without angle brackets; restart PowerShell/Codex sessions to inherit it and avoid wrapping the PAT in < >.
  - Beacon free: handle default-SMS role result callback UX, improve permission rationale, add contact avatars, interstitial trigger points, and run lint/unit tests once finalized. Consider launcher/icon entry to inbox from PulseLink home per request.
  - Beacon MMS: current CarrierMessagingService is a stub (immediate OK); implement real carrier-grade MMS download/send pipeline and verify with device/carrier.
 - SMS: Add MMS send/receive UI + compliance tests; enhance inbox with unread badges, delete/archive, and better date formatting; consider content observer cleanup.

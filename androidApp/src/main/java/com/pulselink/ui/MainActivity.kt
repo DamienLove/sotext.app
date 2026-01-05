@@ -75,7 +75,6 @@ import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.LineInboxMode
 import com.pulselink.domain.model.LineSendPreference
-import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.R
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BetaTesterListScreen
@@ -123,6 +122,7 @@ import com.pulselink.ui.state.SmsLinesViewModel
 import com.pulselink.ui.state.SmsThreadViewModel
 import com.pulselink.ui.state.PublicProfile
 import com.pulselink.ui.theme.PulseLinkTheme
+import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.util.VibrationPatterns
 import com.pulselink.util.normalizeSmsAddress
 import com.pulselink.util.parseColorOr
@@ -173,6 +173,7 @@ import com.pulselink.util.UnifiedLauncherManager
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import com.pulselink.util.splitSmsDisplayAddress
+import com.pulselink.util.sendAttachmentViaSms
 
 private fun checkContactsPermission(context: Context): Boolean =
     ContextCompat.checkSelfPermission(
@@ -1735,6 +1736,17 @@ class MainActivity : AppCompatActivity() {
                         val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
                         val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
                         val inboxBusy by smsInboxViewModel.isDatabaseBusy.collectAsStateWithLifecycle()
+                        val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
+                        val deviceContacts by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
+                        var hasContactsPermission by remember { mutableStateOf(checkContactsPermission(context)) }
+                        val contactsPermissionLauncher = rememberLauncherForActivityResult(
+                            contract = ActivityResultContracts.RequestPermission()
+                        ) { granted ->
+                            hasContactsPermission = granted
+                            if (granted) {
+                                deviceContactsViewModel.refresh()
+                            }
+                        }
                         val contactsByNumber = remember(state.contacts) {
                             val map = mutableMapOf<String, Contact>()
                             state.contacts.forEach { contact ->
@@ -1744,6 +1756,39 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                             map.toMap()
+                        }
+                        LaunchedEffect(hasContactsPermission) {
+                            if (hasContactsPermission) deviceContactsViewModel.refresh()
+                        }
+                        val contactRecipients = remember(state.contacts, deviceContacts) {
+                            val trustedRecipients = state.contacts.flatMap { contact ->
+                                val phones = (listOf(contact.phoneNumber) + contact.additionalPhones)
+                                    .map { it.trim() }
+                                    .filter { it.isNotBlank() }
+                                phones.mapIndexed { index, phone ->
+                                    MessageRecipient(
+                                        id = (contact.id * 10_000L) + index,
+                                        displayName = contact.displayName,
+                                        phoneNumber = phone,
+                                        isTrusted = true
+                                    )
+                                }
+                            }
+                            val trustedNumbers = trustedRecipients.map { normalizePhone(it.phoneNumber) }.toSet()
+                            val deviceRecipients = deviceContacts.map { device ->
+                                MessageRecipient(
+                                    id = -device.id,
+                                    displayName = device.displayName.ifBlank { device.phoneNumber },
+                                    phoneNumber = device.phoneNumber,
+                                    isTrusted = false
+                                )
+                            }.filter { normalizePhone(it.phoneNumber) !in trustedNumbers }
+                            (trustedRecipients + deviceRecipients)
+                                .distinctBy { normalizePhone(it.phoneNumber) }
+                                .sortedWith(
+                                    compareByDescending<MessageRecipient> { it.isTrusted }
+                                        .thenBy { it.displayName.lowercase() }
+                                )
                         }
                         val lifecycleOwner = LocalLifecycleOwner.current
                         var notificationsEnabled by remember {
@@ -1810,6 +1855,11 @@ class MainActivity : AppCompatActivity() {
                             onImportAll = { smsInboxViewModel.importAllMessages() },
                             isDatabaseBusy = inboxBusy,
                             contactsByNumber = contactsByNumber,
+                            contactRecipients = contactRecipients,
+                            hasContactsPermission = hasContactsPermission,
+                            onRequestContactsPermission = {
+                                contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                            },
                             isPremium = isPremium,
                             isPro = isPro,
                             isUnifiedMode = unifiedModeActive,
@@ -1934,6 +1984,10 @@ class MainActivity : AppCompatActivity() {
                             onRequestContactsPermission = {
                                 contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
                             },
+                            onSendAttachment = { numbers, uri ->
+                                val address = numbers.joinToString(";")
+                                sendAttachmentViaSms(context, address, uri)
+                            },
                             theme = state.settings.themePreferences
                         )
                     }
@@ -1960,6 +2014,7 @@ class MainActivity : AppCompatActivity() {
                         val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
                         val decodedAddress = Uri.decode(address)
                         val premiumActive = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
+                        val isAuthenticated = authState is AuthState.Authenticated
                         val threadLineId = lineId ?: deviceLineId
                         val threadKey = "${threadLineId ?: deviceLineId}:$threadId"
                         val fallbackLineId = defaultSendLineId ?: threadLineId ?: deviceLineId
@@ -2026,7 +2081,9 @@ class MainActivity : AppCompatActivity() {
                             },
                             onClearCompose = { threadViewModel.clearCompose() },
                             aiSummaryEnabled = premiumActive && state.settings.aiSummariesEnabled,
-                            aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled
+                            aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled && isAuthenticated,
+                            aiSignInRequired = !isAuthenticated,
+                            onRequestAiSignIn = { navController.navigate("login") }
                         )
                     }
                     composable("settings_help") {

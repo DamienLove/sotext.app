@@ -106,6 +106,7 @@ import com.pulselink.util.ensureReadableOnColor
 import com.pulselink.util.splitSmsDisplayAddress
 import com.pulselink.ui.state.SearchResultState
 import com.pulselink.data.sms.SmsMessageItem
+import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.ui.branding.beaconBrandName
 import com.pulselink.ui.branding.brandLogoRes
 import com.pulselink.ui.branding.unifiedBrandName
@@ -137,6 +138,9 @@ fun SmsInboxScreen(
     banner: @Composable () -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
     contactsByNumber: Map<String, Contact> = emptyMap(),
+    contactRecipients: List<MessageRecipient> = emptyList(),
+    hasContactsPermission: Boolean = true,
+    onRequestContactsPermission: () -> Unit = {},
     showSearchBar: Boolean = false,
     searchState: SearchResultState = SearchResultState.Idle,
     onSearch: (String) -> Unit = {},
@@ -192,14 +196,13 @@ fun SmsInboxScreen(
     val filtered = remember(filter, gatedThreads, gatedArchivedThreads, privateThreadIds, showPrivateOnly) {
         val base = when (filter) {
             InboxFilter.ARCHIVED -> gatedArchivedThreads
-            InboxFilter.ALL -> gatedThreads
             else -> gatedThreads
         }
         val source = base.filter { thread ->
             val isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId)
             if (showPrivateOnly) isPrivate else !isPrivate
         }
-        val otpFiltered = if (hideOtpInAll) {
+        val otpFiltered = if (hideOtpInAll && filter == InboxFilter.ALL) {
             source.filterNot { it.isOtp }
         } else {
             source
@@ -207,11 +210,24 @@ fun SmsInboxScreen(
         otpFiltered.filter { thread ->
             when (filter) {
                 InboxFilter.ALL -> true
+                InboxFilter.OTP -> thread.isOtp
+                InboxFilter.TRUSTED -> thread.isTrusted
+                InboxFilter.FAVORITES -> thread.isFavorite
+                InboxFilter.PRIVATE -> thread.isPrivate || privateThreadIds.contains(thread.threadId)
+                InboxFilter.CONTACTS -> false
                 InboxFilter.READ -> !thread.unread
                 InboxFilter.UNREAD -> thread.unread
                 InboxFilter.ARCHIVED -> true
             }
         }
+    }
+    val contactList = remember(contactRecipients) {
+        contactRecipients
+            .distinctBy { normalizeSmsAddress(it.phoneNumber) }
+            .sortedWith(
+                compareByDescending<MessageRecipient> { it.isTrusted }
+                    .thenBy { it.displayName.lowercase() }
+            )
     }
     val showImportAll = filter == InboxFilter.ALL &&
         localDeviceId != null &&
@@ -544,13 +560,14 @@ fun SmsInboxScreen(
                     color = onBackgroundColor
                 )
             }
-            val unreadCount = remember(threads) { threads.count { it.unread } }
+            val unreadCount = remember(threads) { threads.count { it.unread } } 
             if (showFilterTabs) {
                 TabsRow(
                     filter = filter,
                     unreadCount = unreadCount,
                     onFilterChange = { filter = it },
-                    theme = theme
+                    theme = theme,
+                    isUnifiedMode = isUnifiedMode
                 )
             }
 
@@ -559,94 +576,135 @@ fun SmsInboxScreen(
                 contentPadding = PaddingValues(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (filtered.isEmpty()) {
-                    if (showSkeletons) {
-                        items(6) {
-                            ThreadRowSkeleton(theme = theme)
+                if (filter == InboxFilter.CONTACTS) {
+                    if (!hasContactsPermission) {
+                        item {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    "Allow contacts access to see your device contacts here.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground)
+                                )
+                                OutlinedButton(onClick = onRequestContactsPermission) {
+                                    Text("Allow contacts")
+                                }
+                            }
                         }
-                    } else {
+                    } else if (contactList.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier.fillParentMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.alpha(0.6f)
+                                Text(
+                                    "No contacts yet.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBackground)
+                                )
+                            }
+                        }
+                    } else {
+                        items(contactList, key = { it.id }) { recipient ->
+                            ContactRecipientRow(
+                                recipient = recipient,
+                                theme = theme,
+                                onClick = { onOpenThreadById(0L, recipient.phoneNumber) }
+                            )
+                        }
+                    }
+                } else {
+                    if (filtered.isEmpty()) {
+                        if (showSkeletons) {
+                            items(6) {
+                                ThreadRowSkeleton(theme = theme)
+                            }
+                        } else {
+                            item {
+                                Box(
+                                    modifier = Modifier.fillParentMaxSize(),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    ThemeIcon(
-                                        iconKey = ThemeIconKey.INBOX,
-                                        theme = theme,
-                                        imageVector = Icons.Filled.Inbox,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(largeIconSize),
-                                        tint = parseColorOr(
-                                            MaterialTheme.colorScheme.onSurfaceVariant,
-                                            theme.onBackground
-                                        )
-                                    )
-                                    Text(
-                                        text = "No messages here yet.",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = parseColorOr(
-                                            MaterialTheme.colorScheme.onSurfaceVariant,
-                                            theme.onBackground
-                                        )
-                                    )
-                                    if (showImportAll) {
-                                        OutlinedButton(onClick = onImportAll) {
-                                            ThemeIcon(
-                                                iconKey = ThemeIconKey.REFRESH,
-                                                theme = theme,
-                                                imageVector = Icons.Filled.Refresh,
-                                                contentDescription = null
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.alpha(0.6f)
+                                    ) {
+                                        ThemeIcon(
+                                            iconKey = ThemeIconKey.INBOX,
+                                            theme = theme,
+                                            imageVector = Icons.Filled.Inbox,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(largeIconSize),
+                                            tint = parseColorOr(
+                                                MaterialTheme.colorScheme.onSurfaceVariant,
+                                                theme.onBackground
                                             )
-                                            Text("Import all messages", modifier = Modifier.padding(start = 6.dp))
+                                        )
+                                        Text(
+                                            text = "No messages here yet.",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = parseColorOr(
+                                                MaterialTheme.colorScheme.onSurfaceVariant,
+                                                theme.onBackground
+                                            )
+                                        )
+                                        if (showImportAll) {
+                                            OutlinedButton(onClick = onImportAll) {
+                                                ThemeIcon(
+                                                    iconKey = ThemeIconKey.REFRESH,
+                                                    theme = theme,
+                                                    imageVector = Icons.Filled.Refresh,
+                                                    contentDescription = null
+                                                )
+                                                Text("Import all messages", modifier = Modifier.padding(start = 6.dp))
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                if (filtered.isNotEmpty()) {
-                    items(filtered, key = { threadKey(it) }) { thread ->
-                        val lineIndex = thread.lineId?.let { lineIndexMap[it] }
-                        val isLocalLine = localDeviceId == null ||
-                            thread.lineId.isNullOrBlank() ||
-                            thread.lineId == localDeviceId
-                        val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
-                        ThreadRow(
-                            thread = thread,
-                            onOpen = onOpenThread,
-                            onAvatarClick = onOpenContactForThread,
-                            onArchive = onArchiveThread,
-                            onUnarchive = onUnarchiveThread,
-                            onDelete = onDeleteThread,
-                            dateFormatter = dateFormatter,
-                            isArchived = archivedIds.contains(threadKey(thread)),
-                            isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
-                            onTogglePrivate = onTogglePrivate,
-                            theme = theme,
-                            contact = contact,
-                            lineIndex = lineIndex,
-                            lineColors = lineColors,
-                            lineCount = orderedLines.size,
-                            actionsEnabled = isLocalLine
-                        )
-                    }
-                    if (hasMoreToLoad && filtered.size >= 20) {
-                         item {
-                             Box(
-                                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                                 contentAlignment = Alignment.Center
-                             ) {
-                                 OutlinedButton(onClick = onLoadMore) {
-                                     Text("Load more conversations")
+                    if (filtered.isNotEmpty()) {
+                        items(filtered, key = { threadKey(it) }) { thread ->
+                            val lineIndex = thread.lineId?.let { lineIndexMap[it] }
+                            val isLocalLine = localDeviceId == null ||
+                                thread.lineId.isNullOrBlank() ||
+                                thread.lineId == localDeviceId
+                            val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
+                            ThreadRow(
+                                thread = thread,
+                                onOpen = onOpenThread,
+                                onAvatarClick = onOpenContactForThread,
+                                onArchive = onArchiveThread,
+                                onUnarchive = onUnarchiveThread,
+                                onDelete = onDeleteThread,
+                                dateFormatter = dateFormatter,
+                                isArchived = archivedIds.contains(threadKey(thread)),
+                                isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
+                                onTogglePrivate = onTogglePrivate,
+                                theme = theme,
+                                contact = contact,
+                                lineIndex = lineIndex,
+                                lineColors = lineColors,
+                                lineCount = orderedLines.size,
+                                actionsEnabled = isLocalLine
+                            )
+                        }
+                        if (hasMoreToLoad && filtered.size >= 20) {
+                             item {
+                                 Box(
+                                     modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                     contentAlignment = Alignment.Center
+                                 ) {
+                                     OutlinedButton(onClick = onLoadMore) {
+                                         Text("Load more conversations")
+                                     }
                                  }
                              }
-                         }
+                        }
                     }
                 }
             }
@@ -1105,11 +1163,63 @@ private fun SearchResults(
 private fun splitDisplay(address: String): Pair<String, String?> = splitSmsDisplayAddress(address)
 
 @Composable
+private fun ContactRecipientRow(
+    recipient: MessageRecipient,
+    theme: ThemePreferences,
+    onClick: () -> Unit
+) {
+    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val onBackground = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Surface(
+            color = primary.copy(alpha = 0.14f),
+            shape = CircleShape,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = recipient.displayName.firstOrNull()?.toString() ?: "#",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = primary
+                )
+            }
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = recipient.displayName,
+                style = MaterialTheme.typography.bodyLarge,
+                color = onBackground
+            )
+            Text(
+                text = recipient.phoneNumber,
+                style = MaterialTheme.typography.bodyMedium,
+                color = onBackground.copy(alpha = 0.7f)
+            )
+            if (recipient.isTrusted) {
+                Text(
+                    text = "Trusted",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun TabsRow(
     filter: InboxFilter,
     unreadCount: Int,
     onFilterChange: (InboxFilter) -> Unit,
-    theme: ThemePreferences
+    theme: ThemePreferences,
+    isUnifiedMode: Boolean
 ) {
     val scrollState = rememberScrollState()
     val unreadBadge = unreadCount.takeIf { it > 0 }?.toString()
@@ -1122,8 +1232,25 @@ private fun TabsRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TabText(label = "All Messages", selected = filter == InboxFilter.ALL, theme = theme) {
+        TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
             onFilterChange(InboxFilter.ALL)
+        }
+        if (isUnifiedMode) {
+            TabText(label = "2-step", selected = filter == InboxFilter.OTP, theme = theme) {
+                onFilterChange(InboxFilter.OTP)
+            }
+            TabText(label = "Trusted", selected = filter == InboxFilter.TRUSTED, theme = theme) {
+                onFilterChange(InboxFilter.TRUSTED)
+            }
+            TabText(label = "Favorites", selected = filter == InboxFilter.FAVORITES, theme = theme) {
+                onFilterChange(InboxFilter.FAVORITES)
+            }
+            TabText(label = "Private", selected = filter == InboxFilter.PRIVATE, theme = theme) {
+                onFilterChange(InboxFilter.PRIVATE)
+            }
+            TabText(label = "Contacts", selected = filter == InboxFilter.CONTACTS, theme = theme) {
+                onFilterChange(InboxFilter.CONTACTS)
+            }
         }
         TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
             onFilterChange(InboxFilter.READ)
@@ -1377,5 +1504,15 @@ private fun LinePickerRow(
     }
 }
 
-private enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED }
+private enum class InboxFilter {
+    ALL,
+    OTP,
+    TRUSTED,
+    FAVORITES,
+    PRIVATE,
+    CONTACTS,
+    READ,
+    UNREAD,
+    ARCHIVED
+}
 

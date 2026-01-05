@@ -1,5 +1,9 @@
 package com.pulselink.ui.screens
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +22,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import com.pulselink.domain.model.ThemePreferences
 import com.pulselink.ui.model.MessageRecipient
 import com.pulselink.util.parseColorOr
@@ -54,10 +60,25 @@ fun NewMessageScreen(
     onManualInput: (String) -> Unit,
     hasContactsPermission: Boolean,
     onRequestContactsPermission: () -> Unit,
+    onSendAttachment: (List<String>, Uri) -> Unit = { _, _ -> },
     theme: ThemePreferences
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedContacts by remember { mutableStateOf(emptyList<MessageRecipient>()) }
+    val context = LocalContext.current
+
+    val attachmentPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            val numbers = selectedContacts.map { it.phoneNumber }.filter { it.isNotBlank() }
+            if (numbers.isNotEmpty()) {
+                onSendAttachment(numbers, uri)
+            } else {
+                Toast.makeText(context, "Select at least one contact first", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     val filteredContacts = remember(searchQuery, contacts, selectedContacts) {
         val candidates = if (searchQuery.isBlank()) contacts else contacts.filter {
@@ -126,6 +147,17 @@ fun NewMessageScreen(
                             )
                         )
                     }
+                }
+
+                OutlinedButton(
+                    onClick = { attachmentPicker.launch("*/*") },
+                    enabled = selectedContacts.isNotEmpty(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                    Text("Add attachment")
                 }
             }
 

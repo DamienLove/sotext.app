@@ -38,7 +38,13 @@
       "Bash(gh label:*)",
       "Bash(gh issue edit:*)",
       "Bash(gh pr close:*)",
-      "Bash(gh pr list:*)"
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(cmd.exe /c \"if not exist H:\\\\disposable mkdir H:\\\\disposable\")",
+      "Bash(cmd.exe /c \"copy androidApp\\\\build\\\\outputs\\\\bundle\\\\freeRelease\\\\androidApp-free-release.aab H:\\\\disposable\\\\pulselink-free-v115.aab\")",
+      "Bash(cmd.exe /c \"copy androidApp\\\\build\\\\outputs\\\\bundle\\\\proRelease\\\\androidApp-pro-release.aab H:\\\\disposable\\\\pulselink-pro-v115.aab\")",
+      "Bash(cmd.exe /c \"copy androidApp\\\\build\\\\outputs\\\\bundle\\\\premiumRelease\\\\androidApp-premium-release.aab H:\\\\disposable\\\\pulselink-premium-v115.aab\")",
+      "Bash(cmd.exe /c \"dir H:\\\\disposable\\\\*v115.aab\")"
     ]
   },
   "mcpServers": {
