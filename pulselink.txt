@@ -77,7 +77,8 @@ Current SMS features
 - Telephony provider writes for inbound/outbound SMS.
 - Inbox/thread UI with live refresh + contact resolution; time-format preference.
 
- Outstanding (carry-over for next session)
+Outstanding (carry-over for next session)
+ - GitHub comments/issue updates blocked: need a GitHub token with `repo` scope to post “verify fixed v118” comments and close items. Resume here when token available.
  - Beacon free: handle default-SMS role result callback UX, improve permission rationale, add contact avatars, interstitial trigger points, and run lint/unit tests once finalized. Consider launcher/icon entry to inbox from PulseLink home per request.
  - Beacon MMS: current CarrierMessagingService is a stub (immediate OK); implement real carrier-grade MMS download/send pipeline and verify with device/carrier.
 - SMS: Add MMS send/receive UI + compliance tests; enhance inbox with unread badges, delete/archive, and better date formatting; consider content observer cleanup.
