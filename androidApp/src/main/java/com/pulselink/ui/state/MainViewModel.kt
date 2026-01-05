@@ -1335,10 +1335,8 @@ class MainViewModel @Inject constructor(
 
         val subjectSuffix = bugReportData.summary.ifBlank { "General issue" }
 
-        return Uri.parse(BUG_REPORT_PAGE_URL).buildUpon()
-            .appendQueryParameter("title", bugReportData.summary)
-            .appendQueryParameter("body", formattedBody)
-            .build()
+        // Always direct to the canonical bug-report site (opens in-app WebView/Custom Tab)
+        return Uri.parse("https://damiennichols.com/report-bug/")
     }
 
     private fun ensureSoundDefaults(settings: com.pulselink.domain.model.PulseLinkSettings): com.pulselink.domain.model.PulseLinkSettings {
