@@ -2,7 +2,7 @@
 
 **Advanced Personal Safety & Utility Suite**
 
-Welcome to the **PulseLink** ecosystem—a family of next-generation safety and utility applications designed to protect you and enhance your mobile experience. PulseLink integrates "always-on" safety monitoring, discreet voice triggers, and robust messaging into a unified platform, while RingerSong provides a premium offline media and caller ID experience.
+Welcome to the **PulseLink** ecosystem—a family of next-generation safety and utility applications designed to protect you and enhance your mobile experience. PulseLink integrates your phones "always-on" voice assistant with safety monitoring, discreet voice triggers, and robust messaging into a unified platform, while RingerSong provides a premium streaming media caller ID experience.
 
 ---
 
@@ -10,10 +10,10 @@ Welcome to the **PulseLink** ecosystem—a family of next-generation safety and 
 
 | App | Flavor | Description | Status |
 | :--- | :--- | :--- | :--- |
-| **PulseLink Beacon** | `free` | The essential safety app. Ad-supported. Features "Always-On" voice detection, Emergency Alerts, Check-Ins, and a unified messaging inbox. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)]() |
-| **PulseLink Pro** | `pro` | The ad-free, definitive safety experience. Unlocks advanced SMS/MMS features, visual customization, and priority support. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)]() |
-| **PulseLink Premium** | `subscription` | The ultimate suite. Adds cloud-powered features: AI Assist (summaries, smart replies), Remote Web Portal access, and Caller ID screening. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)]() |
-| **RingerSong** | `RingerSong` | Offline Spotify player & Caller ID utility. Download tracks for offline listening and identify unknown callers. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Coming_Soon-grey?logo=google-play)]() |
+| **PulseLink** | `free` | The essential safety app. Ad-supported. Features "Always-On" voice detection, Emergency Alerts, Check-Ins, and a unified messaging inbox. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)](https://play.google.com/store/apps/details?id=com.free.pulselink) |
+| **PulseLink Pro** | `pro` | The ad-free, definitive safety experience. Unlocks advanced SMS/MMS features, visual customization, and priority support. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)](https://play.google.com/store/apps/details?id=com.pulselink.pro) |
+| **PulseLink Premium** | `subscription` | The ultimate suite. Adds cloud-powered features: AI Assist (summaries, smart replies), Remote Web Portal access, and Caller ID screening. |   ***Available within PulseLink or PulseLink Pro Apps***|
+| **RingerSong** | `RingerSong` | Offline Spotify player & Caller ID utility. Download tracks for offline listening and identify unknown callers. | [![Google Play Store - Open Testing](https://img.shields.io/badge/Google_Play_Store-Open_Testing-green?&logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.RingerSong.free)
 
 ---
 
@@ -22,16 +22,13 @@ Welcome to the **PulseLink** ecosystem—a family of next-generation safety and 
 ### PulseLink (Safety & Messaging)
 *   **Future Deep Design:** A stunning, modern UI with glassmorphism effects and dynamic themes like *Aurora*, *Midnight OLED*, and *Cyber Mist*.
 *   **Unified Launcher:** Seamlessly switch between your inbox, safety controls, and settings from a single, intuitive home screen.
-*   **Discreet Voice Triggers:** Activate emergency alerts or check-ins using custom spoken phrases—even when your phone is locked.
-*   **Crash Detection:** Automatically detects severe impacts and alerts your trusted contacts with your location.
+*   **Discreet Voice Triggers:** Activate emergency alerts or check-ins using spoken phrases, when combined with your phones built in assistant this can be accessed even when your phone is locked.
 *   **DND Override:** Critical alerts bypass "Do Not Disturb" settings to ensure your network hears you.
 *   **Multi-Channel Delivery:** Smart routing uses Firebase data messaging for speed, falling back to SMS/MMS for reliability.
 *   **Web Portal (Premium):** Access your messages, location, and safety status remotely from `web.pulselink.app`.
 
 ### RingerSong (Media & Utility)
-*   **Offline Music Freedom:** Download Spotify tracks directly to your device for true offline playback without a premium subscription.
-*   **Smart Caller ID:** Identify unknown numbers and block spam using advanced lookup integrations (Truecaller).
-*   **Local Library:** robust management for your MP3 collection with tag editing and playlist creation.
+*   **Offline Music Freedom:** Spotify tracks directly to your to use as device ringtone with a premium subscription.
 
 ---
 
@@ -51,7 +48,7 @@ Welcome to the **PulseLink** ecosystem—a family of next-generation safety and 
 Explore our [Wiki](wiki/) for detailed guides:
 
 *   [**PulseLink User Guide**](wiki/PulseLink-User-Guide.md): Setup, Voice Phrases, and Trusted Contacts.
-*   [**RingerSong User Guide**](wiki/RingerSong-Manual.md): Music Downloading and Caller ID setup.
+*   [**RingerSong User Guide**](wiki/RingerSong-Manual.md): Music Ringtones.
 *   [**Edition Comparison**](wiki/Pro-vs-Premium.md): Understand the differences between Free, Pro, and Premium.
 *   [**Troubleshooting**](wiki/Troubleshooting.md): Permissions, Battery Optimization, and DND issues.
 
