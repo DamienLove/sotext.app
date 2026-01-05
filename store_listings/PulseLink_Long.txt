@@ -1,0 +1,25 @@
+PulseLink is your silent guardian. Using discreet voice triggers, it instantly escalates emergency alerts to your trusted contacts—even if your phone is locked or out of reach.
+
+**KEY FEATURES:**
+
+🗣️ **Voice Activated Safety**
+Set a custom "Safe Phrase" (e.g., "Tell my sister to call me") and a "Danger Phrase" (e.g., "Red Alert"). PulseLink listens for these specific keywords to trigger the appropriate response.
+
+🆘 **Emergency Alerts**
+Instantly send SMS and data notifications to your designated Emergency Contacts. Alerts include your live location and a loud siren to attract attention (unless Silent Mode is active).
+
+📍 **Live Location Sharing**
+In an emergency, every second counts. PulseLink shares your real-time location with your safety network so they can find you or direct help to you.
+
+🔊 **Do Not Disturb Override**
+Critical alerts are designed to break through silent modes, ensuring your loved ones hear the alarm when it matters most.
+
+✅ **Safety Check-Ins**
+Send quick "I'm safe" updates to your Check-In circle with a simple voice command, perfect for arriving home late or finishing a solo trip.
+
+🌐 **Reliable Messaging**
+Uses a smart hybrid system that tries internet messaging first (for speed) and falls back to SMS (for reliability) to ensure your alert gets through.
+
+**Download PulseLink today and give yourself—and your loved ones—peace of mind.**
+
+*Note: This version is Ad-supported. Upgrade to Pro to remove ads.*

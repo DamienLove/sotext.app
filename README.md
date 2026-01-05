@@ -1,98 +1,76 @@
-# PulseLink
+# PulseLink Ecosystem
 
-PulseLink is a personal safety app that listens for discreet trigger phrases and instantly escalates alerts to trusted contacts with location context.
+**Advanced Personal Safety & Utility Suite**
 
-[![CI](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml/badge.svg)](https://github.com/DamienLove/pulselink/actions/workflows/verify-main.yml)
+This repository hosts the **PulseLink** family of safety applications and the **RingerSong** media utility. PulseLink provides state-of-the-art emergency alerting, discreet trigger phrases, and "always-on" safety monitoring, while RingerSong offers a robust offline music experience with advanced caller identification.
 
-<!-- Donation badges — replace placeholders after you enable them (see instructions below) -->
+---
+
+## 🚀 Application Lineup
+
+| App | Flavor | Description | Status |
+| :--- | :--- | :--- | :--- |
+| **PulseLink Beacon** | `free` | The core safety app. Ad-supported. Includes "Always-On" phrase detection, Emergency Alerts, Check-Ins, and Firebase/SMS messaging. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Coming_Soon-grey?logo=google-play)]() |
+| **PulseLink Pro** | `pro` | Ad-free safety experience. Includes all Beacon features plus enhanced UI and priority support. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Coming_Soon-grey?logo=google-play)]() |
+| **PulseLink Premium** | `premium` | The ultimate safety suite. Adds AI Assist (summaries, smart replies), Web Portal access (remote messaging), and Caller ID screening. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Coming_Soon-grey?logo=google-play)]() |
+| **RingerSong** | `RingerSong` | Offline Spotify player & Caller ID utility. Download tracks, identify spam calls, and manage media without needing a Spotify Premium subscription. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Coming_Soon-grey?logo=google-play)]() |
+
+---
+
+## 🛠️ Key Features
+
+### PulseLink (Safety & Messaging)
+*   **Discreet Voice Triggers:** Activate emergency alerts or check-ins using custom spoken phrases, even when the phone is locked.
+*   **DND Override:** Critical alerts bypass "Do Not Disturb" settings to ensure they are heard (utilizing Android's `setBypassDnd` and audio focus overrides).
+*   **Multi-Channel Delivery:** Uses a "Firebase-First" approach for instant data messaging, automatically falling back to SMS (and optionally Email) if data fails.
+*   **Trusted Contacts:** Define separate circles for "Emergency" vs. "Check-In" alerts.
+*   **Live Location:** Share real-time location tracking during active emergencies.
+*   **Google Assistant Integration:** "Hey Google, emergency alert with PulseLink".
+
+### RingerSong (Media & Utility)
+*   **Offline Spotify:** Download tracks directly to your device for offline playback—no Spotify App required.
+*   **YouTube Music Integration:** Search and browse YouTube Music library.
+*   **Caller ID & Spam Protection:** Identify unknown numbers and block spam using Truecaller integration.
+*   **Local Playback:** Robust local file management for your own MP3 library.
+
+---
+
+## 📥 Downloads & Installation
+
+**Open Testing / Beta:**
+*   [PulseLink Beacon (Free) - Latest APK](https://github.com/DamienLove/pulselink/releases/tag/latest)
+*   [RingerSong - Latest APK](https://github.com/DamienLove/pulselink/releases/tag/latest)
+
+**Production:**
+*   COMING SOON to Google Play.
+
+---
+
+## 📚 Documentation & Support
+
+We maintain comprehensive documentation for all apps in our [Wiki](wiki/).
+
+*   [**PulseLink User Guide**](wiki/PulseLink-User-Guide.md): Setup, Voice Phrases, and Trusted Contacts.
+*   [**RingerSong User Guide**](wiki/RingerSong-Manual.md): Music Downloading and Caller ID setup.
+*   [**Troubleshooting**](wiki/Troubleshooting.md): Permissions, Battery Optimization, and DND issues.
+
+### Contributing
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+*   **Bugs:** [Report a Bug](https://damienlove.github.io/pulselink/)
+*   **iOS Roadmap:** [View Status](docs/ios-roadmap.md)
+
+---
+
+## 💖 Support the Project
+
+PulseLink is developed with a mission to make personal safety accessible to everyone. Your support helps fund server costs (Firebase, SMS gateways) and development time.
+
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-❤_GitHub_Sponsors-ea4aaa?logo=github)](https://github.com/sponsors/DamienLove)
 [![Ko‑fi](https://img.shields.io/badge/Buy_me_a_coffee-Ko%E2%80%91fi-29abe0?logo=kofi)](https://ko-fi.com/DamienLove)
-[![PayPal](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal)](https://www.paypal.com/donate?hosted_button_id=YOUR_BUTTON_ID)
 
-## Downloads
+---
 
-- Latest build is on Google Play (coming soon)
-- Beta APK:
-  - Download: [PulseLink Beta](https://github.com/DamienLove/pulselink/releases/download/Beta/androidApp-free-release.apk)
-- Alpha APK:
-  - Download: [PulseLink Alpha](androidApp/build/outputs/apk/free/debug/androidApp-free-debug.apk)
+## 📄 License
 
-## Product Lineup
-
-- **Beacon (Free)** – ad-supported default SMS app with core safety and alerts.
-- **PulseLink Pro (one-time)** – Beacon plus the full safety stack with ads removed.
-- **Beacon Premium (subscription)** – everything in Pro plus caller ID, remote SMS access, AI \"Lab\" features, trusted/private contacts, and customizable UI.
-
-## Multi-Channel Messaging
-
-PulseLink now uses a Firebase-first messaging architecture for robust app-to-app communication:
-- **Firebase Realtime/FCM**: Primary channel for instant, cost-effective alerts.
-- **SMS Fallback**: Ensures delivery when data is unavailable or Firebase fails.
-- **Email Fallback**: Tertiary backup for critical alerts.
-
-This hybrid approach ensures high reliability without strictly depending on cellular data or SMS permissions for every message.
-
-### Configuration
-
-To enable email fallback, configure the email transport credentials in Firebase Functions environment variables:
-
-```bash
-firebase functions:config:set email.user="your-email@gmail.com" email.pass="your-app-password"
-```
-(Ensure your function code retrieves these, or use `.env` files for `process.env.EMAIL_USER` / `EMAIL_PASS` access).
-
-## iOS Roadmap
-
-PulseLink for iOS is in active planning. See the detailed milestones, dependencies, and how to contribute:
-
-- docs: [iOS Roadmap](docs/ios-roadmap.md)
-- GitHub Pages: https://damienlove.github.io/pulselink/ (auto-published from the `docs/` folder)
-
-## Support the Project
-
-If PulseLink helps you or someone you care about, please consider supporting development. Your contributions fund:
-
-- App Store fees and infrastructure (build minutes, test devices)
-- Accessibility and safety research
-- iOS development to reach more users
-
-How to donate:
-
-- GitHub Sponsors: https://github.com/sponsors/DamienLove
-- Ko‑fi: https://ko-fi.com/DamienLove
-- PayPal: https://www.paypal.com/donate?hosted_button_id=YOUR_BUTTON_ID
-
-Prefer to contribute code, docs, or testing? See Issues and the iOS Roadmap above—PRs are welcome.
-
-## Documentation & Wiki
-
-This repository publishes documentation via GitHub Pages from the `docs/` directory. Any changes pushed under `docs/**` will automatically re-deploy the site via GitHub Actions.
-
-- Source docs: [`/docs`](docs)
-- Published site: https://damienlove.github.io/pulselink/
-
-If you also use the GitHub Wiki feature, mirror or link the same content there for consistency.
-
-## Status
-
-Fresh build created on November 16, 2025. Messaging pathways remain fully enabled.
-
-## Google Assistant Integration
-
-PulseLink supports Google Assistant App Actions, allowing users to trigger emergency features using voice commands.
-
-### Supported Voice Commands
-
-- "Hey Google, emergency alert with PulseLink" - Triggers an immediate emergency alert
-- "Hey Google, check in with PulseLink" - Performs a routine safety check-in
-- "Hey Google, send message with PulseLink" - Sends a message to emergency contacts
-
-### Technical Implementation
-
-- **App Links**: Configured via `assetlinks.json` for domain verification
-- **Shortcuts XML**: Defines Built-in Intents (BIIs) for Assistant integration
-- **Deep Links**: Supports both `pulselink://` and `https://pulselink.app/` schemes
-- **Security**: Validates all deep link URLs against verified domains
-
-For more details, see the [App Actions documentation](https://developer.android.com/guide/app-actions).
-
+Copyright © 2026 PulseLink. All Rights Reserved.
+See [LICENSE](LICENSE) for details.
