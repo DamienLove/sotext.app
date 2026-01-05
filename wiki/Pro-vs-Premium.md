@@ -5,13 +5,13 @@ Select the plan that fits your safety needs.
 | Feature | Beacon (Free) | Pro (One-Time) | Premium (Subscription) |
 | :--- | :---: | :---: | :---: |
 | **Unified Launcher** | ✅ | ✅ | ✅ |
-| **Voice Triggers** | ✅ | ✅ | ✅ |
+| **Voice Triggers (Assistant)**| ✅ | ✅ | ✅ |
 | **Emergency Alerts** | ✅ | ✅ | ✅ |
-| **Crash Detection** | ✅ | ✅ | ✅ |
+| **Beacon Default SMS** | ✅ | ✅ | ✅ |
 | **Ads** | Contains Ads | **No Ads** | **No Ads** |
 | **SMS Inbox Theme** | Basic | **Custom Themes** | **Custom Themes** |
 | **Web Portal Access** | ❌ | ❌ | ✅ |
-| **AI Smart Replies** | ❌ | ❌ | ✅ |
+| **AI DND Override** | ❌ | ❌ | ✅ |
 | **Caller ID Screening** | ❌ | ❌ | ✅ |
 
 ---
@@ -19,4 +19,4 @@ Select the plan that fits your safety needs.
 ## Upgrade Tiers
 
 *   **PulseLink Pro:** A single purchase. Removes ads, unlocks visual customization (themes like *Midnight OLED*), and ensures a distraction-free safety experience.
-*   **PulseLink Premium:** A recurring subscription. Unlocks cloud-based power: remote access via `web.pulselink.app`, AI features, and advanced Caller ID.
+*   **PulseLink Premium:** A recurring subscription. Unlocks cloud-based power: remote access via `app.damiennichols.com`, AI urgency detection, and advanced Caller ID.

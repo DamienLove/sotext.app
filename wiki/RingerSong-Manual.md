@@ -1,17 +1,17 @@
 # RingerSong Manual
 
-**RingerSong** combines offline music freedom with advanced caller protection.
+**RingerSong** combines premium audio customization with advanced caller protection.
 
 ---
 
-## 🎵 Offline Spotify
+## 🎵 Progressive Ringtones (Spotify)
 
-Download your favorite Spotify tracks for playback anywhere—no premium subscription required.
+Use your **Spotify Premium** account to set tracks as gradually increasing ringtones or alarms.
 
-1.  **Copy Link:** In Spotify, share a song/playlist and copy the link.
-2.  **Paste:** Open RingerSong and paste the link in the search bar.
-3.  **Download:** Tap download. The app converts and saves the track locally.
-4.  **Play:** Access your library in the **Tracks** tab. Works 100% offline.
+1.  **Connect Account:** In RingerSong Settings, tap **Connect Spotify** and log in with your Premium credentials.
+2.  **Select Track:** Browse your playlists or search for a song within RingerSong.
+3.  **Set as Ringtone:** Tap the "Set as Ringtone" or "Set as Alarm" button.
+4.  **How it Works:** When your phone rings, RingerSong streams the track, starting quietly and gradually increasing in volume.
 
 ---
 
@@ -35,4 +35,4 @@ RingerSong integrates with Truecaller to screen incoming calls.
 
 *   **Scan:** Automatically finds MP3s on your device.
 *   **Tag Editor:** Fix incorrect Artist/Title metadata.
-*   **Ringtones:** Set any downloaded track as your ringtone.
+*   **Playlists:** Organize your local files into custom playlists.

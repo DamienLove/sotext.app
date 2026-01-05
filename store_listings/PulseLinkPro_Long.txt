@@ -1,21 +1,21 @@
 Upgrade to PulseLink Pro for the definitive, ad-free safety and messaging experience.
 
 **✨ PRO EXCLUSIVES**
-• **No Ads:** A clean, distraction-free interface focused purely on your safety and conversations.
-• **Advanced SMS Inbox:** A fully featured replacement for your default SMS app with secure threading, archiving, and "Future Deep" styling.
-• **Visual Customization:** Unlock exclusive themes like *Midnight OLED*, *Cyber Mist*, and *Forest Trail* to match your style.
+• **No Ads:** A clean, distraction-free interface.
+• **Advanced SMS Inbox:** A full-featured replacement for your default SMS app with secure threading, archiving, and "Future Deep" styling.
+• **Custom Themes:** Unlock exclusive visual styles like *Midnight OLED*, *Cyber Mist*, and *Forest Trail*.
 • **Priority Support:** Get faster responses from our team.
 
-**🛡️ ALL BEACON FEATURES INCLUDED**
-• **Voice-Activated Safety:** Trigger help without touching your phone.
-• **Live Location Tracking:** Real-time sharing during emergencies.
-• **Trusted Contacts:** Manage Emergency and Check-In circles.
-• **Crash Detection:** Automated impact alerts.
+**🚀 ALL BEACON FEATURES INCLUDED**
+• **Assistant Voice Integration:** Trigger alerts hands-free via Google Assistant.
+• **Intelligent DND Override:** (Premium) AI context detection for urgent messages.
+• **Multi-Channel Delivery:** Reliable alerts via data and SMS/MMS fallback.
+• **Live Location:** Real-time sharing during emergencies.
 
 **💎 PREMIUM READY**
 PulseLink Pro is the foundation for our Premium service (subscription required), which adds:
 • **AI Assist:** Smart replies and thread summaries.
-• **Web Portal:** Access your messages remotely at web.pulselink.app.
+• **Web Portal:** Access your messages remotely from `app.damiennichols.com` or `pulselink.damiennichols.com`.
 • **Caller ID:** Real-time spam protection.
 
 *PulseLink Pro is a one-time purchase. Invest in your safety today.*

@@ -1,14 +1,13 @@
-RingerSong empowers your audio experience. Take your music offline and take back control of your phone calls.
+RingerSong is your ultimate audio utility and caller protection tool. Use your **Spotify Premium** account to set custom progressive ringtones and identify unwanted callers.
 
-**🎵 MUSIC UNLEASHED**
-• **Offline Spotify:** Download your favorite tracks and playlists directly to your device storage.
-• **No Premium Needed:** Enjoy offline playback of your downloaded library without requiring a Spotify Premium subscription.
-• **YouTube Music Integration:** Search, browse, and discover new tracks from the massive YouTube library.
-• **Local Player:** A sleek, modern interface to organize and play your MP3 collection.
+**🎵 PROGRESSIVE RINGTONES**
+• **Spotify Integration:** Connect your Spotify Premium account to select any track as your ringtone or alarm.
+• **Gradual Volume:** Your ringtone will increase in volume, just like a progressive alarm.
+• **No Downloads Needed:** Your chosen Spotify tracks stream via your connected account.
 
 **🛡️ SMART CALLER DEFENSE**
-• **Instant Caller ID:** Identify unknown numbers in real-time before you pick up.
+• **Live Caller ID:** See names for unknown numbers in real-time before you pick up.
 • **Spam Protection:** Integrated with Truecaller to warn you about known spammers and potential fraud.
-• **Call Log History:** View detailed metadata for your recent calls.
+• **Call Log History:** View identification details for your recent calls.
 
-**Download RingerSong and listen on your terms.**
+Take control of your audio and your calls with RingerSong.

@@ -13,13 +13,12 @@ Solutions for common PulseLink and RingerSong issues.
 2.  **Permissions:** Ensure "Override Do Not Disturb" is granted in App Settings > Notifications.
 3.  **Volume:** Check "Audio Gain" in PulseLink Settings.
 
-### 🔋 Voice Triggers Stopping
-**Issue:** "Always-On" listening stops working after some time.
+### 🔋 Voice Assistant Issues
+**Issue:** "Hey Google, open PulseLink Emergency" isn't working.
 **Fix:**
-Android Battery Optimization often kills background services.
-1.  Go to **Settings > Apps > PulseLink > Battery**.
-2.  Select **Unrestricted** or **Don't Optimize**.
-3.  (Samsung users): Check "Sleeping Apps" and remove PulseLink.
+1.  Ensure **Google Assistant** is enabled and configured on your device.
+2.  Open PulseLink once manually to register the shortcuts.
+3.  Check if your phrase matches exactly what you set in **Settings > Voice Triggers**.
 
 ### 📍 Location Not Updating
 **Issue:** Contacts receive an old location.
@@ -31,12 +30,12 @@ Android Battery Optimization often kills background services.
 
 ## RingerSong
 
-### ⬇️ Download Failed
-**Issue:** Spotify link doesn't download.
+### 🎵 Spotify Integration Issues
+**Issue:** Cannot connect or tracks won't play.
 **Fix:**
-*   Use a **Track Link** or **Public Playlist Link**. Private playlists cannot be accessed.
-*   Check internet stability.
-*   Wait 5 minutes if you've hit a rate limit.
+*   **Premium Required:** Ensure you have an active Spotify Premium subscription.
+*   **Internet:** A stable connection is required to stream tracks as ringtones (unless cached by the Spotify app).
+*   **Re-login:** Try disconnecting and reconnecting your account in RingerSong settings.
 
 ### 📞 Caller ID Missing
 **Issue:** No overlay for incoming calls.

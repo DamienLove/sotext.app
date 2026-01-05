@@ -14,37 +14,31 @@ PulseLink now features a **Unified Launcher**. This means your inbox, contacts, 
 
 ### 2. Permissions
 Upon first launch, grant the following to enable core features:
-*   **Microphone:** For voice triggers.
+*   **Microphone:** For voice triggers via Google Assistant.
 *   **Location:** For emergency tracking.
-*   **SMS/Phone:** To send alerts and messages.
+*   **SMS/Phone:** To send alerts and messages via Beacon SMS.
 *   **Notifications (DND Bypass):** Critical for audible alarms.
 
 ---
 
-## 🗣️ Voice Triggers
+## 🗣️ Voice Triggers (via Google Assistant)
 
-PulseLink listens for specific phrases to trigger actions hands-free.
+PulseLink works with your device's built-in assistant for hands-free actions.
 
 ### Setup
-1.  Navigate to **Settings > Voice Triggers**.
-2.  Tap **Add Phrase**.
-3.  Record your phrase (e.g., "Code Red", "I'm safe").
-4.  Assign an action (**Emergency** or **Check-In**).
+1.  Ensure Google Assistant is set up on your device.
+2.  In PulseLink **Settings > Voice Triggers**, set up your custom phrases (e.g., "Code Red", "Help me now").
+3.  Assign an action: **Emergency Alert** or **Check-In**.
 
 ### Usage
-*   **Unlocked:** Speak clearly.
-*   **Locked:** If "Always-On" is enabled, the app listens even when the screen is off.
-*   **Discreet:** The engine is tuned for close-range speech, allowing you to whisper triggers.
+*   **Activate Assistant:** Say "Hey Google" or your usual wake phrase.
+*   **Invoke PulseLink:** Follow up with your trigger phrase (e.g., "Hey Google, tell PulseLink to trigger Red Alert"). The app will then execute the action.
 
 ---
 
-## 🚗 Crash Detection (Beta)
+## 💡 Intelligent DND Override (Premium)
 
-PulseLink uses your device's accelerometer and gyroscope to detect severe impacts.
-
-1.  Enable in **Settings > Safety Features**.
-2.  If a crash is detected, a countdown begins.
-3.  If you don't cancel it, an **Emergency Alert** is sent automatically with your coordinates.
+For PulseLink Premium users, our AI analyzes incoming message context. If your contacts are in distress and texting urgently, PulseLink can automatically override Do Not Disturb to ring your phone, ensuring you don't miss critical alerts.
 
 ---
 
@@ -53,14 +47,14 @@ PulseLink uses your device's accelerometer and gyroscope to detect severe impact
 Organize your safety network into two circles:
 
 ### Emergency Contacts 🚨
-*   **For:** Critical situations.
+*   **Role:** People who should be notified immediately in a crisis.
 *   **Receive:** Loud siren alerts, live location, automated calls.
 *   **Who:** Parents, Spouses, Close Friends.
 
 ### Check-In Contacts ✅
-*   **For:** Status updates.
+*   **Role:** People you want to keep updated on your safety status.
 *   **Receive:** "I'm safe" notifications and location snapshots.
-*   **Who:** Roommates, Siblings.
+*   **Who:** Roommates, Extended Family.
 
 ---
 
@@ -68,7 +62,7 @@ Organize your safety network into two circles:
 
 When activated:
 1.  **Siren:** Loud alarm (unless Silent SOS is on).
-2.  **Messaging:** Multi-channel broadcast (Data + SMS) to Emergency Contacts.
+2.  **Messaging:** Multi-channel broadcast (Data + SMS/MMS) to Emergency Contacts.
 3.  **Live Tracking:** Real-time location sharing begins.
 4.  **Calling:** Auto-dials your primary contact.
 

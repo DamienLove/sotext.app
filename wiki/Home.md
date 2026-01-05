@@ -6,13 +6,13 @@ Your central hub for documentation, guides, and support for the PulseLink ecosys
 
 ### [PulseLink (Beacon & Pro)](PulseLink-User-Guide.md)
 The core safety and messaging platform.
-*   **[User Guide](PulseLink-User-Guide.md):** Setup, Voice Triggers, Trusted Contacts.
+*   **[User Guide](PulseLink-User-Guide.md):** Setup, Assistant Triggers, Trusted Contacts.
 *   **[Edition Comparison](Pro-vs-Premium.md):** Differences between Free, Pro, and Premium.
 *   **[Troubleshooting](Troubleshooting.md):** Fix common issues with DND, Battery, and Notifications.
 
 ### [RingerSong](RingerSong-Manual.md)
-Offline music and caller utility.
-*   **[Manual](RingerSong-Manual.md):** Downloading music, Caller ID setup.
+Advanced audio utility and caller protection.
+*   **[Manual](RingerSong-Manual.md):** Spotify integration, Caller ID setup.
 
 ## 🤝 Community & Support
 
