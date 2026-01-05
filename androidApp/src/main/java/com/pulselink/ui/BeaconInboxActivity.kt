@@ -255,6 +255,8 @@ class BeaconInboxActivity : ComponentActivity() {
             notificationTarget.value = null
         }
 
+        val fromPulseLink = intent.getBooleanExtra("from_pulselink", false)
+
         Column(modifier = Modifier.fillMaxSize()) {
             val bannerHeight = 50.dp
             Box(modifier = Modifier.weight(1f)) {
@@ -380,7 +382,15 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
                                             onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
                                             onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
-                                            onBack = { finish() },
+                                            onBack = {
+                                                if (fromPulseLink && isTaskRoot) {
+                                                    val backIntent = Intent(context, MainActivity::class.java).apply {
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                                    }
+                                                    startActivity(backIntent)
+                                                }
+                                                finish()
+                                            },
                                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
                                             lineOptions = if (hasPremium) orderedLines else emptyList(),
                                             deviceLineId = deviceLineId,
@@ -391,10 +401,20 @@ class BeaconInboxActivity : ComponentActivity() {
                                             },
                                             showLinePicker = hasPremium && state.settings.lineInboxMode == LineInboxMode.PER_LINE && currentRoute == BeaconNavRoute.Inbox,
                                             isBeaconMode = true,
+                                            showBackInBeacon = fromPulseLink,
                                             isPremium = hasPremium,
                                             isPro = isPro,
                                             onOpenSettings = { navController.navigate("beacon_settings") },
-                                            onOpenPrivate = {},
+                                            onOpenPrivate = {
+                                                if (currentRoute != BeaconNavRoute.Private) {
+                                                    if (state.settings.privatePinHash.isNullOrBlank()) {
+                                                        navController.navigate("private_pin")
+                                                    } else {
+                                                        pinInput = ""
+                                                        showPinDialog = true
+                                                    }
+                                                }
+                                            },
                                             privateThreadIds = privateThreads,
                                             showPrivateOnly = currentRoute == BeaconNavRoute.Private,
                                             hideOtpInAll = currentRoute == BeaconNavRoute.Inbox,
