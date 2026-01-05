@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2026-01-04: v115 release — unified launcher now always lands on the unified home when Messages icon is used; PulseLink/Beacon icons are hidden while unified is enabled; Tones/Themes buttons on home use singleTop navigation so they open reliably; remote web access still triggers sync on enable. Built free/pro AABs (disposable_aabs/androidApp-*-release-v115.aab), uploaded to Play internal → open testing → production, review resubmitted.
 - 2026-01-04: v113 release — fixed remote web access sync trigger (runs whenever enabled so web inbox populates) and hid all PulseLink/Beacon launcher icons while unified mode is on. Built free/pro AABs (disposable_aabs/androidApp-*-release-v113.aab), uploaded to Play internal → open testing → production, review resubmitted.
 - 2026-01-04: v111 release — hid PulseLink launcher when unified mode is enabled (restored when off), compacted headers on PulseLink/Beacon, and tightened unified home spacing under emergency row. Built free/pro AABs (disposable_aabs/androidApp-*-release-v111.aab), uploaded to Play internal → open testing → production, review resubmitted.
 - 2026-01-04: v110 release — refreshed premium status on login, neutralized pre-sign-in branding, added Beacon thread quick Themes/Tones actions, and kept unified launcher stable; bumped versionCode/Name to 110. Free/pro AABs built (disposable_aabs/androidApp-*-release-v110.aab), uploaded to Play internal → open testing → production, and submitted for review.

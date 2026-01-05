@@ -794,28 +794,47 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
+                val launchedFromUnifiedIcon = remember {
+                    intent?.component?.className?.contains("UnifiedLauncher") == true
+                }
+                val unifiedModeActive = state.settings.mergedExperienceEnabled || launchedFromUnifiedIcon
                 val startDestination = remember(
                     initialInboxShortcut,
-                    state.settings.mergedExperienceEnabled,
+                    unifiedModeActive,
                     state.onboardingComplete
                 ) {
                     when {
                         initialInboxShortcut -> "sms/inbox"
                         !state.onboardingComplete -> "splash"
-                        state.settings.mergedExperienceEnabled -> "unified_inbox"
+                        unifiedModeActive -> "unified_inbox"
                         else -> "home"
                     }
                 }
 
-                val bannerHeight = 50.dp
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
+                    val bannerHeight = 50.dp
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
                             .padding(bottom = if (state.showAds) bannerHeight else 0.dp)
                     ) {
+                        LaunchedEffect(unifiedModeActive) {
+                            val current = navController.currentDestination?.route
+                            if (unifiedModeActive && current != "unified_inbox") {
+                                navController.navigate("unified_inbox") {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            } else if (!unifiedModeActive && current == "unified_inbox") {
+                                navController.navigate("home") {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
+                                }
+                            }
+                        }
+
                         NavHost(navController = navController, startDestination = startDestination) {
-                    val premiumBranding = state.settings.premiumUnlocked ||
+                    val premiumBranding = state.settings.premiumUnlocked ||     
                         BuildConfig.PREMIUM_FEATURES ||
                         state.isProUser
                     val proLikeUser = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || state.settings.premiumUnlocked
@@ -833,15 +852,15 @@ class MainActivity : AppCompatActivity() {
                             usePremiumBranding = premiumBranding || proLikeUser,
                             brandName = brandName,
                             badgeText = badgeText,
-                            isUnifiedMode = state.settings.mergedExperienceEnabled
+                            isUnifiedMode = unifiedModeActive
                         )
-                        LaunchedEffect(authState, state.onboardingComplete) {
+                        LaunchedEffect(authState, state.onboardingComplete) {   
                             if (authState is AuthState.Loading) return@LaunchedEffect
                             delay(1200)
                             val destination = when (authState) {
                                 is AuthState.Authenticated -> {
                                     if (state.onboardingComplete) {
-                                        if (state.settings.mergedExperienceEnabled) "unified_inbox" else "home"
+                                        if (unifiedModeActive) "unified_inbox" else "home"
                                     } else {
                                         "onboarding_intro"
                                     }
@@ -872,11 +891,11 @@ class MainActivity : AppCompatActivity() {
                             onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
                             onTriggerEmergency = viewModel::triggerEmergency,
                             onSendCheckIn = viewModel::sendCheckIn,
-                            onSettingsClick = { navController.navigate("settings") },
-                            onFaqClick = { navController.navigate("faq") },
-                            onOpenContacts = { navController.navigate("sms/contacts") },
-                            onOpenNotifications = { navController.navigate("notifications/message_sound") },
-                            onOpenThemes = { navController.navigate("visual_settings") },
+                            onSettingsClick = { navController.navigate("settings") { launchSingleTop = true } },
+                            onFaqClick = { navController.navigate("faq") { launchSingleTop = true } },
+                            onOpenContacts = { navController.navigate("sms/contacts") { launchSingleTop = true } },
+                            onOpenNotifications = { navController.navigate("notifications/message_sound") { launchSingleTop = true } },
+                            onOpenThemes = { navController.navigate("visual_settings") { launchSingleTop = true } },
                             onAddContact = viewModel::saveContact,
                             onContactSelected = { contactId -> navController.navigate("contact/$contactId") },
                             onContactSettings = { contactId -> navController.navigate("contact/$contactId/settings") },
@@ -889,7 +908,7 @@ class MainActivity : AppCompatActivity() {
                             onRequestCancelEmergency = cancelEmergencyHandler,
                             onViewEmergencyMap = { navController.navigate("emergency_map") },
                             isCancelingEmergency = isCancelingEmergency,
-                            onAlertsClick = { navController.navigate("alerts_history") },
+                            onAlertsClick = { navController.navigate("alerts_history") { launchSingleTop = true } },
                             showAddLoginPrompt = isSmsOnlyUser,
                             onAddLoginClick = {
                                 navController.navigate("login") {
@@ -1213,8 +1232,8 @@ class MainActivity : AppCompatActivity() {
                             onDismissAssistantShortcuts = viewModel::dismissAssistantHint,
                             onTriggerEmergency = viewModel::triggerEmergency,
                             onSendCheckIn = viewModel::sendCheckIn,
-                            onSettingsClick = { navController.navigate("settings") },
-                            onFaqClick = { navController.navigate("faq") },
+                            onSettingsClick = { navController.navigate("settings") { launchSingleTop = true } },
+                            onFaqClick = { navController.navigate("faq") { launchSingleTop = true } },
                             onBeaconClick = launchBeaconInbox,
                             showBeaconIcon = state.settings.beaconLauncherEnabled,
                             showBeaconHint = !state.settings.beaconHintDismissed,
@@ -1251,7 +1270,7 @@ class MainActivity : AppCompatActivity() {
                             onRequestCancelEmergency = cancelEmergencyHandler,
                             onViewEmergencyMap = { navController.navigate("emergency_map") },
                             isCancelingEmergency = isCancelingEmergency,
-                            onAlertsClick = { navController.navigate("alerts_history") },
+                            onAlertsClick = { navController.navigate("alerts_history") { launchSingleTop = true } },
                             showAddLoginPrompt = isSmsOnlyUser,
                             onAddLoginClick = {
                                 navController.navigate("login") {
@@ -1271,7 +1290,9 @@ class MainActivity : AppCompatActivity() {
                                     playStoreIntent.setPackage(null)
                                     startActivity(playStoreIntent)
                                 }
-                            }
+                            },
+                            onOpenThemes = { navController.navigate("visual_settings") { launchSingleTop = true } },
+                            onOpenNotifications = { navController.navigate("notifications/message_sound") { launchSingleTop = true } }
                         )
                     }
                     composable("alerts_history") {
@@ -1774,7 +1795,7 @@ class MainActivity : AppCompatActivity() {
                             contactsByNumber = contactsByNumber,
                             isPremium = isPremium,
                             isPro = isPro,
-                            isUnifiedMode = state.settings.mergedExperienceEnabled,
+                            isUnifiedMode = unifiedModeActive,
                             banner = {
                                 if (!notificationsEnabled || notificationsSilent) {
                                     Surface(
