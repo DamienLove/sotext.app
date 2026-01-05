@@ -1,25 +1,20 @@
-PulseLink is your silent guardian. Using discreet voice triggers, it instantly escalates emergency alerts to your trusted contacts—even if your phone is locked or out of reach.
+PulseLink is your silent guardian and connected hub. Combining state-of-the-art personal safety with a robust messaging experience, PulseLink ensures you are never alone.
 
-**KEY FEATURES:**
+**🛡️ UNIFIED SAFETY & MESSAGING**
+Experience the "Future Deep" design—a unified interface that brings your safety controls and messages together.
+• **Discreet Voice Triggers:** Activate emergency alerts or check-ins with custom phrases like "Red Alert" or "I'm safe", even when your phone is locked.
+• **Unified Launcher:** Seamlessly switch between your inbox, safety dashboard, and settings.
+• **Crash Detection:** (Beta) Automatically detects severe impacts and notifies your emergency contacts with your location.
 
-🗣️ **Voice Activated Safety**
-Set a custom "Safe Phrase" (e.g., "Tell my sister to call me") and a "Danger Phrase" (e.g., "Red Alert"). PulseLink listens for these specific keywords to trigger the appropriate response.
+**🆘 EMERGENCY RESPONSE**
+• **Instant Escalation:** Sends SMS and data notifications to your Trusted Contacts immediately.
+• **Live Location:** Shares real-time tracking so help can find you faster.
+• **DND Override:** Critical sirens bypass "Do Not Disturb" to ensure your loved ones hear the call.
 
-🆘 **Emergency Alerts**
-Instantly send SMS and data notifications to your designated Emergency Contacts. Alerts include your live location and a loud siren to attract attention (unless Silent Mode is active).
+**💬 POWERFUL CONNECTIVITY**
+• **Smart Routing:** Uses internet messaging for speed, automatically falling back to SMS for reliability.
+• **Check-Ins:** Send quick status updates to your inner circle with a single tap or voice command.
 
-📍 **Live Location Sharing**
-In an emergency, every second counts. PulseLink shares your real-time location with your safety network so they can find you or direct help to you.
+**Download PulseLink Beacon today. Safety, simplified.**
 
-🔊 **Do Not Disturb Override**
-Critical alerts are designed to break through silent modes, ensuring your loved ones hear the alarm when it matters most.
-
-✅ **Safety Check-Ins**
-Send quick "I'm safe" updates to your Check-In circle with a simple voice command, perfect for arriving home late or finishing a solo trip.
-
-🌐 **Reliable Messaging**
-Uses a smart hybrid system that tries internet messaging first (for speed) and falls back to SMS (for reliability) to ensure your alert gets through.
-
-**Download PulseLink today and give yourself—and your loved ones—peace of mind.**
-
-*Note: This version is Ad-supported. Upgrade to Pro to remove ads.*
+*Note: This version is Ad-supported. Upgrade to PulseLink Pro for an ad-free experience with advanced customization.*

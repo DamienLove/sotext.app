@@ -1,24 +1,22 @@
 # Edition Comparison
 
-Choose the right level of protection for you.
+Select the plan that fits your safety needs.
 
 | Feature | Beacon (Free) | Pro (One-Time) | Premium (Subscription) |
 | :--- | :---: | :---: | :---: |
-| **Core Safety** | ✅ | ✅ | ✅ |
+| **Unified Launcher** | ✅ | ✅ | ✅ |
 | **Voice Triggers** | ✅ | ✅ | ✅ |
 | **Emergency Alerts** | ✅ | ✅ | ✅ |
-| **Trusted Contacts** | Unlimited | Unlimited | Unlimited |
+| **Crash Detection** | ✅ | ✅ | ✅ |
 | **Ads** | Contains Ads | **No Ads** | **No Ads** |
-| **SMS Inbox UI** | Basic | **Advanced** | **Advanced** |
-| **AI Smart Replies** | ❌ | ❌ | ✅ |
-| **Thread Summaries** | ❌ | ❌ | ✅ |
+| **SMS Inbox Theme** | Basic | **Custom Themes** | **Custom Themes** |
 | **Web Portal Access** | ❌ | ❌ | ✅ |
-| **Remote Messaging** | ❌ | ❌ | ✅ |
+| **AI Smart Replies** | ❌ | ❌ | ✅ |
 | **Caller ID Screening** | ❌ | ❌ | ✅ |
 
 ---
 
-## Upgrade Paths
+## Upgrade Tiers
 
-*   **Free -> Pro:** A single one-time purchase removes all ads and unlocks the advanced SMS inbox interface.
-*   **Pro -> Premium:** A monthly or annual subscription unlocks the cloud-powered features (AI, Web, Caller ID) which have ongoing server costs.
+*   **PulseLink Pro:** A single purchase. Removes ads, unlocks visual customization (themes like *Midnight OLED*), and ensures a distraction-free safety experience.
+*   **PulseLink Premium:** A recurring subscription. Unlocks cloud-based power: remote access via `web.pulselink.app`, AI features, and advanced Caller ID.
