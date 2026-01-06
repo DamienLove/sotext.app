@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 // Updated to "Future Deep v2" Palette
 val Ink = Color(0xFF05070F) // Deep Background
-val DeepBlue = Color(0xFF0C1326) // Deep Surface
+val DeepBlue = Color(0xFF0E121E) // Deep Surface
 val Ocean = Color(0xFF0EA5E9) // Accent Strong (Blue/Cyan)
 val Sky = Color(0xFF22D3EE) // Accent (Cyan)
 val NeonPurple = Color(0xFFBC13FE) // Tertiary (Neon Purple)

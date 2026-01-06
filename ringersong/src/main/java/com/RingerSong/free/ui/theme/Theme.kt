@@ -31,8 +31,8 @@ private val DarkColorScheme = darkColorScheme(
     primary = Sky,
     secondary = Azure,
     tertiary = NeonPurple,
-    background = Ink,
-    surface = DeepBlue,
+    background = Ink, // #05070F
+    surface = DeepBlue, // #0E121E (Updated to match PulseLink)
     surfaceVariant = Ocean,
     onPrimary = Ink,
     onSecondary = Mist,
@@ -48,10 +48,11 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun RingerSongTheme(
-    darkTheme: Boolean = false,
+    darkTheme: Boolean = true, // Default to True for Future Deep consistency
     themeConfig: ThemeConfig? = null,
     content: @Composable () -> Unit
 ) {
+    // Prioritize Dark Theme for the suite aesthetic unless explicitly overridden
     val baseScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     val colorScheme = themeConfig?.let { buildColorScheme(baseScheme, it) } ?: baseScheme
