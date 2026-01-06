@@ -540,9 +540,13 @@ private struct CancelEmergencySheet: View {
 // MARK: - Theme
 
 enum RelayColors {
-    static let primary = Color(red: 0.13, green: 0.83, blue: 0.93)   // Cyan (#22D3EE)
-    static let accent  = Color(red: 0.05, green: 0.65, blue: 0.91)   // Sky Blue (#0EA5E9)
-    static let deep    = Color(red: 0.04, green: 0.05, blue: 0.09)   // Future Deep (#0B0E16)
+    // 0.133, 0.827, 0.933 -> #22D3EE
+    static let primary = Color(red: 0.133, green: 0.827, blue: 0.933)
+    // 0.055, 0.647, 0.914 -> #0EA5E9
+    static let accent  = Color(red: 0.055, green: 0.647, blue: 0.914)
+    // 0.043, 0.055, 0.086 -> #0B0E16
+    static let deep    = Color(red: 0.043, green: 0.055, blue: 0.086)
+
     // Slightly lighter than deep, with opacity to allow background to bleed through if needed, simulating glass
     static let cardBackground = Color(red: 0.09, green: 0.11, blue: 0.15).opacity(0.8)
 }
