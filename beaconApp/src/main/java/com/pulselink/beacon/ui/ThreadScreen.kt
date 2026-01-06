@@ -47,14 +47,17 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -65,10 +68,15 @@ import coil.compose.AsyncImage
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
+import com.pulselink.beacon.util.LinkPreviewData
+import com.pulselink.beacon.util.LinkPreviewHelper
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import androidx.compose.foundation.clickable
+import android.content.Intent
+import android.net.Uri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -317,6 +325,8 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
     val bubbleShape = RoundedCornerShape(theme.bubbleRadius.dp)
     val clipboardManager = LocalClipboardManager.current
     val otp = remember(message.body) { extractOtp(message.body) }
+    val extractedUrl = remember(message.body) { LinkPreviewHelper.extractUrl(message.body) }
+    val context = LocalContext.current
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -339,6 +349,25 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Black
                 )
+
+                if (extractedUrl != null) {
+                    val preview by produceState<LinkPreviewData?>(initialValue = null, key1 = extractedUrl) {
+                        value = LinkPreviewHelper.fetchPreview(extractedUrl)
+                    }
+
+                    if (preview != null && (preview!!.title != null || preview!!.imageUrl != null)) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinkPreviewCard(preview = preview!!) {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(extractedUrl))
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+
                 if (message.isMms && message.mediaParts.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     message.mediaParts.filter { it.dataUri != null && it.contentType.startsWith("image") }
@@ -382,6 +411,55 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Light,
                     color = Color.DarkGray
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LinkPreviewCard(preview: LinkPreviewData, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color.White.copy(alpha = 0.9f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Column {
+            if (preview.imageUrl != null) {
+                AsyncImage(
+                    model = preview.imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                )
+            }
+            Column(Modifier.padding(8.dp)) {
+                if (preview.title != null) {
+                    Text(
+                        text = preview.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        maxLines = 1
+                    )
+                }
+                if (preview.description != null) {
+                    Text(
+                        text = preview.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.DarkGray,
+                        maxLines = 2
+                    )
+                }
+                Text(
+                    text = preview.siteName ?: Uri.parse(preview.url).host ?: preview.url,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray,
+                    maxLines = 1
                 )
             }
         }
