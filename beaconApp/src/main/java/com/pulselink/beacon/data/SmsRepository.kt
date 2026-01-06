@@ -82,6 +82,16 @@ class SmsRepository(private val context: Context) {
 
         val addressMap = resolveAddressesForThreads(rawThreads)
 
+        // Bulk resolve names for addresses not in cache to avoid N+1 queries
+        val rawAddresses = addressMap.values.distinct()
+        val uncachedAddresses = rawAddresses.filter { contactCache[it] == null }
+        if (uncachedAddresses.isNotEmpty()) {
+            val batchResolved = batchResolveDisplayNames(uncachedAddresses)
+            batchResolved.forEach { (num, name) ->
+                contactCache.put(num, name)
+            }
+        }
+
         return@withContext rawThreads.map { raw ->
             val cachedName = addressCache[raw.id]
             if (cachedName != null) {
@@ -94,7 +104,15 @@ class SmsRepository(private val context: Context) {
                 )
             } else {
                 val rawAddress = addressMap[raw.id] ?: ""
-                val displayName = resolveAddress(rawAddress)
+                // Try contact cache first (populated by batch)
+                val cachedContact = contactCache[rawAddress]
+                val displayName = if (cachedContact != null) {
+                    cachedContact
+                } else {
+                    // Fallback to single lookup if batch missed (e.g. formatting mismatch)
+                    resolveAddress(rawAddress)
+                }
+
                 if (displayName.isNotBlank()) {
                     addressCache.put(raw.id, displayName)
                 }
@@ -107,6 +125,57 @@ class SmsRepository(private val context: Context) {
                 )
             }
         }
+    }
+
+    private fun batchResolveDisplayNames(numbers: List<String>): Map<String, String> {
+        if (!hasReadPerms() || numbers.isEmpty()) return emptyMap()
+        val result = mutableMapOf<String, String>()
+
+        // Chunk to avoid SQLite limits
+        numbers.chunked(50).forEach { chunk ->
+            val q = chunk.joinToString(",") { "?" }
+            // Try matching against NUMBER
+            val cursor = runCatching {
+                context.contentResolver.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME),
+                    "${ContactsContract.CommonDataKinds.Phone.NUMBER} IN ($q)",
+                    chunk.toTypedArray(),
+                    null
+                )
+            }.getOrNull()
+
+            cursor?.use { c ->
+                val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                if (numIdx >= 0 && nameIdx >= 0) {
+                    while (c.moveToNext()) {
+                        val dbNum = c.getString(numIdx)
+                        val name = c.getString(nameIdx)
+                        if (!name.isNullOrBlank()) {
+                            // Map back to the input number if possible.
+                            // Since we don't know which input matched which output exactly if formatting differs,
+                            // we rely on the fact that the query matched `dbNum` to one of our inputs.
+                            // But `dbNum` from DB might differ from input `num` (formatting).
+                            // We need to find which input number matches this dbNum.
+                            // Simple approach: Check if dbNum is in our chunk.
+                            if (chunk.contains(dbNum)) {
+                                result[dbNum] = name
+                            } else {
+                                // Try to find a loose match in the chunk (e.g. stripping chars)
+                                // This is expensive O(M*N), but chunk is small (50).
+                                val cleanDb = dbNum.filter { it.isDigit() }
+                                val match = chunk.find { it.filter { c -> c.isDigit() } == cleanDb }
+                                if (match != null) {
+                                    result[match] = name
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return result
     }
 
     private data class RawThreadData(

@@ -387,7 +387,8 @@ fun InboxScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(24.dp),
+                        .padding(24.dp)
+                        .alpha(0.8f), // Soften empty state
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -448,7 +449,8 @@ fun InboxScreen(
                             onClick = { onOpenThread(item.threadId, item.address) },
                             onDelete = { onDeleteThread(item.threadId) },
                             onTogglePin = { onTogglePin(item.threadId) },
-                            onToggleArchive = { onToggleArchive(item.threadId) }
+                            onToggleArchive = { onToggleArchive(item.threadId) },
+                            modifier = Modifier.animateItemPlacement()
                         )
                     }
                     item { Spacer(modifier = Modifier.height(60.dp)) }
@@ -513,10 +515,12 @@ private fun SwipeableThreadRow(
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onTogglePin: () -> Unit,
-    onToggleArchive: () -> Unit
+    onToggleArchive: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     SwipeToDismissBox(
         state = state,
+        modifier = modifier,
         backgroundContent = {
             // Use muted theme color for archive, accent for pin
             val (color, alignment, icon) = when (state.targetValue) {

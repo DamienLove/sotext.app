@@ -97,7 +97,8 @@ fun ThreadScreen(
             // Only scroll if we are near the bottom (index 0 in reverse layout) or it's initial load
             val firstVisible = listState.firstVisibleItemIndex
             if (firstVisible < 2) {
-                listState.animateScrollToItem(0)
+                // Use scrollToItem for instant jump on load or new message, avoiding animation lag
+                listState.scrollToItem(0)
             }
         }
     }
