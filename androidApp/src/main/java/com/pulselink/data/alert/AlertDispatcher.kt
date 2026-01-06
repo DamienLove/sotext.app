@@ -117,7 +117,8 @@ class AlertDispatcher @Inject constructor(
             soundOption = soundOption,
             primaryContact = orderedContacts.firstOrNull(),
             shouldPlaySound = shouldPlayLocalSound,
-            notifiedContacts = smsCount
+            notifiedContacts = smsCount,
+            settings = settings
         )
 
         if (shouldOverrideAudio && overrideResult.state != AudioOverrideManager.OverrideResult.State.FAILURE && overrideResult.state != AudioOverrideManager.OverrideResult.State.SKIPPED) {
@@ -194,7 +195,8 @@ class AlertDispatcher @Inject constructor(
         soundOption: SoundOption?,
         primaryContact: Contact?,
         shouldPlaySound: Boolean,
-        notifiedContacts: Int
+        notifiedContacts: Int,
+        settings: PulseLinkSettings
     ) {
         val manager = NotificationManagerCompat.from(context)
         val (title, text) = if (shouldPlaySound) {
