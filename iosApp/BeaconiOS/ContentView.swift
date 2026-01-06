@@ -135,50 +135,54 @@ private struct BeaconTab: View {
 
                 Group {
                     if filter == .private && !isUnlocked {
-                    VStack(spacing: 20) {
-                        Image(systemName: "lock.circle.fill")
-                            .font(.system(size: 60))
-                            .foregroundStyle(.secondary)
-                        Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
-                            .font(.title2.bold())
-                        Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
-                            showPinSheet = true
+                        VStack(spacing: 20) {
+                            Image(systemName: "lock.circle.fill")
+                                .font(.system(size: 60))
+                                .foregroundStyle(.secondary)
+                            Text(storedPin.isEmpty ? "Setup Private Safe" : "Private Safe Locked")
+                                .font(.title2.bold())
+                            Button(storedPin.isEmpty ? "Set PIN" : "Unlock") {
+                                showPinSheet = true
+                            }
+                            .buttonStyle(.borderedProminent)
                         }
-                        .buttonStyle(.borderedProminent)
-                    }
-                } else {
-                    List(filteredContacts) { contact in
-                        NavigationLink(value: contact) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(contact.name).font(.headline)
-                                    Text(contact.role).font(.caption).foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                if contact.unread > 0 {
-                                    Text("\(contact.unread)")
-                                        .font(.caption.bold())
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 4)
-                                        .background(themeColor.color)
-                                        .clipShape(Capsule())
+                    } else {
+                        List(filteredContacts) { contact in
+                            NavigationLink(value: contact) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(contact.name).font(.headline)
+                                        Text(contact.role).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    if contact.unread > 0 {
+                                        Text("\(contact.unread)")
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(themeColor.color)
+                                            .clipShape(Capsule())
+                                    }
                                 }
                             }
                         }
-                    }
-                    .searchable(text: $searchText)
-                    .overlay {
-                        if filteredContacts.isEmpty {
-                            ContentUnavailableView(
-                                "No conversations",
-                                systemImage: "bubble.left.and.bubble.right",
-                                description: Text("Start a new chat on your Android device.")
-                            )
+                        .scrollContentBackground(.hidden)
+                        .background(RelayColors.deep.ignoresSafeArea())
+                        .searchable(text: $searchText)
+                        .overlay {
+                            if filteredContacts.isEmpty {
+                                ContentUnavailableView(
+                                    "No conversations",
+                                    systemImage: "bubble.left.and.bubble.right",
+                                    description: Text("Start a new chat on your Android device.")
+                                )
+                            }
                         }
                     }
                 }
             }
+            .background(RelayColors.deep.ignoresSafeArea())
             .navigationDestination(for: BeaconContactCard.self) { contact in
                 ConversationView(
                     contact: contact,
@@ -217,7 +221,6 @@ private struct BeaconTab: View {
                                     showPinSheet = false
                                     pinInput = ""
                                 } else {
-                                    // Shake animation or error feedback could go here
                                     pinInput = ""
                                 }
                             }
@@ -340,6 +343,8 @@ private struct SettingsTab: View {
                     Text("Beacon iOS")
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(RelayColors.deep.ignoresSafeArea())
             .navigationTitle("Settings")
         }
         .alert("Delete Account", isPresented: $showDeleteConfirmation) {
@@ -350,8 +355,6 @@ private struct SettingsTab: View {
                     do {
                         try await viewModel.deleteAccount()
                     } catch {
-                        // Error handling usually requires showing another alert,
-                        // but for now we just reset the state.
                         print("Delete account error: \(error)")
                     }
                     isDeleting = false
@@ -400,4 +403,13 @@ enum BubbleStyle: String, CaseIterable {
         case .capsule: return AnyShape(Capsule())
         }
     }
+}
+
+enum RelayColors {
+    // 0.133, 0.827, 0.933 -> #22D3EE
+    static let primary = Color(red: 0.133, green: 0.827, blue: 0.933)
+    // 0.055, 0.647, 0.914 -> #0EA5E9
+    static let accent  = Color(red: 0.055, green: 0.647, blue: 0.914)
+    // 0.043, 0.055, 0.086 -> #0B0E16
+    static let deep    = Color(red: 0.043, green: 0.055, blue: 0.086)
 }
