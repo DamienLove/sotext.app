@@ -65,7 +65,7 @@ class AlertDispatcher @Inject constructor(
         }
         val soundOption = if (shouldPlayLocalSound) soundCatalog.resolve(profile.soundKey, soundCategory) else null
         val channelId = if (shouldPlayLocalSound) {
-            registrar.ensureAlertChannel(soundCategory, soundOption, profile)
+            registrar.ensureAlertChannel(soundCategory, soundOption, profile, settings.customVibrationPattern)
         } else {
             registrar.ensureSilentAlertChannel()
         }
@@ -234,7 +234,7 @@ class AlertDispatcher @Inject constructor(
             .setGroupSummary(false)
 
         if (shouldPlaySound && profile.vibrate) {
-            val pattern = VibrationPatterns.alertOption(profile.vibrationPatternKey).pattern
+            val pattern = VibrationPatterns.patternForAlertKey(profile.vibrationPatternKey, settings.customVibrationPattern)
             builder.setVibrate(pattern)
         }
         if (shouldPlaySound && profile.breakThroughDnd) builder.setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -270,7 +270,8 @@ class AlertDispatcher @Inject constructor(
                     registrar.ensureAlertChannel(
                         SoundCategory.SIREN.takeIf { tier == EscalationTier.EMERGENCY } ?: SoundCategory.CHIME,
                         soundOption,
-                        profile
+                        profile,
+                        settings.customVibrationPattern
                     )
                 } else {
                     registrar.ensureSilentAlertChannel()

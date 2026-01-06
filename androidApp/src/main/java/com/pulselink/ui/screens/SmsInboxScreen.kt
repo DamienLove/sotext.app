@@ -1214,7 +1214,7 @@ private fun ContactRecipientRow(
 }
 
 @Composable
-private fun TabsRow(
+fun TabsRow(
     filter: InboxFilter,
     unreadCount: Int,
     onFilterChange: (InboxFilter) -> Unit,
@@ -1265,7 +1265,7 @@ private fun TabsRow(
 }
 
 @Composable
-private fun TabText(
+fun TabText(
     label: String,
     badge: String? = null,
     selected: Boolean,
@@ -1504,7 +1504,7 @@ private fun LinePickerRow(
     }
 }
 
-private enum class InboxFilter {
+enum class InboxFilter {
     ALL,
     OTP,
     TRUSTED,

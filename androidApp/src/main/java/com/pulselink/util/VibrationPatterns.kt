@@ -16,6 +16,7 @@ data class CustomVibrationPattern(
 object VibrationPatterns {
     const val MESSAGE_DEFAULT = "message_default"
     const val ALERT_DEFAULT = "alert_default"
+    const val CUSTOM_KEY = "custom_user"
 
     val messageOptions: List<VibrationPatternOption> = listOf(
         VibrationPatternOption(
@@ -93,4 +94,28 @@ object VibrationPatterns {
 
     fun alertOption(key: String?): VibrationPatternOption =
         alertOptions.firstOrNull { it.key == key } ?: alertOptions.first()
+
+    fun customOption(name: String?, pattern: List<Long>?): VibrationPatternOption? {
+        if (pattern.isNullOrEmpty()) return null
+        return VibrationPatternOption(
+            key = CUSTOM_KEY,
+            label = name?.ifBlank { "Custom pattern" } ?: "Custom pattern",
+            pattern = pattern.toLongArray(),
+            isCustom = true
+        )
+    }
+
+    fun patternForMessageKey(key: String?, customPattern: List<Long>?): LongArray {
+        if (key == CUSTOM_KEY && !customPattern.isNullOrEmpty()) {
+            return customPattern.toLongArray()
+        }
+        return messageOption(key).pattern
+    }
+
+    fun patternForAlertKey(key: String?, customPattern: List<Long>?): LongArray {
+        if (key == CUSTOM_KEY && !customPattern.isNullOrEmpty()) {
+            return customPattern.toLongArray()
+        }
+        return alertOption(key).pattern
+    }
 }

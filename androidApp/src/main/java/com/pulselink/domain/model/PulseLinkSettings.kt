@@ -30,6 +30,8 @@ data class PulseLinkSettings(
     val messageNotificationSoundOverrides: Map<String, String> = emptyMap(),
     val messageNotificationVibrationPattern: String = "message_default",
     val messageNotificationVibrationOverrides: Map<String, String> = emptyMap(),
+    val customVibrationPatternName: String? = null,
+    val customVibrationPattern: List<Long>? = null,
     val betaAgreementAccepted: Boolean = false,
     val betaAgreementVersion: String? = null,
     val autoCallAfterAlert: Boolean = false,

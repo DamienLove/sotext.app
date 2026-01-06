@@ -63,7 +63,8 @@ class NotificationRegistrar @Inject constructor(
     fun ensureAlertChannel(
         category: SoundCategory,
         soundOption: SoundOption?,
-        profile: AlertProfile
+        profile: AlertProfile,
+        customPattern: List<Long>? = null
     ): String {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return when (category) {
@@ -83,7 +84,7 @@ class NotificationRegistrar @Inject constructor(
         val existing = manager.getNotificationChannel(channelId)
         val soundUri = soundOption?.resolveUri(context)
         val desiredPattern = if (profile.vibrate) {
-            VibrationPatterns.alertOption(profile.vibrationPatternKey).pattern
+            VibrationPatterns.patternForAlertKey(profile.vibrationPatternKey, customPattern)
         } else {
             null
         }

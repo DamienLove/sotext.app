@@ -1522,7 +1522,7 @@ class RemoteActionHandler @Inject constructor(
             )
         }
         val soundOption = soundCatalog.resolve(soundKey, category)
-        val channel = notificationRegistrar.ensureAlertChannel(category, soundOption, profile)
+        val channel = notificationRegistrar.ensureAlertChannel(category, soundOption, profile, settings.customVibrationPattern)
         val requestBypass = forceBypass ||
             profile.breakThroughDnd ||
             tier == EscalationTier.EMERGENCY ||
@@ -1548,7 +1548,7 @@ class RemoteActionHandler @Inject constructor(
             .setAutoCancel(true)
             .apply {
                 if (profile.vibrate) {
-                    val pattern = VibrationPatterns.alertOption(profile.vibrationPatternKey).pattern
+                    val pattern = VibrationPatterns.patternForAlertKey(profile.vibrationPatternKey, settings.customVibrationPattern)
                     setVibrate(pattern)
                 }
                 if (requestBypass) {
@@ -1580,7 +1580,7 @@ class RemoteActionHandler @Inject constructor(
             ?: contact.emergencySoundKey
             ?: profile.soundKey
         val soundOption = soundCatalog.resolve(soundKey, SoundCategory.CALL)
-        val channel = notificationRegistrar.ensureAlertChannel(SoundCategory.CALL, soundOption, profile)
+        val channel = notificationRegistrar.ensureAlertChannel(SoundCategory.CALL, soundOption, profile, settings.customVibrationPattern)
         val overrideResult = audioOverrideManager.overrideForAlert(true)
         if (!overrideResult.success) {
             Log.w(
@@ -1609,7 +1609,7 @@ class RemoteActionHandler @Inject constructor(
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .apply {
                 if (profile.vibrate) {
-                    val pattern = VibrationPatterns.alertOption(profile.vibrationPatternKey).pattern
+                    val pattern = VibrationPatterns.patternForAlertKey(profile.vibrationPatternKey, settings.customVibrationPattern)
                     setVibrate(pattern)
                 }
             }

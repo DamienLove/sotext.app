@@ -58,23 +58,8 @@ class PulseLinkApp : Application(), Configuration.Provider {
             appOpenAdController.updateAvailability(false)
         }
 
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val syncRequest = PeriodicWorkRequest.Builder(
-            com.pulselink.data.sms.SmsSyncWorker::class.java,
-            15,
-            java.util.concurrent.TimeUnit.MINUTES
-        )
-            .setConstraints(constraints)
-            .build()
-
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
-            "SmsSync",
-            ExistingPeriodicWorkPolicy.KEEP,
-            syncRequest
-        )
+        // SMS sync is now triggered on-demand when messages are sent/received
+        // No need for periodic sync
 
         val otpCleanupRequest = PeriodicWorkRequest.Builder(
             com.pulselink.data.sms.OtpCleanupWorker::class.java,

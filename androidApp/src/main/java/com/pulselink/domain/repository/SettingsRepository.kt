@@ -57,4 +57,6 @@ interface SettingsRepository {
     suspend fun setThreadLineOverrides(overrides: Map<String, String>)
     suspend fun setThreadLineOverride(threadKey: String, lineId: String?)
     suspend fun setDevicePhoneNumber(phone: String?)
+    suspend fun setCustomVibrationPattern(name: String, pattern: List<Long>)
+    suspend fun clearCustomVibrationPattern()
 }

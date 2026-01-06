@@ -101,6 +101,7 @@ import com.pulselink.ui.screens.SettingsHelpScreen
 import com.pulselink.ui.screens.SettingsScreen
 import com.pulselink.ui.screens.MessageNotificationSoundScreen
 import com.pulselink.ui.screens.VibrationPatternPickerScreen
+import com.pulselink.ui.screens.CustomVibrationCreatorScreen
 import com.pulselink.ui.screens.MultiLineSetupDialog
 import com.pulselink.ui.screens.LineLimitDialog
 import com.pulselink.ui.screens.ProfileSettingsScreen
@@ -1470,17 +1471,29 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("alerts/default/emergency_vibration") {
+                        val customOption = VibrationPatterns.customOption(
+                            state.settings.customVibrationPatternName,
+                            state.settings.customVibrationPattern
+                        )
+                        val alertOptions = if (customOption != null) {
+                            VibrationPatterns.alertOptions + customOption
+                        } else {
+                            VibrationPatterns.alertOptions
+                        }
                         VibrationPatternPickerScreen(
                             title = "Emergency vibration pattern",
                             subtitle = "Select the vibration style for emergency alerts.",
-                            options = VibrationPatterns.alertOptions,
+                            options = alertOptions,
                             selectedKey = state.settings.emergencyProfile.vibrationPatternKey,
                             onSelect = { key ->
                                 viewModel.updateEmergencyVibrationPattern(
                                     key ?: VibrationPatterns.ALERT_DEFAULT
                                 )
                             },
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            onCreateCustom = {
+                                navController.navigate("notifications/custom_vibration")
+                            }
                         )
                     }
                     composable("alerts/default/checkin") {
@@ -1494,17 +1507,29 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
                     composable("alerts/default/checkin_vibration") {
+                        val customOption = VibrationPatterns.customOption(
+                            state.settings.customVibrationPatternName,
+                            state.settings.customVibrationPattern
+                        )
+                        val alertOptions = if (customOption != null) {
+                            VibrationPatterns.alertOptions + customOption
+                        } else {
+                            VibrationPatterns.alertOptions
+                        }
                         VibrationPatternPickerScreen(
                             title = "Check-in vibration pattern",
                             subtitle = "Select the vibration style for check-in alerts.",
-                            options = VibrationPatterns.alertOptions,
+                            options = alertOptions,
                             selectedKey = state.settings.checkInProfile.vibrationPatternKey,
                             onSelect = { key ->
                                 viewModel.updateCheckInVibrationPattern(
                                     key ?: VibrationPatterns.ALERT_DEFAULT
                                 )
                             },
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            onCreateCustom = {
+                                navController.navigate("notifications/custom_vibration")
+                            }
                         )
                     }
                     composable("alerts/default/call") {
@@ -1561,12 +1586,18 @@ class MainActivity : AppCompatActivity() {
                         val messageVibrationLabel = VibrationPatterns
                             .messageOption(state.settings.messageNotificationVibrationPattern)
                             .label
-                        val emergencyVibrationLabel = VibrationPatterns
-                            .alertOption(state.settings.emergencyProfile.vibrationPatternKey)
-                            .label
-                        val checkInVibrationLabel = VibrationPatterns
-                            .alertOption(state.settings.checkInProfile.vibrationPatternKey)
-                            .label
+                        val customVibration = VibrationPatterns.customOption(
+                            state.settings.customVibrationPatternName,
+                            state.settings.customVibrationPattern
+                        )
+                        val emergencyVibrationLabel = (
+                            customVibration.takeIf { state.settings.emergencyProfile.vibrationPatternKey == VibrationPatterns.CUSTOM_KEY }
+                                ?: VibrationPatterns.alertOption(state.settings.emergencyProfile.vibrationPatternKey)
+                            ).label
+                        val checkInVibrationLabel = (
+                            customVibration.takeIf { state.settings.checkInProfile.vibrationPatternKey == VibrationPatterns.CUSTOM_KEY }
+                                ?: VibrationPatterns.alertOption(state.settings.checkInProfile.vibrationPatternKey)
+                            ).label
                         val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
                         SettingsScreen(
                             settings = state.settings,
@@ -1691,6 +1722,15 @@ class MainActivity : AppCompatActivity() {
                         val normalized = addressArg?.let { normalizeSmsAddress(it) }
                         val overrideKey = normalized?.let { state.settings.messageNotificationVibrationOverrides[it] }
                         val isContact = addressArg != null
+                        val customOption = VibrationPatterns.customOption(
+                            state.settings.customVibrationPatternName,
+                            state.settings.customVibrationPattern
+                        )
+                        val messageOptions = if (customOption != null) {
+                            VibrationPatterns.messageOptions + customOption
+                        } else {
+                            VibrationPatterns.messageOptions
+                        }
                         VibrationPatternPickerScreen(
                             title = if (isContact) "Notification vibration" else "Message vibration pattern",
                             subtitle = if (isContact) {
@@ -1698,7 +1738,7 @@ class MainActivity : AppCompatActivity() {
                             } else {
                                 "Choose the vibration style for incoming texts."
                             },
-                            options = VibrationPatterns.messageOptions,
+                            options = messageOptions,
                             selectedKey = if (isContact) overrideKey else state.settings.messageNotificationVibrationPattern,
                             defaultLabel = if (isContact) "Use global message pattern" else null,
                             onSelect = { key ->
@@ -1710,7 +1750,19 @@ class MainActivity : AppCompatActivity() {
                                     )
                                 }
                             },
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            onCreateCustom = {
+                                navController.navigate("notifications/custom_vibration")
+                            }
+                        )
+                    }
+                    composable("notifications/custom_vibration") {
+                        CustomVibrationCreatorScreen(
+                            onBack = { navController.popBackStack() },
+                            onSave = { name, pattern ->
+                                viewModel.saveCustomVibrationPattern(name, pattern.toList())
+                                navController.popBackStack()
+                            }
                         )
                     }
                     composable("profile_settings") {
@@ -2130,7 +2182,6 @@ class MainActivity : AppCompatActivity() {
                                 val uri = viewModel.buildBugReportUri(context, data)
                                 val intent = Intent(Intent.ACTION_VIEW, uri)
                                 runCatching { context.startActivity(intent) }
-                                    .onSuccess { navController.popBackStack() }
                                     .onFailure {
                                         Toast.makeText(
                                             context,

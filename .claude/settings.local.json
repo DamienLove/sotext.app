@@ -44,7 +44,13 @@
       "Bash(cmd.exe /c \"copy androidApp\\\\build\\\\outputs\\\\bundle\\\\freeRelease\\\\androidApp-free-release.aab H:\\\\disposable\\\\pulselink-free-v115.aab\")",
       "Bash(cmd.exe /c \"copy androidApp\\\\build\\\\outputs\\\\bundle\\\\proRelease\\\\androidApp-pro-release.aab H:\\\\disposable\\\\pulselink-pro-v115.aab\")",
       "Bash(cmd.exe /c \"copy androidApp\\\\build\\\\outputs\\\\bundle\\\\premiumRelease\\\\androidApp-premium-release.aab H:\\\\disposable\\\\pulselink-premium-v115.aab\")",
-      "Bash(cmd.exe /c \"dir H:\\\\disposable\\\\*v115.aab\")"
+      "Bash(cmd.exe /c \"dir H:\\\\disposable\\\\*v115.aab\")",
+      "Bash(gh pr ready:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(dir /s /b androidAppbuildoutputsbundle*Release*.aab)",
+      "Bash(cmd.exe /c \"dir /s /b androidApp\\\\build\\\\outputs\\\\bundle\\\\*Release\\\\*.aab\")",
+      "Bash(grep:*)"
     ]
   },
   "mcpServers": {

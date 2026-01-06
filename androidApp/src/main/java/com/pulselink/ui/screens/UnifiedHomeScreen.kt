@@ -26,7 +26,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -127,25 +130,29 @@ fun UnifiedHomeScreen(
     }
 
     val context = LocalContext.current
-    val previewThreads = remember(threads, isPremium, activeLineId, deviceLineId) {
-        val filtered = if (isPremium && orderedLines.isNotEmpty()) {
-             val effectiveActive = activeLineId ?: deviceLineId
-             if (effectiveActive != null) {
-                 threads.filter { it.lineId.isNullOrBlank() || it.lineId == effectiveActive }
-             } else threads
+    var selectedFilter by rememberSaveable { mutableStateOf(InboxFilter.ALL) }
+    val totalUnread = remember(threads) { threads.count { it.unread } }
+    val previewThreads = remember(threads, isPremium, activeLineId, deviceLineId, selectedFilter, contactsByNumber) {
+        val lineFiltered = if (isPremium && orderedLines.isNotEmpty()) {
+            val effectiveActive = activeLineId ?: deviceLineId
+            if (effectiveActive != null) {
+                threads.filter { it.lineId.isNullOrBlank() || it.lineId == effectiveActive }
+            } else threads
         } else {
             threads
         }
-        // Filter out archived, but maybe keep OTP/Trusted? 
-        // For preview, we generally want standard inbox.
-        // We will filter out archived threads for the main view as usual.
-        filtered.filterNot { 
-            // We don't have access to archived IDs easily here without viewing Archived state
-            // But typically threads list is "Inbox", separate state for "Archived" in VM
-            // SmsInboxViewModel exposes 'threads' (inbox) and 'archived' (archived).
-            // So 'threads' should be safe.
-            false 
-        }.take(5)
+        val filteredByFilter = when (selectedFilter) {
+            InboxFilter.ALL -> lineFiltered
+            InboxFilter.OTP -> lineFiltered.filter { it.isOtp }
+            InboxFilter.TRUSTED -> lineFiltered.filter { it.isTrusted }
+            InboxFilter.FAVORITES -> lineFiltered.filter { it.isFavorite }
+            InboxFilter.PRIVATE -> lineFiltered.filter { it.isPrivate }
+            InboxFilter.CONTACTS -> lineFiltered.filter { contactsByNumber.containsKey(normalizeSmsAddress(it.address)) }
+            InboxFilter.READ -> lineFiltered.filter { !it.unread }
+            InboxFilter.UNREAD -> lineFiltered.filter { it.unread }
+            InboxFilter.ARCHIVED -> emptyList() // preview does not show archived
+        }
+        filteredByFilter.take(8)
     }
 
     HomeScreen(
@@ -182,10 +189,14 @@ fun UnifiedHomeScreen(
         brandName = brandName,
         isPremium = isPremium,
         isPro = isPro,
+        showComposeButton = true,
+        onComposeMessage = onComposeMessage,
         smsPreviewContent = {
             SmsInboxPreviewSection(
                 threads = previewThreads,
-                totalUnread = threads.count { it.unread },
+                totalUnread = totalUnread,
+                filter = selectedFilter,
+                onFilterChange = { selectedFilter = it },
                 onOpenThread = onOpenThread,
                 onViewAll = onViewAllMessages,
                 onOpenContact = onOpenContactForThread,
@@ -206,6 +217,8 @@ fun UnifiedHomeScreen(
 fun SmsInboxPreviewSection(
     threads: List<SmsThreadItem>,
     totalUnread: Int,
+    filter: InboxFilter,
+    onFilterChange: (InboxFilter) -> Unit,
     onOpenThread: (SmsThreadItem) -> Unit,
     onViewAll: () -> Unit,
     onOpenContact: (SmsThreadItem) -> Unit,
@@ -250,10 +263,15 @@ fun SmsInboxPreviewSection(
                     }
                 }
             }
-            TextButton(onClick = onViewAll) {
-                Text("View all")
-            }
         }
+
+        TabsRow(
+            filter = filter,
+            unreadCount = totalUnread,
+            onFilterChange = onFilterChange,
+            theme = theme,
+            isUnifiedMode = true
+        )
 
         if (threads.isEmpty()) {
             if (isDatabaseBusy) {
@@ -311,26 +329,18 @@ fun SmsInboxPreviewSection(
                 }
                 
                 Button(
-                    onClick = onViewAll,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
+                    onClick = onComposeMessage,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("View all messages")
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight, 
-                        contentDescription = null,
-                        modifier = Modifier.padding(start = 4.dp).size(16.dp)
-                    )
+                    Text("Start new message")
                 }
             }
-            TextButton(onClick = onComposeMessage) {
-                Text("Compose")
+            TextButton(
+                onClick = onViewAll,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text("Open full inbox")
             }
         }
     }

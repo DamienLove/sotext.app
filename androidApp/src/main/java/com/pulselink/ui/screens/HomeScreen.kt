@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Help
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Mic
@@ -68,6 +69,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -79,6 +82,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
@@ -167,6 +171,8 @@ fun HomeScreen(
     brandName: String = "PulseLink",
     isPremium: Boolean = false,
     isPro: Boolean = false,
+    showComposeButton: Boolean = false,
+    onComposeMessage: () -> Unit = {},
     smsPreviewContent: (@Composable () -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -222,16 +228,32 @@ fun HomeScreen(
     }
 
     val contentPaddingVertical = 14.dp
-    Surface(
+    Scaffold(
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing),
-        color = backgroundColor
-    ) {
+        containerColor = backgroundColor,
+        floatingActionButton = {
+            if (showComposeButton) {
+                FloatingActionButton(
+                    onClick = onComposeMessage,
+                    containerColor = parseColorOr(MaterialTheme.colorScheme.primary, themePrefs.primaryColor),
+                    contentColor = parseColorOr(MaterialTheme.colorScheme.onPrimary, themePrefs.onBubbleOutgoing)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "New message"
+                    )
+                }
+            }
+        },
+        floatingActionButtonPosition = FabPosition.Start
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
+                .padding(innerPadding)
                 .padding(horizontal = 20.dp, vertical = contentPaddingVertical),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {

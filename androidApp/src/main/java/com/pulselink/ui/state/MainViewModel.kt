@@ -38,6 +38,7 @@ import com.pulselink.ui.state.DndStatusMessage
 import com.pulselink.util.AudioOverrideManager
 import com.pulselink.widget.WidgetStateManager
 import com.pulselink.util.BeaconIconManager
+import com.pulselink.util.VibrationPatterns
 import com.pulselink.util.normalizeSmsAddress
 import com.pulselink.util.stripSmsDisplayName
 import com.google.firebase.firestore.DocumentSnapshot
@@ -186,7 +187,7 @@ class MainViewModel @Inject constructor(
                 val user = (state as? AuthState.Authenticated)?.user
                 if (user != null && !user.isAnonymous) {
                     syncProfileFromCloud(user)
-                    syncContactsFromCloud(user)
+                    syncContactsFromCloud(user, forcePushLocal = true)
                     linkManager.syncLinksOnLogin()
                     startRemoteSettingsListener(user)
                     val settings = settingsRepository.settings.first()
@@ -469,6 +470,17 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.update { settings ->
                 settings.copy(messageNotificationVibrationPattern = key)
+            }
+        }
+    }
+
+    fun saveCustomVibrationPattern(name: String, pattern: List<Long>) {
+        viewModelScope.launch {
+            settingsRepository.setCustomVibrationPattern(name, pattern)
+            settingsRepository.update { settings ->
+                settings.copy(
+                    messageNotificationVibrationPattern = VibrationPatterns.CUSTOM_KEY
+                )
             }
         }
     }

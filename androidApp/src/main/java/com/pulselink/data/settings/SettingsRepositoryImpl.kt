@@ -46,6 +46,8 @@ private val MESSAGE_NOTIFICATION_VIBRATE = booleanPreferencesKey("message_notifi
 private val MESSAGE_NOTIFICATION_SOUND_OVERRIDES = stringPreferencesKey("message_notification_sound_overrides")
 private val MESSAGE_NOTIFICATION_VIBRATION_PATTERN = stringPreferencesKey("message_notification_vibration_pattern")
 private val MESSAGE_NOTIFICATION_VIBRATION_OVERRIDES = stringPreferencesKey("message_notification_vibration_overrides")
+private val CUSTOM_VIBRATION_NAME = stringPreferencesKey("custom_vibration_name")
+private val CUSTOM_VIBRATION_PATTERN = stringPreferencesKey("custom_vibration_pattern")
 private val BETA_AGREEMENT_ACCEPTED = booleanPreferencesKey("beta_agreement_accepted")
 private val BETA_AGREEMENT_VERSION = stringPreferencesKey("beta_agreement_version")
 private val AUTO_CALL = booleanPreferencesKey("auto_call")
@@ -148,6 +150,10 @@ class SettingsRepositoryImpl @Inject constructor(
                 prefs[MESSAGE_NOTIFICATION_VIBRATION_OVERRIDES]
             ) { json.decodeFromString<Map<String, String>>(it) }
                 ?: PulseLinkSettings().messageNotificationVibrationOverrides,
+            customVibrationPatternName = prefs[CUSTOM_VIBRATION_NAME],
+            customVibrationPattern = prefs[CUSTOM_VIBRATION_PATTERN]?.let { raw ->
+                decodeJsonOrNull(raw) { json.decodeFromString<List<Long>>(it) }
+            },
             betaAgreementAccepted = prefs[BETA_AGREEMENT_ACCEPTED] ?: PulseLinkSettings().betaAgreementAccepted,
             betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
@@ -236,6 +242,10 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[MESSAGE_NOTIFICATION_VIBRATION_OVERRIDES] = encodeJson {
                 json.encodeToString(updated.messageNotificationVibrationOverrides)
             }
+            updated.customVibrationPatternName?.let { prefs[CUSTOM_VIBRATION_NAME] = it } ?: prefs.remove(CUSTOM_VIBRATION_NAME)
+            updated.customVibrationPattern?.let { pattern ->
+                prefs[CUSTOM_VIBRATION_PATTERN] = encodeJson { json.encodeToString(pattern) }
+            } ?: prefs.remove(CUSTOM_VIBRATION_PATTERN)
             prefs[BETA_AGREEMENT_ACCEPTED] = updated.betaAgreementAccepted
             updated.betaAgreementVersion?.let { prefs[BETA_AGREEMENT_VERSION] = it } ?: prefs.remove(BETA_AGREEMENT_VERSION)
             prefs[AUTO_CALL] = updated.autoCallAfterAlert
@@ -379,6 +389,20 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setDevicePhoneNumber(phone: String?) {
         editOnIo { prefs ->
             phone?.let { prefs[DEVICE_PHONE_NUMBER] = it } ?: prefs.remove(DEVICE_PHONE_NUMBER)
+        }
+    }
+
+    override suspend fun setCustomVibrationPattern(name: String, pattern: List<Long>) {
+        editOnIo { prefs ->
+            prefs[CUSTOM_VIBRATION_NAME] = name
+            prefs[CUSTOM_VIBRATION_PATTERN] = encodeJson { json.encodeToString(pattern) }
+        }
+    }
+
+    override suspend fun clearCustomVibrationPattern() {
+        editOnIo { prefs ->
+            prefs.remove(CUSTOM_VIBRATION_NAME)
+            prefs.remove(CUSTOM_VIBRATION_PATTERN)
         }
     }
 

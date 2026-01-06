@@ -1182,7 +1182,7 @@ function App() {
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
     timeFormat: 'AUTO',
-    thirdPartyExtensionsEnabled: false
+    thirdPartyExtensionsEnabled: true
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -1407,6 +1407,10 @@ function App() {
     const unsubscribe = onSnapshot(userRef, (snapshot) => {
       const data = snapshot.data() || {};
       setUserData(data);
+      const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
+      const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
+      const isBeta = data.isBetaTester === true;
+      const tenureDays = data.createdAt ? (Date.now() - toMillis(data.createdAt)) / (1000 * 60 * 60 * 24) : 0;
       setProfile({
         ownerName: data.ownerName ?? user.displayName ?? '',
         avatarUrl: data.avatarUrl ?? '',
@@ -1420,10 +1424,10 @@ function App() {
         setThemePrefs(defaultTheme);
       }
       setRemoteSettings({
-        remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? false,
+        remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? isPremium,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
-        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? false
+        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true
       });
 
       // Check for theme and avatar unlocks
@@ -1431,13 +1435,8 @@ function App() {
       const currentUnlockedAvatars = data.unlockedAvatarIds || [];
       const newUnlocks = [];
       const newAvatarUnlocks = [];
-      const tenureDays = data.createdAt ? (Date.now() - toMillis(data.createdAt)) / (1000 * 60 * 60 * 24) : 0;
-      
       // Mock status checks if fields don't exist yet, effectively unlocking for testing if user has flags
       // In production, these flags would be set by payment/backend logic
-      const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
-      const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
-      const isBeta = data.isBetaTester === true;
       const isLoyal = tenureDays > 365;
 
       specialThemePresets.forEach(preset => {

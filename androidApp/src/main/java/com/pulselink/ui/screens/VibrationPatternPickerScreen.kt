@@ -42,7 +42,8 @@ fun VibrationPatternPickerScreen(
     selectedKey: String?,
     defaultLabel: String? = null,
     onSelect: (String?) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onCreateCustom: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val vibrator = context.getSystemService(Vibrator::class.java)
@@ -139,6 +140,14 @@ fun VibrationPatternPickerScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Done")
+            }
+            if (onCreateCustom != null) {
+                OutlinedButton(
+                    onClick = onCreateCustom,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Create custom pattern")
+                }
             }
         }
     }
