@@ -1216,6 +1216,7 @@ function App() {
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
+  const [isLoadingThreads, setIsLoadingThreads] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -1529,6 +1530,7 @@ function App() {
     const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
 
     if (user && isPremiumUser && hasRemoteAccess) {
+      setIsLoadingThreads(true);
       // Listen to threads only if user has premium and remote web access enabled
       // Assuming structure: users/{uid}/synced_threads/{threadId}
       const threadsRef = collection(db, "users", user.uid, "synced_threads");
@@ -1539,10 +1541,12 @@ function App() {
           ...doc.data()
         }));
         setThreads(threadsData);
+        setIsLoadingThreads(false);
       });
       return () => unsubscribe();
     } else {
       setThreads([]);
+      setIsLoadingThreads(false);
     }
   }, [user, userData, remoteSettings.remoteWebAccessEnabled]);
 
@@ -2443,7 +2447,12 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
+              {isLoadingThreads ? (
+                <div className="sidebar-placeholder">
+                  <Spinner />
+                  <div className="sidebar-tip">Loading conversations...</div>
+                </div>
+              ) : threads.length === 0 ? (
                 <div className="sidebar-placeholder">
                   <div className="sidebar-tip">
                     <strong>No conversations found</strong>
