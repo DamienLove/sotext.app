@@ -390,7 +390,9 @@ android {
     lint {
         disable += listOf(
             "StateFlowValueCalledInComposition",
-            "FlowOperatorInvokedInComposition"
+            "FlowOperatorInvokedInComposition",
+            // Compose lint crashes with metadata 2.1.0; temporary disable to unblock builds.
+            "CoroutineCreationDuringComposition"
         )
     }
 

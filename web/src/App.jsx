@@ -1137,6 +1137,11 @@ function App() {
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [threads, setThreads] = useState([]);
+  const [legacyThreads, setLegacyThreads] = useState([]);
+  const [lineThreads, setLineThreads] = useState({});
+  const [lines, setLines] = useState([]);
+  const [lineInboxMode, setLineInboxMode] = useState('COMBINED');
+  const [activeLineId, setActiveLineId] = useState(null);
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
   const [profile, setProfile] = useState({
@@ -1190,6 +1195,7 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [composeAddress, setComposeAddress] = useState('');
   const [composeBody, setComposeBody] = useState('');
+  const [sendLineId, setSendLineId] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -1216,14 +1222,6 @@ function App() {
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
-  const [isLoadingThreads, setIsLoadingThreads] = useState(false);
-
-  // Extensions State
-  const [activeExtension, setActiveExtension] = useState(null); // { id, url, name }
-  const [devExtensionUrl, setDevExtensionUrl] = useState('http://localhost:5173/extensions/helloworld/manifest.json');
-  // eslint-disable-next-line no-unused-vars
-  const [installedExtensions, setInstalledExtensions] = useState([]);
-  const [extensionStatus, setExtensionStatus] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -1409,6 +1407,11 @@ function App() {
         autoUpdateContactInfo: true,
         timeFormat: 'AUTO'
       });
+      setLineInboxMode('COMBINED');
+      setActiveLineId(null);
+      setLines([]);
+      setLegacyThreads([]);
+      setLineThreads({});
       return;
     }
     const userRef = doc(db, "users", user.uid);
@@ -1437,6 +1440,8 @@ function App() {
         timeFormat: data.timeFormat ?? 'AUTO',
         thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true
       });
+      if (data.lineInboxMode) setLineInboxMode(data.lineInboxMode);
+      if (data.activeLineId) setActiveLineId(data.activeLineId);
 
       // Check for theme and avatar unlocks
       const currentUnlockedIds = data.unlockedThemeIds || [];
@@ -1537,23 +1542,51 @@ function App() {
     const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
 
     if (user && isPremiumUser && hasRemoteAccess) {
-      setIsLoadingThreads(true);
-      // Listen to threads only if user has premium and remote web access enabled
-      // Assuming structure: users/{uid}/synced_threads/{threadId}
-      const threadsRef = collection(db, "users", user.uid, "synced_threads");
-      const q = query(threadsRef, orderBy("date", "desc"));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const threadsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setThreads(threadsData);
-        setIsLoadingThreads(false);
+      // Legacy single-line threads (synced_threads)
+      const legacyRef = collection(db, "users", user.uid, "synced_threads");
+      const legacyQuery = query(legacyRef, orderBy("date", "desc"));
+      const unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
+        const threadsData = snapshot.docs.map(doc => ({ id: doc.id, lineId: null, ...doc.data() }));
+        setLegacyThreads(threadsData);
       });
-      return () => unsubscribe();
+
+      // Multi-device: lines/{lineId}/threads
+      const linesRef = collection(db, "users", user.uid, "lines");
+      const threadUnsubs = new Map();
+
+      const attachLine = (lineId) => {
+        if (threadUnsubs.has(lineId)) return;
+        const lineThreadsRef = collection(db, "users", user.uid, "lines", lineId, "threads");
+        const lineQuery = query(lineThreadsRef, orderBy("date", "desc"));
+        const unsub = onSnapshot(lineQuery, (snapshot) => {
+          const items = snapshot.docs.map(doc => ({ id: doc.id, lineId, ...doc.data() }));
+          setLineThreads((prev) => ({ ...prev, [lineId]: items }));
+        });
+        threadUnsubs.set(lineId, unsub);
+      };
+
+      const detachAll = () => {
+        threadUnsubs.forEach((u) => u());
+        threadUnsubs.clear();
+      };
+
+      const unsubscribeLines = onSnapshot(linesRef, (snapshot) => {
+        const lineItems = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(line => line.disabled !== true);
+        setLines(lineItems);
+        lineItems.forEach(line => attachLine(line.id));
+      });
+
+      return () => {
+        unsubscribeLegacy();
+        unsubscribeLines();
+        detachAll();
+      };
     } else {
-      setThreads([]);
-      setIsLoadingThreads(false);
+      setLegacyThreads([]);
+      setLines([]);
+      setLineThreads({});
     }
   }, [user, userData, remoteSettings.remoteWebAccessEnabled]);
 
@@ -1583,7 +1616,10 @@ function App() {
 
     if (user && selectedThread && isPremiumUser && hasRemoteAccess) {
       // Listen to messages only if user has premium and remote web access enabled
-      const messagesRef = collection(db, "users", user.uid, "synced_threads", selectedThread.id, "messages");
+      const basePath = selectedThread.lineId
+        ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
+        : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];
+      const messagesRef = collection(db, ...basePath);
       const q = query(messagesRef, orderBy("date", "asc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const messagesData = snapshot.docs.map(doc => ({
@@ -2210,6 +2246,7 @@ function App() {
     if (!user) return;
     const address = composeAddress.trim();
     const body = composeBody.trim();
+    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (sendLineId || activeLineId || lines[0]?.id || null) : null;
     if (!address || !body) {
       setSendStatus("Add a phone number and message.");
       return;
@@ -2221,7 +2258,8 @@ function App() {
         address,
         body,
         createdAt: serverTimestamp(),
-        source: "web"
+        source: "web",
+        lineId: effectiveLineId
       });
       setComposeBody('');
       setSendStatus("Queued for sending from your device.");
@@ -2237,102 +2275,27 @@ function App() {
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
     setSelectedThread(thread);
+    if (thread?.lineId) {
+      setActiveLineId((prev) => prev ?? thread.lineId);
+      setSendLineId(thread.lineId);
+    }
   }, []);
 
-  const handleLoadExtension = async (manifestUrl) => {
-      setExtensionStatus("Loading extension manifest...");
-      try {
-          // If it's a relative path in public, use window.location.origin
-          let url = manifestUrl;
-          if (manifestUrl.startsWith('/')) {
-              url = window.location.origin + manifestUrl;
-          }
+  const combinedThreads = useMemo(() => {
+    if (lineInboxMode === 'PER_LINE') return [];
+    const lineFlattened = Object.values(lineThreads).flat();
+    const all = [...legacyThreads, ...lineFlattened];
+    return all.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
+  }, [legacyThreads, lineThreads, lineInboxMode]);
 
-          const response = await fetch(url);
-          if (!response.ok) throw new Error("Failed to load manifest");
-          const manifest = await response.json();
-
-          if (!manifest.entry_point) throw new Error("Manifest missing entry_point");
-
-          // Resolve entry point relative to manifest URL
-          const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
-          let entryUrl = manifest.entry_point;
-          if (!entryUrl.startsWith('http')) {
-              entryUrl = baseUrl + entryUrl;
-          }
-
-          setActiveExtension({
-              id: manifest.id,
-              name: manifest.name,
-              url: entryUrl
-          });
-          setExtensionStatus("");
-          setActivePanel('extension_runner');
-      } catch (e) {
-          setExtensionStatus("Error: " + e.message);
-      }
-  };
-
-  const ExtensionRunner = ({ extension, onClose }) => {
-      const iframeRef = useRef(null);
-
-      useEffect(() => {
-          const handler = (event) => {
-              if (event.source !== iframeRef.current?.contentWindow) return;
-
-              const { type, payload } = event.data || {};
-              // Bridge Logic
-              if (type === 'EXTENSION_PING') {
-                  console.log("Extension Ping:", payload);
-                  iframeRef.current.contentWindow.postMessage({ type: 'HOST_PONG', payload: { serverTime: Date.now() } }, '*');
-              }
-              // Add more API methods here (getUser, etc.)
-              if (type === 'GET_USER') {
-                  iframeRef.current.contentWindow.postMessage({
-                      type: 'USER_DATA',
-                      payload: {
-                          uid: user?.uid,
-                          displayName: profile.ownerName
-                      }
-                  }, '*');
-              }
-          };
-          window.addEventListener('message', handler);
-          return () => window.removeEventListener('message', handler);
-      }, [extension]);
-
-      return (
-          <div className="extension-runner-container" style={{
-              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'var(--bg)', zIndex: 100, display: 'flex', flexDirection: 'column'
-          }}>
-              <div className="panel-header" style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
-                      <button className="ghost-btn icon-only" onClick={onClose}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
-                      <h3>{extension.name}</h3>
-                  </div>
-                  <div className="badge">Running</div>
-              </div>
-              <iframe
-                  ref={iframeRef}
-                  src={extension.url}
-                  style={{ flex: 1, border: 'none', width: '100%', height: '100%' }}
-                  title={extension.name}
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-              />
-          </div>
-      );
-  };
+  const activeLineThreads = useMemo(() => {
+    if (lineInboxMode === 'COMBINED') return combinedThreads;
+    const chosenLine = activeLineId || lines[0]?.id || null;
+    const current = chosenLine ? lineThreads[chosenLine] || [] : [];
+    return current.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
+  }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
 
   const isPremium = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
-
-  if (activePanel === 'extension_runner' && activeExtension) {
-      return (
-        <div className="app-shell" style={themeVars}>
-            <ExtensionRunner extension={activeExtension} onClose={() => setActivePanel('extensions')} />
-        </div>
-      );
-  }
 
   if (!user) {
     return (
@@ -2547,12 +2510,27 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {isLoadingThreads ? (
-                <div className="sidebar-placeholder">
-                  <Spinner />
-                  <div className="sidebar-tip">Loading conversations...</div>
+              {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+                <div className="line-tabs" aria-label="Device lines">
+                  <button
+                    className={`chip ${!activeLineId ? 'active' : ''}`}
+                    onClick={() => setActiveLineId(null)}
+                  >
+                    All
+                  </button>
+                  {lines.map((line) => (
+                    <button
+                      key={line.id}
+                      className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                      onClick={() => setActiveLineId(line.id)}
+                      title={line.phoneNumber || 'Line'}
+                    >
+                      {line.label || line.phoneNumber || line.id.slice(0, 6)}
+                    </button>
+                  ))}
                 </div>
-              ) : threads.length === 0 ? (
+              )}
+              {activeLineThreads.length === 0 ? (
                 <div className="sidebar-placeholder">
                   <div className="sidebar-tip">
                     <strong>No conversations found</strong>
@@ -2572,7 +2550,7 @@ function App() {
                   </div>
                 </div>
               ) : (
-                threads.map(thread => (
+                activeLineThreads.map(thread => (
                   <ThreadItem
                     key={thread.id}
                     thread={thread}
@@ -3334,7 +3312,7 @@ function App() {
                   <p>Smart summaries and auto-replies. Coming soon.</p>
                   <div className="badge" style={{background: 'var(--border)', color: 'var(--muted)', marginTop: 12, display: 'inline-block'}}>Coming Soon</div>
                 </div>
-                {!remoteSettings.thirdPartyExtensionsEnabled ? (
+                {!remoteSettings.thirdPartyExtensionsEnabled && (
                     <div className="settings-card" style={{gridColumn: '1 / -1'}}>
                         <h4>Enable Third-Party Extensions</h4>
                         <p className="settings-note">Unlock the full potential of PulseLink by enabling community extensions.</p>
@@ -3342,33 +3320,6 @@ function App() {
                             setRemoteSettings(prev => ({ ...prev, thirdPartyExtensionsEnabled: true }));
                             handleRemoteSettingsSave();
                         }}>Enable Beta Extensions</button>
-                    </div>
-                ) : (
-                    <div className="settings-card" style={{gridColumn: '1 / -1'}}>
-                        <h4>Developer Mode</h4>
-                        <p className="settings-note">Load an extension from a URL (manifest.json).</p>
-                        <div className="search-container">
-                            <div className="search-input-wrapper">
-                                <input
-                                    className="login-input"
-                                    value={devExtensionUrl}
-                                    onChange={(e) => setDevExtensionUrl(e.target.value)}
-                                    placeholder="http://localhost:3000/manifest.json"
-                                />
-                                <button className="primary-btn" onClick={() => handleLoadExtension(devExtensionUrl)}>
-                                    Load
-                                </button>
-                            </div>
-                        </div>
-                        {extensionStatus && <div className="settings-status" role="status" aria-live="polite">{extensionStatus}</div>}
-
-                        <h4 style={{marginTop: 20}}>Local Samples</h4>
-                        <div className="theme-grid">
-                            <button className="theme-chip" onClick={() => handleLoadExtension('/extensions/helloworld/manifest.json')}>
-                                <div className="theme-chip-title"><strong>Hello World</strong></div>
-                                <div className="theme-chip-preview" style={{padding: 5, fontSize: '0.8em'}}>Basic Sample</div>
-                            </button>
-                        </div>
                     </div>
                 )}
               </div>
@@ -3508,10 +3459,40 @@ function App() {
           {activePanel === 'beacon' && (
             isPremium ? (
               <>
+      {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+        <div className="line-tabs line-tabs--main">
+          <div className="line-tabs-header">
+            <h4>Inbox lines</h4>
+            <div className="chip-row">
+              <button
+                className={`chip ${!activeLineId ? 'active' : ''}`}
+                onClick={() => setActiveLineId(null)}
+              >
+                All
+              </button>
+              {lines.map((line) => (
+                <button
+                  key={line.id}
+                  className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                  onClick={() => setActiveLineId(line.id)}
+                  title={line.phoneNumber || 'Line'}
+                >
+                  {line.label || line.phoneNumber || line.id.slice(0, 6)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
                 {selectedThread ? (
                   <>
                     <div className="chat-header">
-                      <h3>{selectedThread.address}</h3>
+                      <div>
+                        <h3>{selectedThread.address}</h3>
+                        {lineInboxMode === 'PER_LINE' && selectedThread.lineId && (
+                          <div className="chat-subtitle">From line {lines.find(l => l.id === selectedThread.lineId)?.label || selectedThread.lineId.slice(0,6)}</div>
+                        )}
+                      </div>
                     </div>
                     <div className="messages-list">
                       {messageListElements}
@@ -3536,6 +3517,25 @@ function App() {
                       onChange={(e) => setComposeAddress(e.target.value)}
                     />
                   </div>
+                  {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+                    <div className="composer-row">
+                      <label className="composer-label" htmlFor="compose-line">Send from</label>
+                      <select
+                        id="compose-line"
+                        className="composer-input"
+                        value={sendLineId || ''}
+                        onChange={(e) => setSendLineId(e.target.value)}
+                      >
+                        <option value="">Primary device</option>
+                        {lines.map(line => (
+                          <option key={line.id} value={line.id}>
+                            {(line.label || line.phoneNumber || line.id.slice(0, 6))}
+                            {line.primaryDeviceId ? ' • primary' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="composer-row composer-actions">
                     <textarea
                       className="composer-textarea"

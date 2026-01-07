@@ -119,6 +119,15 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override val settings: Flow<PulseLinkSettings> = dataStore.data.map { prefs ->
+        val defaults = PulseLinkSettings()
+        val premiumUnlocked = prefs[PREMIUM_UNLOCKED] ?: defaults.premiumUnlocked
+        val proUnlocked = prefs[PRO_UNLOCKED] ?: defaults.proUnlocked
+        val remoteWebAccessEnabled = when {
+            prefs.contains(REMOTE_WEB_ACCESS) -> prefs[REMOTE_WEB_ACCESS] ?: false
+            premiumUnlocked || BuildConfig.PREMIUM_FEATURES -> true
+            else -> defaults.remoteWebAccessEnabled
+        }
+
         PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
             secondaryPhrase = prefs[SECONDARY_PHRASE] ?: PulseLinkSettings().secondaryPhrase,
@@ -157,8 +166,8 @@ class SettingsRepositoryImpl @Inject constructor(
             betaAgreementAccepted = prefs[BETA_AGREEMENT_ACCEPTED] ?: PulseLinkSettings().betaAgreementAccepted,
             betaAgreementVersion = prefs[BETA_AGREEMENT_VERSION] ?: PulseLinkSettings().betaAgreementVersion,
             autoCallAfterAlert = prefs[AUTO_CALL] ?: PulseLinkSettings().autoCallAfterAlert,
-            proUnlocked = prefs[PRO_UNLOCKED] ?: PulseLinkSettings().proUnlocked,
-            premiumUnlocked = prefs[PREMIUM_UNLOCKED] ?: PulseLinkSettings().premiumUnlocked,
+            proUnlocked = proUnlocked,
+            premiumUnlocked = premiumUnlocked,
             premiumPurchaseToken = prefs[PREMIUM_PURCHASE_TOKEN],
             tierBeforePremium = prefs[TIER_BEFORE_PREMIUM],
             onboardingComplete = prefs[ONBOARDING_COMPLETE] ?: PulseLinkSettings().onboardingComplete,
@@ -171,7 +180,7 @@ class SettingsRepositoryImpl @Inject constructor(
             themePreferences = decodeJsonOrNull(prefs[THEME_PREFERENCES]) {
                 json.decodeFromString(com.pulselink.domain.model.ThemePreferences.serializer(), it)
             } ?: PulseLinkSettings().themePreferences,
-            remoteWebAccessEnabled = prefs[REMOTE_WEB_ACCESS] ?: PulseLinkSettings().remoteWebAccessEnabled,
+            remoteWebAccessEnabled = remoteWebAccessEnabled,
             otpCleanupEnabled = prefs[OTP_CLEANUP_ENABLED] ?: PulseLinkSettings().otpCleanupEnabled,
             otpCleanupDays = prefs[OTP_CLEANUP_DAYS] ?: PulseLinkSettings().otpCleanupDays,
             privatePinHash = prefs[PRIVATE_PIN_HASH],
