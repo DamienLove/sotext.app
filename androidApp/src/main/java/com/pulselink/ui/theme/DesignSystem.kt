@@ -8,15 +8,16 @@ import androidx.compose.ui.unit.dp
 // Aligned with PulseLinkTheme.kt and Web v2 Redesign
 
 // Colors
-private val DeepBackground = Color(0xFF05070F)
-private val DeepSurface = Color(0xFF0C1326)
-private val DeepAccent = Color(0xFF22D3EE)
-private val DeepAccentStrong = Color(0xFF0EA5E9)
-private val DeepTertiary = Color(0xFFBC13FE) // Neon Purple
-private val DeepError = Color(0xFFEF4444)
+val DeepBackground = Color(0xFF05070F)
+val DeepSurface = Color(0xFF0E121E) // Slightly brighter than bg for surface
+val DeepAccent = Color(0xFF22D3EE) // Cyan
+val DeepAccentStrong = Color(0xFF0EA5E9)
+val DeepTertiary = Color(0xFFBC13FE) // Neon Purple
+val DeepError = Color(0xFFEF4444)
+val DeepOnSurface = Color(0xFFEEF2FB)
 
 object Spacing {
-    val extraSmall = 6.dp // Increased breathing room slightly
+    val extraSmall = 6.dp
     val small = 10.dp
     val medium = 18.dp
     val large = 26.dp
@@ -25,9 +26,9 @@ object Spacing {
 }
 
 object Layout {
-    val cardCornerRadius = 20.dp
-    val buttonCornerRadius = 14.dp
-    val inputCornerRadius = 14.dp
+    val cardCornerRadius = 24.dp // Increased for smoother look
+    val buttonCornerRadius = 16.dp
+    val inputCornerRadius = 16.dp
     val bottomSheetCornerRadius = 32.dp
     val dialogCornerRadius = 24.dp
 }
@@ -43,9 +44,22 @@ object Gradients {
         colors = listOf(DeepAccent, DeepAccentStrong)
     )
 
-    // Futuristic Holographic Gradient
+    // Futuristic Holographic Gradient for special cards
     val Holographic = Brush.linearGradient(
-        colors = listOf(DeepAccent, DeepTertiary, DeepAccentStrong)
+        colors = listOf(
+            DeepAccent.copy(alpha = 0.8f),
+            DeepTertiary.copy(alpha = 0.8f),
+            DeepAccentStrong.copy(alpha = 0.8f)
+        )
+    )
+
+    // "Neon Glow" for active states or borders
+    val NeonGlow = Brush.horizontalGradient(
+        colors = listOf(
+            DeepAccent.copy(alpha = 0.0f),
+            DeepAccent.copy(alpha = 0.5f),
+            DeepAccent.copy(alpha = 0.0f)
+        )
     )
 
     val EmergencyGradient = Brush.linearGradient(
