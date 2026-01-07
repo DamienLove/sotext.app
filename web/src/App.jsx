@@ -1218,6 +1218,13 @@ function App() {
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [isLoadingThreads, setIsLoadingThreads] = useState(false);
 
+  // Extensions State
+  const [activeExtension, setActiveExtension] = useState(null); // { id, url, name }
+  const [devExtensionUrl, setDevExtensionUrl] = useState('http://localhost:5173/extensions/helloworld/manifest.json');
+  // eslint-disable-next-line no-unused-vars
+  const [installedExtensions, setInstalledExtensions] = useState([]);
+  const [extensionStatus, setExtensionStatus] = useState('');
+
   useEffect(() => {
     if (!user) {
       setRingerPlaylist([]);
@@ -2232,7 +2239,100 @@ function App() {
     setSelectedThread(thread);
   }, []);
 
+  const handleLoadExtension = async (manifestUrl) => {
+      setExtensionStatus("Loading extension manifest...");
+      try {
+          // If it's a relative path in public, use window.location.origin
+          let url = manifestUrl;
+          if (manifestUrl.startsWith('/')) {
+              url = window.location.origin + manifestUrl;
+          }
+
+          const response = await fetch(url);
+          if (!response.ok) throw new Error("Failed to load manifest");
+          const manifest = await response.json();
+
+          if (!manifest.entry_point) throw new Error("Manifest missing entry_point");
+
+          // Resolve entry point relative to manifest URL
+          const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+          let entryUrl = manifest.entry_point;
+          if (!entryUrl.startsWith('http')) {
+              entryUrl = baseUrl + entryUrl;
+          }
+
+          setActiveExtension({
+              id: manifest.id,
+              name: manifest.name,
+              url: entryUrl
+          });
+          setExtensionStatus("");
+          setActivePanel('extension_runner');
+      } catch (e) {
+          setExtensionStatus("Error: " + e.message);
+      }
+  };
+
+  const ExtensionRunner = ({ extension, onClose }) => {
+      const iframeRef = useRef(null);
+
+      useEffect(() => {
+          const handler = (event) => {
+              if (event.source !== iframeRef.current?.contentWindow) return;
+
+              const { type, payload } = event.data || {};
+              // Bridge Logic
+              if (type === 'EXTENSION_PING') {
+                  console.log("Extension Ping:", payload);
+                  iframeRef.current.contentWindow.postMessage({ type: 'HOST_PONG', payload: { serverTime: Date.now() } }, '*');
+              }
+              // Add more API methods here (getUser, etc.)
+              if (type === 'GET_USER') {
+                  iframeRef.current.contentWindow.postMessage({
+                      type: 'USER_DATA',
+                      payload: {
+                          uid: user?.uid,
+                          displayName: profile.ownerName
+                      }
+                  }, '*');
+              }
+          };
+          window.addEventListener('message', handler);
+          return () => window.removeEventListener('message', handler);
+      }, [extension]);
+
+      return (
+          <div className="extension-runner-container" style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'var(--bg)', zIndex: 100, display: 'flex', flexDirection: 'column'
+          }}>
+              <div className="panel-header" style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{display: 'flex', alignItems: 'center', gap: 10}}>
+                      <button className="ghost-btn icon-only" onClick={onClose}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+                      <h3>{extension.name}</h3>
+                  </div>
+                  <div className="badge">Running</div>
+              </div>
+              <iframe
+                  ref={iframeRef}
+                  src={extension.url}
+                  style={{ flex: 1, border: 'none', width: '100%', height: '100%' }}
+                  title={extension.name}
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              />
+          </div>
+      );
+  };
+
   const isPremium = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
+
+  if (activePanel === 'extension_runner' && activeExtension) {
+      return (
+        <div className="app-shell" style={themeVars}>
+            <ExtensionRunner extension={activeExtension} onClose={() => setActivePanel('extensions')} />
+        </div>
+      );
+  }
 
   if (!user) {
     return (
@@ -3234,7 +3334,7 @@ function App() {
                   <p>Smart summaries and auto-replies. Coming soon.</p>
                   <div className="badge" style={{background: 'var(--border)', color: 'var(--muted)', marginTop: 12, display: 'inline-block'}}>Coming Soon</div>
                 </div>
-                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                {!remoteSettings.thirdPartyExtensionsEnabled ? (
                     <div className="settings-card" style={{gridColumn: '1 / -1'}}>
                         <h4>Enable Third-Party Extensions</h4>
                         <p className="settings-note">Unlock the full potential of PulseLink by enabling community extensions.</p>
@@ -3242,6 +3342,33 @@ function App() {
                             setRemoteSettings(prev => ({ ...prev, thirdPartyExtensionsEnabled: true }));
                             handleRemoteSettingsSave();
                         }}>Enable Beta Extensions</button>
+                    </div>
+                ) : (
+                    <div className="settings-card" style={{gridColumn: '1 / -1'}}>
+                        <h4>Developer Mode</h4>
+                        <p className="settings-note">Load an extension from a URL (manifest.json).</p>
+                        <div className="search-container">
+                            <div className="search-input-wrapper">
+                                <input
+                                    className="login-input"
+                                    value={devExtensionUrl}
+                                    onChange={(e) => setDevExtensionUrl(e.target.value)}
+                                    placeholder="http://localhost:3000/manifest.json"
+                                />
+                                <button className="primary-btn" onClick={() => handleLoadExtension(devExtensionUrl)}>
+                                    Load
+                                </button>
+                            </div>
+                        </div>
+                        {extensionStatus && <div className="settings-status" role="status" aria-live="polite">{extensionStatus}</div>}
+
+                        <h4 style={{marginTop: 20}}>Local Samples</h4>
+                        <div className="theme-grid">
+                            <button className="theme-chip" onClick={() => handleLoadExtension('/extensions/helloworld/manifest.json')}>
+                                <div className="theme-chip-title"><strong>Hello World</strong></div>
+                                <div className="theme-chip-preview" style={{padding: 5, fontSize: '0.8em'}}>Basic Sample</div>
+                            </button>
+                        </div>
                     </div>
                 )}
               </div>
