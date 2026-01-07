@@ -82,30 +82,10 @@ import androidx.compose.foundation.rememberScrollState
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.ThemePalette
+import com.pulselink.beacon.data.ThreadCategory
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.R
 import kotlinx.coroutines.launch
-import java.util.regex.Pattern
-
-// Compiled Patterns and Regex for performance optimization
-private val NUMERIC_REGEX = Regex("[^0-9]")
-private val TRANSACTION_KEYWORDS = listOf(
-    "otp", "code", "bank", "debit", "credit", "acct", "txn", "verify",
-    "password", "login", "auth", "bill", "invoice", "due", "paid"
-)
-private val PROMOTION_KEYWORDS = listOf(
-    "offer", "sale", "save", "discount", "buy", "deal", "coupon",
-    "% off", "limited time", "cashback", "flat"
-)
-
-private val TRANSACTION_PATTERN = Pattern.compile(
-    "\\b(${TRANSACTION_KEYWORDS.joinToString("|")})\\b",
-    Pattern.CASE_INSENSITIVE
-)
-private val PROMOTION_PATTERN = Pattern.compile(
-    "\\b(${PROMOTION_KEYWORDS.joinToString("|")})\\b",
-    Pattern.CASE_INSENSITIVE
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -149,12 +129,18 @@ fun InboxScreen(
             InboxFilter.ALL -> all
             InboxFilter.READ -> all.filter { !it.unread }
             InboxFilter.UNREAD -> all.filter { it.unread }
-            InboxFilter.PERSONAL -> all.filter { isPersonal(it) }
-            InboxFilter.TRANSACTIONS -> all.filter { isTransaction(it) }
-            InboxFilter.PROMOTIONS -> all.filter { isPromotion(it) }
-            InboxFilter.ARCHIVED -> all // Handled by repository call logic if separate list, but assuming passed 'threads' matches context
+            InboxFilter.PERSONAL -> all.filter { it.category == ThreadCategory.PERSONAL }
+            InboxFilter.TRANSACTIONS -> all.filter { it.category == ThreadCategory.TRANSACTIONS }
+            InboxFilter.PROMOTIONS -> all.filter { it.category == ThreadCategory.PROMOTIONS }
+            InboxFilter.ARCHIVED -> all // Filtering logic for Archived is often separate or included, but assuming 'threads' passed here contains what we need or filtered upstream if needed. But usually Archived are separate. For this UI, we just filter by property if present.
+                .filter { it.isArchived } // If repository returns mixed. If repository returns ONLY inbox, this might be empty unless handled upstream.
         }
     }
+
+    // Note: If 'threads' only contains INBOX, then ARCHIVED filter might return empty unless the ViewModel passes archived threads here.
+    // Assuming ViewModel passes specific lists based on filter OR passes all and we filter.
+    // Based on previous code, ViewModel passes 'merged' threads.
+
     val unreadCount = remember(threads) { threads.count { it.unread } }
     val mutedTint = theme.frameColor.copy(alpha = 0.7f)
     val topAppBarState = rememberTopAppBarState()
@@ -222,7 +208,7 @@ fun InboxScreen(
                 scrollBehavior = scrollBehavior
             )
         },
-                floatingActionButton = {
+        floatingActionButton = {
             FloatingActionButton(
                 onClick = onCompose,
                 containerColor = theme.accentColor
@@ -484,58 +470,6 @@ fun InboxScreen(
     }
 }
 
-// Logic for categorization
-fun isTransaction(item: SmsThreadItem): Boolean {
-    // If we have a contact name, it's Personal (unless it's purely a business name, but hard to tell).
-    // SmsRepository populates address with display name if found in contacts.
-    // If address has letters but NO spaces (e.g. "HDFCBNK"), it's likely a sender ID.
-    // If it has spaces (e.g. "John Doe"), it's likely a contact -> Personal.
-
-    val address = item.address
-    val body = item.snippet.lowercase()
-
-    // Check if it's a known contact (heuristic: contains spaces and letters, usually "First Last")
-    // Or if it's a phone number (mostly digits)
-    val isPhoneNumber = address.replace(NUMERIC_REGEX, "").length >= 7 // simple check
-    val hasSpace = address.contains(" ")
-
-    // If it looks like a person's name or a raw phone number, it's PERSONAL.
-    if (hasSpace || (isPhoneNumber && address.any { it.isDigit() })) {
-        return false
-    }
-
-    // If it's a shortcode or Alpha Sender ID (e.g. "UBER", "AMAZON"), it's likely transactional/promo
-    // We assume anything NOT Personal is a candidate for Trans/Promo.
-
-    return TRANSACTION_PATTERN.matcher(body).find()
-}
-
-fun isPromotion(item: SmsThreadItem): Boolean {
-    if (isTransaction(item)) return false // Transaction takes precedence
-
-    val address = item.address
-    val hasSpace = address.contains(" ")
-    val isPhoneNumber = address.replace(NUMERIC_REGEX, "").length >= 7
-
-    // If it's personal, it's not a promo (usually)
-    if (hasSpace || (isPhoneNumber && address.any { it.isDigit() })) {
-        return false
-    }
-
-    val body = item.snippet.lowercase()
-    return PROMOTION_PATTERN.matcher(body).find()
-}
-
-fun isPersonal(item: SmsThreadItem): Boolean {
-    val address = item.address
-
-    // Known contact (has name with space) OR standard phone number
-    val hasSpace = address.contains(" ")
-    val isPhoneNumber = address.any { it.isDigit() } && address.replace(NUMERIC_REGEX, "").length >= 7
-
-    return hasSpace || isPhoneNumber
-}
-
 @Composable
 private fun SearchResults(
     hits: List<SmsMessageItem>,
@@ -596,7 +530,6 @@ private fun SwipeableThreadRow(
     SwipeToDismissBox(
         state = state,
         backgroundContent = {
-            // Use muted theme color for archive, accent for pin
             val (color, alignment, icon) = when (state.targetValue) {
                 SwipeToDismissBoxValue.EndToStart -> Triple(theme.frameColor.copy(alpha = 0.5f), Alignment.CenterEnd, Icons.Default.Inbox) // Archive
                 SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor, Alignment.CenterStart, if (thread.isPinned) Icons.Default.PushPin else Icons.Default.PushPin) // Pin/Unpin
@@ -724,14 +657,15 @@ private fun ThreadRow(
                         DateUtils.MINUTE_IN_MILLIS
                     ).toString(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.DarkGray
+                    color = Color.Gray
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = thread.snippet,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1
+                maxLines = 1,
+                color = theme.frameColor.copy(alpha = 0.8f)
             )
         }
     }

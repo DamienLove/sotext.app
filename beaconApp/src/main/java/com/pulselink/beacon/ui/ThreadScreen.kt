@@ -4,6 +4,7 @@ import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,12 +14,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -74,7 +76,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
-import androidx.compose.foundation.clickable
 import android.content.Intent
 import android.net.Uri
 
@@ -96,16 +97,16 @@ fun ThreadScreen(
     var showTimePicker by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    // Ensure new messages are seen first (at bottom)
+    // Ensure we start at the bottom (newest messages)
+    // reverseLayout = true means index 0 is at the bottom.
+    // We can just rely on the layout, but sometimes scroll state needs a hint if data loads late.
     LaunchedEffect(messages.firstOrNull()?.id) {
         if (messages.isNotEmpty()) {
-            // Only scroll if we are near the bottom (index 0 in reverse layout) or it's initial load
-            val firstVisible = listState.firstVisibleItemIndex
-            if (firstVisible < 2) {
-                listState.animateScrollToItem(0)
+            if (listState.firstVisibleItemIndex < 2) {
+                // If we are already near bottom, stay there or scroll to very bottom
+                listState.scrollToItem(0)
             }
         }
     }
@@ -142,7 +143,6 @@ fun ThreadScreen(
             onDismissRequest = { showTimePicker = false },
             onConfirm = {
                 selectedDateMillis?.let { dateMillis ->
-                    // dateMillis is UTC midnight of the selected date.
                     val utcDate = Instant.ofEpochMilli(dateMillis)
                         .atZone(ZoneId.of("UTC"))
                         .toLocalDate()
@@ -468,13 +468,8 @@ private fun LinkPreviewCard(preview: LinkPreviewData, onClick: () -> Unit) {
 
 private fun extractOtp(body: String): String? {
     val regex = Regex("(?<!\\d)\\d{4,8}(?!\\d)")
-    // Filter out things that are obviously not OTPs if needed, but 4-8 isolated digits is a good heuristic
-    // Check if body contains common OTP keywords to reduce false positives
     val keywords = listOf("code", "pin", "verification", "otp", "password")
     if (keywords.none { body.contains(it, ignoreCase = true) }) {
-        // Relaxing this check because sometimes it's just "123456"
-        // But for "Best App" experience, maybe strict is better?
-        // Let's keep it simple: matches regex and body length is short (< 160 chars)
         if (body.length > 160) return null
     }
     return regex.find(body)?.value
