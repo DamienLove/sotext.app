@@ -42,7 +42,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FabPosition
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -77,12 +76,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.R
 import kotlinx.coroutines.launch
+import java.util.regex.Pattern
+
+// Compiled Patterns and Regex for performance optimization
+private val NUMERIC_REGEX = Regex("[^0-9]")
+private val TRANSACTION_KEYWORDS = listOf(
+    "otp", "code", "bank", "debit", "credit", "acct", "txn", "verify",
+    "password", "login", "auth", "bill", "invoice", "due", "paid"
+)
+private val PROMOTION_KEYWORDS = listOf(
+    "offer", "sale", "save", "discount", "buy", "deal", "coupon",
+    "% off", "limited time", "cashback", "flat"
+)
+
+private val TRANSACTION_PATTERN = Pattern.compile(
+    "\\b(${TRANSACTION_KEYWORDS.joinToString("|")})\\b",
+    Pattern.CASE_INSENSITIVE
+)
+private val PROMOTION_PATTERN = Pattern.compile(
+    "\\b(${PROMOTION_KEYWORDS.joinToString("|")})\\b",
+    Pattern.CASE_INSENSITIVE
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -121,15 +144,15 @@ fun InboxScreen(
     val iconTint = theme.accentColor
 
     val filtered = remember(filter, threads) {
-        threads.filter { thread ->
-            when (filter) {
-                // ALL and ARCHIVED modes are pre-filtered by the Repository query.
-                // We trust the repository to return the correct set (Inbox/Pinned vs Archived).
-                InboxFilter.ALL -> true
-                InboxFilter.READ -> !thread.unread
-                InboxFilter.UNREAD -> thread.unread
-                InboxFilter.ARCHIVED -> true
-            }
+        val all = threads
+        when (filter) {
+            InboxFilter.ALL -> all
+            InboxFilter.READ -> all.filter { !it.unread }
+            InboxFilter.UNREAD -> all.filter { it.unread }
+            InboxFilter.PERSONAL -> all.filter { isPersonal(it) }
+            InboxFilter.TRANSACTIONS -> all.filter { isTransaction(it) }
+            InboxFilter.PROMOTIONS -> all.filter { isPromotion(it) }
+            InboxFilter.ARCHIVED -> all // Handled by repository call logic if separate list, but assuming passed 'threads' matches context
         }
     }
     val unreadCount = remember(threads) { threads.count { it.unread } }
@@ -397,12 +420,15 @@ fun InboxScreen(
                             tint = iconTint,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
-                        Text("No messages yet")
+                        Text("No messages here")
                         Text(
                             when (filter) {
                                 InboxFilter.UNREAD -> "No unread messages."
-                                InboxFilter.READ -> "No read messages."
-                                else -> "New texts will appear here once Beacon is the default SMS app."
+                                InboxFilter.PERSONAL -> "No personal messages found."
+                                InboxFilter.TRANSACTIONS -> "No transactions or OTPs found."
+                                InboxFilter.PROMOTIONS -> "No promotions found."
+                                InboxFilter.ARCHIVED -> "No archived messages."
+                                else -> "Your inbox is empty."
                             },
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -456,6 +482,58 @@ fun InboxScreen(
             }
         }
     }
+}
+
+// Logic for categorization
+fun isTransaction(item: SmsThreadItem): Boolean {
+    // If we have a contact name, it's Personal (unless it's purely a business name, but hard to tell).
+    // SmsRepository populates address with display name if found in contacts.
+    // If address has letters but NO spaces (e.g. "HDFCBNK"), it's likely a sender ID.
+    // If it has spaces (e.g. "John Doe"), it's likely a contact -> Personal.
+
+    val address = item.address
+    val body = item.snippet.lowercase()
+
+    // Check if it's a known contact (heuristic: contains spaces and letters, usually "First Last")
+    // Or if it's a phone number (mostly digits)
+    val isPhoneNumber = address.replace(NUMERIC_REGEX, "").length >= 7 // simple check
+    val hasSpace = address.contains(" ")
+
+    // If it looks like a person's name or a raw phone number, it's PERSONAL.
+    if (hasSpace || (isPhoneNumber && address.any { it.isDigit() })) {
+        return false
+    }
+
+    // If it's a shortcode or Alpha Sender ID (e.g. "UBER", "AMAZON"), it's likely transactional/promo
+    // We assume anything NOT Personal is a candidate for Trans/Promo.
+
+    return TRANSACTION_PATTERN.matcher(body).find()
+}
+
+fun isPromotion(item: SmsThreadItem): Boolean {
+    if (isTransaction(item)) return false // Transaction takes precedence
+
+    val address = item.address
+    val hasSpace = address.contains(" ")
+    val isPhoneNumber = address.replace(NUMERIC_REGEX, "").length >= 7
+
+    // If it's personal, it's not a promo (usually)
+    if (hasSpace || (isPhoneNumber && address.any { it.isDigit() })) {
+        return false
+    }
+
+    val body = item.snippet.lowercase()
+    return PROMOTION_PATTERN.matcher(body).find()
+}
+
+fun isPersonal(item: SmsThreadItem): Boolean {
+    val address = item.address
+
+    // Known contact (has name with space) OR standard phone number
+    val hasSpace = address.contains(" ")
+    val isPhoneNumber = address.any { it.isDigit() } && address.replace(NUMERIC_REGEX, "").length >= 7
+
+    return hasSpace || isPhoneNumber
 }
 
 @Composable
@@ -666,10 +744,12 @@ private fun TabsRow(
     onFilterChange: (InboxFilter) -> Unit,
     theme: ThemePalette
 ) {
+    val scrollState = rememberScrollState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .selectableGroup()
+            .horizontalScroll(scrollState)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -677,8 +757,26 @@ private fun TabsRow(
         TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
             onFilterChange(InboxFilter.ALL)
         }
-        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
-            onFilterChange(InboxFilter.READ)
+        TabText(
+            label = "Personal",
+            selected = filter == InboxFilter.PERSONAL,
+            theme = theme
+        ) {
+            onFilterChange(InboxFilter.PERSONAL)
+        }
+        TabText(
+            label = "Transactions",
+            selected = filter == InboxFilter.TRANSACTIONS,
+            theme = theme
+        ) {
+            onFilterChange(InboxFilter.TRANSACTIONS)
+        }
+        TabText(
+            label = "Promotions",
+            selected = filter == InboxFilter.PROMOTIONS,
+            theme = theme
+        ) {
+            onFilterChange(InboxFilter.PROMOTIONS)
         }
         TabText(
             label = "Unread${if (unreadCount > 0) " ($unreadCount)" else ""}",
@@ -686,6 +784,9 @@ private fun TabsRow(
             theme = theme
         ) {
             onFilterChange(InboxFilter.UNREAD)
+        }
+        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
+            onFilterChange(InboxFilter.READ)
         }
         TabText(
             label = "Archived",
@@ -723,4 +824,4 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePalette, onCli
     }
 }
 
-enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED }
+enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS }
