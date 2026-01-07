@@ -444,6 +444,75 @@ class SmsRepository(private val context: Context) {
         observerFlow.tryEmit(Unit)
     }
 
+    fun markThreadUnread(threadId: Long) {
+        if (!hasWritePerms()) return
+        val values = android.content.ContentValues().apply {
+            put(Telephony.Sms.READ, 0)
+            put(Telephony.Sms.SEEN, 0)
+        }
+        context.contentResolver.update(
+            Telephony.Sms.CONTENT_URI,
+            values,
+            "${Telephony.Sms.THREAD_ID}=?",
+            arrayOf(threadId.toString())
+        )
+        context.contentResolver.update(
+            Telephony.Threads.CONTENT_URI,
+            values,
+            "${Telephony.Threads._ID}=?",
+            arrayOf(threadId.toString())
+        )
+        observerFlow.tryEmit(Unit)
+    }
+
+    fun markThreadsRead(threadIds: List<Long>) {
+        if (!hasWritePerms() || threadIds.isEmpty()) return
+        val values = android.content.ContentValues().apply {
+            put(Telephony.Sms.READ, 1)
+            put(Telephony.Sms.SEEN, 1)
+        }
+        threadIds.chunked(900).forEach { chunk ->
+            val ids = chunk.joinToString(",")
+            context.contentResolver.update(
+                Telephony.Sms.CONTENT_URI,
+                values,
+                "${Telephony.Sms.THREAD_ID} IN ($ids)",
+                null
+            )
+            context.contentResolver.update(
+                Telephony.Threads.CONTENT_URI,
+                values,
+                "${Telephony.Threads._ID} IN ($ids)",
+                null
+            )
+        }
+        observerFlow.tryEmit(Unit)
+    }
+
+    fun markThreadsUnread(threadIds: List<Long>) {
+        if (!hasWritePerms() || threadIds.isEmpty()) return
+        val values = android.content.ContentValues().apply {
+            put(Telephony.Sms.READ, 0)
+            put(Telephony.Sms.SEEN, 0)
+        }
+        threadIds.chunked(900).forEach { chunk ->
+            val ids = chunk.joinToString(",")
+            context.contentResolver.update(
+                Telephony.Sms.CONTENT_URI,
+                values,
+                "${Telephony.Sms.THREAD_ID} IN ($ids)",
+                null
+            )
+            context.contentResolver.update(
+                Telephony.Threads.CONTENT_URI,
+                values,
+                "${Telephony.Threads._ID} IN ($ids)",
+                null
+            )
+        }
+        observerFlow.tryEmit(Unit)
+    }
+
     fun deleteThread(threadId: Long) {
         if (!hasWritePerms()) return
         context.contentResolver.delete(
@@ -451,6 +520,19 @@ class SmsRepository(private val context: Context) {
             "${Telephony.Sms.THREAD_ID}=?",
             arrayOf(threadId.toString())
         )
+        observerFlow.tryEmit(Unit)
+    }
+
+    fun deleteThreads(threadIds: List<Long>) {
+        if (!hasWritePerms() || threadIds.isEmpty()) return
+        threadIds.chunked(900).forEach { chunk ->
+            val ids = chunk.joinToString(",")
+            context.contentResolver.delete(
+                Telephony.Sms.CONTENT_URI,
+                "${Telephony.Sms.THREAD_ID} IN ($ids)",
+                null
+            )
+        }
         observerFlow.tryEmit(Unit)
     }
 

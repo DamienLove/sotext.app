@@ -90,6 +90,7 @@ fun ThreadScreen(
     onDeleteThread: () -> Unit,
     onEditNotificationSound: () -> Unit,
     onCustomize: () -> Unit,
+    onCall: () -> Unit = {}
 ) {
     var draft by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -178,6 +179,9 @@ fun ThreadScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onCall) {
+                        Icon(Icons.Default.Call, contentDescription = "Call", tint = iconTint)
+                    }
                     IconButton(onClick = onCustomize) {
                         Icon(Icons.Default.Palette, contentDescription = "Customize theme", tint = iconTint)
                     }

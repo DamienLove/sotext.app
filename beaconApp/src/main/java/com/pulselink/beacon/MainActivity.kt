@@ -224,7 +224,17 @@ private fun BeaconNav(
                     onClearSearch = { vm.clearSearch() },
                     onCustomize = { navController.navigate("customize?address=") },
                     onCompose = { navController.navigate("newMessage") },
-                    onOpenNotifications = { navController.navigate("notifications") }
+                    onOpenNotifications = { navController.navigate("notifications") },
+                    selectionMode = vm.selectionMode,
+                    selectedThreadIds = vm.selectedThreadIds,
+                    onToggleSelection = { vm.toggleSelection(it) },
+                    onClearSelection = { vm.clearSelection() },
+                    onArchiveSelected = { vm.archiveSelected() },
+                    onDeleteSelected = { vm.deleteSelected() },
+                    onMarkSelectedRead = { vm.markSelectedRead() },
+                    onMarkSelectedUnread = { vm.markSelectedUnread() },
+                    onPinSelected = { vm.pinSelected() },
+                    onMarkAsUnread = { vm.markAsUnread(it) }
                 )
             }
             composable(
@@ -254,7 +264,13 @@ private fun BeaconNav(
                             navController.popBackStack()
                         },
                         onCustomize = { navController.navigate("customize?address=${Uri.encode(address)}") },
-                        onEditNotificationSound = { navController.navigate("notifications?address=${Uri.encode(address)}") }
+                        onEditNotificationSound = { navController.navigate("notifications?address=${Uri.encode(address)}") },
+                        onCall = {
+                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:$address")
+                            }
+                            context.startActivity(intent)
+                        }
                     )
                 }
             }
