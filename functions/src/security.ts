@@ -43,5 +43,6 @@ export function sanitizeScalar(unsafe: string | null | undefined): string {
   if (typeof unsafe !== "string") unsafe = String(unsafe);
 
   // Replace newlines and control characters with a space
+  // eslint-disable-next-line no-control-regex
   return unsafe.replace(/[\r\n\x00-\x1F\x7F]+/g, " ").trim();
 }
