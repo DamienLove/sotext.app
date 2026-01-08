@@ -63,6 +63,14 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var isRefreshing by mutableStateOf(false)
         private set
 
+    var selectionMode by mutableStateOf(false)
+        private set
+    var selectedThreadIds by mutableStateOf(setOf<Long>())
+        private set
+
+    var userMessage by mutableStateOf<String?>(null)
+        private set
+
     // Internal holder for raw threads before merging preferences
     private var rawThreads: List<SmsThreadItem> = emptyList()
     private var inboxState: InboxState = InboxState()
@@ -117,6 +125,89 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             inboxPrefs.toggleArchive(threadId)
         }
+    }
+
+    fun markAsUnread(threadId: Long) {
+        viewModelScope.launch {
+            repo.markThreadUnread(threadId)
+            // Local update optimization could be done here, but observing repository changes handles it
+        }
+    }
+
+    fun toggleSelection(threadId: Long) {
+        val current = selectedThreadIds
+        if (current.contains(threadId)) {
+            selectedThreadIds = current - threadId
+            if (selectedThreadIds.isEmpty()) {
+                selectionMode = false
+            }
+        } else {
+            selectedThreadIds = current + threadId
+            selectionMode = true
+        }
+    }
+
+    fun clearSelection() {
+        selectedThreadIds = emptySet()
+        selectionMode = false
+    }
+
+    fun archiveSelected() {
+        val ids = selectedThreadIds.toList()
+        viewModelScope.launch {
+            // Snapshot current threads to avoid race conditions during async execution
+            val currentThreads = threads
+            val toArchive = currentThreads.filter { it.threadId in ids && !it.isArchived }.map { it.threadId }
+            toArchive.forEach { inboxPrefs.toggleArchive(it) }
+
+            userMessage = "${toArchive.size} threads archived"
+            clearSelection()
+        }
+    }
+
+    fun pinSelected() {
+        val ids = selectedThreadIds.toList()
+        viewModelScope.launch {
+            // Snapshot current threads to avoid race conditions during async execution
+            val currentThreads = threads
+            val toPin = currentThreads.filter { it.threadId in ids && !it.isPinned }.map { it.threadId }
+            toPin.forEach { inboxPrefs.togglePin(it) }
+
+            userMessage = "${toPin.size} threads pinned"
+            clearSelection()
+        }
+    }
+
+    fun deleteSelected() {
+        val ids = selectedThreadIds.toList()
+        viewModelScope.launch {
+            repo.deleteThreads(ids)
+            userMessage = "${ids.size} threads deleted"
+            clearSelection()
+            refreshThreads()
+        }
+    }
+
+    fun markSelectedRead() {
+        val ids = selectedThreadIds.toList()
+        viewModelScope.launch {
+            repo.markThreadsRead(ids)
+            userMessage = "Marked ${ids.size} threads as read"
+            clearSelection()
+        }
+    }
+
+    fun markSelectedUnread() {
+        val ids = selectedThreadIds.toList()
+        viewModelScope.launch {
+            repo.markThreadsUnread(ids)
+            userMessage = "Marked ${ids.size} threads as unread"
+            clearSelection()
+        }
+    }
+
+    fun clearUserMessage() {
+        userMessage = null
     }
 
     fun openThread(threadId: Long, address: String) {

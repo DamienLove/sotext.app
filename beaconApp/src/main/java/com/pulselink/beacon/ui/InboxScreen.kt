@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.MarkChatUnread
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,7 +44,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FabPosition
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -77,9 +78,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.ThemePalette
+import com.pulselink.beacon.data.ThreadCategory
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.R
 import kotlinx.coroutines.launch
@@ -112,7 +117,19 @@ fun InboxScreen(
     filter: InboxFilter,
     onFilterChange: (InboxFilter) -> Unit,
     isLoading: Boolean = false,
-    isRefreshing: Boolean = false
+    isRefreshing: Boolean = false,
+    selectionMode: Boolean = false,
+    selectedThreadIds: Set<Long> = emptySet(),
+    onToggleSelection: (Long) -> Unit = {},
+    onClearSelection: () -> Unit = {},
+    onArchiveSelected: () -> Unit = {},
+    onDeleteSelected: () -> Unit = {},
+    onMarkSelectedRead: () -> Unit = {},
+    onMarkSelectedUnread: () -> Unit = {},
+    onPinSelected: () -> Unit = {},
+    onMarkAsUnread: (Long) -> Unit = {},
+    userMessage: String? = null,
+    onClearUserMessage: () -> Unit = {}
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -120,18 +137,31 @@ fun InboxScreen(
     var navigatedFromSearch by remember { mutableStateOf(false) }
     val iconTint = theme.accentColor
 
-    val filtered = remember(filter, threads) {
-        threads.filter { thread ->
-            when (filter) {
-                // ALL and ARCHIVED modes are pre-filtered by the Repository query.
-                // We trust the repository to return the correct set (Inbox/Pinned vs Archived).
-                InboxFilter.ALL -> true
-                InboxFilter.READ -> !thread.unread
-                InboxFilter.UNREAD -> thread.unread
-                InboxFilter.ARCHIVED -> true
-            }
+    LaunchedEffect(userMessage) {
+        userMessage?.let {
+            host.showSnackbar(it)
+            onClearUserMessage()
         }
     }
+
+    val filtered = remember(filter, threads) {
+        val all = threads
+        when (filter) {
+            InboxFilter.ALL -> all
+            InboxFilter.READ -> all.filter { !it.unread }
+            InboxFilter.UNREAD -> all.filter { it.unread }
+            InboxFilter.PERSONAL -> all.filter { it.category == ThreadCategory.PERSONAL }
+            InboxFilter.TRANSACTIONS -> all.filter { it.category == ThreadCategory.TRANSACTIONS }
+            InboxFilter.PROMOTIONS -> all.filter { it.category == ThreadCategory.PROMOTIONS }
+            InboxFilter.ARCHIVED -> all // Filtering logic for Archived is often separate or included, but assuming 'threads' passed here contains what we need or filtered upstream if needed. But usually Archived are separate. For this UI, we just filter by property if present.
+                .filter { it.isArchived } // If repository returns mixed. If repository returns ONLY inbox, this might be empty unless handled upstream.
+        }
+    }
+
+    // Note: If 'threads' only contains INBOX, then ARCHIVED filter might return empty unless the ViewModel passes archived threads here.
+    // Assuming ViewModel passes specific lists based on filter OR passes all and we filter.
+    // Based on previous code, ViewModel passes 'merged' threads.
+
     val unreadCount = remember(threads) { threads.count { it.unread } }
     val mutedTint = theme.frameColor.copy(alpha = 0.7f)
     val topAppBarState = rememberTopAppBarState()
@@ -151,55 +181,111 @@ fun InboxScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+            if (selectionMode) {
+                TopAppBar(
+                    title = {
                         Text(
-                            "Beacon Inbox",
-                            fontWeight = FontWeight.SemiBold,
+                            text = "${selectedThreadIds.size} selected",
                             color = theme.frameColor
                         )
-                        if (isRefreshing) {
-                            Spacer(modifier = Modifier.size(12.dp))
-                            CircularProgressIndicator(
-                                strokeWidth = 2.dp,
-                                modifier = Modifier.size(16.dp),
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onClearSelection) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear selection", tint = iconTint)
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onArchiveSelected) {
+                            Icon(Icons.Default.Inbox, contentDescription = "Archive", tint = iconTint)
+                        }
+                        IconButton(onClick = onDeleteSelected) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = iconTint)
+                        }
+                        var showMore by remember { mutableStateOf(false) }
+                        IconButton(onClick = { showMore = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = "More", tint = iconTint)
+                            DropdownMenu(expanded = showMore, onDismissRequest = { showMore = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Mark read") },
+                                    onClick = {
+                                        onMarkSelectedRead()
+                                        showMore = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Mark unread") },
+                                    onClick = {
+                                        onMarkSelectedUnread()
+                                        showMore = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Pin/Unpin") },
+                                    onClick = {
+                                        onPinSelected()
+                                        showMore = false
+                                    }
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = theme.inboxBackgroundColor,
+                        titleContentColor = theme.frameColor,
+                        actionIconContentColor = iconTint
+                    )
+                )
+            } else {
+                LargeTopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "Beacon Inbox",
+                                fontWeight = FontWeight.SemiBold,
                                 color = theme.frameColor
                             )
+                            if (isRefreshing) {
+                                Spacer(modifier = Modifier.size(12.dp))
+                                CircularProgressIndicator(
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(16.dp),
+                                    color = theme.frameColor
+                                )
+                            }
                         }
-                    }
-                },
-                navigationIcon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.beacon_logo),
-                        contentDescription = "Beacon",
-                        tint = Color.Unspecified,
-                        modifier = Modifier
-                            .padding(start = 8.dp)
-                            .size(32.dp)
-                            .alpha(beaconIconAlpha)
-                    )
-                },
-                actions = {
-                    IconButton(onClick = onRefresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = iconTint)
-                    }
-                    IconButton(onClick = onOpenNotifications) {
-                        Icon(Icons.Default.NotificationsActive, contentDescription = "Notifications", tint = iconTint)
-                    }
-                    IconButton(onClick = onCustomize) {
-                        Icon(Icons.Default.ColorLens, contentDescription = "Customize", tint = iconTint)
-                    }
-                },
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = theme.inboxBackgroundColor,
-                    titleContentColor = theme.frameColor,
-                    actionIconContentColor = iconTint
-                ),
-                scrollBehavior = scrollBehavior
-            )
+                    },
+                    navigationIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.beacon_logo),
+                            contentDescription = "Beacon",
+                            tint = Color.Unspecified,
+                            modifier = Modifier
+                                .padding(start = 8.dp)
+                                .size(32.dp)
+                                .alpha(beaconIconAlpha)
+                        )
+                    },
+                    actions = {
+                        IconButton(onClick = onRefresh) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = iconTint)
+                        }
+                        IconButton(onClick = onOpenNotifications) {
+                            Icon(Icons.Default.NotificationsActive, contentDescription = "Notifications", tint = iconTint)
+                        }
+                        IconButton(onClick = onCustomize) {
+                            Icon(Icons.Default.ColorLens, contentDescription = "Customize", tint = iconTint)
+                        }
+                    },
+                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                        containerColor = theme.inboxBackgroundColor,
+                        titleContentColor = theme.frameColor,
+                        actionIconContentColor = iconTint
+                    ),
+                    scrollBehavior = scrollBehavior
+                )
+            }
         },
-                floatingActionButton = {
+        floatingActionButton = {
             FloatingActionButton(
                 onClick = onCompose,
                 containerColor = theme.accentColor
@@ -387,8 +473,7 @@ fun InboxScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(24.dp)
-                        .alpha(0.8f), // Soften empty state
+                        .padding(24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -398,12 +483,15 @@ fun InboxScreen(
                             tint = iconTint,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
-                        Text("No messages yet")
+                        Text("No messages here")
                         Text(
                             when (filter) {
                                 InboxFilter.UNREAD -> "No unread messages."
-                                InboxFilter.READ -> "No read messages."
-                                else -> "New texts will appear here once Beacon is the default SMS app."
+                                InboxFilter.PERSONAL -> "No personal messages found."
+                                InboxFilter.TRANSACTIONS -> "No transactions or OTPs found."
+                                InboxFilter.PROMOTIONS -> "No promotions found."
+                                InboxFilter.ARCHIVED -> "No archived messages."
+                                else -> "Your inbox is empty."
                             },
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -442,16 +530,32 @@ fun InboxScreen(
                                 false
                             }
                         )
-                        SwipeableThreadRow(
-                            thread = item,
-                            state = dismissState,
-                            theme = theme,
-                            onClick = { onOpenThread(item.threadId, item.address) },
-                            onDelete = { onDeleteThread(item.threadId) },
-                            onTogglePin = { onTogglePin(item.threadId) },
-                            onToggleArchive = { onToggleArchive(item.threadId) },
-                            modifier = Modifier.animateItemPlacement()
-                        )
+                        if (selectionMode) {
+                            // In selection mode, disable swipe gestures
+                            ThreadRow(
+                                thread = item,
+                                theme = theme,
+                                isSelected = selectedThreadIds.contains(item.threadId),
+                                selectionMode = true,
+                                onClick = { onToggleSelection(item.threadId) },
+                                onDelete = { onDeleteThread(item.threadId) },
+                                onTogglePin = { onTogglePin(item.threadId) },
+                                onToggleArchive = { onToggleArchive(item.threadId) },
+                                onMarkAsUnread = { onMarkAsUnread(item.threadId) }
+                            )
+                        } else {
+                            SwipeableThreadRow(
+                                thread = item,
+                                state = dismissState,
+                                theme = theme,
+                                onClick = { onOpenThread(item.threadId, item.address) },
+                                onDelete = { onDeleteThread(item.threadId) },
+                                onTogglePin = { onTogglePin(item.threadId) },
+                                onToggleArchive = { onToggleArchive(item.threadId) },
+                                onMarkAsUnread = { onMarkAsUnread(item.threadId) },
+                                onLongClick = { onToggleSelection(item.threadId) }
+                            )
+                        }
                     }
                     item { Spacer(modifier = Modifier.height(60.dp)) }
                 }
@@ -516,13 +620,12 @@ private fun SwipeableThreadRow(
     onDelete: () -> Unit,
     onTogglePin: () -> Unit,
     onToggleArchive: () -> Unit,
-    modifier: Modifier = Modifier
+    onMarkAsUnread: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     SwipeToDismissBox(
         state = state,
-        modifier = modifier,
         backgroundContent = {
-            // Use muted theme color for archive, accent for pin
             val (color, alignment, icon) = when (state.targetValue) {
                 SwipeToDismissBoxValue.EndToStart -> Triple(theme.frameColor.copy(alpha = 0.5f), Alignment.CenterEnd, Icons.Default.Inbox) // Archive
                 SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor, Alignment.CenterStart, if (thread.isPinned) Icons.Default.PushPin else Icons.Default.PushPin) // Pin/Unpin
@@ -545,10 +648,14 @@ private fun SwipeableThreadRow(
             ThreadRow(
                 thread = thread,
                 theme = theme,
+                isSelected = false,
+                selectionMode = false,
                 onClick = onClick,
                 onDelete = onDelete,
                 onTogglePin = onTogglePin,
-                onToggleArchive = onToggleArchive
+                onToggleArchive = onToggleArchive,
+                onMarkAsUnread = onMarkAsUnread,
+                onLongClick = onLongClick
             )
         },
         enableDismissFromStartToEnd = true,
@@ -561,75 +668,106 @@ private fun SwipeableThreadRow(
 private fun ThreadRow(
     thread: SmsThreadItem,
     theme: ThemePalette,
+    isSelected: Boolean,
+    selectionMode: Boolean,
     onClick: () -> Unit,
     onDelete: () -> Unit = {},
     onTogglePin: () -> Unit = {},
-    onToggleArchive: () -> Unit = {}
+    onToggleArchive: () -> Unit = {},
+    onMarkAsUnread: () -> Unit = {},
+    onLongClick: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     Surface(
         shape = RoundedCornerShape(theme.bubbleRadius.dp),
-        tonalElevation = if (thread.unread) 2.dp else 0.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.35f)),
-        color = theme.inboxBackgroundColor,
+        tonalElevation = if (isSelected) 4.dp else if (thread.unread) 2.dp else 0.dp,
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) theme.accentColor else theme.frameColor.copy(alpha = 0.35f)
+        ),
+        color = if (isSelected) theme.accentColor.copy(alpha = 0.1f) else theme.inboxBackgroundColor,
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = { showMenu = true }
+                onLongClick = onLongClick
             )
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text(if (thread.isPinned) "Unpin" else "Pin") },
-                    onClick = {
-                        onTogglePin()
-                        showMenu = false
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.PushPin,
-                            contentDescription = if (thread.isPinned) "Unpin conversation" else "Pin conversation"
-                        )
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(if (thread.isArchived) "Unarchive" else "Archive") },
-                    onClick = {
-                        onToggleArchive()
-                        showMenu = false
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Inbox,
-                            contentDescription = if (thread.isArchived) "Unarchive conversation" else "Archive conversation"
-                        )
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Delete") },
-                    onClick = {
-                        onDelete()
-                        showMenu = false
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete conversation"
-                        )
-                    }
-                )
+            // Dropdown menu only available if NOT in selection mode
+            if (!selectionMode) {
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(if (thread.isPinned) "Unpin" else "Pin") },
+                        onClick = {
+                            onTogglePin()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.PushPin,
+                                contentDescription = if (thread.isPinned) "Unpin conversation" else "Pin conversation"
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (thread.isArchived) "Unarchive" else "Archive") },
+                        onClick = {
+                            onToggleArchive()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Inbox,
+                                contentDescription = if (thread.isArchived) "Unarchive conversation" else "Archive conversation"
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Mark unread") },
+                        onClick = {
+                            onMarkAsUnread()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.MarkChatUnread,
+                                contentDescription = "Mark as unread"
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        onClick = {
+                            onDelete()
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete conversation"
+                            )
+                        }
+                    )
+                }
             }
+
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (thread.isPinned) {
+                if (isSelected) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = "Selected",
+                        tint = theme.accentColor,
+                        modifier = Modifier.padding(end = 8.dp).size(20.dp)
+                    )
+                } else if (thread.isPinned) {
                     Icon(
                         Icons.Default.PushPin,
                         contentDescription = "Pinned",
@@ -637,6 +775,7 @@ private fun ThreadRow(
                         modifier = Modifier.padding(end = 4.dp).size(16.dp)
                     )
                 }
+
                 Text(
                     text = thread.address.ifBlank { "Unknown" },
                     style = MaterialTheme.typography.titleMedium,
@@ -650,14 +789,15 @@ private fun ThreadRow(
                         DateUtils.MINUTE_IN_MILLIS
                     ).toString(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.DarkGray
+                    color = Color.Gray
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = thread.snippet,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1
+                maxLines = 1,
+                color = theme.frameColor.copy(alpha = 0.8f)
             )
         }
     }
@@ -670,10 +810,12 @@ private fun TabsRow(
     onFilterChange: (InboxFilter) -> Unit,
     theme: ThemePalette
 ) {
+    val scrollState = rememberScrollState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .selectableGroup()
+            .horizontalScroll(scrollState)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -681,8 +823,26 @@ private fun TabsRow(
         TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
             onFilterChange(InboxFilter.ALL)
         }
-        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
-            onFilterChange(InboxFilter.READ)
+        TabText(
+            label = "Personal",
+            selected = filter == InboxFilter.PERSONAL,
+            theme = theme
+        ) {
+            onFilterChange(InboxFilter.PERSONAL)
+        }
+        TabText(
+            label = "Transactions",
+            selected = filter == InboxFilter.TRANSACTIONS,
+            theme = theme
+        ) {
+            onFilterChange(InboxFilter.TRANSACTIONS)
+        }
+        TabText(
+            label = "Promotions",
+            selected = filter == InboxFilter.PROMOTIONS,
+            theme = theme
+        ) {
+            onFilterChange(InboxFilter.PROMOTIONS)
         }
         TabText(
             label = "Unread${if (unreadCount > 0) " ($unreadCount)" else ""}",
@@ -690,6 +850,9 @@ private fun TabsRow(
             theme = theme
         ) {
             onFilterChange(InboxFilter.UNREAD)
+        }
+        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
+            onFilterChange(InboxFilter.READ)
         }
         TabText(
             label = "Archived",
@@ -727,4 +890,4 @@ private fun TabText(label: String, selected: Boolean, theme: ThemePalette, onCli
     }
 }
 
-enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED }
+enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS }

@@ -256,45 +256,66 @@ const buildAlertSnippet = (body = '') => {
 };
 
 // Bolt: Optimized MapAlertItem to prevent re-renders of the alert list
-const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => (
-  <div
-    className={`map-item ${isActive ? 'active' : ''}`}
-    onClick={() => onFocus(alert)}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onFocus(alert);
-      }
-    }}
-  >
-    <div className="map-item-header">
-      <div className="map-item-title">{alert.address}</div>
-      <span
-        className="map-badge"
-        style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
-      >
-        {alertBadgeCopy[alert.severity] ?? 'Alert'}
-      </span>
+const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleClear = useCallback(async (event) => {
+    event.stopPropagation();
+    setIsClearing(true);
+    try {
+      await onClear(alert.id);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsClearing(false);
+    }
+  }, [alert.id, onClear]);
+
+  return (
+    <div
+      className={`map-item ${isActive ? 'active' : ''}`}
+      onClick={() => onFocus(alert)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onFocus(alert);
+        }
+      }}
+    >
+      <div className="map-item-header">
+        <div className="map-item-title">{alert.address}</div>
+        <span
+          className="map-badge"
+          style={{ background: alertBadgeColor[alert.severity] ?? alertBadgeColor.non_urgent }}
+        >
+          {alertBadgeCopy[alert.severity] ?? 'Alert'}
+        </span>
+      </div>
+      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+      <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
+      <div className="map-item-actions">
+        <button
+          className="secondary-btn"
+          type="button"
+          onClick={handleClear}
+          disabled={isClearing}
+          aria-label={`Clear alert from ${alert.address}`}
+        >
+          {isClearing ? (
+            <>
+              <Spinner />
+              Clearing...
+            </>
+          ) : 'Clear'}
+        </button>
+      </div>
     </div>
-    <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
-    <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
-    <div className="map-item-actions">
-      <button
-        className="secondary-btn"
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onClear(alert.id);
-        }}
-      >
-        Clear
-      </button>
-    </div>
-  </div>
-), (prev, next) => {
+  );
+}, (prev, next) => {
   return prev.isActive === next.isActive &&
+    prev.onClear === next.onClear &&
     prev.alert.id === next.alert.id &&
     prev.alert.address === next.alert.address &&
     prev.alert.severity === next.alert.severity &&
@@ -1136,7 +1157,12 @@ function App() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [threads, setThreads] = useState([]);
+  const [isLoadingThreads, setIsLoadingThreads] = useState(true);
+  const [legacyThreads, setLegacyThreads] = useState([]);
+  const [lineThreads, setLineThreads] = useState({});
+  const [lines, setLines] = useState([]);
+  const [lineInboxMode, setLineInboxMode] = useState('COMBINED');
+  const [activeLineId, setActiveLineId] = useState(null);
   const [selectedThread, setSelectedThread] = useState(null);
   const [messages, setMessages] = useState([]);
   const [profile, setProfile] = useState({
@@ -1190,6 +1216,7 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [composeAddress, setComposeAddress] = useState('');
   const [composeBody, setComposeBody] = useState('');
+  const [sendLineId, setSendLineId] = useState('');
   const [sendStatus, setSendStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -1401,6 +1428,11 @@ function App() {
         autoUpdateContactInfo: true,
         timeFormat: 'AUTO'
       });
+      setLineInboxMode('COMBINED');
+      setActiveLineId(null);
+      setLines([]);
+      setLegacyThreads([]);
+      setLineThreads({});
       return;
     }
     const userRef = doc(db, "users", user.uid);
@@ -1429,6 +1461,8 @@ function App() {
         timeFormat: data.timeFormat ?? 'AUTO',
         thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true
       });
+      if (data.lineInboxMode) setLineInboxMode(data.lineInboxMode);
+      if (data.activeLineId) setActiveLineId(data.activeLineId);
 
       // Check for theme and avatar unlocks
       const currentUnlockedIds = data.unlockedThemeIds || [];
@@ -1529,20 +1563,59 @@ function App() {
     const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
 
     if (user && isPremiumUser && hasRemoteAccess) {
-      // Listen to threads only if user has premium and remote web access enabled
-      // Assuming structure: users/{uid}/synced_threads/{threadId}
-      const threadsRef = collection(db, "users", user.uid, "synced_threads");
-      const q = query(threadsRef, orderBy("date", "desc"));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const threadsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setThreads(threadsData);
+      setIsLoadingThreads(true);
+      // Legacy single-line threads (synced_threads)
+      const legacyRef = collection(db, "users", user.uid, "synced_threads");
+      const legacyQuery = query(legacyRef, orderBy("date", "desc"));
+      const unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
+        const threadsData = snapshot.docs.map(doc => ({ id: doc.id, lineId: null, ...doc.data() }));
+        setLegacyThreads(threadsData);
+        // Only set loading to false if we have at least legacy threads or lines have also loaded.
+        // But for simplicity, we can set it to false here as we have *some* data.
+        // A better approach would be to wait for both, but onSnapshot is async.
+        // Let's assume lines load quickly or we just wait for the first data update.
+        setIsLoadingThreads(false);
       });
-      return () => unsubscribe();
+
+      // Multi-device: lines/{lineId}/threads
+      const linesRef = collection(db, "users", user.uid, "lines");
+      const threadUnsubs = new Map();
+
+      const attachLine = (lineId) => {
+        if (threadUnsubs.has(lineId)) return;
+        const lineThreadsRef = collection(db, "users", user.uid, "lines", lineId, "threads");
+        const lineQuery = query(lineThreadsRef, orderBy("date", "desc"));
+        const unsub = onSnapshot(lineQuery, (snapshot) => {
+          const items = snapshot.docs.map(doc => ({ id: doc.id, lineId, ...doc.data() }));
+          setLineThreads((prev) => ({ ...prev, [lineId]: items }));
+        });
+        threadUnsubs.set(lineId, unsub);
+      };
+
+      const detachAll = () => {
+        threadUnsubs.forEach((u) => u());
+        threadUnsubs.clear();
+      };
+
+      const unsubscribeLines = onSnapshot(linesRef, (snapshot) => {
+        const lineItems = snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(line => line.disabled !== true);
+        setLines(lineItems);
+        lineItems.forEach(line => attachLine(line.id));
+        setIsLoadingThreads(false);
+      });
+
+      return () => {
+        unsubscribeLegacy();
+        unsubscribeLines();
+        detachAll();
+      };
     } else {
-      setThreads([]);
+      setLegacyThreads([]);
+      setLines([]);
+      setLineThreads({});
+      setIsLoadingThreads(false);
     }
   }, [user, userData, remoteSettings.remoteWebAccessEnabled]);
 
@@ -1572,7 +1645,10 @@ function App() {
 
     if (user && selectedThread && isPremiumUser && hasRemoteAccess) {
       // Listen to messages only if user has premium and remote web access enabled
-      const messagesRef = collection(db, "users", user.uid, "synced_threads", selectedThread.id, "messages");
+      const basePath = selectedThread.lineId
+        ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
+        : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];
+      const messagesRef = collection(db, ...basePath);
       const q = query(messagesRef, orderBy("date", "asc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const messagesData = snapshot.docs.map(doc => ({
@@ -2186,19 +2262,20 @@ function App() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await signOut(auth);
     setSelectedThread(null);
     setComposeAddress('');
     setComposeBody('');
     setSendStatus('');
     setActivePanel('home');
-  };
+  }, []);
 
   const handleSendMessage = async () => {
     if (!user) return;
     const address = composeAddress.trim();
     const body = composeBody.trim();
+    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (sendLineId || activeLineId || lines[0]?.id || null) : null;
     if (!address || !body) {
       setSendStatus("Add a phone number and message.");
       return;
@@ -2210,7 +2287,8 @@ function App() {
         address,
         body,
         createdAt: serverTimestamp(),
-        source: "web"
+        source: "web",
+        lineId: effectiveLineId
       });
       setComposeBody('');
       setSendStatus("Queued for sending from your device.");
@@ -2226,7 +2304,40 @@ function App() {
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
     setSelectedThread(thread);
+    if (thread?.lineId) {
+      setActiveLineId((prev) => prev ?? thread.lineId);
+      setSendLineId(thread.lineId);
+    }
   }, []);
+
+  const combinedThreads = useMemo(() => {
+    if (lineInboxMode === 'PER_LINE') return [];
+    const lineFlattened = Object.values(lineThreads).flat();
+    const all = [...legacyThreads, ...lineFlattened];
+    return all.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
+  }, [legacyThreads, lineThreads, lineInboxMode]);
+
+  const activeLineThreads = useMemo(() => {
+    if (lineInboxMode === 'COMBINED') return combinedThreads;
+    const chosenLine = activeLineId || lines[0]?.id || null;
+    const current = chosenLine ? lineThreads[chosenLine] || [] : [];
+    return current.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
+  }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
+
+  // Bolt: Memoize thread list elements to prevent re-rendering on every compose keystroke.
+  // Note: handleThreadSelect is stable (useCallback) but included for exhaustive-deps correctness.
+  // Note: selectedThread?.id is used to avoid re-rendering the whole list when non-visual props of selectedThread change.
+  const threadListElements = useMemo(() => (
+    activeLineThreads.map(thread => (
+      <ThreadItem
+        key={thread.id}
+        thread={thread}
+        isActive={selectedThread?.id === thread.id}
+        onSelect={handleThreadSelect}
+        showPreviews={showPreviews}
+      />
+    ))
+  ), [activeLineThreads, selectedThread?.id, handleThreadSelect, showPreviews]);
 
   const isPremium = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
 
@@ -2443,7 +2554,32 @@ function App() {
           </div>
           {activePanel === 'beacon' ? (
             <div className="thread-list">
-              {threads.length === 0 ? (
+              {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+                <div className="line-tabs" aria-label="Device lines">
+                  <button
+                    className={`chip ${!activeLineId ? 'active' : ''}`}
+                    onClick={() => setActiveLineId(null)}
+                  >
+                    All
+                  </button>
+                  {lines.map((line) => (
+                    <button
+                      key={line.id}
+                      className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                      onClick={() => setActiveLineId(line.id)}
+                      title={line.phoneNumber || 'Line'}
+                    >
+                      {line.label || line.phoneNumber || line.id.slice(0, 6)}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {isLoadingThreads ? (
+                <div className="sidebar-placeholder">
+                  <Spinner />
+                  <div className="sidebar-tip muted">Loading conversations...</div>
+                </div>
+              ) : activeLineThreads.length === 0 ? (
                 <div className="sidebar-placeholder">
                   <div className="sidebar-tip">
                     <strong>No conversations found</strong>
@@ -2463,15 +2599,7 @@ function App() {
                   </div>
                 </div>
               ) : (
-                threads.map(thread => (
-                  <ThreadItem
-                    key={thread.id}
-                    thread={thread}
-                    isActive={selectedThread?.id === thread.id}
-                    onSelect={handleThreadSelect}
-                    showPreviews={showPreviews}
-                  />
-                ))
+                threadListElements
               )}
             </div>
           ) : (
@@ -3372,10 +3500,40 @@ function App() {
           {activePanel === 'beacon' && (
             isPremium ? (
               <>
+      {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+        <div className="line-tabs line-tabs--main">
+          <div className="line-tabs-header">
+            <h4>Inbox lines</h4>
+            <div className="chip-row">
+              <button
+                className={`chip ${!activeLineId ? 'active' : ''}`}
+                onClick={() => setActiveLineId(null)}
+              >
+                All
+              </button>
+              {lines.map((line) => (
+                <button
+                  key={line.id}
+                  className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                  onClick={() => setActiveLineId(line.id)}
+                  title={line.phoneNumber || 'Line'}
+                >
+                  {line.label || line.phoneNumber || line.id.slice(0, 6)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
                 {selectedThread ? (
                   <>
                     <div className="chat-header">
-                      <h3>{selectedThread.address}</h3>
+                      <div>
+                        <h3>{selectedThread.address}</h3>
+                        {lineInboxMode === 'PER_LINE' && selectedThread.lineId && (
+                          <div className="chat-subtitle">From line {lines.find(l => l.id === selectedThread.lineId)?.label || selectedThread.lineId.slice(0,6)}</div>
+                        )}
+                      </div>
                     </div>
                     <div className="messages-list">
                       {messageListElements}
@@ -3400,6 +3558,25 @@ function App() {
                       onChange={(e) => setComposeAddress(e.target.value)}
                     />
                   </div>
+                  {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+                    <div className="composer-row">
+                      <label className="composer-label" htmlFor="compose-line">Send from</label>
+                      <select
+                        id="compose-line"
+                        className="composer-input"
+                        value={sendLineId || ''}
+                        onChange={(e) => setSendLineId(e.target.value)}
+                      >
+                        <option value="">Primary device</option>
+                        {lines.map(line => (
+                          <option key={line.id} value={line.id}>
+                            {(line.label || line.phoneNumber || line.id.slice(0, 6))}
+                            {line.primaryDeviceId ? ' • primary' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="composer-row composer-actions">
                     <textarea
                       className="composer-textarea"

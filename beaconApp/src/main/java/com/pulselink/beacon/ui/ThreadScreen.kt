@@ -4,6 +4,7 @@ import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,12 +14,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -47,14 +49,17 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -65,10 +70,14 @@ import coil.compose.AsyncImage
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
+import com.pulselink.beacon.util.LinkPreviewData
+import com.pulselink.beacon.util.LinkPreviewHelper
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
+import android.content.Intent
+import android.net.Uri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,22 +91,22 @@ fun ThreadScreen(
     onDeleteThread: () -> Unit,
     onEditNotificationSound: () -> Unit,
     onCustomize: () -> Unit,
+    onCall: () -> Unit = {}
 ) {
     var draft by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    // Ensure new messages are seen first (at bottom)
+    // Ensure we start at the bottom (newest messages)
+    // reverseLayout = true means index 0 is at the bottom.
+    // We can just rely on the layout, but sometimes scroll state needs a hint if data loads late.
     LaunchedEffect(messages.firstOrNull()?.id) {
         if (messages.isNotEmpty()) {
-            // Only scroll if we are near the bottom (index 0 in reverse layout) or it's initial load
-            val firstVisible = listState.firstVisibleItemIndex
-            if (firstVisible < 2) {
-                // Use scrollToItem for instant jump on load or new message, avoiding animation lag
+            if (listState.firstVisibleItemIndex < 2) {
+                // If we are already near bottom, stay there or scroll to very bottom
                 listState.scrollToItem(0)
             }
         }
@@ -135,7 +144,6 @@ fun ThreadScreen(
             onDismissRequest = { showTimePicker = false },
             onConfirm = {
                 selectedDateMillis?.let { dateMillis ->
-                    // dateMillis is UTC midnight of the selected date.
                     val utcDate = Instant.ofEpochMilli(dateMillis)
                         .atZone(ZoneId.of("UTC"))
                         .toLocalDate()
@@ -171,6 +179,9 @@ fun ThreadScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onCall) {
+                        Icon(Icons.Default.Call, contentDescription = "Call", tint = iconTint)
+                    }
                     IconButton(onClick = onCustomize) {
                         Icon(Icons.Default.Palette, contentDescription = "Customize theme", tint = iconTint)
                     }
@@ -318,6 +329,8 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
     val bubbleShape = RoundedCornerShape(theme.bubbleRadius.dp)
     val clipboardManager = LocalClipboardManager.current
     val otp = remember(message.body) { extractOtp(message.body) }
+    val extractedUrl = remember(message.body) { LinkPreviewHelper.extractUrl(message.body) }
+    val context = LocalContext.current
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -340,6 +353,25 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Black
                 )
+
+                if (extractedUrl != null) {
+                    val preview by produceState<LinkPreviewData?>(initialValue = null, key1 = extractedUrl) {
+                        value = LinkPreviewHelper.fetchPreview(extractedUrl)
+                    }
+
+                    if (preview != null && (preview!!.title != null || preview!!.imageUrl != null)) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinkPreviewCard(preview = preview!!) {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(extractedUrl))
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+
                 if (message.isMms && message.mediaParts.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     message.mediaParts.filter { it.dataUri != null && it.contentType.startsWith("image") }
@@ -389,15 +421,59 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
     }
 }
 
+@Composable
+private fun LinkPreviewCard(preview: LinkPreviewData, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color.White.copy(alpha = 0.9f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Column {
+            if (preview.imageUrl != null) {
+                AsyncImage(
+                    model = preview.imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                )
+            }
+            Column(Modifier.padding(8.dp)) {
+                if (preview.title != null) {
+                    Text(
+                        text = preview.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        maxLines = 1
+                    )
+                }
+                if (preview.description != null) {
+                    Text(
+                        text = preview.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.DarkGray,
+                        maxLines = 2
+                    )
+                }
+                Text(
+                    text = preview.siteName ?: Uri.parse(preview.url).host ?: preview.url,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
 private fun extractOtp(body: String): String? {
     val regex = Regex("(?<!\\d)\\d{4,8}(?!\\d)")
-    // Filter out things that are obviously not OTPs if needed, but 4-8 isolated digits is a good heuristic
-    // Check if body contains common OTP keywords to reduce false positives
     val keywords = listOf("code", "pin", "verification", "otp", "password")
     if (keywords.none { body.contains(it, ignoreCase = true) }) {
-        // Relaxing this check because sometimes it's just "123456"
-        // But for "Best App" experience, maybe strict is better?
-        // Let's keep it simple: matches regex and body length is short (< 160 chars)
         if (body.length > 160) return null
     }
     return regex.find(body)?.value
