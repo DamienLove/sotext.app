@@ -379,6 +379,40 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
 
 ThemeGalleryItem.displayName = 'ThemeGalleryItem';
 
+// Bolt: Optimized ThemePresetItem to prevent re-renders of the preset list
+const ThemePresetItem = memo(({ preset, onApply }) => (
+  <button
+    className="theme-chip"
+    onClick={() => onApply(preset.theme)}
+  >
+    <div className="theme-chip-title">
+      <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
+      <strong>{preset.name}</strong>
+    </div>
+    <div className="theme-chip-preview">
+      <div
+        className="theme-bubble incoming"
+        style={{
+          background: preset.theme.bubbleIncoming,
+          color: preset.theme.onBubbleIncoming
+        }}
+      >
+        Sample incoming
+      </div>
+      <div
+        className="theme-bubble outgoing"
+        style={{
+          background: preset.theme.bubbleOutgoing,
+          color: preset.theme.onBubbleOutgoing
+        }}
+      >
+        Sample reply
+      </div>
+    </div>
+  </button>
+));
+ThemePresetItem.displayName = 'ThemePresetItem';
+
 const areRingerSongsEqual = (prev, next) => {
   return prev.song.id === next.song.id &&
          prev.song.title === next.song.title &&
@@ -3242,36 +3276,11 @@ function App() {
                   <h4>Quick presets</h4>
                   <div className="theme-grid">
                     {themePresets.map((preset) => (
-                      <button
+                      <ThemePresetItem
                         key={preset.name}
-                        className="theme-chip"
-                        onClick={() => handleApplyPreset(preset.theme)}
-                      >
-                        <div className="theme-chip-title">
-                          <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />
-                          <strong>{preset.name}</strong>
-                        </div>
-                        <div className="theme-chip-preview">
-                          <div
-                            className="theme-bubble incoming"
-                            style={{
-                              background: preset.theme.bubbleIncoming,
-                              color: preset.theme.onBubbleIncoming
-                            }}
-                          >
-                            Sample incoming
-                          </div>
-                          <div
-                            className="theme-bubble outgoing"
-                            style={{
-                              background: preset.theme.bubbleOutgoing,
-                              color: preset.theme.onBubbleOutgoing
-                            }}
-                          >
-                            Sample reply
-                          </div>
-                        </div>
-                      </button>
+                        preset={preset}
+                        onApply={handleApplyPreset}
+                      />
                     ))}
                   </div>
                   <div className="theme-editor">
