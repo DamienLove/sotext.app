@@ -157,20 +157,25 @@ class SmsRepository(private val context: Context) {
     private fun classifyThread(address: String, snippet: String): ThreadCategory {
         val body = snippet.lowercase()
         val hasSpace = address.contains(" ")
-        // Simple check: if address has letters but no spaces, it might be a sender ID (e.g. "HDFCBNK")
-        // If it looks like a phone number, it's personal unless it's a shortcode.
 
-        val isPhoneNumber = address.any { it.isDigit() } && address.replace(NUMERIC_REGEX, "").length >= 7
+        // Refined Classification:
+        // A "Real Phone Number" should generally not have letters.
+        // If it has letters, it's likely a Shortcode or Sender ID (e.g. "HDFC2U").
+        // Exception: Contact names have letters and spaces ("John Doe").
 
-        if (hasSpace || isPhoneNumber) {
+        val hasLetters = address.any { it.isLetter() }
+        val isContactName = hasSpace && hasLetters
+        val isNumericNumber = !hasLetters && address.any { it.isDigit() } && address.length >= 3
+
+        if (isContactName || isNumericNumber) {
             return ThreadCategory.PERSONAL
         }
 
-        // Likely a Sender ID or Shortcode
+        // Likely a Sender ID (alphanumeric) or Shortcode
         if (TRANSACTION_PATTERN.matcher(body).find()) return ThreadCategory.TRANSACTIONS
         if (PROMOTION_PATTERN.matcher(body).find()) return ThreadCategory.PROMOTIONS
 
-        // Default fallback for non-personal looking items
+        // Default fallback for non-personal looking items (e.g. "HDFC2U" without specific keywords)
         return ThreadCategory.TRANSACTIONS
     }
 
@@ -228,31 +233,7 @@ class SmsRepository(private val context: Context) {
         val numbersToLookup = recipientIdToNumber.values.toSet().filter { contactCache[it] == null }
 
         if (numbersToLookup.isNotEmpty()) {
-            // Batch query contacts by number
-            // We can't do a massive IN clause for phone numbers easily because of formatting,
-            // but we can try normalized matching or just raw matching if they are clean.
-            // For safety and speed, we limit batch size.
              numbersToLookup.chunked(50).forEach { batch ->
-                 val selection = batch.joinToString(" OR ") { "${ContactsContract.CommonDataKinds.Phone.NUMBER} = ?" }
-                 val selectionArgs = batch.toTypedArray()
-
-                 // Note: PhoneLookup is better for exact matching, but doesn't support batch IN easily.
-                 // CommonDataKinds.Phone supports standard selection.
-
-                 // To avoid complex formatting issues, we will actually fall back to individual lookup
-                 // if the batch approach is too risky for fuzzy matches, but let's try a direct query first.
-                 // Actually, let's stick to the existing robust `resolveAddress` but optimized.
-                 // If we have 100 threads, 100 lookups is slow.
-                 // Let's optimize: query CommonDataKinds.Phone where IN (numbers)
-                 // This requires numbers to match exactly what's in DB.
-
-                 // Alternative: Query *all* contacts with these numbers.
-                 // Ideally we use PhoneLookup. But that's per-number.
-                 // Let's rely on `resolveAddress` but with a larger cache and maybe parallel execution?
-                 // No, parallel DB queries on SQLite might lock.
-
-                 // Let's do the fast `CommonDataKinds.Phone` query for exact matches.
-                 // If that fails, we leave it as the number.
                  val cursor = runCatching {
                      context.contentResolver.query(
                          ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -267,14 +248,14 @@ class SmsRepository(private val context: Context) {
                      val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
                      val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
                      while (c.moveToNext()) {
-                         val num = c.getString(numIdx)
-                         val name = c.getString(nameIdx)
-                         if (!num.isNullOrBlank() && !name.isNullOrBlank()) {
-                             // This might be fuzzy if formats differ, but it catches exact stored matches
-                             numberToName[num] = name
-                             // Also normalize
+                         val num = c.getString(numIdx) ?: continue
+                         val name = c.getString(nameIdx) ?: continue
+                         if (name.isNotBlank()) {
+                             val formatted = if (name != num) "$name \u2022 $num" else num
+                             numberToName[num] = formatted
+                             // Also normalize simple cases
                              val norm = num.replace(" ", "").replace("-", "")
-                             numberToName[norm] = name
+                             if (norm != num) numberToName[norm] = formatted
                          }
                      }
                  }
@@ -299,15 +280,9 @@ class SmsRepository(private val context: Context) {
                         return@mapNotNull bulkName
                     }
 
-                    // Fallback to slow lookup if needed, but for list speed, maybe skip?
-                    // "Do everything to improve speed".
-                    // Let's do a single lookup if missing, but only if < 20 items to resolve to avoid lag?
-                    // Or just return number and let it resolve lazily?
-                    // No, users hate seeing numbers.
-                    // Let's do the slow lookup and cache it.
-                    val resolved = resolveAddress(rawNum)
-                    contactCache.put(rawNum, resolved)
-                    resolved
+                    // Fallback removed for speed: Use raw number if not found in bulk.
+                    contactCache.put(rawNum, rawNum)
+                    rawNum
                 }
                 val finalStr = names.joinToString(", ")
                 addressCache.put(thread.id, finalStr)
@@ -631,7 +606,7 @@ class SmsRepository(private val context: Context) {
                 val numIdx = c.getColumnIndexOrThrow(ContactsContract.PhoneLookup.NUMBER)
                 val name = c.getString(nameIdx) ?: ""
                 val formatted = c.getString(numIdx) ?: number
-                if (name.isNotBlank()) "$name" else formatted
+                if (name.isNotBlank()) "$name \u2022 $formatted" else formatted
             } else {
                 number
             }
