@@ -1136,7 +1136,6 @@ function App() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  // threads state removed as it was unused and replaced by legacyThreads/lineThreads
   const [legacyThreads, setLegacyThreads] = useState([]);
   const [lineThreads, setLineThreads] = useState({});
   const [lines, setLines] = useState([]);
@@ -2295,6 +2294,9 @@ function App() {
     return current.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
 
+  // Bolt: Memoize thread list elements to prevent re-rendering on every compose keystroke.
+  // Note: handleThreadSelect is stable (useCallback) but included for exhaustive-deps correctness.
+  // Note: selectedThread?.id is used to avoid re-rendering the whole list when non-visual props of selectedThread change.
   const threadListElements = useMemo(() => (
     activeLineThreads.map(thread => (
       <ThreadItem
