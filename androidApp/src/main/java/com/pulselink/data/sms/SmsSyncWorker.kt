@@ -1,20 +1,22 @@
 package com.pulselink.data.sms
 
 import android.content.Context
+import android.os.Build
+import android.provider.Telephony
+import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
-import com.pulselink.data.contacts.DeviceContactsRepository
 import com.pulselink.BuildConfig
+import com.pulselink.data.contacts.DeviceContactsRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.util.splitSmsDisplayAddress
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import android.os.Build
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 
@@ -33,17 +35,14 @@ class SmsSyncWorker @AssistedInject constructor(
         val settings = settingsRepository.settings.first()
         val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
         val isPro = settings.proUnlocked
+        val hasReadSms = hasSmsPermission()
 
-        val user = auth.currentUser
-        if (user == null) {
-            return Result.failure()
-        }
+        val user = auth.currentUser ?: return Result.failure()
 
         return try {
             val userRef = firestore.collection("users").document(user.uid)
 
             // Sync subscription status to allow Web client to unlock features
-            // Explicitly set to free if not premium to handle subscription cancellation/expiry
             val status = when {
                 isPremium -> "premium"
                 isPro -> "pro"
@@ -53,12 +52,12 @@ class SmsSyncWorker @AssistedInject constructor(
 
             // If the user hasn't enabled remote web access, there's nothing to sync.
             if (!settings.remoteWebAccessEnabled) {
+                writeDiagnostics(user.uid, settingsRepository.ensureDeviceId(), status, 0, 0, hasReadSms, "remoteWebAccess off")
                 return Result.success()
             }
 
             val deviceId = settingsRepository.ensureDeviceId()
-            val phoneNumber = settings.devicePhoneNumber
-                ?: settingsRepository.getLastKnownPhone()
+            val phoneNumber = settings.devicePhoneNumber ?: settingsRepository.getLastKnownPhone()
             val lineId = deviceId
 
             val lineRef = userRef.collection("lines").document(lineId)
@@ -79,14 +78,13 @@ class SmsSyncWorker @AssistedInject constructor(
             phoneNumber?.takeIf { it.isNotBlank() }?.let { devicePayload["phoneNumber"] = it }
             deviceRef.set(devicePayload, SetOptions.merge()).await()
 
-            // Only sync messages if Remote Web Access is enabled by the user
-            if (settings.remoteWebAccessEnabled) {
-                val threads = smsRepository.listThreads(limit = 20)
-                val legacyThreadsRef = userRef.collection("synced_threads")
+            var syncedThreads = 0
+            var syncedMessages = 0
+            if (settings.remoteWebAccessEnabled && hasReadSms) {
+                val threads = smsRepository.listThreads(limit = 50)
                 val lineThreadsRef = lineRef.collection("threads")
 
                 for (thread in threads) {
-                    val threadDoc = legacyThreadsRef.document(thread.threadId.toString())
                     val lineThreadDoc = lineThreadsRef.document(thread.threadId.toString())
 
                     val (namePart, numberPart) = splitSmsDisplayAddress(thread.address)
@@ -95,8 +93,6 @@ class SmsSyncWorker @AssistedInject constructor(
 
                     val threadData = mapOf(
                         "address" to thread.address,
-                        // Using snake_case for new fields to match cross-platform schema,
-                        // while maintaining camelCase for existing legacy fields.
                         "display_name" to displayName,
                         "phone_number" to phoneNumber,
                         "snippet" to thread.snippet,
@@ -107,37 +103,47 @@ class SmsSyncWorker @AssistedInject constructor(
                         "isPrivate" to thread.isPrivate,
                         "isTrusted" to thread.isTrusted
                     )
-                    // Write thread data
-                    threadDoc.set(threadData, SetOptions.merge()).await()
                     lineThreadDoc.set(threadData, SetOptions.merge()).await()
+                    syncedThreads++
 
-                    // Sync messages
-                    val messages = smsRepository.messagesForThread(thread.threadId, limit = 50)
-                    val messagesRef = threadDoc.collection("messages")
+                    val messages = smsRepository.messagesForThread(thread.threadId, limit = 200)
                     val lineMessagesRef = lineThreadDoc.collection("messages")
-
-                    val batch = firestore.batch()
                     val lineBatch = firestore.batch()
                     var batchCount = 0
 
                     for (msg in messages) {
-                        val msgDoc = messagesRef.document(msg.id.toString())
                         val lineMsgDoc = lineMessagesRef.document(msg.id.toString())
                         val msgData = mapOf(
                             "body" to msg.body,
                             "date" to msg.timestamp,
                             "type" to (if (msg.outgoing) 2 else 1)
                         )
-                        batch.set(msgDoc, msgData, SetOptions.merge())
                         lineBatch.set(lineMsgDoc, msgData, SetOptions.merge())
                         batchCount++
+                        syncedMessages++
+                        if (batchCount >= 450) {
+                            lineBatch.commit().await()
+                            batchCount = 0
+                        }
                     }
                     if (batchCount > 0) {
-                        batch.commit().await()
                         lineBatch.commit().await()
                     }
                 }
             }
+
+            writeDiagnostics(
+                user.uid,
+                settingsRepository.ensureDeviceId(),
+                status,
+                syncedThreads,
+                syncedMessages,
+                hasReadSms,
+                when {
+                    !hasReadSms -> "READ_SMS missing"
+                    else -> "ok"
+                }
+            )
 
             if (deviceContactsRepository.hasContactsPermission() && settings.remoteWebAccessEnabled) {
                 syncDeviceContacts(user.uid)
@@ -204,5 +210,44 @@ class SmsSyncWorker @AssistedInject constructor(
             }
         }
         return if (input.trim().startsWith("+")) "+$digits" else digits
+    }
+
+    private fun hasSmsPermission(): Boolean {
+        val ctx = applicationContext
+        val perms = listOf(
+            android.Manifest.permission.READ_SMS,
+            android.Manifest.permission.RECEIVE_SMS,
+            android.Manifest.permission.SEND_SMS
+        )
+        return perms.all { perm ->
+            ContextCompat.checkSelfPermission(ctx, perm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private suspend fun writeDiagnostics(
+        userId: String,
+        deviceId: String,
+        subscriptionStatus: String,
+        threadCount: Int,
+        messageCount: Int,
+        hasReadSms: Boolean,
+        status: String
+    ) {
+        runCatching {
+            val doc = firestore.collection("users").document(userId)
+                .collection("syncDiagnostics")
+                .document("latest")
+            val payload = mapOf(
+                "deviceId" to deviceId,
+                "subscriptionStatus" to subscriptionStatus,
+                "threadCount" to threadCount,
+                "messageCount" to messageCount,
+                "hasReadSms" to hasReadSms,
+                "status" to status,
+                "timestamp" to FieldValue.serverTimestamp(),
+                "appVersion" to BuildConfig.VERSION_NAME
+            )
+            doc.set(payload, SetOptions.merge()).await()
+        }
     }
 }
