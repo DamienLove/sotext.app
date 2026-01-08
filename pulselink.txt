@@ -121,3 +121,5 @@ Outstanding (carry-over for next session)
 - 2026-01-08: Ran ./gradlew lintFreeDebug testFreeDebugUnitTest after merges — build successful.
 - 2026-01-08: Added UnifiedHomeFilterTest (preview filter logic/unit) and ran ./gradlew testFreeDebugUnitTest --tests com.pulselink.ui.screens.UnifiedHomeFilterTest (pass).
 - 2026-01-08: Bumped versionCode/Name to 122; built free/pro release AABs; uploaded both to Play (internal/beta/production) via service account. Web build succeeded (npm run build); Firebase hosting deploy blocked: firebase auth expired (run firebase login --reauth or provide FIREBASE_TOKEN).
+- 2026-01-08: Unified launcher: treat PackageManager DEFAULT state as enabled to stop false “failed to open unified navigation” errors on some OEM launchers.
+- 2026-01-08: Beacon Contacts tab: merges device contacts (deduped by normalized number) when READ_CONTACTS is granted; ran ./gradlew lintFreeDebug testFreeDebugUnitTest.

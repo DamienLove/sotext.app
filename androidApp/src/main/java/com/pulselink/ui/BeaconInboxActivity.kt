@@ -294,8 +294,37 @@ class BeaconInboxActivity : ComponentActivity() {
 
                                     var currentRoute by remember { mutableStateOf(BeaconNavRoute.Inbox) }
 
-                                    val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
-                                    val deviceContacts by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
+                val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
+                val deviceContacts by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
+                val hasContactsPermission = ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.READ_CONTACTS
+                ) == PackageManager.PERMISSION_GRANTED
+
+                val mergedContacts = remember(state.contacts, deviceContacts, hasContactsPermission) {
+                    val normalized = mutableMapOf<String, com.pulselink.domain.model.Contact>()
+                    // Start with app contacts
+                    state.contacts.forEach { contact ->
+                        val numbers = listOf(contact.phoneNumber) + contact.additionalPhones
+                        numbers.filter { it.isNotBlank() }.forEach { number ->
+                            val key = com.pulselink.util.normalizeSmsAddress(number)
+                            if (key.isNotBlank()) normalized.putIfAbsent(key, contact)
+                        }
+                    }
+                    if (hasContactsPermission) {
+                        deviceContacts.forEach { deviceContact ->
+                            val key = com.pulselink.util.normalizeSmsAddress(deviceContact.phoneNumber)
+                            if (key.isNotBlank() && !normalized.containsKey(key)) {
+                                normalized[key] = com.pulselink.domain.model.Contact(
+                                    displayName = deviceContact.displayName.ifBlank { deviceContact.phoneNumber },
+                                    phoneNumber = deviceContact.phoneNumber
+                                )
+                            }
+                        }
+                    }
+                    // Return list sorted by name
+                    normalized.values.sortedBy { it.displayName.lowercase() }
+                }
 
                                     val displayedThreads = when (currentRoute) {
                                         BeaconNavRoute.Inbox -> threads
@@ -322,7 +351,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                             // Show contacts list instead of messages
                                             Column(modifier = Modifier.fillMaxSize()) {
                                                 BeaconContactsScreen(
-                                                    contacts = state.contacts,
+                                                    contacts = mergedContacts,
                                                     theme = state.settings.themePreferences,
                                                     onSelect = { contact ->
                                                         // Navigate to thread with this contact's phone number

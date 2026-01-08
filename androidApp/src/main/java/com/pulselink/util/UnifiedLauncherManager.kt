@@ -79,12 +79,12 @@ object UnifiedLauncherManager {
                 // Verify the target unified component was enabled
                 delay(100) // Small delay to allow launcher to process
                 val state = pm.getComponentEnabledSetting(targetUnified)
-                if (state != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                if (!state.isEnabledOrDefault()) {
                     Log.w(TAG, "Target unified component not enabled after first attempt. State: $state. Retrying...")
                     enable(pm, targetUnified, "unified target (retry)")
                     delay(100)
                     val retryState = pm.getComponentEnabledSetting(targetUnified)
-                    if (retryState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+                    if (!retryState.isEnabledOrDefault()) {
                         Log.e(TAG, "Failed to enable unified component after retry. State: $retryState")
                         return false
                     }
@@ -135,4 +135,12 @@ object UnifiedLauncherManager {
             PackageManager.DONT_KILL_APP
         )
     }
+
+    /**
+     * Some OEM launchers report DEFAULT (0) even after enabling an alias.
+     * Treat DEFAULT as acceptable to avoid false negatives.
+     */
+    private fun Int.isEnabledOrDefault(): Boolean =
+        this == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
+            this == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT
 }
