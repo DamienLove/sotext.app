@@ -3,12 +3,6 @@ import { db, auth } from './firebase';
 import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 
 /**
- * Time constants for date calculations
- */
-const MS_PER_MINUTE = 1000 * 60;
-const MS_PER_HOUR = MS_PER_MINUTE * 60;
-
-/**
  * Constants for mock data to avoid magic numbers/strings
  */
 const MOCK_DATA = {
@@ -33,10 +27,10 @@ const MOCK_DATA = {
  *
  * SECURITY WARNING: This component allows writing to the database.
  * It ensures it only runs in development mode, but should never be exposed in production builds.
- * REQUIRES AUTHENTICATION: Users must be logged in to populate mock data.
  */
 const DevTools = ({ isVisible, onClose }) => {
   const [status, setStatus] = useState('');
+  const [userId, setUserId] = useState('test_user_123');
 
   const populateMockData = async () => {
     // SECURITY: Double-check we are in DEV mode
@@ -45,17 +39,11 @@ const DevTools = ({ isVisible, onClose }) => {
       return;
     }
 
-    // SECURITY: Require authentication - do not allow arbitrary user ID injection
-    if (!auth.currentUser) {
-      setStatus('Error: You must be logged in to populate mock data.');
-      return;
-    }
-
     try {
       setStatus('Populating...');
 
-      // Use authenticated user's ID
-      const uid = auth.currentUser.uid;
+      // Use current user if logged in, otherwise use test user ID
+      const uid = auth.currentUser ? auth.currentUser.uid : userId;
 
       const batch = writeBatch(db);
 
@@ -84,7 +72,7 @@ const DevTools = ({ isVisible, onClose }) => {
           display_name: MOCK_DATA.THREAD_NAME,
           snippet: MOCK_DATA.THREAD_SNIPPET,
           // Using Date.now() for message/thread timestamps to match client usage
-          date: Date.now() - (5 * MS_PER_MINUTE), // 5 mins ago
+          date: Date.now() - 1000 * 60 * 5, // 5 mins ago
           unread: true,
           unreadCount: 2
         },
@@ -93,7 +81,7 @@ const DevTools = ({ isVisible, onClose }) => {
           address: MOCK_DATA.VERIFICATION_ADDRESS,
           display_name: MOCK_DATA.VERIFICATION_NAME,
           snippet: MOCK_DATA.VERIFICATION_SNIPPET,
-          date: Date.now() - (2 * MS_PER_HOUR), // 2 hours ago
+          date: Date.now() - 1000 * 60 * 60 * 2, // 2 hours ago
           unread: false
         }
       ];
@@ -112,17 +100,14 @@ const DevTools = ({ isVisible, onClose }) => {
 
       // 4. Create Messages for Thread 1
       const msgs = [
-        { body: "Hello!", date: Date.now() - MS_PER_HOUR, type: 2 }, // Sent
-        { body: "Hi there!", date: Date.now() - (55 * MS_PER_MINUTE), type: 1 }, // Received
-        { body: "Are we still on for dinner?", date: Date.now() - (5 * MS_PER_MINUTE), type: 1 } // Received
+        { body: "Hello!", date: Date.now() - 1000 * 60 * 60, type: 2 }, // Sent
+        { body: "Hi there!", date: Date.now() - 1000 * 60 * 55, type: 1 }, // Received
+        { body: "Are we still on for dinner?", date: Date.now() - 1000 * 60 * 5, type: 1 } // Received
       ];
 
       const msgBatch = writeBatch(db);
-      let messageCounter = 0;
       for (const m of msgs) {
-         // Use slice() instead of deprecated substr() and ensure unique IDs
-         const msgId = `msg_${Date.now() + messageCounter}_${Math.random().toString(36).slice(2, 11)}`;
-         messageCounter++;
+         const msgId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
          const mRef = doc(db, "users", uid, "synced_threads", MOCK_DATA.THREAD_ID, "messages", msgId);
          const lineMRef = doc(db, "users", uid, "lines", MOCK_DATA.LINE_ID, "threads", MOCK_DATA.THREAD_ID, "messages", msgId);
          msgBatch.set(mRef, m);
@@ -130,7 +115,7 @@ const DevTools = ({ isVisible, onClose }) => {
       }
       await msgBatch.commit();
 
-      setStatus('Success! Click the "Beacon" tab to view messages.');
+      setStatus('Success! Reload or check Beacon tab.');
     } catch (e) {
       console.error('Failed to populate mock data:', e);
       setStatus('Error: ' + (e.code || 'Unknown') + ' - ' + e.message);
@@ -163,31 +148,35 @@ const DevTools = ({ isVisible, onClose }) => {
         </button>
       </div>
 
-      <div style={{marginBottom: 10, fontSize: 12, color: '#aaa'}}>
-        {auth.currentUser
-          ? `Logged in as: ${auth.currentUser.email || auth.currentUser.uid}`
-          : 'Please log in to use DevTools'}
+      <div style={{marginBottom: 10}}>
+         <label htmlFor="dev-target-user-id" style={{display:'block', fontSize: 12, marginBottom: 4}}>
+           Target User ID (if not logged in)
+         </label>
+         <input
+           id="dev-target-user-id"
+           value={userId}
+           onChange={e => setUserId(e.target.value)}
+           style={{width: '100%', background: '#222', border: '1px solid #444', color: '#fff', padding: 4}}
+         />
       </div>
 
       <button
         onClick={populateMockData}
-        disabled={!auth.currentUser}
         style={{
           width: '100%',
-          background: auth.currentUser ? '#0ea5e9' : '#555',
+          background: '#0ea5e9',
           border: 'none',
           padding: '8px',
           color: 'white',
           borderRadius: 4,
-          cursor: auth.currentUser ? 'pointer' : 'not-allowed',
-          marginBottom: 8,
-          opacity: auth.currentUser ? 1 : 0.5
+          cursor: 'pointer',
+          marginBottom: 8
         }}
       >
         Populate Mock Data
       </button>
 
-      {status && <div style={{fontSize: 12, color: '#aaa'}} role="alert" aria-live="polite">{status}</div>}
+      {status && <div style={{fontSize: 12, color: '#aaa'}} role="alert">{status}</div>}
     </div>
   );
 };
