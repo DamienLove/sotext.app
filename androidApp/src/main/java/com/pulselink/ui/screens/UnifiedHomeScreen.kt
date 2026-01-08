@@ -155,6 +155,8 @@ fun UnifiedHomeScreen(
         filteredByFilter.take(8)
     }
 
+    val shouldShowPreview = inboxBusy || threads.isNotEmpty()
+
     HomeScreen(
         state = state,
         onDismissAssistantShortcuts = onDismissAssistantShortcuts,
@@ -191,25 +193,27 @@ fun UnifiedHomeScreen(
         isPro = isPro,
         showComposeButton = true,
         onComposeMessage = onComposeMessage,
-        smsPreviewContent = {
-            SmsInboxPreviewSection(
-                threads = previewThreads,
-                totalUnread = totalUnread,
-                filter = selectedFilter,
-                onFilterChange = { selectedFilter = it },
-                onOpenThread = onOpenThread,
-                onViewAll = onViewAllMessages,
-                onOpenContact = onOpenContactForThread,
-                onComposeMessage = onComposeMessage,
-                theme = state.settings.themePreferences,
-                dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
-                contactsByNumber = contactsByNumber,
-                isDatabaseBusy = inboxBusy,
-                lineIndexMap = lineIndexMap,
-                lineColors = lineColors,
-                lineCount = orderedLines.size
-            )
-        }
+        smsPreviewContent = if (shouldShowPreview) {
+            {
+                SmsInboxPreviewSection(
+                    threads = previewThreads,
+                    totalUnread = totalUnread,
+                    filter = selectedFilter,
+                    onFilterChange = { selectedFilter = it },
+                    onOpenThread = onOpenThread,
+                    onViewAll = onViewAllMessages,
+                    onOpenContact = onOpenContactForThread,
+                    onComposeMessage = onComposeMessage,
+                    theme = state.settings.themePreferences,
+                    dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                    contactsByNumber = contactsByNumber,
+                    isDatabaseBusy = inboxBusy,
+                    lineIndexMap = lineIndexMap,
+                    lineColors = lineColors,
+                    lineCount = orderedLines.size
+                )
+            }
+        } else null
     )
 }
 

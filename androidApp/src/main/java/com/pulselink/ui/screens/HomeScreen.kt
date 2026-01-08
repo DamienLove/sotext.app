@@ -293,17 +293,17 @@ fun HomeScreen(
                 )
                 quickActionsShown = true
             }
-            if (isUnifiedMode) {
-                if (smsPreviewContent != null) {
-                    smsPreviewContent()
-                } else {
-                    BeaconUnifiedWidget(
-                        onOpenInbox = onBeaconClick,
-                        onOpenContacts = onOpenContacts,
-                        theme = themePrefs
-                    )
-                }
+        if (isUnifiedMode) {
+            if (smsPreviewContent != null) {
+                smsPreviewContent()
+            } else if (showBeaconHint) {
+                BeaconUnifiedWidget(
+                    onOpenInbox = onBeaconClick,
+                    onOpenContacts = onOpenContacts,
+                    theme = themePrefs
+                )
             }
+        }
             if (showBeaconHint) {
                 BeaconHintCard(
                     onDismiss = onBeaconHintDismiss,
