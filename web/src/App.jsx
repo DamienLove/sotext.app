@@ -266,6 +266,7 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
       await onClear(alert.id);
     } catch (e) {
       console.error(e);
+    } finally {
       setIsClearing(false);
     }
   }, [alert.id, onClear]);
@@ -314,6 +315,7 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
   );
 }, (prev, next) => {
   return prev.isActive === next.isActive &&
+    prev.onClear === next.onClear &&
     prev.alert.id === next.alert.id &&
     prev.alert.address === next.alert.address &&
     prev.alert.severity === next.alert.severity &&
