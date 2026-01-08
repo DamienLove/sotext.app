@@ -207,8 +207,8 @@ class MainActivity : AppCompatActivity() {
     @Inject lateinit var defaultSmsHelper: DefaultSmsHelper
     @Inject lateinit var subscriptionManager: com.pulselink.billing.SubscriptionManager
     private val inboxShortcutFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    private fun updateBeaconLauncher(enable: Boolean, variant: String) {
-        BeaconIconManager.apply(this, variant, enable)
+    private fun updateBeaconLauncher(enable: Boolean, variant: String, unifiedModeActive: Boolean = false) {
+        BeaconIconManager.apply(this, variant, enable, unifiedModeActive)
     }
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
@@ -425,20 +425,42 @@ class MainActivity : AppCompatActivity() {
                     lifecycleOwner.lifecycle.addObserver(observer)
                     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
-                LaunchedEffect(state.settings.beaconLauncherEnabled, state.settings.themePreferences.inboxIconVariant) {
-                    updateBeaconLauncher(
-                        state.settings.beaconLauncherEnabled,
-                        state.settings.themePreferences.inboxIconVariant
-                    )
-                }
+                // IMPORTANT: Unified launcher must be applied FIRST to establish unified mode,
+                // then beacon launcher respects that state to avoid race conditions
                 LaunchedEffect(state.settings.mergedExperienceEnabled, state.settings.unifiedDisplayName) {
-                    UnifiedLauncherManager.apply(
+                    val success = UnifiedLauncherManager.apply(
                         context,
                         state.settings.mergedExperienceEnabled,
                         state.settings.unifiedDisplayName
                     )
+                    if (!success && state.settings.mergedExperienceEnabled) {
+                        // Failed to enable unified mode - show error and disable
+                        Toast.makeText(
+                            context,
+                            "Failed to enable unified navigation. Please restart the app.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        // Optionally disable unified mode on failure
+                        viewModel.setMergedExperienceEnabled(false)
+                    }
                     // Refresh default SMS status when unified mode changes
                     refreshDefaultSms()
+                }
+
+                LaunchedEffect(
+                    state.settings.beaconLauncherEnabled,
+                    state.settings.themePreferences.inboxIconVariant,
+                    state.settings.mergedExperienceEnabled
+                ) {
+                    // Skip beacon icon management when unified mode is active
+                    // UnifiedLauncherManager handles all icon states in unified mode
+                    if (!state.settings.mergedExperienceEnabled) {
+                        updateBeaconLauncher(
+                            state.settings.beaconLauncherEnabled,
+                            state.settings.themePreferences.inboxIconVariant,
+                            unifiedModeActive = false
+                        )
+                    }
                 }
                 LaunchedEffect(navController) {
                     inboxShortcutFlow.collectLatest {
@@ -458,7 +480,8 @@ class MainActivity : AppCompatActivity() {
                         }
                         val shouldEnable = currentBeaconEnabled
                         val iconVariant = viewModel.uiState.value.settings.themePreferences.inboxIconVariant
-                        updateBeaconLauncher(shouldEnable, iconVariant)
+                        val unifiedMode = viewModel.uiState.value.settings.mergedExperienceEnabled
+                        updateBeaconLauncher(shouldEnable, iconVariant, unifiedMode)
 
                         // Policy: default-SMS prompt must precede runtime SMS permissions.
                         if (!isNowDefault) {

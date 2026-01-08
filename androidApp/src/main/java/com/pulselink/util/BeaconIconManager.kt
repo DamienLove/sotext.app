@@ -3,10 +3,13 @@ package com.pulselink.util
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Log
 import com.pulselink.ui.InboxLauncherActivity
 import java.util.Locale
 
 object BeaconIconManager {
+    private const val TAG = "BeaconIconManager"
+
     private val themeVariantMap = mapOf(
         "default_light" to "com.pulselink.BeaconInboxThemeDefaultLight",
         "midnight_oled" to "com.pulselink.BeaconInboxThemeMidnightOled",
@@ -37,7 +40,20 @@ object BeaconIconManager {
             .ifBlank { "default" }
     }
 
-    fun apply(context: Context, variant: String, enabled: Boolean = true) {
+    /**
+     * Apply beacon icon variant settings.
+     * @param unifiedModeActive If true, skip all operations as UnifiedLauncherManager handles icon state
+     */
+    fun apply(context: Context, variant: String, enabled: Boolean = true, unifiedModeActive: Boolean = false) {
+        // When unified navigation is enabled, UnifiedLauncherManager handles all launcher icon states.
+        // Skip beacon icon management to avoid race conditions.
+        if (unifiedModeActive) {
+            Log.d(TAG, "Skipping beacon icon management - unified mode is active")
+            return
+        }
+
+        Log.d(TAG, "apply() called - variant=$variant, enabled=$enabled")
+
         val pm = context.packageManager
         val pkg = context.packageName
         val defaultComp = ComponentName(context, InboxLauncherActivity::class.java)
@@ -47,6 +63,7 @@ object BeaconIconManager {
         val allComps = listOf(defaultComp, logoComp, proComp) + themeComps
 
         if (!enabled) {
+            Log.d(TAG, "Disabling all beacon icons")
             allComps.forEach {
                 pm.setComponentEnabledSetting(it, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
             }
@@ -61,6 +78,8 @@ object BeaconIconManager {
             else -> defaultComp
         }
 
+        Log.d(TAG, "Enabling beacon icon variant: $key (${target.className})")
+
         allComps.forEach { component ->
             val state = if (component == target) {
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED
@@ -69,5 +88,7 @@ object BeaconIconManager {
             }
             pm.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
         }
+
+        Log.d(TAG, "Beacon icon management complete")
     }
 }

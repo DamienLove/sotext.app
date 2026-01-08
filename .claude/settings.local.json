@@ -50,7 +50,8 @@
       "Bash(gh pr diff:*)",
       "Bash(dir /s /b androidAppbuildoutputsbundle*Release*.aab)",
       "Bash(cmd.exe /c \"dir /s /b androidApp\\\\build\\\\outputs\\\\bundle\\\\*Release\\\\*.aab\")",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "WebFetch(domain:damiennichols.com)"
     ]
   },
   "mcpServers": {

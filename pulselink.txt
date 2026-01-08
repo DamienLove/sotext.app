@@ -116,3 +116,7 @@ Outstanding (carry-over for next session)
 - 2026-01-06: Web: added multi-device Beacon inbox support (combined or per-line tabs), line-aware message listener and send-from-line selection; auto-send lineId in web outbox.
 - 2026-01-06: Web: restyled theme gallery (larger cards, chat-like preview, responsive grid) to match app feel.
 - 2026-01-07: v121 build ready — lintFreeDebug + testFreeDebugUnitTest passing after disabling Compose CoroutineCreationDuringComposition lint crash; PulseLink versionCode/Name 121; remote web access defaults to true for premium/pro; multi-device line inbox + send-from-line shipped on web; widget icons use app:tint; PulseLinkTheme shares Deep tokens from DesignSystem to avoid dupes; built free/pro release AABs at androidApp/build/outputs/bundle/(freeRelease|proRelease)/ and web dist/ via npm run build (hosting/Play uploads not run).
+- 2026-01-08: Attempted to merge PRs #455-467; all open PRs are drafts so merge blocked. No merges performed.
+- 2026-01-08: Merged PRs #461 #465 #466 #467 #462 into Suite-Beta; resolved conflicts in web/src/App.jsx (loading state + map alert clearing). Remaining open PRs are drafts #455 and #459.
+- 2026-01-08: Ran ./gradlew lintFreeDebug testFreeDebugUnitTest after merges — build successful.
+- 2026-01-08: Added UnifiedHomeFilterTest (preview filter logic/unit) and ran ./gradlew testFreeDebugUnitTest --tests com.pulselink.ui.screens.UnifiedHomeFilterTest (pass).

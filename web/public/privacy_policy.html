@@ -3,60 +3,583 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PulseLink Privacy Policy</title>
+  <title>Privacy Policy - PulseLink</title>
   <style>
-    :root { --bg:#0b1020; --card:#11182c; --ink:#e8f0ff; --muted:#9bb0ce; --accent:#22d3ee; }
-    body { margin:0; font-family:"Inter", system-ui, -apple-system, sans-serif; background:radial-gradient(circle at 20% 20%, #121b33, #0b1020 55%); color:var(--ink); line-height:1.6; }
-    .page { max-width:960px; margin:48px auto; padding:32px; background:var(--card); border-radius:18px; box-shadow:0 30px 80px -40px rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.05); }
-    h1 { font-size:28px; margin-bottom:12px; }
-    h2 { margin-top:28px; font-size:20px; color:var(--accent); }
-    a { color:var(--accent); }
-    ul { padding-left:20px; }
-    small { color:var(--muted); }
+    :root {
+      --bg: #0b1020;
+      --card: #11182c;
+      --ink: #e8f0ff;
+      --muted: #9bb0ce;
+      --accent: #22d3ee;
+    }
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, #121b33, #0b1020 55%);
+      color: var(--ink);
+      line-height: 1.7;
+    }
+    .page {
+      max-width: 960px;
+      margin: 48px auto;
+      padding: 40px;
+      background: var(--card);
+      border-radius: 18px;
+      box-shadow: 0 30px 80px -40px rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+    h2 {
+      margin-top: 36px;
+      margin-bottom: 16px;
+      font-size: 22px;
+      color: var(--accent);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 8px;
+    }
+    h3 {
+      margin-top: 24px;
+      margin-bottom: 12px;
+      font-size: 18px;
+      color: var(--ink);
+    }
+    p {
+      margin: 12px 0;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    ul, ol {
+      padding-left: 24px;
+      margin: 12px 0;
+    }
+    li {
+      margin: 8px 0;
+    }
+    small {
+      color: var(--muted);
+    }
+    .developer-info {
+      background: rgba(34, 211, 238, 0.1);
+      padding: 16px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 3px solid var(--accent);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    th {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .highlight {
+      background: rgba(34, 211, 238, 0.15);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
   <div class="page">
-    <h1>PulseLink Privacy Policy</h1>
-    <small>Last updated: January 5, 2026</small>
+    <h1>Privacy Policy</h1>
+    <small>Effective Date: January 8, 2026</small>
+    <small style="display: block; margin-top: 4px;">Last Updated: January 8, 2026</small>
 
-    <h2>1. Data We Collect</h2>
+    <div class="developer-info">
+      <h3 style="margin-top: 0;">Developer Information</h3>
+      <p><strong>Developer:</strong> Damien Nichols</p>
+      <p><strong>App Name:</strong> PulseLink (also available as PulseLink, PulseLink Pro, and PulseLink Premium)</p>
+      <p><strong>Privacy Contact:</strong> <a href="mailto:pulselink-support@dmnlat.com">pulselink-support@dmnlat.com</a></p>
+      <p><strong>Website:</strong> <a href="https://app.damiennichols.com">https://app.damiennichols.com</a></p>
+    </div>
+
+    <p>This Privacy Policy describes how PulseLink ("we," "us," or "our") collects, uses, discloses, and protects your personal information when you use our mobile application (the "App") and related services (collectively, the "Service"). This policy applies to all versions of PulseLink, including PulseLink Beacon (free tier), PulseLink Pro, and PulseLink Premium.</p>
+
+    <p><strong>By using the Service, you agree to the collection and use of information in accordance with this Privacy Policy.</strong> If you do not agree with this policy, please do not use the Service.</p>
+
+    <h2>1. Information We Collect</h2>
+
+    <p>We collect different types of information to provide and improve our Service. The information we collect includes:</p>
+
+    <h3>1.1 Personal Information You Provide</h3>
     <ul>
-      <li>Account info (name, email/phone) when you sign in.</li>
-      <li>App telemetry (crash/analytics) to improve stability.</li>
-      <li>Optional sync data (messages, contacts, themes) when you enable sync/remote web access.</li>
-      <li>Device data needed for core features (e.g., network state, app version).</li>
+      <li><strong>Account Information:</strong> When you sign in using Google Sign-In or other authentication methods, we collect your name, email address, and profile information from your authentication provider.</li>
+      <li><strong>Contact Information:</strong> If you contact us for support, we collect your email address and any information you provide in your communications.</li>
+      <li><strong>Payment Information:</strong> When you purchase a subscription or in-app purchase, payment information is processed by Google Play's billing system. We do not store your payment card details, but we receive transaction information (subscription status, purchase date) from Google Play.</li>
     </ul>
 
-    <h2>2. How We Use Data</h2>
+    <h3>1.2 SMS and MMS Data</h3>
+    <p>PulseLink functions as an SMS/MMS messaging application. To provide core messaging features, we access and process:</p>
     <ul>
-      <li>Provide messaging, emergency, and safety features.</li>
-      <li>Sync your settings/messages across signed-in devices when you opt in.</li>
-      <li>Improve performance, debug issues, and prevent abuse.</li>
-      <li>Serve ads in free tiers where applicable.</li>
+      <li><strong>Message Content:</strong> Text messages (SMS) and multimedia messages (MMS) you send and receive, including message bodies, attachments, timestamps, and delivery status.</li>
+      <li><strong>Message Metadata:</strong> Phone numbers of senders and recipients, conversation threads, read/unread status, and message categories.</li>
+      <li><strong>Message Analysis:</strong> We use on-device AI and cloud-based AI (Firebase AI) to analyze message content for emergency detection, spam filtering, and categorization features. This analysis helps identify urgent or emergency messages to trigger appropriate alerts.</li>
+      <li><strong>Beacon Feature:</strong> Messages categorized as "Beacon" messages (check-ins, emergency alerts) may be processed differently to provide safety and emergency response features.</li>
+    </ul>
+    <p><strong>Storage:</strong> Messages are stored locally on your device in an encrypted database. If you enable optional sync features or remote web access, message data may be synchronized to Firebase Firestore (cloud storage) to enable cross-device sync and remote access via web browser.</p>
+
+    <h3>1.3 Contact Information</h3>
+    <ul>
+      <li>When you grant permission, we access your device contacts to display contact names, phone numbers, and profile pictures in conversations.</li>
+      <li>Contact information is used locally on your device and may be synced to the cloud if you enable sync features.</li>
     </ul>
 
-    <h2>3. Sharing</h2>
-    <p>We do not sell your data. Limited sharing occurs with service providers (hosting, analytics, crash reporting, payments) under data-protection terms. We may disclose data to comply with law or protect users and the Service.</p>
-
-    <h2>4. Security</h2>
-    <p>We use industry-standard security controls. No system is 100% secure; keep devices and accounts protected.</p>
-
-    <h2>5. Your Choices</h2>
+    <h3>1.4 Location Data</h3>
     <ul>
-      <li>Opt out of sync/remote access by disabling those settings in-app.</li>
-      <li>Manage notifications and data permissions at the OS level.</li>
-      <li>Request deletion by contacting support@pulselink.app.</li>
+      <li><strong>Precise Location:</strong> We collect your precise location (GPS coordinates) when you use location-sharing features, emergency alert features, or enable location-based services.</li>
+      <li><strong>Location Sharing:</strong> You can share your location with specific contacts through messages. Location data is transmitted directly to the recipient and may be stored in message history.</li>
+      <li><strong>Emergency Location:</strong> When you trigger emergency alerts or use emergency features, your location is collected and may be shared with your designated emergency contacts.</li>
     </ul>
 
-    <h2>6. Children</h2>
-    <p>The Service is not directed to children under 16 (or as defined by local law).</p>
+    <h3>1.5 Phone and Call Data</h3>
+    <ul>
+      <li><strong>Phone State:</strong> We access your phone's state to detect incoming calls and SMS for caller ID features.</li>
+      <li><strong>Phone Numbers:</strong> We read your phone number and SIM card information to configure messaging functionality.</li>
+      <li><strong>Call Log:</strong> We access call log data to provide caller ID information and integrate calling features with messaging.</li>
+      <li><strong>Caller ID Lookups:</strong> When enabled, phone numbers from incoming calls or messages may be sent to third-party caller ID services (see Section 4) to retrieve caller information such as name, location, and spam risk.</li>
+    </ul>
 
-    <h2>7. Changes</h2>
-    <p>We may update this Policy periodically. Continued use after changes signifies acceptance.</p>
+    <h3>1.6 Device Information</h3>
+    <ul>
+      <li><strong>Device Identifiers:</strong> Device model, operating system version, unique device identifiers, mobile network information.</li>
+      <li><strong>App Configuration:</strong> Your app settings, preferences, theme selections, notification preferences, and feature configurations.</li>
+      <li><strong>Installed Apps:</strong> We check for the presence of specific apps (Google Assistant, Bard) to enable assistant integration features.</li>
+    </ul>
 
-    <h2>8. Contact</h2>
-    <p>Questions? Email <a href="mailto:support@pulselink.app">support@pulselink.app</a>.</p>
+    <h3>1.7 Usage and Analytics Data</h3>
+    <ul>
+      <li><strong>App Usage:</strong> Features you use, screens you view, actions you take, frequency and duration of use.</li>
+      <li><strong>Performance Data:</strong> App crashes, errors, performance metrics, and diagnostic information collected through Firebase Crashlytics.</li>
+      <li><strong>Interaction Data:</strong> Button clicks, navigation paths, and user interactions within the app.</li>
+    </ul>
+
+    <h3>1.8 Advertising Data (Free Tier Only)</h3>
+    <p>If you use PulseLink Beacon (free tier), we collect and share data with advertising partners:</p>
+    <ul>
+      <li><strong>Advertising ID:</strong> Your Google Advertising ID for personalized advertising.</li>
+      <li><strong>Ad Interaction Data:</strong> Ad views, clicks, and conversions.</li>
+      <li><strong>Ad Partners:</strong> We use Google AdMob and mediation partners including AppLovin, InMobi, IronSource, Meta (Facebook), Pangle, and Vungle to serve advertisements.</li>
+    </ul>
+
+    <h2>2. How We Use Your Information</h2>
+
+    <p>We use the collected information for the following purposes:</p>
+
+    <h3>2.1 Provide Core Messaging Services</h3>
+    <ul>
+      <li>Send, receive, and store SMS/MMS messages on your device</li>
+      <li>Display conversations, contacts, and message history</li>
+      <li>Enable message search, organization, and categorization</li>
+      <li>Provide message backup and restore functionality</li>
+      <li>Synchronize messages across your devices (when enabled)</li>
+    </ul>
+
+    <h3>2.2 Emergency and Safety Features</h3>
+    <ul>
+      <li>Detect emergency messages and urgent communications using AI analysis</li>
+      <li>Trigger emergency alerts, attention tones, and special notifications</li>
+      <li>Share your location with emergency contacts when you activate emergency features</li>
+      <li>Process check-in messages and safety status updates</li>
+      <li>Enable "Beacon" emergency messaging features</li>
+    </ul>
+
+    <h3>2.3 Caller ID and Spam Protection</h3>
+    <ul>
+      <li>Look up caller information for incoming calls and messages</li>
+      <li>Identify potential spam, scam, or unwanted communications</li>
+      <li>Display caller name, location, and reputation information</li>
+      <li>Block or filter unwanted messages and calls</li>
+    </ul>
+
+    <h3>2.4 Personalization and Customization</h3>
+    <ul>
+      <li>Remember your preferences, settings, and theme choices</li>
+      <li>Customize the user interface based on your usage patterns</li>
+      <li>Provide personalized features and recommendations</li>
+      <li>Enable custom notification sounds, vibration patterns, and alerts</li>
+    </ul>
+
+    <h3>2.5 Authentication and Account Management</h3>
+    <ul>
+      <li>Authenticate your identity using Google Sign-In or other methods</li>
+      <li>Manage your subscription status and premium features</li>
+      <li>Verify app integrity and prevent fraud or abuse</li>
+      <li>Enable cloud sync and remote web access features</li>
+    </ul>
+
+    <h3>2.6 Analytics and Improvement</h3>
+    <ul>
+      <li>Analyze app usage patterns to improve features and user experience</li>
+      <li>Monitor app performance, crashes, and errors</li>
+      <li>Conduct research and development for new features</li>
+      <li>Generate aggregated, anonymized statistics about app usage</li>
+    </ul>
+
+    <h3>2.7 Advertising (Free Tier Only)</h3>
+    <ul>
+      <li>Display relevant advertisements in the free version of the app</li>
+      <li>Measure ad performance and effectiveness</li>
+      <li>Support app development and maintenance through ad revenue</li>
+    </ul>
+
+    <h3>2.8 Communication</h3>
+    <ul>
+      <li>Send important service announcements and updates</li>
+      <li>Respond to your support requests and inquiries</li>
+      <li>Send push notifications about messages, alerts, and app features</li>
+      <li>Notify you about subscription renewals, payments, and account changes</li>
+    </ul>
+
+    <h3>2.9 Legal and Security</h3>
+    <ul>
+      <li>Comply with legal obligations and enforce our Terms of Service</li>
+      <li>Protect against fraud, abuse, and security threats</li>
+      <li>Resolve disputes and enforce our agreements</li>
+      <li>Respond to law enforcement requests when legally required</li>
+    </ul>
+
+    <h2>3. Data Storage and Security</h2>
+
+    <h3>3.1 Local Storage</h3>
+    <ul>
+      <li><strong>Device Database:</strong> Messages, contacts, and app data are stored locally on your device in an encrypted SQLite database using Android Room.</li>
+      <li><strong>Encryption:</strong> Sensitive data is encrypted using Android's Security Crypto library and DataStore with encryption at rest.</li>
+      <li><strong>App Data:</strong> Preferences, settings, and configurations are stored in encrypted DataStore on your device.</li>
+    </ul>
+
+    <h3>3.2 Cloud Storage (Optional)</h3>
+    <ul>
+      <li><strong>Firebase Firestore:</strong> If you enable sync features or remote web access, your messages, contacts, settings, and themes may be synchronized to Firebase Firestore, a cloud database operated by Google.</li>
+      <li><strong>Firebase Storage:</strong> Media attachments (images, videos, audio) may be stored in Firebase Cloud Storage.</li>
+      <li><strong>Data Location:</strong> Cloud data is stored on Google's servers, primarily in the United States (us-central1 region).</li>
+      <li><strong>Encryption in Transit:</strong> All data transmitted to and from cloud services uses TLS/SSL encryption.</li>
+    </ul>
+
+    <h3>3.3 Security Measures</h3>
+    <p>We implement industry-standard security measures to protect your data:</p>
+    <ul>
+      <li>Encryption of data at rest and in transit</li>
+      <li>Secure authentication using Google Sign-In and Firebase Authentication</li>
+      <li>Access controls and permission management</li>
+      <li>Regular security updates and vulnerability patching</li>
+      <li>Firebase Security Rules to protect cloud data access</li>
+      <li>Play Integrity API to prevent tampering and unauthorized access</li>
+    </ul>
+
+    <p><strong>Important:</strong> While we strive to protect your data, no method of electronic storage or transmission is 100% secure. You are responsible for maintaining the security of your device, authentication credentials, and preventing unauthorized access to your device.</p>
+
+    <h2>4. Data Sharing and Third-Party Services</h2>
+
+    <p>We share your information with third-party service providers and partners to operate and improve the Service. We do not sell your personal information to third parties.</p>
+
+    <h3>4.1 Service Providers</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Service Provider</th>
+          <th>Purpose</th>
+          <th>Data Shared</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Google Firebase</td>
+          <td>Authentication, cloud storage, push notifications, crash reporting, analytics, AI services</td>
+          <td>Account info, messages (if sync enabled), device info, usage data, crash logs</td>
+        </tr>
+        <tr>
+          <td>Google Cloud Functions</td>
+          <td>Backend processing, emergency alert relay</td>
+          <td>Emergency messages, location data, recipient information</td>
+        </tr>
+        <tr>
+          <td>Google Play Services</td>
+          <td>Authentication, location services, maps, in-app billing, ads (free tier)</td>
+          <td>Account info, location data, purchase info, advertising ID</td>
+        </tr>
+        <tr>
+          <td>Google AdMob & Partners</td>
+          <td>Advertising (free tier only)</td>
+          <td>Advertising ID, device info, usage patterns, ad interactions</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>4.2 Caller ID Services (When Enabled)</h3>
+    <p>When you use caller ID features, phone numbers may be sent to these third-party lookup services:</p>
+    <ul>
+      <li><strong>NumLookup API:</strong> Phone number validation and caller information</li>
+      <li><strong>Numverify:</strong> Phone number verification and carrier lookup</li>
+      <li><strong>IPQualityScore:</strong> Spam risk assessment and fraud detection</li>
+      <li><strong>Twilio Lookup:</strong> Carrier information and number validation</li>
+      <li><strong>Truecaller (via RapidAPI):</strong> Caller name and spam identification</li>
+      <li><strong>RealCall.ai:</strong> Spam and scam caller identification</li>
+      <li><strong>Phone Number Lookup API (RapidAPI):</strong> General phone number information</li>
+    </ul>
+    <p><strong>Data Sent:</strong> Phone numbers only (no message content or personal information is sent to caller ID services).</p>
+    <p><strong>Rate Limits:</strong> Lookups are subject to monthly caps to protect your privacy and control costs.</p>
+
+    <h3>4.3 Advertising Partners (Free Tier Only)</h3>
+    <p>The free version of PulseLink (PulseLink Beacon) displays advertisements through:</p>
+    <ul>
+      <li><strong>Google AdMob:</strong> Primary ad network</li>
+      <li><strong>Mediation Partners:</strong> AppLovin, InMobi, IronSource, Meta Audience Network (Facebook), Pangle, Vungle</li>
+    </ul>
+    <p>These partners may collect advertising identifiers, device information, and usage data for ad targeting and measurement. Each partner has their own privacy policy governing their data practices.</p>
+
+    <h3>4.4 Wearable Devices</h3>
+    <ul>
+      <li>If you connect a Wear OS smartwatch, message data and commands may be synchronized to your wearable device via Google Play Services for Wearables.</li>
+    </ul>
+
+    <h3>4.5 Legal Requirements</h3>
+    <p>We may disclose your information to government authorities, law enforcement, or other third parties when:</p>
+    <ul>
+      <li>Required by law, regulation, or legal process (subpoena, court order)</li>
+      <li>Necessary to protect the rights, property, or safety of PulseLink, our users, or the public</li>
+      <li>Needed to detect, prevent, or address fraud, security, or technical issues</li>
+      <li>Required to enforce our Terms of Service or investigate violations</li>
+    </ul>
+
+    <h3>4.6 Business Transfers</h3>
+    <p>If PulseLink is involved in a merger, acquisition, sale of assets, or bankruptcy, your information may be transferred as part of that transaction. We will notify you of any such change in ownership or control of your personal information.</p>
+
+    <h2>5. Data Retention and Deletion</h2>
+
+    <h3>5.1 Retention Periods</h3>
+    <ul>
+      <li><strong>Message Data:</strong> Stored locally on your device until you delete conversations or uninstall the app. Cloud-synced messages are retained until you disable sync or delete your account.</li>
+      <li><strong>Account Information:</strong> Retained while your account is active and for a reasonable period after account deletion to comply with legal obligations.</li>
+      <li><strong>Analytics and Logs:</strong> Aggregated analytics data is retained indefinitely. Individual logs and crash reports are retained for 90 days.</li>
+      <li><strong>Payment Records:</strong> Transaction records are retained for 7 years to comply with tax and financial regulations.</li>
+    </ul>
+
+    <h3>5.2 Your Deletion Rights</h3>
+    <p>You have the right to delete your data:</p>
+    <ul>
+      <li><strong>Delete Messages:</strong> Delete individual messages or entire conversations within the app at any time.</li>
+      <li><strong>Clear App Data:</strong> Clear all app data from your device through Android Settings > Apps > PulseLink > Storage > Clear Data.</li>
+      <li><strong>Disable Sync:</strong> Turn off cloud sync in app settings to stop syncing data to Firebase. Previously synced data will remain in the cloud until you request deletion.</li>
+      <li><strong>Delete Cloud Data:</strong> Contact us at <a href="mailto:pulselink-support@dmnlat.com">pulselink-support@dmnlat.com</a> to request deletion of all cloud-stored data.</li>
+      <li><strong>Delete Account:</strong> You can delete your account and associated data by going to remove.damiennichols.com or you can request account deletion by emailing <a href="mailto:pulselink-support@dmnlat.com">pulselink-support@dmnlat.com</a>. We will delete your account and associated data within 30 days.</li>
+      <li><strong>Uninstall App:</strong> Uninstalling the app removes all local data from your device but does not delete cloud-synced data or your account.</li>
+    </ul>
+
+    <h3>5.3 Retention After Deletion</h3>
+    <p>After you delete data or your account:</p>
+    <ul>
+      <li>Backup copies may be retained for up to 30 days for disaster recovery purposes</li>
+      <li>Some data may be retained in aggregated, anonymized form for analytics</li>
+      <li>Legal obligations may require retention of certain records (e.g., payment transactions)</li>
+      <li>Cached data on third-party services may persist for a short period</li>
+    </ul>
+
+    <h2>6. Your Privacy Rights and Choices</h2>
+
+    <h3>6.1 Access and Control</h3>
+    <p>You have the following rights regarding your personal information:</p>
+    <ul>
+      <li><strong>Access:</strong> Request a copy of the personal data we hold about you by contacting <a href="mailto:pulselink-support@dmnlat.com">pulselink-support@dmnlat.com</a>.</li>
+      <li><strong>Correction:</strong> Update or correct your account information through app settings or by contacting us.</li>
+      <li><strong>Deletion:</strong> Request deletion of your data as described in Section 5.2.</li>
+      <li><strong>Portability:</strong> Request a copy of your data in a machine-readable format (JSON, CSV).</li>
+      <li><strong>Objection:</strong> Object to certain data processing activities by disabling features or contacting us.</li>
+    </ul>
+
+    <h3>6.2 Permission Controls</h3>
+    <p>You can control app permissions through Android Settings > Apps > PulseLink > Permissions:</p>
+    <ul>
+      <li><strong>SMS:</strong> Required for core messaging functionality. Denying this permission will prevent the app from functioning as an SMS app.</li>
+      <li><strong>Contacts:</strong> Optional. Deny to prevent contact name display.</li>
+      <li><strong>Location:</strong> Optional. Deny to prevent location sharing and emergency location features.</li>
+      <li><strong>Phone:</strong> Optional. Deny to prevent caller ID features.</li>
+      <li><strong>Notifications:</strong> Optional. Deny to prevent push notifications.</li>
+    </ul>
+
+    <h3>6.3 Feature Controls</h3>
+    <p>Control data collection through in-app settings:</p>
+    <ul>
+      <li><strong>Cloud Sync:</strong> Disable to prevent message syncing to Firebase.</li>
+      <li><strong>Remote Web Access:</strong> Disable to prevent remote access to your messages via web browser.</li>
+      <li><strong>Caller ID:</strong> Disable to prevent phone number lookups to third-party services.</li>
+      <li><strong>AI Message Analysis:</strong> Disable emergency detection to prevent message content analysis (note: this disables emergency features).</li>
+      <li><strong>Location Sharing:</strong> Control whether to share location in messages.</li>
+    </ul>
+
+    <h3>6.4 Advertising Choices (Free Tier)</h3>
+    <ul>
+      <li><strong>Opt Out of Personalized Ads:</strong> Go to Android Settings > Google > Ads > Opt out of Ads Personalization.</li>
+      <li><strong>Reset Advertising ID:</strong> Go to Android Settings > Google > Ads > Reset advertising ID.</li>
+      <li><strong>Upgrade to Remove Ads:</strong> Purchase PulseLink Pro or Premium to completely remove advertisements and advertising data collection.</li>
+    </ul>
+
+    <h3>6.5 Marketing Communications</h3>
+    <ul>
+      <li>You can opt out of promotional emails by clicking the unsubscribe link in any marketing email.</li>
+      <li>You can disable push notifications in app settings or Android system settings.</li>
+      <li>Service-related communications (security alerts, subscription notices) cannot be opted out of while using the Service.</li>
+    </ul>
+
+    <h2>7. Children's Privacy</h2>
+
+    <p>The Service is not intended for use by children under the age of 16 (or the minimum age required by law in your jurisdiction). We do not knowingly collect personal information from children under 16.</p>
+
+    <p>If you are a parent or guardian and believe your child has provided us with personal information, please contact us at <a href="mailto:pulselink-support@dmnlat.com">pulselink-support@dmnlat.com</a>. We will delete such information from our systems within 30 days.</p>
+
+    <p>If we become aware that we have collected personal information from a child under 16 without parental consent, we will take steps to delete that information immediately.</p>
+
+    <h2>8. International Data Transfers</h2>
+
+    <p>PulseLink is operated from the United States. If you use the Service from outside the United States, your information may be transferred to, stored, and processed in the United States and other countries where our service providers operate.</p>
+
+    <p>These countries may have data protection laws that differ from your country. By using the Service, you consent to the transfer of your information to the United States and other countries.</p>
+
+    <p>We rely on the following legal mechanisms for international data transfers:</p>
+    <ul>
+      <li>Google Cloud's and Firebase's compliance with international data protection frameworks</li>
+      <li>Standard contractual clauses with service providers</li>
+      <li>Your explicit consent to data transfer</li>
+    </ul>
+
+    <h2>9. California Privacy Rights (CCPA)</h2>
+
+    <p>If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA):</p>
+
+    <h3>9.1 Right to Know</h3>
+    <p>You have the right to request disclosure of:</p>
+    <ul>
+      <li>Categories and specific pieces of personal information we collect</li>
+      <li>Categories of sources from which information is collected</li>
+      <li>Business or commercial purposes for collecting or selling information</li>
+      <li>Categories of third parties with whom we share information</li>
+    </ul>
+
+    <h3>9.2 Right to Delete</h3>
+    <p>You have the right to request deletion of personal information we collected from you, subject to certain exceptions.</p>
+
+    <h3>9.3 Right to Opt-Out of Sale</h3>
+    <p>We do not sell your personal information to third parties. While we share data with advertising partners in the free tier, this does not constitute a "sale" under CCPA because we do not receive monetary compensation for this sharing.</p>
+
+    <h3>9.4 Right to Non-Discrimination</h3>
+    <p>You have the right to not receive discriminatory treatment for exercising your CCPA rights.</p>
+
+    <h3>9.5 Exercising Your Rights</h3>
+    <p>To exercise your California privacy rights, contact us at <a href="mailto:pulselink-support@dmnlat.com">pulselink-support@dmnlat.com</a> with the subject line "California Privacy Request." We will verify your identity and respond within 45 days.</p>
+
+    <h2>10. European Privacy Rights (GDPR)</h2>
+
+    <p>If you are located in the European Economic Area (EEA), United Kingdom, or Switzerland, you have additional rights under the General Data Protection Regulation (GDPR):</p>
+
+    <h3>10.1 Legal Basis for Processing</h3>
+    <p>We process your personal data based on:</p>
+    <ul>
+      <li><strong>Contractual Necessity:</strong> To provide the Service you requested</li>
+      <li><strong>Legitimate Interests:</strong> To improve our Service, prevent fraud, and ensure security</li>
+      <li><strong>Consent:</strong> For optional features like location sharing, caller ID, and personalized ads</li>
+      <li><strong>Legal Obligation:</strong> To comply with applicable laws and regulations</li>
+    </ul>
+
+    <h3>10.2 Your GDPR Rights</h3>
+    <ul>
+      <li><strong>Right of Access:</strong> Obtain confirmation of data processing and a copy of your data</li>
+      <li><strong>Right to Rectification:</strong> Correct inaccurate or incomplete data</li>
+      <li><strong>Right to Erasure:</strong> Request deletion of your data ("right to be forgotten")</li>
+      <li><strong>Right to Restriction:</strong> Limit how we use your data</li>
+      <li><strong>Right to Portability:</strong> Receive your data in a structured, machine-readable format</li>
+      <li><strong>Right to Object:</strong> Object to data processing based on legitimate interests</li>
+      <li><strong>Right to Withdraw Consent:</strong> Withdraw consent at any time (without affecting prior lawful processing)</li>
+      <li><strong>Right to Lodge a Complaint:</strong> File a complaint with your local data protection authority</li>
+    </ul>
+
+    <h3>10.3 Data Protection Officer</h3>
+    <p>For GDPR-related inquiries, contact our privacy team at <a href="mailto:pulselink-support@dmnlat.com">pulselink-support@dmnlat.com</a>.</p>
+
+    <h2>11. Changes to This Privacy Policy</h2>
+
+    <p>We may update this Privacy Policy from time to time to reflect changes in our practices, technology, legal requirements, or other factors. When we make material changes, we will:</p>
+
+    <ul>
+      <li>Update the "Last Updated" date at the top of this policy</li>
+      <li>Notify you through the app with a prominent notice</li>
+      <li>Send you an email notification (if you have provided an email address)</li>
+      <li>For material changes, we may require you to review and accept the updated policy</li>
+    </ul>
+
+    <p>Your continued use of the Service after the effective date of an updated Privacy Policy constitutes your acceptance of the changes. If you do not agree with the updated policy, you should stop using the Service and delete your account.</p>
+
+    <p>We encourage you to review this Privacy Policy periodically to stay informed about how we protect your information.</p>
+
+    <h2>12. Contact Us</h2>
+
+    <p>If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:</p>
+
+    <div class="developer-info">
+      <p><strong>Privacy Contact:</strong></p>
+      <p>Email: <a href="mailto:pulselink-support@dmnlat.com">pulselink-support@dmnlat.com</a></p>
+      <p>Developer: Damien Nichols</p>
+      <p>Website: <a href="https://damiennichols.com">https://damiennichols.com</a></p>
+    </div>
+
+    <p>We will respond to your inquiry within 30 days. For urgent privacy concerns, please mark your email as "Urgent Privacy Matter."</p>
+
+    <h2>13. Additional Disclosures</h2>
+
+    <h3>13.1 SMS Default App Requirements</h3>
+    <p>PulseLink can function as your device's default SMS application. As a default SMS app, we are required to access SMS and MMS data to provide core messaging functionality. This access is governed by Android's SMS and MMS permissions framework.</p>
+
+    <h3>13.2 No Selling of SMS Data</h3>
+    <p>We do not sell, rent, or trade your SMS or MMS message content to any third party. Message content is used solely to provide the Service's features and is not shared with advertisers or data brokers.</p>
+
+    <h3>13.3 AI Processing Disclosure</h3>
+    <p>We use artificial intelligence to analyze message content for:</p>
+    <ul>
+      <li>Emergency message detection</li>
+      <li>Spam and scam identification</li>
+      <li>Message categorization</li>
+      <li>Smart reply suggestions</li>
+    </ul>
+    <p>AI processing occurs both on-device (for privacy) and in the cloud using Firebase AI when more powerful analysis is needed. You can disable AI features in app settings.</p>
+
+    <h3>13.4 Third-Party Links</h3>
+    <p>The Service may contain links to third-party websites, services, or applications. We are not responsible for the privacy practices of these third parties. We encourage you to read their privacy policies before providing any information.</p>
+
+    <h3>13.5 Data Security Incidents</h3>
+    <p>In the event of a data breach that affects your personal information, we will:</p>
+    <ul>
+      <li>Notify affected users within 72 hours of discovering the breach</li>
+      <li>Describe the nature of the breach and data affected</li>
+      <li>Provide guidance on steps you can take to protect yourself</li>
+      <li>Report the breach to relevant authorities as required by law</li>
+    </ul>
+
+    <hr style="margin: 40px 0; border: none; border-top: 1px solid rgba(255,255,255,0.1);" />
+
+    <p style="text-align: center; color: var(--muted); font-size: 14px;">
+      <strong>This is a legally binding Privacy Policy for PulseLink.</strong><br>
+      By using PulseLink, you acknowledge that you have read, understood, and agree to be bound by this Privacy Policy.
+    </p>
+
+    <p style="text-align: center; margin-top: 24px;">
+      <small>Last Updated: January 8, 2026</small><br>
+      <small>Version 2.0</small>
+    </p>
   </div>
 </body>
 </html>
