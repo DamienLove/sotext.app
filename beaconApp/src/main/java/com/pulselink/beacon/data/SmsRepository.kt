@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.regex.Pattern
 import kotlin.jvm.Volatile
 
 class SmsRepository(private val context: Context) {
@@ -28,6 +29,55 @@ class SmsRepository(private val context: Context) {
 
     private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
     private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
+
+    companion object {
+        private const val ADDRESS_CACHE_SIZE = 500
+        private const val CONTACT_CACHE_SIZE = 1000
+
+        // Classification Regex
+        private val NUMERIC_REGEX = Regex("[^0-9]")
+        private val TRANSACTION_KEYWORDS = listOf(
+            "otp", "code", "bank", "debit", "credit", "acct", "txn", "verify",
+            "password", "login", "auth", "bill", "invoice", "due", "paid"
+        )
+        private val PROMOTION_KEYWORDS = listOf(
+            "offer", "sale", "save", "discount", "buy", "deal", "coupon",
+            "% off", "limited time", "cashback", "flat"
+        )
+        private val TRANSACTION_PATTERN = Pattern.compile(
+            "\\b(${TRANSACTION_KEYWORDS.joinToString("|")})\\b",
+            Pattern.CASE_INSENSITIVE
+        )
+        private val PROMOTION_PATTERN = Pattern.compile(
+            "\\b(${PROMOTION_KEYWORDS.joinToString("|")})\\b",
+            Pattern.CASE_INSENSITIVE
+        )
+
+        private fun isDefaultSmsApp(context: Context): Boolean {
+            val roleHeld = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                context.getSystemService(RoleManager::class.java)
+                    ?.isRoleHeld(RoleManager.ROLE_SMS) == true
+            } else {
+                false
+            }
+            val telephonyDefault = Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+            return roleHeld || telephonyDefault
+        }
+
+        private fun hasReadSmsPermission(context: Context): Boolean {
+            return ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_SMS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+
+        private fun hasSendSmsPermission(context: Context): Boolean {
+            return ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.SEND_SMS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+    }
 
     init {
         ensureObserversRegistered()
@@ -80,32 +130,19 @@ class SmsRepository(private val context: Context) {
 
         if (rawThreads.isEmpty()) return@withContext listThreadsFromSms(limit)
 
+        // Bulk resolve
         val addressMap = resolveAddressesForThreads(rawThreads)
 
         return@withContext rawThreads.map { raw ->
-            val cachedName = addressCache[raw.id]
-            if (cachedName != null) {
-                SmsThreadItem(
-                    threadId = raw.id,
-                    address = cachedName,
-                    snippet = raw.snippet,
-                    timestamp = raw.timestamp,
-                    unread = raw.unread
-                )
-            } else {
-                val rawAddress = addressMap[raw.id] ?: ""
-                val displayName = resolveAddress(rawAddress)
-                if (displayName.isNotBlank()) {
-                    addressCache.put(raw.id, displayName)
-                }
-                SmsThreadItem(
-                    threadId = raw.id,
-                    address = displayName,
-                    snippet = raw.snippet,
-                    timestamp = raw.timestamp,
-                    unread = raw.unread
-                )
-            }
+            val finalName = addressMap[raw.id] ?: "Unknown"
+            SmsThreadItem(
+                threadId = raw.id,
+                address = finalName,
+                snippet = raw.snippet,
+                timestamp = raw.timestamp,
+                unread = raw.unread,
+                category = classifyThread(finalName, raw.snippet)
+            )
         }
     }
 
@@ -117,24 +154,62 @@ class SmsRepository(private val context: Context) {
         val recipientIds: String
     )
 
+    private fun classifyThread(address: String, snippet: String): ThreadCategory {
+        val body = snippet.lowercase()
+        val hasSpace = address.contains(" ")
+
+        // Refined Classification:
+        // A "Real Phone Number" should generally not have letters.
+        // If it has letters, it's likely a Shortcode or Sender ID (e.g. "HDFC2U").
+        // Exception: Contact names have letters and spaces ("John Doe").
+
+        val hasLetters = address.any { it.isLetter() }
+        val isContactName = hasSpace && hasLetters
+        val isNumericNumber = !hasLetters && address.any { it.isDigit() } && address.length >= 3
+
+        if (isContactName || isNumericNumber) {
+            return ThreadCategory.PERSONAL
+        }
+
+        // Likely a Sender ID (alphanumeric) or Shortcode
+        if (TRANSACTION_PATTERN.matcher(body).find()) return ThreadCategory.TRANSACTIONS
+        if (PROMOTION_PATTERN.matcher(body).find()) return ThreadCategory.PROMOTIONS
+
+        // Default fallback for non-personal looking items (e.g. "HDFC2U" without specific keywords)
+        return ThreadCategory.TRANSACTIONS
+    }
+
     private fun resolveAddressesForThreads(threads: List<RawThreadData>): Map<Long, String> {
         val result = mutableMapOf<Long, String>()
-        val neededRecipients = mutableSetOf<Long>()
-        val threadToRecipients = mutableMapOf<Long, List<Long>>()
+        val threadsToResolve = mutableListOf<RawThreadData>()
 
+        // 1. Check cache first
         threads.forEach { thread ->
-            if (addressCache[thread.id] == null) {
-                val ids = thread.recipientIds.split(" ").mapNotNull { it.toLongOrNull() }
-                if (ids.isNotEmpty()) {
-                    threadToRecipients[thread.id] = ids
-                    neededRecipients.addAll(ids)
-                }
+            val cached = addressCache[thread.id]
+            if (cached != null) {
+                result[thread.id] = cached
+            } else {
+                threadsToResolve.add(thread)
             }
         }
 
-        val idToAddr = mutableMapOf<Long, String>()
+        if (threadsToResolve.isEmpty()) return result
+
+        val threadToRecipients = mutableMapOf<Long, List<Long>>()
+        val neededRecipients = mutableSetOf<Long>()
+
+        threadsToResolve.forEach { thread ->
+            val ids = thread.recipientIds.split(" ").mapNotNull { it.toLongOrNull() }
+            if (ids.isNotEmpty()) {
+                threadToRecipients[thread.id] = ids
+                neededRecipients.addAll(ids)
+            }
+        }
+
+        // 2. Resolve Recipient IDs to Raw Numbers (Canonical Addresses)
+        val recipientIdToNumber = mutableMapOf<Long, String>()
         if (neededRecipients.isNotEmpty()) {
-            neededRecipients.chunked(100).forEach { chunk ->
+            neededRecipients.chunked(50).forEach { chunk ->
                 val q = chunk.joinToString(",")
                 val c = runCatching {
                     context.contentResolver.query(
@@ -147,17 +222,71 @@ class SmsRepository(private val context: Context) {
                 }.getOrNull()
                 c?.use {
                     while (it.moveToNext()) {
-                        idToAddr[it.getLong(0)] = it.getString(1)
+                        recipientIdToNumber[it.getLong(0)] = it.getString(1)
                     }
                 }
             }
         }
 
-        threads.forEach { thread ->
+        // 3. Resolve Numbers to Contact Names (Bulk)
+        val numberToName = mutableMapOf<String, String>()
+        val numbersToLookup = recipientIdToNumber.values.toSet().filter { contactCache[it] == null }
+
+        if (numbersToLookup.isNotEmpty()) {
+             numbersToLookup.chunked(50).forEach { batch ->
+                 val cursor = runCatching {
+                     context.contentResolver.query(
+                         ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                         arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME),
+                         "${ContactsContract.CommonDataKinds.Phone.NUMBER} IN (${batch.joinToString(",") { "?" }})",
+                         batch.toTypedArray(),
+                         null
+                     )
+                 }.getOrNull()
+
+                 cursor?.use { c ->
+                     val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                     val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                     while (c.moveToNext()) {
+                         val num = c.getString(numIdx) ?: continue
+                         val name = c.getString(nameIdx) ?: continue
+                         if (name.isNotBlank()) {
+                             val formatted = if (name != num) "$name \u2022 $num" else num
+                             numberToName[num] = formatted
+                             // Also normalize simple cases
+                             val norm = num.replace(" ", "").replace("-", "")
+                             if (norm != num) numberToName[norm] = formatted
+                         }
+                     }
+                 }
+             }
+        }
+
+        // Assemble results
+        threadsToResolve.forEach { thread ->
             val recips = threadToRecipients[thread.id]
             if (recips != null) {
-                val rawAddr = recips.mapNotNull { idToAddr[it] }.joinToString(", ")
-                result[thread.id] = rawAddr
+                val names = recips.mapNotNull { rid ->
+                    val rawNum = recipientIdToNumber[rid] ?: return@mapNotNull null
+                    // Check cache
+                    contactCache[rawNum]?.let { return@mapNotNull it }
+
+                    // Check bulk result
+                    val bulkName = numberToName[rawNum]
+                        ?: numberToName[rawNum.replace(" ", "").replace("-", "")]
+
+                    if (bulkName != null) {
+                        contactCache.put(rawNum, bulkName)
+                        return@mapNotNull bulkName
+                    }
+
+                    // Fallback removed for speed: Use raw number if not found in bulk.
+                    contactCache.put(rawNum, rawNum)
+                    rawNum
+                }
+                val finalStr = names.joinToString(", ")
+                addressCache.put(thread.id, finalStr)
+                result[thread.id] = finalStr
             }
         }
         return result
@@ -487,36 +616,6 @@ class SmsRepository(private val context: Context) {
         return result
     }
 
-    companion object {
-        private const val ADDRESS_CACHE_SIZE = 200
-        private const val CONTACT_CACHE_SIZE = 500
-
-        private fun isDefaultSmsApp(context: Context): Boolean {
-            val roleHeld = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                context.getSystemService(RoleManager::class.java)
-                    ?.isRoleHeld(RoleManager.ROLE_SMS) == true
-            } else {
-                false
-            }
-            val telephonyDefault = Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
-            return roleHeld || telephonyDefault
-        }
-
-        private fun hasReadSmsPermission(context: Context): Boolean {
-            return ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.READ_SMS
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        }
-
-        private fun hasSendSmsPermission(context: Context): Boolean {
-            return ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.SEND_SMS
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        }
-    }
-
     private fun hasReadPerms(): Boolean = isDefaultSmsApp(context) || hasReadSmsPermission(context)
     private fun hasSendPerms(): Boolean = isDefaultSmsApp(context) || hasSendSmsPermission(context)
     private fun hasWritePerms(): Boolean = isDefaultSmsApp(context)
@@ -580,13 +679,16 @@ class SmsRepository(private val context: Context) {
                 val body = c.getString(bodyIdx) ?: ""
                 val ts = c.getLong(dateIdx)
                 val unread = c.getInt(readIdx) == 0
-                val address = resolveAddress(c.getString(addrIdx))
+                val rawAddr = c.getString(addrIdx)
+                val address = resolveAddress(rawAddr)
+
                 items += SmsThreadItem(
                     threadId = threadId,
                     address = address,
                     snippet = body,
                     timestamp = ts,
-                    unread = unread
+                    unread = unread,
+                    category = classifyThread(address, body)
                 )
                 count++
             }
