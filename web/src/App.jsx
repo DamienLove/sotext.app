@@ -389,6 +389,13 @@ const areRingerSongsEqual = (prev, next) => {
 // Bolt: Optimized RingerSongItem with memo to prevent re-rendering the entire playlist
 const RingerSongItem = memo(({ song, onDelete }) => {
   const [isDeleting, setIsDeleting] = useState(false);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
@@ -396,7 +403,10 @@ const RingerSongItem = memo(({ song, onDelete }) => {
       await onDelete(song.id);
     } catch (error) {
       console.error("Failed to delete song", error);
-      setIsDeleting(false);
+    } finally {
+      if (isMounted.current) {
+        setIsDeleting(false);
+      }
     }
   }, [song.id, onDelete]);
 
@@ -419,7 +429,7 @@ const RingerSongItem = memo(({ song, onDelete }) => {
         aria-label={`Remove ${song.title} from playlist`}
         style={{ width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none' }}
       >
-        {isDeleting ? <Spinner style={{ marginRight: 0 }} /> : <TrashIcon />}
+        {isDeleting ? <Spinner className="no-margin" /> : <TrashIcon />}
       </button>
     </div>
   );
