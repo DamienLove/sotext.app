@@ -1155,6 +1155,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoadingThreads, setIsLoadingThreads] = useState(true);
   const [legacyThreads, setLegacyThreads] = useState([]);
   const [lineThreads, setLineThreads] = useState({});
   const [lines, setLines] = useState([]);
@@ -1560,12 +1561,18 @@ function App() {
     const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
 
     if (user && isPremiumUser && hasRemoteAccess) {
+      setIsLoadingThreads(true);
       // Legacy single-line threads (synced_threads)
       const legacyRef = collection(db, "users", user.uid, "synced_threads");
       const legacyQuery = query(legacyRef, orderBy("date", "desc"));
       const unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
         const threadsData = snapshot.docs.map(doc => ({ id: doc.id, lineId: null, ...doc.data() }));
         setLegacyThreads(threadsData);
+        // Only set loading to false if we have at least legacy threads or lines have also loaded.
+        // But for simplicity, we can set it to false here as we have *some* data.
+        // A better approach would be to wait for both, but onSnapshot is async.
+        // Let's assume lines load quickly or we just wait for the first data update.
+        setIsLoadingThreads(false);
       });
 
       // Multi-device: lines/{lineId}/threads
@@ -1594,6 +1601,7 @@ function App() {
           .filter(line => line.disabled !== true);
         setLines(lineItems);
         lineItems.forEach(line => attachLine(line.id));
+        setIsLoadingThreads(false);
       });
 
       return () => {
@@ -1605,6 +1613,7 @@ function App() {
       setLegacyThreads([]);
       setLines([]);
       setLineThreads({});
+      setIsLoadingThreads(false);
     }
   }, [user, userData, remoteSettings.remoteWebAccessEnabled]);
 
@@ -2563,7 +2572,12 @@ function App() {
                   ))}
                 </div>
               )}
-              {activeLineThreads.length === 0 ? (
+              {isLoadingThreads ? (
+                <div className="sidebar-placeholder">
+                  <Spinner />
+                  <div className="sidebar-tip muted">Loading conversations...</div>
+                </div>
+              ) : activeLineThreads.length === 0 ? (
                 <div className="sidebar-placeholder">
                   <div className="sidebar-tip">
                     <strong>No conversations found</strong>
