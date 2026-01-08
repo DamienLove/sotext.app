@@ -1,6 +1,7 @@
 import * as admin from "firebase-admin";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {onDocumentWritten} from "firebase-functions/v2/firestore";
+import * as logger from "firebase-functions/logger";
 
 // Simple extension submission function
 export const submitExtension = onCall(async (request) => {
@@ -55,8 +56,37 @@ export const onExtensionSubmitted = onDocumentWritten(
       const after = event.data.after.data();
       if (!after || after.status !== "submitted") return;
 
-      // TODO: Add allowlist logic here
-      // For now, auto-approve everything in dev environment
-      return event.data.after.ref.update({status: "approved"});
+      const ownerUid = after.ownerUid;
+      if (!ownerUid) {
+        logger.warn(
+            `Extension ${event.params.extensionId} submitted without ownerUid.`,
+        );
+        return;
+      }
+
+      try {
+        const user = await admin.auth().getUser(ownerUid);
+        // Sentinel: Only auto-approve if the submitter is an Admin.
+        // Prevents untrusted users from publishing extensions automatically.
+        const isAdmin = user.customClaims?.admin === true;
+
+        if (isAdmin) {
+          await event.data.after.ref.update({status: "approved"});
+          logger.info(
+              `Auto-approved ${event.params.extensionId} for admin ` +
+              `${ownerUid}.`,
+          );
+        } else {
+          logger.info(
+              `Extension ${event.params.extensionId} from ${ownerUid} ` +
+            "requires manual review.",
+          );
+        }
+      } catch (e) {
+        logger.error(
+            `Failed to verify owner for ${event.params.extensionId}`,
+            e,
+        );
+      }
     },
 );

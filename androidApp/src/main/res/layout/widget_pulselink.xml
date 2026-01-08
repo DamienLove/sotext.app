@@ -53,7 +53,7 @@
             android:padding="2dp"
             android:src="@drawable/widget_ic_settings"
             app:tint="@color/widget_gold_light"
-            android:contentDescription="@string/widget_open_settings" />        
+            android:contentDescription="@string/widget_open_settings" />
     </LinearLayout>
 
     <!-- Quick Actions Row -->
