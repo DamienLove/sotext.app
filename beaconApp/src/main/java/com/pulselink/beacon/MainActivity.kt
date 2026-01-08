@@ -254,7 +254,7 @@ private fun BeaconNav(
                 BeaconTheme(theme = contactTheme) {
                     ThreadScreen(
                         address = address.ifBlank { "Unknown" },
-                        messages = vm.messages,
+                        uiItems = vm.uiMessages,
                         theme = contactTheme,
                         onBack = { navController.popBackStack() },
                         onSend = { vm.sendMessage(it) },

@@ -20,10 +20,12 @@ import com.pulselink.beacon.data.scheduled.BeaconDatabase
 import com.pulselink.beacon.data.scheduled.ScheduledMessage
 import com.pulselink.beacon.data.scheduled.MessageStatus
 import com.pulselink.beacon.worker.ScheduledMessageWorker
+import com.pulselink.beacon.util.ThreadDateUtils
 import com.pulselink.beacon.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -44,14 +46,18 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private val workManager = WorkManager.getInstance(app)
 
     private companion object {
-        const val THREAD_LIMIT = 100
+        const val THREAD_LIMIT = 500 // Increased from 100
         const val MESSAGE_LIMIT = 300
     }
 
     var threads by mutableStateOf<List<SmsThreadItem>>(emptyList())
         private set
-    var messages by mutableStateOf<List<SmsMessageItem>>(emptyList())
+    // Changed to hold UiItems for display
+    var uiMessages by mutableStateOf<List<ThreadUiItem>>(emptyList())
         private set
+    // Keep raw messages for internal logic
+    private var rawMessages = emptyList<SmsMessageItem>()
+
     var currentThreadId by mutableStateOf<Long?>(null)
         private set
     var currentAddress by mutableStateOf("")
@@ -75,6 +81,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private var rawThreads: List<SmsThreadItem> = emptyList()
     private var inboxState: InboxState = InboxState()
 
+    private var searchJob: Job? = null
+
     init {
         refreshThreads(initial = true)
 
@@ -96,6 +104,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshThreads(initial: Boolean = false) {
         viewModelScope.launch {
             if (initial) isLoading = true else isRefreshing = true
+            // Run on IO
             rawThreads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
             mergeThreads()
             if (initial) isLoading = false else isRefreshing = false
@@ -103,11 +112,18 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun mergeThreads() {
+        // Optimized sorting
         val merged = rawThreads.map { thread ->
-            thread.copy(
-                isPinned = inboxState.pinnedThreadIds.contains(thread.threadId),
-                isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
-            )
+            val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
+            // Only copy if needed
+            if (isPinned != thread.isPinned || inboxState.archivedThreadIds.contains(thread.threadId) != thread.isArchived) {
+                thread.copy(
+                    isPinned = isPinned,
+                    isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
+                )
+            } else {
+                thread
+            }
         }.sortedWith(
             compareByDescending<SmsThreadItem> { it.isPinned }
                 .thenByDescending { it.timestamp }
@@ -130,7 +146,6 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun markAsUnread(threadId: Long) {
         viewModelScope.launch {
             repo.markThreadUnread(threadId)
-            // Local update optimization could be done here, but observing repository changes handles it
         }
     }
 
@@ -155,7 +170,6 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun archiveSelected() {
         val ids = selectedThreadIds.toList()
         viewModelScope.launch {
-            // Snapshot current threads to avoid race conditions during async execution
             val currentThreads = threads
             val toArchive = currentThreads.filter { it.threadId in ids && !it.isArchived }.map { it.threadId }
             toArchive.forEach { inboxPrefs.toggleArchive(it) }
@@ -168,7 +182,6 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun pinSelected() {
         val ids = selectedThreadIds.toList()
         viewModelScope.launch {
-            // Snapshot current threads to avoid race conditions during async execution
             val currentThreads = threads
             val toPin = currentThreads.filter { it.threadId in ids && !it.isPinned }.map { it.threadId }
             toPin.forEach { inboxPrefs.togglePin(it) }
@@ -211,11 +224,11 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun openThread(threadId: Long, address: String) {
-        // Handle new conversations
         if (threadId == 0L && !address.isNullOrBlank()) {
             currentThreadId = 0L
             currentAddress = address
-            messages = emptyList()
+            rawMessages = emptyList()
+            uiMessages = emptyList()
             return
         }
 
@@ -226,14 +239,17 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun refreshThread(threadId: Long, refreshRead: Boolean) {
         viewModelScope.launch {
-            messages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
+            rawMessages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
                 .getOrElse { emptyList() }
+            // Transform for UI (Group by Date)
+            uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages)
+
             if (refreshRead) runCatching { repo.markThreadRead(threadId) }
         }
     }
 
     fun sendMessage(body: String) {
-        val addr = currentAddress.ifBlank { messages.lastOrNull()?.address.orEmpty() }
+        val addr = currentAddress.ifBlank { rawMessages.lastOrNull()?.address.orEmpty() }
         if (addr.isBlank()) return
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -247,7 +263,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun scheduleMessage(body: String, scheduledTime: Long) {
-        val addr = currentAddress.ifBlank { messages.lastOrNull()?.address.orEmpty() }
+        val addr = currentAddress.ifBlank { rawMessages.lastOrNull()?.address.orEmpty() }
         if (addr.isBlank()) return
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -276,18 +292,24 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         repo.deleteThread(threadId)
         if (currentThreadId == threadId) {
             currentThreadId = null
-            messages = emptyList()
+            rawMessages = emptyList()
+            uiMessages = emptyList()
         }
         refreshThreads()
     }
 
     fun search(query: String) {
+        searchJob?.cancel()
         if (query.isBlank()) {
             searchState = SearchResultState.Idle
             return
         }
-        searchState = SearchResultState.Searching
-        viewModelScope.launch(Dispatchers.IO) {
+
+        // Debounce
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(300)
+            withContext(Dispatchers.Main) { searchState = SearchResultState.Searching }
+
             val direct = threads.firstOrNull {
                 it.address.contains(query, ignoreCase = true)
                         || it.snippet.contains(query, ignoreCase = true)
@@ -299,12 +321,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
 
-            // Premium hook: route through Gemini when available; fallback to local search otherwise
-            val hits = if (BuildConfig.PREMIUM_SEARCH) {
-                repo.searchMessages(query) // placeholder until Gemini backend is wired
-            } else {
-                repo.searchMessages(query)
-            }
+            val hits = repo.searchMessages(query)
             withContext(Dispatchers.Main) {
                 searchState = if (hits.isEmpty()) SearchResultState.Empty else SearchResultState.Messages(hits)
             }
@@ -312,6 +329,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun clearSearch() {
+        searchJob?.cancel()
         searchState = SearchResultState.Idle
     }
 

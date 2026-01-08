@@ -31,8 +31,8 @@ class SmsRepository(private val context: Context) {
     private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
 
     companion object {
-        private const val ADDRESS_CACHE_SIZE = 500
-        private const val CONTACT_CACHE_SIZE = 1000
+        private const val ADDRESS_CACHE_SIZE = 1000 // Increased cache
+        private const val CONTACT_CACHE_SIZE = 2000 // Increased cache
 
         // Classification Regex
         private val NUMERIC_REGEX = Regex("[^0-9]")
@@ -91,6 +91,7 @@ class SmsRepository(private val context: Context) {
     suspend fun listThreads(limit: Int = 100): List<SmsThreadItem> = withContext(Dispatchers.IO) {
         if (!hasReadPerms()) return@withContext emptyList()
         ensureObserversRegistered()
+        // Optimized Projection
         val projection = arrayOf(
             Telephony.Threads._ID,
             Telephony.Threads.SNIPPET,
@@ -158,24 +159,18 @@ class SmsRepository(private val context: Context) {
         val body = snippet.lowercase()
         val hasSpace = address.contains(" ")
 
-        // Refined Classification:
-        // A "Real Phone Number" should generally not have letters.
-        // If it has letters, it's likely a Shortcode or Sender ID (e.g. "HDFC2U").
-        // Exception: Contact names have letters and spaces ("John Doe").
-
         val hasLetters = address.any { it.isLetter() }
         val isContactName = hasSpace && hasLetters
+        // Check if it's a raw phone number (digits and common punctuation only)
         val isNumericNumber = !hasLetters && address.any { it.isDigit() } && address.length >= 3
 
         if (isContactName || isNumericNumber) {
             return ThreadCategory.PERSONAL
         }
 
-        // Likely a Sender ID (alphanumeric) or Shortcode
         if (TRANSACTION_PATTERN.matcher(body).find()) return ThreadCategory.TRANSACTIONS
         if (PROMOTION_PATTERN.matcher(body).find()) return ThreadCategory.PROMOTIONS
 
-        // Default fallback for non-personal looking items (e.g. "HDFC2U" without specific keywords)
         return ThreadCategory.TRANSACTIONS
     }
 
@@ -209,7 +204,8 @@ class SmsRepository(private val context: Context) {
         // 2. Resolve Recipient IDs to Raw Numbers (Canonical Addresses)
         val recipientIdToNumber = mutableMapOf<Long, String>()
         if (neededRecipients.isNotEmpty()) {
-            neededRecipients.chunked(50).forEach { chunk ->
+            // Increased chunk size for better speed
+            neededRecipients.chunked(100).forEach { chunk ->
                 val q = chunk.joinToString(",")
                 val c = runCatching {
                     context.contentResolver.query(
@@ -233,7 +229,8 @@ class SmsRepository(private val context: Context) {
         val numbersToLookup = recipientIdToNumber.values.toSet().filter { contactCache[it] == null }
 
         if (numbersToLookup.isNotEmpty()) {
-             numbersToLookup.chunked(50).forEach { batch ->
+            // Chunk size 100 is safe (SQLite limit 900 params)
+             numbersToLookup.chunked(100).forEach { batch ->
                  val cursor = runCatching {
                      context.contentResolver.query(
                          ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -253,7 +250,7 @@ class SmsRepository(private val context: Context) {
                          if (name.isNotBlank()) {
                              val formatted = if (name != num) "$name \u2022 $num" else num
                              numberToName[num] = formatted
-                             // Also normalize simple cases
+                             // Normalize for matches
                              val norm = num.replace(" ", "").replace("-", "")
                              if (norm != num) numberToName[norm] = formatted
                          }
@@ -280,7 +277,7 @@ class SmsRepository(private val context: Context) {
                         return@mapNotNull bulkName
                     }
 
-                    // Fallback removed for speed: Use raw number if not found in bulk.
+                    // Store raw number in cache if no contact found, to avoid repeated lookups
                     contactCache.put(rawNum, rawNum)
                     rawNum
                 }
@@ -394,7 +391,7 @@ class SmsRepository(private val context: Context) {
         return@withContext parts
     }
 
-    suspend fun messagesForThread(threadId: Long, limit: Int = 200): List<SmsMessageItem> = withContext(Dispatchers.IO) {
+    suspend fun messagesForThread(threadId: Long, limit: Int = 300): List<SmsMessageItem> = withContext(Dispatchers.IO) {
         val projection = arrayOf(
             Telephony.Sms._ID,
             Telephony.Sms.THREAD_ID,

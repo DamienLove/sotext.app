@@ -15,13 +15,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Palette
@@ -43,6 +46,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -65,6 +69,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.pulselink.beacon.data.SmsMessageItem
@@ -73,7 +78,6 @@ import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.util.LinkPreviewData
 import com.pulselink.beacon.util.LinkPreviewHelper
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import android.content.Intent
@@ -83,7 +87,7 @@ import android.net.Uri
 @Composable
 fun ThreadScreen(
     address: String,
-    messages: List<SmsMessageItem>,
+    uiItems: List<ThreadUiItem>,
     theme: ThemePalette,
     onBack: () -> Unit,
     onSend: (String) -> Unit,
@@ -100,15 +104,15 @@ fun ThreadScreen(
     val context = LocalContext.current
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
-    // Ensure we start at the bottom (newest messages)
-    // reverseLayout = true means index 0 is at the bottom.
-    // We can just rely on the layout, but sometimes scroll state needs a hint if data loads late.
-    LaunchedEffect(messages.firstOrNull()?.id) {
-        if (messages.isNotEmpty()) {
-            if (listState.firstVisibleItemIndex < 2) {
-                // If we are already near bottom, stay there or scroll to very bottom
-                listState.scrollToItem(0)
-            }
+    // Auto-scroll logic for new messages
+    // Since reverseLayout=true, item 0 is at bottom.
+    // If the list grows (new message), it should stay at bottom if already there.
+    // However, if we just opened, we want to be at bottom.
+    LaunchedEffect(uiItems.firstOrNull()) {
+        if (uiItems.isNotEmpty()) {
+             if (listState.firstVisibleItemIndex < 3) {
+                listState.animateScrollToItem(0)
+             }
         }
     }
 
@@ -172,7 +176,11 @@ fun ThreadScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(address, maxLines = 1, color = theme.frameColor) },
+                title = {
+                    Column {
+                        Text(address, maxLines = 1, style = MaterialTheme.typography.titleMedium, color = theme.frameColor)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = iconTint)
@@ -193,7 +201,7 @@ fun ThreadScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = theme.threadBackgroundColor,
+                    containerColor = theme.threadBackgroundColor.copy(alpha = 0.95f),
                     titleContentColor = theme.frameColor,
                     navigationIconContentColor = iconTint,
                     actionIconContentColor = iconTint
@@ -213,26 +221,49 @@ fun ThreadScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 reverseLayout = true
             ) {
-                item { Spacer(modifier = Modifier.height(40.dp)) }
+                item { Spacer(modifier = Modifier.height(8.dp)) }
+
+                items(
+                    items = uiItems,
+                    key = { item ->
+                        when(item) {
+                            is ThreadUiItem.Message -> item.message.id
+                            is ThreadUiItem.DateHeader -> "header_${item.date}"
+                        }
+                    },
+                    contentType = { item ->
+                        when(item) {
+                            is ThreadUiItem.Message -> 1
+                            is ThreadUiItem.DateHeader -> 2
+                        }
+                    }
+                ) { item ->
+                    when (item) {
+                        is ThreadUiItem.Message -> MessageBubble(message = item.message, theme = theme)
+                        is ThreadUiItem.DateHeader -> DateHeader(date = item.date, theme = theme)
+                    }
+                }
+
                 item {
-                    if (messages.size > 3) {
+                    if (uiItems.size > 5) {
                         NativeAdCard(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp)
+                                .padding(vertical = 12.dp)
                         )
                     }
                 }
-                items(messages, key = { it.id }) { msg ->
-                    MessageBubble(message = msg, theme = theme)
-                }
+
+                item { Spacer(modifier = Modifier.height(20.dp)) }
             }
 
+            // Input Area
             Surface(
-                tonalElevation = 2.dp,
+                tonalElevation = 0.dp,
+                color = theme.inboxBackgroundColor.copy(alpha = 0.9f),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column {
@@ -247,28 +278,43 @@ fun ThreadScreen(
                                 onClick = { draft = reply },
                                 label = { Text(reply) },
                                 colors = SuggestionChipDefaults.suggestionChipColors(
-                                    containerColor = theme.inboxBackgroundColor.copy(alpha = 0.5f)
-                                )
+                                    containerColor = theme.accentColor.copy(alpha = 0.1f),
+                                    labelColor = theme.frameColor
+                                ),
+                                border = null
                             )
                         }
                     }
+
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Bottom,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(start = 8.dp, end = 8.dp, bottom = 8.dp, top = 4.dp)
                     ) {
                         IconButton(onClick = {
                             if (draft.isNotBlank()) showDatePicker = true
                         }) {
                             Icon(Icons.Default.Schedule, contentDescription = "Schedule", tint = iconTint)
                         }
+
                         TextField(
                             value = draft,
                             onValueChange = { draft = it },
-                            modifier = Modifier.weight(1f),
-                            placeholder = { Text("Write your message") }
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 4.dp)
+                                .clip(RoundedCornerShape(24.dp)),
+                            placeholder = { Text("Text message", fontSize = 14.sp) },
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = theme.threadBackgroundColor.copy(alpha = 0.5f),
+                                unfocusedContainerColor = theme.threadBackgroundColor.copy(alpha = 0.5f),
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
+                            ),
+                            maxLines = 4
                         )
+
                         IconButton(
                             onClick = {
                                 val text = draft.trim()
@@ -276,13 +322,40 @@ fun ThreadScreen(
                                     onSend(text)
                                     draft = ""
                                 }
-                            }
+                            },
+                            enabled = draft.isNotBlank()
                         ) {
-                            Icon(Icons.Default.Send, contentDescription = "Send", tint = iconTint)
+                            Icon(
+                                Icons.Default.Send,
+                                contentDescription = "Send",
+                                tint = if (draft.isNotBlank()) iconTint else iconTint.copy(alpha = 0.5f)
+                            )
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun DateHeader(date: String, theme: ThemePalette) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = theme.frameColor.copy(alpha = 0.1f)
+        ) {
+            Text(
+                text = date,
+                style = MaterialTheme.typography.labelSmall,
+                color = theme.frameColor.copy(alpha = 0.8f),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
         }
     }
 }
@@ -326,32 +399,69 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
     val alignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
     val frameColor = theme.frameColor
-    val bubbleShape = RoundedCornerShape(theme.bubbleRadius.dp)
+
+    // Bubble Styling
+    val cornerRadius = theme.bubbleRadius.dp
+    val bubbleShape = if (isOutgoing) {
+        RoundedCornerShape(
+            topStart = cornerRadius,
+            topEnd = 2.dp,
+            bottomStart = cornerRadius,
+            bottomEnd = cornerRadius
+        )
+    } else {
+        RoundedCornerShape(
+            topStart = 2.dp,
+            topEnd = cornerRadius,
+            bottomStart = cornerRadius,
+            bottomEnd = cornerRadius
+        )
+    }
+
     val clipboardManager = LocalClipboardManager.current
     val otp = remember(message.body) { extractOtp(message.body) }
     val extractedUrl = remember(message.body) { LinkPreviewHelper.extractUrl(message.body) }
     val context = LocalContext.current
 
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp), // Tight vertical spacing within group
         contentAlignment = alignment
     ) {
         Surface(
             color = background,
             shape = bubbleShape,
-            tonalElevation = 1.dp,
-            border = BorderStroke(1.dp, frameColor.copy(alpha = 0.6f)),
+            tonalElevation = 0.dp, // Flat look
             modifier = Modifier
-                .fillMaxWidth(0.9f)
+                .width(if (message.body.length > 40) 300.dp else Box.Unspecified) // Limit width for long text
+                .padding(horizontal = 0.dp)
                 .clip(bubbleShape)
+                .clickable { /* Toggle timestamp expansion? */ }
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
+                if (message.isMms && message.mediaParts.isNotEmpty()) {
+                    message.mediaParts.filter { it.dataUri != null && it.contentType.startsWith("image") }
+                        .forEach { part ->
+                            AsyncImage(
+                                model = part.dataUri,
+                                contentDescription = "MMS image",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                }
+
                 Text(
                     text = message.body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                    color = if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming
                 )
 
                 if (extractedUrl != null) {
@@ -372,24 +482,12 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                     }
                 }
 
-                if (message.isMms && message.mediaParts.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    message.mediaParts.filter { it.dataUri != null && it.contentType.startsWith("image") }
-                        .forEach { part ->
-                            AsyncImage(
-                                model = part.dataUri,
-                                contentDescription = "MMS image",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                            )
-                        }
-                }
                 if (otp != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     AssistChip(
                         onClick = {
                             clipboardManager.setText(AnnotatedString(otp))
+                            Toast.makeText(context, "Copied code", Toast.LENGTH_SHORT).show()
                         },
                         label = { Text("Copy $otp") },
                         leadingIcon = {
@@ -400,32 +498,41 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                             )
                         },
                         colors = AssistChipDefaults.assistChipColors(
-                            containerColor = Color.White.copy(alpha = 0.8f),
+                            containerColor = Color.White.copy(alpha = 0.9f),
                             labelColor = Color.Black,
                             leadingIconContentColor = Color.Black
                         )
                     )
                 }
-                Text(
-                    text = DateUtils.getRelativeTimeSpanString(
-                        message.timestamp,
-                        System.currentTimeMillis(),
-                        DateUtils.MINUTE_IN_MILLIS
-                    ).toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Light,
-                    color = Color.DarkGray
-                )
+
+                // Timestamp
+                Row(
+                    modifier = Modifier.padding(top = 4.dp).align(Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatMessageTime(message.timestamp),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        fontWeight = FontWeight.Medium,
+                        color = (if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming).copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }
+}
+
+private fun formatMessageTime(timestamp: Long): String {
+    val date = Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault())
+    val formatter = java.time.format.DateTimeFormatter.ofPattern("h:mm a")
+    return date.format(formatter)
 }
 
 @Composable
 private fun LinkPreviewCard(preview: LinkPreviewData, onClick: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(8.dp),
-        color = Color.White.copy(alpha = 0.9f),
+        color = Color.Black.copy(alpha = 0.1f),
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -438,7 +545,7 @@ private fun LinkPreviewCard(preview: LinkPreviewData, onClick: () -> Unit) {
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp)
+                        .height(120.dp)
                 )
             }
             Column(Modifier.padding(8.dp)) {
@@ -447,22 +554,14 @@ private fun LinkPreviewCard(preview: LinkPreviewData, onClick: () -> Unit) {
                         text = preview.title,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black,
+                        color = Color.White,
                         maxLines = 1
-                    )
-                }
-                if (preview.description != null) {
-                    Text(
-                        text = preview.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.DarkGray,
-                        maxLines = 2
                     )
                 }
                 Text(
                     text = preview.siteName ?: Uri.parse(preview.url).host ?: preview.url,
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray,
+                    color = Color.White.copy(alpha = 0.7f),
                     maxLines = 1
                 )
             }

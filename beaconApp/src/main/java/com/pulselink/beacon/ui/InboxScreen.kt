@@ -1,7 +1,9 @@
 package com.pulselink.beacon.ui
 
-import android.provider.Telephony
 import android.text.format.DateUtils
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -31,6 +34,7 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.MarkChatUnread
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -144,25 +148,25 @@ fun InboxScreen(
         }
     }
 
-    val filtered = remember(filter, threads) {
-        val all = threads
-        when (filter) {
-            InboxFilter.ALL -> all
-            InboxFilter.READ -> all.filter { !it.unread }
-            InboxFilter.UNREAD -> all.filter { it.unread }
-            InboxFilter.PERSONAL -> all.filter { it.category == ThreadCategory.PERSONAL }
-            InboxFilter.TRANSACTIONS -> all.filter { it.category == ThreadCategory.TRANSACTIONS }
-            InboxFilter.PROMOTIONS -> all.filter { it.category == ThreadCategory.PROMOTIONS }
-            InboxFilter.ARCHIVED -> all // Filtering logic for Archived is often separate or included, but assuming 'threads' passed here contains what we need or filtered upstream if needed. But usually Archived are separate. For this UI, we just filter by property if present.
-                .filter { it.isArchived } // If repository returns mixed. If repository returns ONLY inbox, this might be empty unless handled upstream.
+    // Pre-calculate filtered list efficiently
+    val filtered = remember(filter, threads, searchText) {
+        // If searching, show threads if they match name (quick filter), otherwise show SearchResults UI
+        // But here we are filtering the main list.
+        if (searchText.isNotBlank()) threads else {
+            val all = threads
+            when (filter) {
+                InboxFilter.ALL -> all.filter { !it.isArchived }
+                InboxFilter.READ -> all.filter { !it.unread && !it.isArchived }
+                InboxFilter.UNREAD -> all.filter { it.unread && !it.isArchived }
+                InboxFilter.PERSONAL -> all.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
+                InboxFilter.TRANSACTIONS -> all.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
+                InboxFilter.PROMOTIONS -> all.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
+                InboxFilter.ARCHIVED -> all.filter { it.isArchived }
+            }
         }
     }
 
-    // Note: If 'threads' only contains INBOX, then ARCHIVED filter might return empty unless the ViewModel passes archived threads here.
-    // Assuming ViewModel passes specific lists based on filter OR passes all and we filter.
-    // Based on previous code, ViewModel passes 'merged' threads.
-
-    val unreadCount = remember(threads) { threads.count { it.unread } }
+    val unreadCount = remember(threads) { threads.count { it.unread && !it.isArchived } }
     val mutedTint = theme.frameColor.copy(alpha = 0.7f)
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
@@ -172,7 +176,10 @@ fun InboxScreen(
         if (searchState is SearchResultState.Contact && !navigatedFromSearch) {
             navigatedFromSearch = true
             onOpenThread(searchState.threadId, searchState.address)
+            // Keep search text to allow user to come back and see what they typed?
+            // Usually clearing is better for "Jump to".
             onClearSearch()
+            searchText = ""
         } else if (searchState !is SearchResultState.Contact) {
             navigatedFromSearch = false
         }
@@ -191,7 +198,7 @@ fun InboxScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onClearSelection) {
-                            Icon(Icons.Default.Clear, contentDescription = "Clear selection", tint = iconTint)
+                            Icon(Icons.Default.Close, contentDescription = "Clear selection", tint = iconTint)
                         }
                     },
                     actions = {
@@ -305,261 +312,319 @@ fun InboxScreen(
                 .padding(padding)
                 .background(theme.inboxBackgroundColor)
         ) {
-            OutlinedTextField(
-                value = searchText,
-                onValueChange = {
-                    searchText = it
-                    if (it.isBlank()) onClearSearch()
-                },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = mutedTint) },
-                trailingIcon = {
-                    if (searchText.isNotBlank()) {
-                        IconButton(onClick = {
-                            searchText = ""
-                            onClearSearch()
-                        }) { Icon(Icons.Default.Clear, contentDescription = "Clear", tint = mutedTint) }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                placeholder = { Text("Search contacts or messages") },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = theme.accentColor,
-                    unfocusedBorderColor = theme.frameColor.copy(alpha = 0.4f),
-                    focusedContainerColor = theme.inboxBackgroundColor,
-                    unfocusedContainerColor = theme.inboxBackgroundColor
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        onSearch(searchText)
-                    }
+            // Search Bar
+            Surface(
+                color = Color.Transparent,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchText,
+                    onValueChange = {
+                        searchText = it
+                        onSearch(it)
+                    },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = mutedTint) },
+                    trailingIcon = {
+                        if (searchText.isNotBlank()) {
+                            IconButton(onClick = {
+                                searchText = ""
+                                onClearSearch()
+                            }) { Icon(Icons.Default.Clear, contentDescription = "Clear", tint = mutedTint) }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Search messages & contacts") },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = theme.accentColor,
+                        unfocusedBorderColor = theme.frameColor.copy(alpha = 0.2f),
+                        focusedContainerColor = theme.frameColor.copy(alpha = 0.05f),
+                        unfocusedContainerColor = theme.frameColor.copy(alpha = 0.05f)
+                    ),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { /* Handled by debounce */ })
                 )
-            )
-
-            TabsRow(
-                filter = filter,
-                unreadCount = unreadCount,
-                onFilterChange = onFilterChange,
-                theme = theme
-            )
-
-            when (searchState) {
-                is SearchResultState.Messages -> SearchResults(
-                    hits = searchState.hits,
-                    theme = theme,
-                    onOpenThread = onOpenThread
-                )
-                SearchResultState.Empty -> Text(
-                    "No matches. Try a contact name or phrase.",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                SearchResultState.Searching -> Text(
-                    "Searching…",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                else -> Unit
             }
 
-            if (!notificationsEnabled || notificationsSilent) {
-                Surface(
-                    tonalElevation = 2.dp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = iconTint)
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = if (!notificationsEnabled) "Message notifications are off" else "Message alerts are silent",
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = if (!notificationsEnabled) {
-                                    "Turn on notifications so Beacon can alert you."
-                                } else {
-                                    "Enable sound or vibration for incoming texts."
-                                },
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        OutlinedButton(onClick = onOpenNotificationSettings) {
-                            Text("Open")
-                        }
-                    }
-                }
+            AnimatedVisibility(visible = searchText.isBlank()) {
+                TabsRow(
+                    filter = filter,
+                    unreadCount = unreadCount,
+                    onFilterChange = onFilterChange,
+                    theme = theme
+                )
             }
 
-            if (missingPermissions.isNotEmpty()) {
-                Surface(
-                    tonalElevation = 2.dp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Settings, contentDescription = null, tint = iconTint)
-                        Column(Modifier.weight(1f)) {
-                            Text("Permissions needed", fontWeight = FontWeight.SemiBold)
-                            Text(
-                                "Grant SMS permission so Beacon can read and show messages.",
-                                style = MaterialTheme.typography.bodySmall
-                            )
+            // Search Results or List
+            Box(modifier = Modifier.weight(1f)) {
+                if (searchText.isNotBlank()) {
+                     when (searchState) {
+                        is SearchResultState.Messages -> SearchResults(
+                            hits = searchState.hits,
+                            theme = theme,
+                            onOpenThread = onOpenThread
+                        )
+                        SearchResultState.Empty -> {
+                             Column(
+                                modifier = Modifier.fillMaxSize().padding(top = 40.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                             ) {
+                                 Icon(Icons.Default.Search, contentDescription = null, tint = mutedTint, modifier = Modifier.size(48.dp))
+                                 Spacer(modifier = Modifier.height(16.dp))
+                                 Text("No results found", color = mutedTint)
+                             }
                         }
-                        OutlinedButton(onClick = onRequestPermissions) {
-                            Text("Grant")
+                        SearchResultState.Searching -> {
+                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                 CircularProgressIndicator(color = theme.accentColor)
+                             }
                         }
+                        else -> Unit
                     }
-                }
-            }
-
-            if (!isDefaultSms || isCheckingDefaultSms) {
-                Surface(
-                    tonalElevation = 2.dp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                } else if (isLoading && filtered.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = theme.accentColor)
+                    }
+                } else if (filtered.isEmpty()) {
+                    EmptyState(filter, theme, iconTint)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Sms, contentDescription = null, tint = iconTint)
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                if (isCheckingDefaultSms) "Checking default SMS status..." else "Set as default SMS",
-                                fontWeight = FontWeight.SemiBold
+                        itemsIndexed(filtered, key = { _, item -> item.threadId }) { index, item ->
+                            if (index == 3) {
+                                NativeAdCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                )
+                            }
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { value ->
+                                    when (value) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            onToggleArchive(item.threadId)
+                                            val msg = if (item.isArchived) "Unarchived" else "Archived"
+                                            scope.launch { host.showSnackbar(msg) }
+                                        }
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            onTogglePin(item.threadId)
+                                            val msg = if (item.isPinned) "Unpinned" else "Pinned"
+                                            scope.launch { host.showSnackbar(msg) }
+                                        }
+                                        else -> {}
+                                    }
+                                    false
+                                }
                             )
-                            Text(
-                                "Required for receiving texts and showing notifications.",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        if (isCheckingDefaultSms) {
-                            CircularProgressIndicator(strokeWidth = 2.dp)
-                        } else {
-                            OutlinedButton(onClick = onRequestDefault) {
-                                Text("Set")
+                            if (selectionMode) {
+                                ThreadRow(
+                                    thread = item,
+                                    theme = theme,
+                                    isSelected = selectedThreadIds.contains(item.threadId),
+                                    selectionMode = true,
+                                    onClick = { onToggleSelection(item.threadId) },
+                                    onDelete = { onDeleteThread(item.threadId) },
+                                    onTogglePin = { onTogglePin(item.threadId) },
+                                    onToggleArchive = { onToggleArchive(item.threadId) },
+                                    onMarkAsUnread = { onMarkAsUnread(item.threadId) }
+                                )
+                            } else {
+                                SwipeableThreadRow(
+                                    thread = item,
+                                    state = dismissState,
+                                    theme = theme,
+                                    onClick = { onOpenThread(item.threadId, item.address) },
+                                    onDelete = { onDeleteThread(item.threadId) },
+                                    onTogglePin = { onTogglePin(item.threadId) },
+                                    onToggleArchive = { onToggleArchive(item.threadId) },
+                                    onMarkAsUnread = { onMarkAsUnread(item.threadId) },
+                                    onLongClick = { onToggleSelection(item.threadId) },
+                                    modifier = Modifier.animateItemPlacement()
+                                )
                             }
                         }
-                        OutlinedButton(onClick = onRefreshDefaultStatus, enabled = !isCheckingDefaultSms) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, tint = iconTint)
-                            Text("Refresh", modifier = Modifier.padding(start = 6.dp))
-                        }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
                 }
             }
 
-            if (isLoading && filtered.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = theme.accentColor)
+            // Bottom Permissions/Status Cards (only if needed)
+            PermissionsBanners(
+                missingPermissions = missingPermissions,
+                onRequestPermissions = onRequestPermissions,
+                isDefaultSms = isDefaultSms,
+                isCheckingDefaultSms = isCheckingDefaultSms,
+                onRequestDefault = onRequestDefault,
+                onRefreshDefaultStatus = onRefreshDefaultStatus,
+                notificationsEnabled = notificationsEnabled,
+                notificationsSilent = notificationsSilent,
+                onOpenNotificationSettings = onOpenNotificationSettings,
+                iconTint = iconTint
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .alpha(0.8f),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(
+                shape = CircleShape,
+                color = theme.frameColor.copy(alpha = 0.05f),
+                modifier = Modifier.size(80.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = when(filter) {
+                            InboxFilter.ARCHIVED -> Icons.Default.Inbox
+                            InboxFilter.UNREAD -> Icons.Default.MarkChatUnread
+                            else -> Icons.Default.Sms
+                        },
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(40.dp)
+                    )
                 }
-            } else if (filtered.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp)
-                        .alpha(0.8f), // Soften empty state
-                    contentAlignment = Alignment.Center
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "No messages here",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = when (filter) {
+                    InboxFilter.UNREAD -> "You're all caught up!"
+                    InboxFilter.PERSONAL -> "No personal messages yet."
+                    InboxFilter.TRANSACTIONS -> "No transactions found."
+                    InboxFilter.PROMOTIONS -> "No promotions found."
+                    InboxFilter.ARCHIVED -> "No archived conversations."
+                    else -> "Start a conversation to see it here."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = theme.frameColor.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PermissionsBanners(
+    missingPermissions: List<String>,
+    onRequestPermissions: () -> Unit,
+    isDefaultSms: Boolean,
+    isCheckingDefaultSms: Boolean,
+    onRequestDefault: () -> Unit,
+    onRefreshDefaultStatus: () -> Unit,
+    notificationsEnabled: Boolean,
+    notificationsSilent: Boolean,
+    onOpenNotificationSettings: () -> Unit,
+    iconTint: Color
+) {
+    Column {
+        if (!notificationsEnabled || notificationsSilent) {
+            Surface(
+                tonalElevation = 2.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Inbox,
-                            contentDescription = null,
-                            tint = iconTint,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Text("No messages here")
+                    Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = iconTint)
+                    Column(Modifier.weight(1f)) {
                         Text(
-                            when (filter) {
-                                InboxFilter.UNREAD -> "No unread messages."
-                                InboxFilter.PERSONAL -> "No personal messages found."
-                                InboxFilter.TRANSACTIONS -> "No transactions or OTPs found."
-                                InboxFilter.PROMOTIONS -> "No promotions found."
-                                InboxFilter.ARCHIVED -> "No archived messages."
-                                else -> "Your inbox is empty."
-                            },
+                            text = if (!notificationsEnabled) "Notifications off" else "Alerts silent",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Enable notifications for alerts.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
+                    OutlinedButton(onClick = onOpenNotificationSettings) {
+                        Text("Fix")
+                    }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            }
+        }
+
+        if (missingPermissions.isNotEmpty()) {
+            Surface(
+                tonalElevation = 2.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    itemsIndexed(filtered, key = { _, item -> item.threadId }) { index, item ->
-                        if (index == 3) {
-                            NativeAdCard(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                            )
-                        }
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { value ->
-                                when (value) {
-                                    SwipeToDismissBoxValue.EndToStart -> {
-                                        onToggleArchive(item.threadId)
-                                        val msg = if (item.isArchived) "Unarchived" else "Archived"
-                                        scope.launch { host.showSnackbar(msg) }
-                                    }
-                                    SwipeToDismissBoxValue.StartToEnd -> {
-                                        onTogglePin(item.threadId)
-                                        val msg = if (item.isPinned) "Unpinned" else "Pinned"
-                                        scope.launch { host.showSnackbar(msg) }
-                                    }
-                                    else -> {}
-                                }
-                                false
-                            }
+                    Icon(Icons.Default.Settings, contentDescription = null, tint = iconTint)
+                    Column(Modifier.weight(1f)) {
+                        Text("Permissions needed", fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Grant SMS permission to function.",
+                            style = MaterialTheme.typography.bodySmall
                         )
-                        if (selectionMode) {
-                            // In selection mode, disable swipe gestures
-                            ThreadRow(
-                                thread = item,
-                                theme = theme,
-                                isSelected = selectedThreadIds.contains(item.threadId),
-                                selectionMode = true,
-                                onClick = { onToggleSelection(item.threadId) },
-                                onDelete = { onDeleteThread(item.threadId) },
-                                onTogglePin = { onTogglePin(item.threadId) },
-                                onToggleArchive = { onToggleArchive(item.threadId) },
-                                onMarkAsUnread = { onMarkAsUnread(item.threadId) }
-                            )
-                        } else {
-                            SwipeableThreadRow(
-                                thread = item,
-                                state = dismissState,
-                                theme = theme,
-                                onClick = { onOpenThread(item.threadId, item.address) },
-                                onDelete = { onDeleteThread(item.threadId) },
-                                onTogglePin = { onTogglePin(item.threadId) },
-                                onToggleArchive = { onToggleArchive(item.threadId) },
-                                onMarkAsUnread = { onMarkAsUnread(item.threadId) },
-                                onLongClick = { onToggleSelection(item.threadId) },
-                                modifier = Modifier.animateItemPlacement()
-                            )
+                    }
+                    OutlinedButton(onClick = onRequestPermissions) {
+                        Text("Grant")
+                    }
+                }
+            }
+        }
+
+        if (!isDefaultSms || isCheckingDefaultSms) {
+            Surface(
+                tonalElevation = 2.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Sms, contentDescription = null, tint = iconTint)
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            if (isCheckingDefaultSms) "Checking..." else "Set Default SMS",
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Required to send & receive.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    if (isCheckingDefaultSms) {
+                        CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                    } else {
+                        OutlinedButton(onClick = onRequestDefault) {
+                            Text("Set")
                         }
                     }
-                    item { Spacer(modifier = Modifier.height(60.dp)) }
                 }
             }
         }
@@ -572,39 +637,44 @@ private fun SearchResults(
     theme: ThemePalette,
     onOpenThread: (Long, String) -> Unit
 ) {
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .padding(horizontal = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        hits.take(5).forEach { msg ->
+        items(hits) { msg ->
             Surface(
                 shape = RoundedCornerShape(14.dp),
                 tonalElevation = 1.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp)
                     .clickable { onOpenThread(msg.threadId, msg.address) }
             ) {
                 Column(Modifier.padding(12.dp)) {
-                    Text(
-                        text = msg.address.ifBlank { "Unknown sender" },
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = theme.accentColor
-                    )
+                    Row {
+                        Text(
+                            text = msg.address.ifBlank { "Unknown" },
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = theme.accentColor,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = DateUtils.getRelativeTimeSpanString(
+                                msg.timestamp,
+                                System.currentTimeMillis(),
+                                DateUtils.MINUTE_IN_MILLIS
+                            ).toString(),
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = msg.body,
                         style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 2
-                    )
-                    Text(
-                        text = DateUtils.getRelativeTimeSpanString(
-                            msg.timestamp,
-                            System.currentTimeMillis(),
-                            DateUtils.MINUTE_IN_MILLIS
-                        ).toString(),
-                        style = MaterialTheme.typography.labelSmall
+                        maxLines = 2,
+                        color = theme.frameColor.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -631,14 +701,15 @@ private fun SwipeableThreadRow(
         modifier = modifier,
         backgroundContent = {
             val (color, alignment, icon) = when (state.targetValue) {
-                SwipeToDismissBoxValue.EndToStart -> Triple(theme.frameColor.copy(alpha = 0.5f), Alignment.CenterEnd, Icons.Default.Inbox) // Archive
-                SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor, Alignment.CenterStart, if (thread.isPinned) Icons.Default.PushPin else Icons.Default.PushPin) // Pin/Unpin
+                SwipeToDismissBoxValue.EndToStart -> Triple(theme.frameColor.copy(alpha = 0.2f), Alignment.CenterEnd, Icons.Default.Inbox)
+                SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor.copy(alpha = 0.8f), Alignment.CenterStart, Icons.Default.PushPin)
                 else -> Triple(Color.Transparent, Alignment.CenterEnd, Icons.Default.Inbox)
             }
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .clip(RoundedCornerShape(theme.bubbleRadius.dp))
                     .background(color)
                     .padding(horizontal = 24.dp),
                 contentAlignment = alignment
@@ -687,8 +758,8 @@ private fun ThreadRow(
         shape = RoundedCornerShape(theme.bubbleRadius.dp),
         tonalElevation = if (isSelected) 4.dp else if (thread.unread) 2.dp else 0.dp,
         border = androidx.compose.foundation.BorderStroke(
-            width = if (isSelected) 2.dp else 1.dp,
-            color = if (isSelected) theme.accentColor else theme.frameColor.copy(alpha = 0.35f)
+            width = if (isSelected) 2.dp else 0.dp,
+            color = if (isSelected) theme.accentColor else Color.Transparent
         ),
         color = if (isSelected) theme.accentColor.copy(alpha = 0.1f) else theme.inboxBackgroundColor,
         modifier = Modifier
@@ -700,100 +771,37 @@ private fun ThreadRow(
     ) {
         Column(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Dropdown menu only available if NOT in selection mode
             if (!selectionMode) {
                 DropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false }
                 ) {
-                    DropdownMenuItem(
-                        text = { Text(if (thread.isPinned) "Unpin" else "Pin") },
-                        onClick = {
-                            onTogglePin()
-                            showMenu = false
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.PushPin,
-                                contentDescription = if (thread.isPinned) "Unpin conversation" else "Pin conversation"
-                            )
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(if (thread.isArchived) "Unarchive" else "Archive") },
-                        onClick = {
-                            onToggleArchive()
-                            showMenu = false
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Inbox,
-                                contentDescription = if (thread.isArchived) "Unarchive conversation" else "Archive conversation"
-                            )
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Mark unread") },
-                        onClick = {
-                            onMarkAsUnread()
-                            showMenu = false
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.MarkChatUnread,
-                                contentDescription = "Mark as unread"
-                            )
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        onClick = {
-                            onDelete()
-                            showMenu = false
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete conversation"
-                            )
-                        }
-                    )
+                    DropdownMenuItem(text = { Text(if (thread.isPinned) "Unpin" else "Pin") }, onClick = { onTogglePin(); showMenu = false })
+                    DropdownMenuItem(text = { Text(if (thread.isArchived) "Unarchive" else "Archive") }, onClick = { onToggleArchive(); showMenu = false })
+                    DropdownMenuItem(text = { Text("Delete") }, onClick = { onDelete(); showMenu = false })
                 }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (isSelected) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Selected",
-                        tint = theme.accentColor,
-                        modifier = Modifier.padding(end = 8.dp).size(20.dp)
-                    )
+                    Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = theme.accentColor, modifier = Modifier.padding(end = 8.dp).size(20.dp))
                 } else if (thread.isPinned) {
-                    Icon(
-                        Icons.Default.PushPin,
-                        contentDescription = "Pinned",
-                        tint = theme.accentColor,
-                        modifier = Modifier.padding(end = 4.dp).size(16.dp)
-                    )
+                    Icon(Icons.Default.PushPin, contentDescription = "Pinned", tint = theme.accentColor, modifier = Modifier.padding(end = 4.dp).size(16.dp))
                 }
 
                 Text(
                     text = thread.address.ifBlank { "Unknown" },
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (thread.unread) FontWeight.SemiBold else FontWeight.Normal,
+                    fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.Medium,
+                    color = theme.frameColor,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = DateUtils.getRelativeTimeSpanString(
-                        thread.timestamp,
-                        System.currentTimeMillis(),
-                        DateUtils.MINUTE_IN_MILLIS
-                    ).toString(),
+                    text = DateUtils.getRelativeTimeSpanString(thread.timestamp, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray
+                    color = theme.frameColor.copy(alpha = 0.6f)
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
@@ -801,7 +809,8 @@ private fun ThreadRow(
                 text = thread.snippet,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
-                color = theme.frameColor.copy(alpha = 0.8f)
+                fontWeight = if (thread.unread) FontWeight.Medium else FontWeight.Normal,
+                color = if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.7f)
             )
         }
     }
@@ -820,76 +829,33 @@ private fun TabsRow(
             .fillMaxWidth()
             .selectableGroup()
             .horizontalScroll(scrollState)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
-            onFilterChange(InboxFilter.ALL)
-        }
-        TabText(
-            label = "Personal",
-            selected = filter == InboxFilter.PERSONAL,
-            theme = theme
-        ) {
-            onFilterChange(InboxFilter.PERSONAL)
-        }
-        TabText(
-            label = "Transactions",
-            selected = filter == InboxFilter.TRANSACTIONS,
-            theme = theme
-        ) {
-            onFilterChange(InboxFilter.TRANSACTIONS)
-        }
-        TabText(
-            label = "Promotions",
-            selected = filter == InboxFilter.PROMOTIONS,
-            theme = theme
-        ) {
-            onFilterChange(InboxFilter.PROMOTIONS)
-        }
-        TabText(
-            label = "Unread${if (unreadCount > 0) " ($unreadCount)" else ""}",
-            selected = filter == InboxFilter.UNREAD,
-            theme = theme
-        ) {
-            onFilterChange(InboxFilter.UNREAD)
-        }
-        TabText(label = "Read", selected = filter == InboxFilter.READ, theme = theme) {
-            onFilterChange(InboxFilter.READ)
-        }
-        TabText(
-            label = "Archived",
-            selected = filter == InboxFilter.ARCHIVED,
-            theme = theme
-        ) {
-            onFilterChange(InboxFilter.ARCHIVED)
-        }
+        // Compact Tabs
+        TabChip("All", filter == InboxFilter.ALL, theme) { onFilterChange(InboxFilter.ALL) }
+        TabChip("Personal", filter == InboxFilter.PERSONAL, theme) { onFilterChange(InboxFilter.PERSONAL) }
+        TabChip("Transactions", filter == InboxFilter.TRANSACTIONS, theme) { onFilterChange(InboxFilter.TRANSACTIONS) }
+        TabChip("Promotions", filter == InboxFilter.PROMOTIONS, theme) { onFilterChange(InboxFilter.PROMOTIONS) }
+        TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
+        TabChip("Archived", filter == InboxFilter.ARCHIVED, theme) { onFilterChange(InboxFilter.ARCHIVED) }
     }
 }
 
 @Composable
-private fun TabText(label: String, selected: Boolean, theme: ThemePalette, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.selectable(
-            selected = selected,
-            role = Role.Tab,
-            onClick = onClick
-        )
+private fun TabChip(label: String, selected: Boolean, theme: ThemePalette, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = if (selected) theme.accentColor.copy(alpha = 0.15f) else Color.Transparent,
+        border = if (selected) BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.5f)) else BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.2f)),
+        modifier = Modifier.selectable(selected = selected, role = Role.Tab, onClick = onClick)
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (selected) theme.frameColor else theme.frameColor.copy(alpha = 0.6f)
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Box(
-            modifier = Modifier
-                .height(2.dp)
-                .fillMaxWidth(0.8f)
-                .background(if (selected) theme.accentColor else Color.Transparent)
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) theme.accentColor else theme.frameColor.copy(alpha = 0.8f),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
     }
 }
