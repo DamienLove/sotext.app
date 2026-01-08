@@ -473,7 +473,8 @@ fun InboxScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(24.dp),
+                        .padding(24.dp)
+                        .alpha(0.8f), // Soften empty state
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -553,7 +554,8 @@ fun InboxScreen(
                                 onTogglePin = { onTogglePin(item.threadId) },
                                 onToggleArchive = { onToggleArchive(item.threadId) },
                                 onMarkAsUnread = { onMarkAsUnread(item.threadId) },
-                                onLongClick = { onToggleSelection(item.threadId) }
+                                onLongClick = { onToggleSelection(item.threadId) },
+                                modifier = Modifier.animateItemPlacement()
                             )
                         }
                     }
@@ -621,10 +623,12 @@ private fun SwipeableThreadRow(
     onTogglePin: () -> Unit,
     onToggleArchive: () -> Unit,
     onMarkAsUnread: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     SwipeToDismissBox(
         state = state,
+        modifier = modifier,
         backgroundContent = {
             val (color, alignment, icon) = when (state.targetValue) {
                 SwipeToDismissBoxValue.EndToStart -> Triple(theme.frameColor.copy(alpha = 0.5f), Alignment.CenterEnd, Icons.Default.Inbox) // Archive
