@@ -41,6 +41,7 @@ class SmsSyncWorker @AssistedInject constructor(
 
         return try {
             val userRef = firestore.collection("users").document(user.uid)
+            val deviceId = settingsRepository.ensureDeviceId()
 
             // Sync subscription status to allow Web client to unlock features
             val status = when {
@@ -52,11 +53,14 @@ class SmsSyncWorker @AssistedInject constructor(
 
             // If the user hasn't enabled remote web access, there's nothing to sync.
             if (!settings.remoteWebAccessEnabled) {
-                writeDiagnostics(user.uid, settingsRepository.ensureDeviceId(), status, 0, 0, hasReadSms, "remoteWebAccess off")
+                writeDiagnostics(user.uid, deviceId, status, 0, 0, hasReadSms, "remoteWebAccess off")
+                return Result.success()
+            }
+            if (!hasReadSms) {
+                writeDiagnostics(user.uid, deviceId, status, 0, 0, hasReadSms, "READ_SMS missing")
                 return Result.success()
             }
 
-            val deviceId = settingsRepository.ensureDeviceId()
             val phoneNumber = settings.devicePhoneNumber ?: settingsRepository.getLastKnownPhone()
             val lineId = deviceId
 
@@ -80,69 +84,64 @@ class SmsSyncWorker @AssistedInject constructor(
 
             var syncedThreads = 0
             var syncedMessages = 0
-            if (settings.remoteWebAccessEnabled && hasReadSms) {
-                val threads = smsRepository.listThreads(limit = 50)
-                val lineThreadsRef = lineRef.collection("threads")
+            val threads = smsRepository.listThreads(limit = 50)
+            val lineThreadsRef = lineRef.collection("threads")
 
-                for (thread in threads) {
-                    val lineThreadDoc = lineThreadsRef.document(thread.threadId.toString())
+            for (thread in threads) {
+                val lineThreadDoc = lineThreadsRef.document(thread.threadId.toString())
 
-                    val (namePart, numberPart) = splitSmsDisplayAddress(thread.address)
-                    val displayName = if (numberPart != null && namePart.isNotBlank()) namePart else ""
-                    val phoneNumber = numberPart?.takeIf { it.isNotBlank() } ?: namePart
+                val (namePart, numberPart) = splitSmsDisplayAddress(thread.address)
+                val displayName = if (numberPart != null && namePart.isNotBlank()) namePart else ""
+                val phone = numberPart?.takeIf { it.isNotBlank() } ?: namePart
 
-                    val threadData = mapOf(
-                        "address" to thread.address,
-                        "display_name" to displayName,
-                        "phone_number" to phoneNumber,
-                        "snippet" to thread.snippet,
-                        "date" to thread.timestamp,
-                        "unread" to thread.unread,
-                        "unreadCount" to thread.unreadCount,
-                        "isFavorite" to thread.isFavorite,
-                        "isPrivate" to thread.isPrivate,
-                        "isTrusted" to thread.isTrusted
+                val threadData = mapOf(
+                    "address" to thread.address,
+                    "display_name" to displayName,
+                    "phone_number" to phone,
+                    "snippet" to thread.snippet,
+                    "date" to thread.timestamp,
+                    "unread" to thread.unread,
+                    "unreadCount" to thread.unreadCount,
+                    "isFavorite" to thread.isFavorite,
+                    "isPrivate" to thread.isPrivate,
+                    "isTrusted" to thread.isTrusted
+                )
+                lineThreadDoc.set(threadData, SetOptions.merge()).await()
+                syncedThreads++
+
+                val messages = smsRepository.messagesForThread(thread.threadId, limit = 200)
+                val lineMessagesRef = lineThreadDoc.collection("messages")
+                val lineBatch = firestore.batch()
+                var batchCount = 0
+
+                for (msg in messages) {
+                    val lineMsgDoc = lineMessagesRef.document(msg.id.toString())
+                    val msgData = mapOf(
+                        "body" to msg.body,
+                        "date" to msg.timestamp,
+                        "type" to (if (msg.outgoing) 2 else 1)
                     )
-                    lineThreadDoc.set(threadData, SetOptions.merge()).await()
-                    syncedThreads++
-
-                    val messages = smsRepository.messagesForThread(thread.threadId, limit = 200)
-                    val lineMessagesRef = lineThreadDoc.collection("messages")
-                    val lineBatch = firestore.batch()
-                    var batchCount = 0
-
-                    for (msg in messages) {
-                        val lineMsgDoc = lineMessagesRef.document(msg.id.toString())
-                        val msgData = mapOf(
-                            "body" to msg.body,
-                            "date" to msg.timestamp,
-                            "type" to (if (msg.outgoing) 2 else 1)
-                        )
-                        lineBatch.set(lineMsgDoc, msgData, SetOptions.merge())
-                        batchCount++
-                        syncedMessages++
-                        if (batchCount >= 450) {
-                            lineBatch.commit().await()
-                            batchCount = 0
-                        }
-                    }
-                    if (batchCount > 0) {
+                    lineBatch.set(lineMsgDoc, msgData, SetOptions.merge())
+                    batchCount++
+                    syncedMessages++
+                    if (batchCount >= 450) {
                         lineBatch.commit().await()
+                        batchCount = 0
                     }
+                }
+                if (batchCount > 0) {
+                    lineBatch.commit().await()
                 }
             }
 
             writeDiagnostics(
                 user.uid,
-                settingsRepository.ensureDeviceId(),
+                deviceId,
                 status,
                 syncedThreads,
                 syncedMessages,
                 hasReadSms,
-                when {
-                    !hasReadSms -> "READ_SMS missing"
-                    else -> "ok"
-                }
+                "ok"
             )
 
             if (deviceContactsRepository.hasContactsPermission() && settings.remoteWebAccessEnabled) {
@@ -151,6 +150,17 @@ class SmsSyncWorker @AssistedInject constructor(
             Result.success()
         } catch (e: Exception) {
             e.printStackTrace()
+            runCatching {
+                writeDiagnostics(
+                    auth.currentUser?.uid ?: "unknown",
+                    settingsRepository.ensureDeviceId(),
+                    "unknown",
+                    0,
+                    0,
+                    hasSmsPermission(),
+                    "error: ${e.message}"
+                )
+            }
             Result.retry()
         }
     }
