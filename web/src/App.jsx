@@ -58,7 +58,9 @@ const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="no
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
 const CopyIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
 const CheckIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
-const Spinner = () => <span className="spinner" aria-hidden="true" />;
+const Spinner = ({ className = '', style = {} }) => (
+  <span className={`spinner ${className}`} style={style} aria-hidden="true" />
+);
 
 const CopyButton = ({ text, label = "Copy" }) => {
   const [copied, setCopied] = useState(false);
@@ -385,28 +387,43 @@ const areRingerSongsEqual = (prev, next) => {
 };
 
 // Bolt: Optimized RingerSongItem with memo to prevent re-rendering the entire playlist
-const RingerSongItem = memo(({ song, onDelete }) => (
-  <div className="song-card">
-    {song.albumArtUrl ? (
-      <img src={song.albumArtUrl} alt="" className="song-art" />
-    ) : (
-      <div className="song-art" style={{ display: 'grid', placeItems: 'center' }}>♫</div>
-    )}
-    <div className="song-info">
-      <div className="song-title">{song.title}</div>
-      <div className="song-artist">{song.artist}</div>
+const RingerSongItem = memo(({ song, onDelete }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      await onDelete(song.id);
+    } catch (error) {
+      console.error("Failed to delete song", error);
+      setIsDeleting(false);
+    }
+  }, [song.id, onDelete]);
+
+  return (
+    <div className="song-card">
+      {song.albumArtUrl ? (
+        <img src={song.albumArtUrl} alt="" className="song-art" />
+      ) : (
+        <div className="song-art" style={{ display: 'grid', placeItems: 'center' }}>♫</div>
+      )}
+      <div className="song-info">
+        <div className="song-title">{song.title}</div>
+        <div className="song-artist">{song.artist}</div>
+      </div>
+      <button
+        className="ghost-btn icon-only"
+        onClick={handleDelete}
+        disabled={isDeleting}
+        title="Remove from playlist"
+        aria-label={`Remove ${song.title} from playlist`}
+        style={{ width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none' }}
+      >
+        {isDeleting ? <Spinner style={{ marginRight: 0 }} /> : <TrashIcon />}
+      </button>
     </div>
-    <button
-      className="ghost-btn icon-only"
-      onClick={() => onDelete(song.id)}
-      title="Remove from playlist"
-      aria-label={`Remove ${song.title} from playlist`}
-      style={{ width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none' }}
-    >
-      <TrashIcon />
-    </button>
-  </div>
-), areRingerSongsEqual);
+  );
+}, areRingerSongsEqual);
 RingerSongItem.displayName = 'RingerSongItem';
 
 const areSpotifyResultsEqual = (prev, next) => {
