@@ -6,6 +6,8 @@ def shared_pods
   pod 'Firebase/CoreOnly'
   pod 'Firebase/Auth'
   pod 'Firebase/Firestore'
+  pod 'Firebase/Messaging'
+  pod 'Firebase/Functions'
 end
 
 target 'PulseLinkFree' do
