@@ -133,6 +133,7 @@ class SmsRepository(private val context: Context) {
 
         // Chunk to avoid SQLite limits
         numbers.chunked(50).forEach { chunk ->
+            // Safe: q contains only '?' placeholders, no user input
             val q = chunk.joinToString(",") { "?" }
             // Try matching against NUMBER
             val cursor = runCatching {
@@ -149,26 +150,18 @@ class SmsRepository(private val context: Context) {
                 val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
                 val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
                 if (numIdx >= 0 && nameIdx >= 0) {
+                    // Pre-compute normalized map for O(M + N) instead of O(M × N)
+                    val normalizedChunk = chunk.associateBy { it.filter { c -> c.isDigit() } }
+
                     while (c.moveToNext()) {
-                        val dbNum = c.getString(numIdx)
+                        val dbNum = c.getString(numIdx) ?: continue
                         val name = c.getString(nameIdx)
                         if (!name.isNullOrBlank()) {
-                            // Map back to the input number if possible.
-                            // Since we don't know which input matched which output exactly if formatting differs,
-                            // we rely on the fact that the query matched `dbNum` to one of our inputs.
-                            // But `dbNum` from DB might differ from input `num` (formatting).
-                            // We need to find which input number matches this dbNum.
-                            // Simple approach: Check if dbNum is in our chunk.
-                            if (chunk.contains(dbNum)) {
-                                result[dbNum] = name
-                            } else {
-                                // Try to find a loose match in the chunk (e.g. stripping chars)
-                                // This is expensive O(M*N), but chunk is small (50).
-                                val cleanDb = dbNum.filter { it.isDigit() }
-                                val match = chunk.find { it.filter { c -> c.isDigit() } == cleanDb }
-                                if (match != null) {
-                                    result[match] = name
-                                }
+                            // Normalize and map using the original input number
+                            val cleanDb = dbNum.filter { it.isDigit() }
+                            val match = normalizedChunk[cleanDb]
+                            if (match != null) {
+                                result[match] = name
                             }
                         }
                     }
