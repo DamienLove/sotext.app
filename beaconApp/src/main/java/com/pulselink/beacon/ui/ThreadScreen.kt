@@ -105,14 +105,16 @@ fun ThreadScreen(
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
     // Auto-scroll logic for new messages
-    // Since reverseLayout=true, item 0 is at bottom.
-    // If the list grows (new message), it should stay at bottom if already there.
-    // However, if we just opened, we want to be at bottom.
-    LaunchedEffect(uiItems.firstOrNull()) {
+    // Since reverseLayout=true, item 0 is at bottom (newest message).
+    // Auto-scroll to bottom when new messages arrive if user is near the bottom.
+    // This ensures users see new messages without disrupting reading history.
+    LaunchedEffect(uiItems.size) {
         if (uiItems.isNotEmpty()) {
-             if (listState.firstVisibleItemIndex < 3) {
+            // Scroll to bottom if user is within the last 5 items (near bottom)
+            // or if this is the initial load
+            if (listState.firstVisibleItemIndex < 5 || listState.firstVisibleItemIndex == 0) {
                 listState.animateScrollToItem(0)
-             }
+            }
         }
     }
 
@@ -469,14 +471,16 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                         value = LinkPreviewHelper.fetchPreview(extractedUrl)
                     }
 
-                    if (preview != null && (preview!!.title != null || preview!!.imageUrl != null)) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LinkPreviewCard(preview = preview!!) {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(extractedUrl))
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                    preview?.let { previewData ->
+                        if (previewData.title != null || previewData.imageUrl != null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinkPreviewCard(preview = previewData) {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(extractedUrl))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Cannot open link", Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
                     }

@@ -112,23 +112,27 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun mergeThreads() {
-        // Optimized sorting
+        // Optimized merging: only update threads with changed pin/archive status
+        val pinnedSet = inboxState.pinnedThreadIds
+        val archivedSet = inboxState.archivedThreadIds
+
         val merged = rawThreads.map { thread ->
-            val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
-            // Only copy if needed
-            if (isPinned != thread.isPinned || inboxState.archivedThreadIds.contains(thread.threadId) != thread.isArchived) {
-                thread.copy(
-                    isPinned = isPinned,
-                    isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
-                )
+            val isPinned = pinnedSet.contains(thread.threadId)
+            val isArchived = archivedSet.contains(thread.threadId)
+            // Only copy if state changed
+            if (isPinned != thread.isPinned || isArchived != thread.isArchived) {
+                thread.copy(isPinned = isPinned, isArchived = isArchived)
             } else {
                 thread
             }
-        }.sortedWith(
+        }
+
+        // Optimized sorting: use stable sort and only sort once
+        // Using sortedWith with a comparator is efficient for already mostly-sorted lists
+        threads = merged.sortedWith(
             compareByDescending<SmsThreadItem> { it.isPinned }
                 .thenByDescending { it.timestamp }
         )
-        threads = merged
     }
 
     fun togglePin(threadId: Long) {
