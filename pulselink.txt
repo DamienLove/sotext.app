@@ -124,3 +124,4 @@ Outstanding (carry-over for next session)
 - 2026-01-08: Unified launcher: treat PackageManager DEFAULT state as enabled to stop false “failed to open unified navigation” errors on some OEM launchers.
 - 2026-01-08: Beacon Contacts tab: merges device contacts (deduped by normalized number) when READ_CONTACTS is granted; ran ./gradlew lintFreeDebug testFreeDebugUnitTest.
 - 2026-01-08: Remote web sync: SmsSyncWorker now syncs whenever remote web access is enabled (even if subscription state temporarily reads free) and sets subscriptionStatus to premium/pro/free; SubscriptionManager triggers an immediate sync when premium activates so web inbox fills right away. ./gradlew testFreeDebugUnitTest passed.
+- 2026-01-08: Attachments stay in-app: sendAttachmentViaSms now uses SmsManager.sendMultimediaMessage with FileProvider instead of launching external chooser. Requires PulseLink as default SMS. ./gradlew testFreeDebugUnitTest.
