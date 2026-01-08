@@ -46,7 +46,8 @@ class SubscriptionManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settingsRepository: SettingsRepository,
     private val functions: FirebaseFunctions,
-    private val authManager: FirebaseAuthManager
+    private val authManager: FirebaseAuthManager,
+    private val smsSyncTrigger: com.pulselink.data.sms.SmsSyncTrigger
 ) : PurchasesUpdatedListener {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -221,9 +222,11 @@ class SubscriptionManager @Inject constructor(
             }
             settingsRepository.setPremiumUnlocked(active)
 
-            // Auto-enable remote web access when premium becomes active
+            // Auto-enable remote web access when premium becomes active        
             if (active && !wasActive) {
                 settingsRepository.setRemoteWebAccessEnabled(true)
+                // Kick off an immediate sync so web inbox populates without waiting for UI flows.
+                smsSyncTrigger.triggerSync()
             }
             purchases.firstOrNull { it.products.contains(BuildConfig.SUBS_MONTHLY_PRODUCT_ID) }
                 ?.let {
@@ -271,9 +274,10 @@ class SubscriptionManager @Inject constructor(
             _state.value = _state.value.copy(isPremiumActive = active)
             settingsRepository.setPremiumUnlocked(active)
 
-            // Auto-enable remote web access when premium becomes active
+            // Auto-enable remote web access when premium becomes active        
             if (active && !wasActive) {
                 settingsRepository.setRemoteWebAccessEnabled(true)
+                smsSyncTrigger.triggerSync()
             }
             if (!active) {
                 settingsRepository.setPremiumPurchaseToken(null)

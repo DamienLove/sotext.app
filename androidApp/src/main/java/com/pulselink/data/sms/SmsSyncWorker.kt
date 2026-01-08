@@ -32,6 +32,7 @@ class SmsSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val settings = settingsRepository.settings.first()
         val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
+        val isPro = settings.proUnlocked
 
         val user = auth.currentUser
         if (user == null) {
@@ -43,10 +44,15 @@ class SmsSyncWorker @AssistedInject constructor(
 
             // Sync subscription status to allow Web client to unlock features
             // Explicitly set to free if not premium to handle subscription cancellation/expiry
-            val status = if (isPremium) "premium" else "free"
+            val status = when {
+                isPremium -> "premium"
+                isPro -> "pro"
+                else -> "free"
+            }
             userRef.set(mapOf("subscriptionStatus" to status), SetOptions.merge()).await()
 
-            if (!isPremium) {
+            // If the user hasn't enabled remote web access, there's nothing to sync.
+            if (!settings.remoteWebAccessEnabled) {
                 return Result.success()
             }
 
