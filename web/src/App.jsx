@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
+import DevTools from './DevTools';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -105,9 +106,9 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
     className={`thread-item ${isActive ? 'active' : ''}`}
     onClick={() => onSelect(thread)}
     aria-current={isActive ? 'true' : undefined}
-    aria-label={`Select conversation with ${thread.address}`}
+    aria-label={`Select conversation with ${thread.display_name || thread.address}`}
   >
-    <div className="thread-name">{thread.address}</div>
+    <div className="thread-name">{thread.display_name || thread.address}</div>
     <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
   </button>
 ), areThreadsEqual);
@@ -1270,6 +1271,18 @@ function App() {
   const [spotifyResults, setSpotifyResults] = useState([]);
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
+  const [showDevTools, setShowDevTools] = useState(false);
+
+  // Toggle DevTools with Ctrl+Shift+D
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        setShowDevTools(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -2371,6 +2384,7 @@ function App() {
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
+        {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <div className="container login-container" id="main-content">
           <div className="login-card">
@@ -2465,6 +2479,7 @@ function App() {
 
   return (
     <div className="app-shell" style={themeVars}>
+      {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
         <div className="sidebar">

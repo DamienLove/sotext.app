@@ -89,3 +89,7 @@ ringersong/android-sdk-0.8.0-appremote_v2.1.0-auth.zip
 ringersong/libs/android-sdk-*-appremote*/
 /secrets/play-store-mcp-all.jar
 /secrets/service-account-key.json
+
+# Web artifacts
+web/*.log
+web/playwright-report/
