@@ -1,11 +1,15 @@
 
 > pulselink-web@0.0.0 dev /app/web
-> vite --port 5173
+> vite
 
-Port 5173 is in use, trying another one...
+Re-optimizing dependencies because lockfile has changed
 
-  VITE v5.4.21  ready in 262 ms
+  VITE v5.4.21  ready in 317 ms
 
-  ➜  Local:   http://localhost:5174/
+  ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
- ELIFECYCLE  Command failed.
+7:36:31 AM [vite] page reload playwright-report/index.html
+7:45:48 AM [vite] hmr update /src/App.jsx
+7:50:34 AM [vite] hmr update /src/App.jsx
+8:02:04 AM [vite] .env.local changed, restarting server...
+8:02:04 AM [vite] server restarted.
