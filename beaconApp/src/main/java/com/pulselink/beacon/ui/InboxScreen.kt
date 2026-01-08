@@ -147,13 +147,22 @@ fun InboxScreen(
     onMarkSelectedRead: () -> Unit = {},
     onMarkSelectedUnread: () -> Unit = {},
     onPinSelected: () -> Unit = {},
-    onMarkAsUnread: (Long) -> Unit = {}
+    onMarkAsUnread: (Long) -> Unit = {},
+    userMessage: String? = null,
+    onClearUserMessage: () -> Unit = {}
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var searchText by rememberSaveable { mutableStateOf("") }
     var navigatedFromSearch by remember { mutableStateOf(false) }
     val iconTint = theme.accentColor
+
+    LaunchedEffect(userMessage) {
+        userMessage?.let {
+            host.showSnackbar(it)
+            onClearUserMessage()
+        }
+    }
 
     val filtered = remember(filter, threads) {
         val all = threads
@@ -749,11 +758,7 @@ private fun ThreadRow(
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = {
-                    if (!selectionMode) {
-                        onLongClick()
-                    }
-                }
+                onLongClick = onLongClick
             )
     ) {
         Column(

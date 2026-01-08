@@ -68,6 +68,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var selectedThreadIds by mutableStateOf(setOf<Long>())
         private set
 
+    var userMessage by mutableStateOf<String?>(null)
+        private set
+
     // Internal holder for raw threads before merging preferences
     private var rawThreads: List<SmsThreadItem> = emptyList()
     private var inboxState: InboxState = InboxState()
@@ -152,48 +155,26 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun archiveSelected() {
         val ids = selectedThreadIds.toList()
         viewModelScope.launch {
-            ids.forEach { inboxPrefs.toggleArchive(it) } // Toggle might be wrong if mixed state, should force archive.
-            // InboxPrefs implementation is toggle-only? Let's check.
-            // Ideally we should have setArchive(id, boolean).
-            // For now, assuming toggle is what we have, but "Archive" button usually means "Move to Archive".
-            // If we use 'toggle', we might unarchive some.
-            // Let's assume user selects items to Archive.
-            // Wait, InboxPreferencesRepository likely only has toggle.
-            // If items are mixed, we should check state.
-            // But 'threads' has the state.
-
-            // Better:
-            val toArchive = threads.filter { it.threadId in ids && !it.isArchived }.map { it.threadId }
+            // Snapshot current threads to avoid race conditions during async execution
+            val currentThreads = threads
+            val toArchive = currentThreads.filter { it.threadId in ids && !it.isArchived }.map { it.threadId }
             toArchive.forEach { inboxPrefs.toggleArchive(it) }
 
+            userMessage = "${toArchive.size} threads archived"
             clearSelection()
-        }
-    }
-
-    fun unarchiveSelected() {
-        val ids = selectedThreadIds.toList()
-        viewModelScope.launch {
-             val toUnarchive = threads.filter { it.threadId in ids && it.isArchived }.map { it.threadId }
-             toUnarchive.forEach { inboxPrefs.toggleArchive(it) }
-             clearSelection()
         }
     }
 
     fun pinSelected() {
         val ids = selectedThreadIds.toList()
         viewModelScope.launch {
-             val toPin = threads.filter { it.threadId in ids && !it.isPinned }.map { it.threadId }
-             toPin.forEach { inboxPrefs.togglePin(it) }
-             clearSelection()
-        }
-    }
+            // Snapshot current threads to avoid race conditions during async execution
+            val currentThreads = threads
+            val toPin = currentThreads.filter { it.threadId in ids && !it.isPinned }.map { it.threadId }
+            toPin.forEach { inboxPrefs.togglePin(it) }
 
-    fun unpinSelected() {
-        val ids = selectedThreadIds.toList()
-        viewModelScope.launch {
-             val toUnpin = threads.filter { it.threadId in ids && it.isPinned }.map { it.threadId }
-             toUnpin.forEach { inboxPrefs.togglePin(it) }
-             clearSelection()
+            userMessage = "${toPin.size} threads pinned"
+            clearSelection()
         }
     }
 
@@ -201,6 +182,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         val ids = selectedThreadIds.toList()
         viewModelScope.launch {
             repo.deleteThreads(ids)
+            userMessage = "${ids.size} threads deleted"
             clearSelection()
             refreshThreads()
         }
@@ -210,6 +192,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         val ids = selectedThreadIds.toList()
         viewModelScope.launch {
             repo.markThreadsRead(ids)
+            userMessage = "Marked ${ids.size} threads as read"
             clearSelection()
         }
     }
@@ -218,8 +201,13 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         val ids = selectedThreadIds.toList()
         viewModelScope.launch {
             repo.markThreadsUnread(ids)
+            userMessage = "Marked ${ids.size} threads as unread"
             clearSelection()
         }
+    }
+
+    fun clearUserMessage() {
+        userMessage = null
     }
 
     fun openThread(threadId: Long, address: String) {

@@ -234,7 +234,9 @@ private fun BeaconNav(
                     onMarkSelectedRead = { vm.markSelectedRead() },
                     onMarkSelectedUnread = { vm.markSelectedUnread() },
                     onPinSelected = { vm.pinSelected() },
-                    onMarkAsUnread = { vm.markAsUnread(it) }
+                    onMarkAsUnread = { vm.markAsUnread(it) },
+                    userMessage = vm.userMessage,
+                    onClearUserMessage = { vm.clearUserMessage() }
                 )
             }
             composable(

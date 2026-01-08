@@ -472,18 +472,19 @@ class SmsRepository(private val context: Context) {
             put(Telephony.Sms.SEEN, 1)
         }
         threadIds.chunked(900).forEach { chunk ->
-            val ids = chunk.joinToString(",")
+            val placeholders = chunk.joinToString(",") { "?" }
+            val args = chunk.map { it.toString() }.toTypedArray()
             context.contentResolver.update(
                 Telephony.Sms.CONTENT_URI,
                 values,
-                "${Telephony.Sms.THREAD_ID} IN ($ids)",
-                null
+                "${Telephony.Sms.THREAD_ID} IN ($placeholders)",
+                args
             )
             context.contentResolver.update(
                 Telephony.Threads.CONTENT_URI,
                 values,
-                "${Telephony.Threads._ID} IN ($ids)",
-                null
+                "${Telephony.Threads._ID} IN ($placeholders)",
+                args
             )
         }
         observerFlow.tryEmit(Unit)
@@ -496,18 +497,19 @@ class SmsRepository(private val context: Context) {
             put(Telephony.Sms.SEEN, 0)
         }
         threadIds.chunked(900).forEach { chunk ->
-            val ids = chunk.joinToString(",")
+            val placeholders = chunk.joinToString(",") { "?" }
+            val args = chunk.map { it.toString() }.toTypedArray()
             context.contentResolver.update(
                 Telephony.Sms.CONTENT_URI,
                 values,
-                "${Telephony.Sms.THREAD_ID} IN ($ids)",
-                null
+                "${Telephony.Sms.THREAD_ID} IN ($placeholders)",
+                args
             )
             context.contentResolver.update(
                 Telephony.Threads.CONTENT_URI,
                 values,
-                "${Telephony.Threads._ID} IN ($ids)",
-                null
+                "${Telephony.Threads._ID} IN ($placeholders)",
+                args
             )
         }
         observerFlow.tryEmit(Unit)
@@ -526,11 +528,12 @@ class SmsRepository(private val context: Context) {
     fun deleteThreads(threadIds: List<Long>) {
         if (!hasWritePerms() || threadIds.isEmpty()) return
         threadIds.chunked(900).forEach { chunk ->
-            val ids = chunk.joinToString(",")
+            val placeholders = chunk.joinToString(",") { "?" }
+            val args = chunk.map { it.toString() }.toTypedArray()
             context.contentResolver.delete(
                 Telephony.Sms.CONTENT_URI,
-                "${Telephony.Sms.THREAD_ID} IN ($ids)",
-                null
+                "${Telephony.Sms.THREAD_ID} IN ($placeholders)",
+                args
             )
         }
         observerFlow.tryEmit(Unit)
