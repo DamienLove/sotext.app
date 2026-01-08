@@ -40,6 +40,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PulseLink">
 
+        <!-- Remove AppLovin MAX debugger activities to avoid crashes in production -->
+        <activity android:name="com.applovin.mediation.MaxDebuggerActivity" tools:node="remove" />
+        <activity android:name="com.applovin.mediation.MaxDebuggerAdUnitDetailActivity" tools:node="remove" />
+        <activity android:name="com.applovin.mediation.MaxDebuggerAdUnitWaterfallsListActivity" tools:node="remove" />
+
         <activity
         android:name=".ui.MainActivity"
         android:exported="true"

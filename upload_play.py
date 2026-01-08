@@ -42,5 +42,5 @@ def upload_and_release(package, aab_path, version_code, name):
     print(f"  committed edit {edit_id}")
 
 base = pathlib.Path('C:/Projects/pulselink/disposable_aabs')
-upload_and_release('com.free.pulselink', str(base/'androidApp-free-release-v125.aab'), 125, 'v125')
-upload_and_release('com.pulselink.pro', str(base/'androidApp-pro-release-v125.aab'), 125, 'v125')
+upload_and_release('com.free.pulselink', str(base/'androidApp-free-release-v126.aab'), 126, 'v126')
+upload_and_release('com.pulselink.pro', str(base/'androidApp-pro-release-v126.aab'), 126, 'v126')

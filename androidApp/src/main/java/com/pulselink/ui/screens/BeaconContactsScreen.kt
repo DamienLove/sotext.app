@@ -32,6 +32,8 @@ import com.pulselink.util.parseColorOr
 fun BeaconContactsScreen(
     contacts: List<Contact>,
     theme: ThemePreferences,
+    hasContactsPermission: Boolean,
+    onRequestContactsPermission: () -> Unit,
     onSelect: (Contact) -> Unit
 ) {
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
@@ -57,6 +59,37 @@ fun BeaconContactsScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
                 )
+
+                if (!hasContactsPermission) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Contacts permission needed",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
+                            )
+                            Text(
+                                text = "Allow Contacts to show your phone and Google contacts here.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
+                            )
+                            androidx.compose.material3.Button(onClick = onRequestContactsPermission) {
+                                Text("Allow contacts access")
+                            }
+                        }
+                    }
+                }
+
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(contacts.sortedBy { it.displayName.lowercase() }) { contact ->
                     Card(
@@ -104,7 +137,11 @@ fun BeaconContactsScreen(
                 if (contacts.isEmpty()) {
                     item {
                         Text(
-                            text = "No contacts found. Check Contacts permission or sync your phone/Google contacts.",
+                            text = if (hasContactsPermission) {
+                                "No contacts found. Add contacts on your phone or sync Google contacts."
+                            } else {
+                                "Contacts are hidden until you allow access."
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
                         )

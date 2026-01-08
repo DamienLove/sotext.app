@@ -300,6 +300,13 @@ class BeaconInboxActivity : ComponentActivity() {
                     context,
                     Manifest.permission.READ_CONTACTS
                 ) == PackageManager.PERMISSION_GRANTED
+                val contactsPermissionLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission()
+                ) { granted ->
+                    if (granted) {
+                        deviceContactsViewModel.refresh()
+                    }
+                }
 
                 val mergedContacts = remember(state.contacts, deviceContacts, hasContactsPermission) {
                     val normalized = mutableMapOf<String, com.pulselink.domain.model.Contact>()
@@ -353,8 +360,11 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 BeaconContactsScreen(
                                                     contacts = mergedContacts,
                                                     theme = state.settings.themePreferences,
+                                                    hasContactsPermission = hasContactsPermission,
+                                                    onRequestContactsPermission = {
+                                                        contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                                                    },
                                                     onSelect = { contact ->
-                                                        // Navigate to thread with this contact's phone number
                                                         if (contact.phoneNumber.isNotBlank()) {
                                                             navController.navigate("sms/thread/0/${Uri.encode(contact.phoneNumber)}")
                                                         }
