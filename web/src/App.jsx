@@ -258,6 +258,7 @@ const buildAlertSnippet = (body = '') => {
 };
 
 // Bolt: Optimized MapAlertItem to prevent re-renders of the alert list
+// Note: onFocus and onClear are assumed to be stable references (useCallback in parent)
 const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
   const [isClearing, setIsClearing] = useState(false);
 
@@ -266,9 +267,11 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
     setIsClearing(true);
     try {
       await onClear(alert.id);
+      // Successful clear will trigger list update and this component will likely unmount
+      // or re-render. If it stays, we keep clearing state true to prevent double clicks.
     } catch (e) {
       console.error(e);
-    } finally {
+      // Reset state on error so user can retry
       setIsClearing(false);
     }
   }, [alert.id, onClear]);
@@ -304,6 +307,7 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
           onClick={handleClear}
           disabled={isClearing}
           aria-label={`Clear alert from ${alert.address}`}
+          aria-busy={isClearing}
         >
           {isClearing ? (
             <>
@@ -317,7 +321,6 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
   );
 }, (prev, next) => {
   return prev.isActive === next.isActive &&
-    prev.onClear === next.onClear &&
     prev.alert.id === next.alert.id &&
     prev.alert.address === next.alert.address &&
     prev.alert.severity === next.alert.severity &&
@@ -1912,7 +1915,10 @@ function App() {
       );
     } catch (error) {
       console.error('Failed to clear alert', error);
-      setAlertStatus(error?.message ?? 'Unable to clear alert.');
+      const message = error?.message ?? 'Unable to clear alert.';
+      setAlertStatus(message);
+      // Re-throw so child component can handle state
+      throw new Error(message);
     }
   }, [user]);
 
