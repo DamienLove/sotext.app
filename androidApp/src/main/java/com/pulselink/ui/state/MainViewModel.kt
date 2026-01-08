@@ -124,9 +124,15 @@ class MainViewModel @Inject constructor(
             settingsRepository.settings.collect { settings ->
                 val user = firebaseAuthManager.currentUser()
                 if (user != null && !user.isAnonymous) {
+                    val subscriptionStatus = when {
+                        settings.premiumUnlocked || BuildConfig.PREMIUM_FEATURES -> "premium"
+                        settings.proUnlocked -> "pro"
+                        else -> "free"
+                    }
                     val payload = mapOf(
                         "premiumUnlocked" to settings.premiumUnlocked,
-                        "proUnlocked" to settings.proUnlocked
+                        "proUnlocked" to settings.proUnlocked,
+                        "subscriptionStatus" to subscriptionStatus
                     )
                     pushSettingsToCloud(user, payload)
                     if (settings.remoteWebAccessEnabled && (!lastRemoteWebEnabled || settings.premiumUnlocked != lastPremium)) {
