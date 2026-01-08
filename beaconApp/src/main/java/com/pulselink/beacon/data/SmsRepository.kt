@@ -13,26 +13,22 @@ import android.util.LruCache
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.regex.Pattern
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.jvm.Volatile
 
 class SmsRepository(private val context: Context) {
 
-    private val observersRegistered = AtomicBoolean(false)
+    @Volatile private var observersRegistered = false
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val otpRegex = Regex("\\b\\d{4,8}\\b")
 
     private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
     private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
-
-    // Structured coroutine scope with SupervisorJob for proper lifecycle management
-    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     companion object {
         private const val ADDRESS_CACHE_SIZE = 1000 // Increased cache
@@ -85,13 +81,9 @@ class SmsRepository(private val context: Context) {
 
     init {
         ensureObserversRegistered()
-        repositoryScope.launch {
+        CoroutineScope(Dispatchers.IO).launch {
             purgeExpiredOneTimeCodes()
         }
-    }
-
-    fun cleanup() {
-        repositoryScope.coroutineContext[SupervisorJob]?.cancel()
     }
 
     fun changes(): SharedFlow<Unit> = observerFlow.asSharedFlow()
@@ -213,8 +205,6 @@ class SmsRepository(private val context: Context) {
         val recipientIdToNumber = mutableMapOf<Long, String>()
         if (neededRecipients.isNotEmpty()) {
             // Increased chunk size for better speed
-            // Note: Using undocumented URI content://mms-sms/canonical-addresses
-            // This may not work on all Android versions/OEMs. Wrapped in try-catch for safety.
             neededRecipients.chunked(100).forEach { chunk ->
                 val q = chunk.joinToString(",")
                 val c = runCatching {
@@ -228,9 +218,7 @@ class SmsRepository(private val context: Context) {
                 }.getOrNull()
                 c?.use {
                     while (it.moveToNext()) {
-                        val id = it.getLong(0)
-                        val address = it.getString(1) ?: continue
-                        recipientIdToNumber[id] = address
+                        recipientIdToNumber[it.getLong(0)] = it.getString(1)
                     }
                 }
             }
@@ -241,13 +229,8 @@ class SmsRepository(private val context: Context) {
         val numbersToLookup = recipientIdToNumber.values.toSet().filter { contactCache[it] == null }
 
         if (numbersToLookup.isNotEmpty()) {
-            // Check READ_CONTACTS permission before querying contacts
-            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CONTACTS)
-                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                // No permission, skip contact lookup
-            } else {
-                // Chunk size 100 is safe (SQLite limit 900 params)
-                numbersToLookup.chunked(100).forEach { batch ->
+            // Chunk size 100 is safe (SQLite limit 900 params)
+             numbersToLookup.chunked(100).forEach { batch ->
                  val cursor = runCatching {
                      context.contentResolver.query(
                          ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -261,7 +244,6 @@ class SmsRepository(private val context: Context) {
                  cursor?.use { c ->
                      val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
                      val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
-                     if (numIdx < 0 || nameIdx < 0) return@use
                      while (c.moveToNext()) {
                          val num = c.getString(numIdx) ?: continue
                          val name = c.getString(nameIdx) ?: continue
@@ -274,8 +256,7 @@ class SmsRepository(private val context: Context) {
                          }
                      }
                  }
-                }
-            }
+             }
         }
 
         // Assemble results
@@ -722,9 +703,7 @@ class SmsRepository(private val context: Context) {
     private fun hasWritePerms(): Boolean = isDefaultSmsApp(context)
 
     private fun ensureObserversRegistered() {
-        // Use AtomicBoolean.compareAndSet for thread-safe registration
-        if (!hasReadPerms() || !observersRegistered.compareAndSet(false, true)) return
-
+        if (observersRegistered || !hasReadPerms()) return
         val handler = Handler(Looper.getMainLooper())
         val observer = object : ContentObserver(handler) {
             override fun onChange(selfChange: Boolean) {
@@ -744,11 +723,7 @@ class SmsRepository(private val context: Context) {
             )
             true
         }.getOrDefault(false)
-
-        // If registration failed, reset the flag
-        if (!registered) {
-            observersRegistered.set(false)
-        }
+        observersRegistered = registered
     }
 
     private suspend fun listThreadsFromSms(limit: Int): List<SmsThreadItem> {

@@ -396,7 +396,31 @@ fun InboxScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         itemsIndexed(filtered, key = { _, item -> item.threadId }) { index, item ->
-                            // Only create dismiss state when not in selection mode to avoid overhead
+                            if (index == 3) {
+                                NativeAdCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                )
+                            }
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { value ->
+                                    when (value) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            onToggleArchive(item.threadId)
+                                            val msg = if (item.isArchived) "Unarchived" else "Archived"
+                                            scope.launch { host.showSnackbar(msg) }
+                                        }
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            onTogglePin(item.threadId)
+                                            val msg = if (item.isPinned) "Unpinned" else "Pinned"
+                                            scope.launch { host.showSnackbar(msg) }
+                                        }
+                                        else -> {}
+                                    }
+                                    false
+                                }
+                            )
                             if (selectionMode) {
                                 ThreadRow(
                                     thread = item,
@@ -410,25 +434,6 @@ fun InboxScreen(
                                     onMarkAsUnread = { onMarkAsUnread(item.threadId) }
                                 )
                             } else {
-                                // Create dismiss state only for non-selection mode
-                                val dismissState = rememberSwipeToDismissBoxState(
-                                    confirmValueChange = { value ->
-                                        when (value) {
-                                            SwipeToDismissBoxValue.EndToStart -> {
-                                                onToggleArchive(item.threadId)
-                                                val msg = if (item.isArchived) "Unarchived" else "Archived"
-                                                scope.launch { host.showSnackbar(msg) }
-                                            }
-                                            SwipeToDismissBoxValue.StartToEnd -> {
-                                                onTogglePin(item.threadId)
-                                                val msg = if (item.isPinned) "Unpinned" else "Pinned"
-                                                scope.launch { host.showSnackbar(msg) }
-                                            }
-                                            else -> {}
-                                        }
-                                        false
-                                    }
-                                )
                                 SwipeableThreadRow(
                                     thread = item,
                                     state = dismissState,
@@ -440,16 +445,6 @@ fun InboxScreen(
                                     onMarkAsUnread = { onMarkAsUnread(item.threadId) },
                                     onLongClick = { onToggleSelection(item.threadId) },
                                     modifier = Modifier.animateItemPlacement()
-                                )
-                            }
-                        }
-                        // Ad displayed as separate item to avoid breaking key mapping
-                        if (filtered.size > 3) {
-                            item(key = "native_ad_inbox") {
-                                NativeAdCard(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
                                 )
                             }
                         }

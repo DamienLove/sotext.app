@@ -28,29 +28,15 @@ object ThreadDateUtils {
         // Algorithm: Iterate through messages. Track current day.
         // When day changes (from Today to Yesterday), insert Header for the *previous* group (Today).
 
-        // Pre-allocate capacity: messages + potential date headers (estimate ~10% of messages)
-        val estimatedCapacity = messages.size + (messages.size / 10).coerceAtLeast(1)
-        val uiItems = ArrayList<ThreadUiItem>(estimatedCapacity)
+        val uiItems = mutableListOf<ThreadUiItem>()
         var currentDay: LocalDate? = null
 
         // Iterate Newest -> Oldest
         for (i in messages.indices) {
             val msg = messages[i]
-
-            // Validate timestamp (reject negative or far future timestamps)
-            if (msg.timestamp < 0 || msg.timestamp > System.currentTimeMillis() + 365L * 24 * 60 * 60 * 1000) {
-                // Skip invalid timestamp, or use a default
-                continue
-            }
-
-            val msgDate = runCatching {
-                Instant.ofEpochMilli(msg.timestamp)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-            }.getOrElse {
-                // If date parsing fails, skip this message
-                continue
-            }
+            val msgDate = Instant.ofEpochMilli(msg.timestamp)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
 
             // If it's the first item, set current day
             if (currentDay == null) {
