@@ -120,3 +120,4 @@ Outstanding (carry-over for next session)
 - 2026-01-08: Merged PRs #461 #465 #466 #467 #462 into Suite-Beta; resolved conflicts in web/src/App.jsx (loading state + map alert clearing). Remaining open PRs are drafts #455 and #459.
 - 2026-01-08: Ran ./gradlew lintFreeDebug testFreeDebugUnitTest after merges — build successful.
 - 2026-01-08: Added UnifiedHomeFilterTest (preview filter logic/unit) and ran ./gradlew testFreeDebugUnitTest --tests com.pulselink.ui.screens.UnifiedHomeFilterTest (pass).
+- 2026-01-08: Bumped versionCode/Name to 122; built free/pro release AABs; uploaded both to Play (internal/beta/production) via service account. Web build succeeded (npm run build); Firebase hosting deploy blocked: firebase auth expired (run firebase login --reauth or provide FIREBASE_TOKEN).
