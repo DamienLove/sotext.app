@@ -2353,7 +2353,12 @@ function App() {
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
     const lineFlattened = Object.values(lineThreads).flat();
-    const all = [...legacyThreads, ...lineFlattened];
+
+    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
+    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
+    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+
+    const all = [...uniqueLegacy, ...lineFlattened];
     return all.sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
   }, [legacyThreads, lineThreads, lineInboxMode]);
 
@@ -2370,7 +2375,7 @@ function App() {
   const threadListElements = useMemo(() => (
     activeLineThreads.map(thread => (
       <ThreadItem
-        key={thread.id}
+        key={`${thread.lineId || 'legacy'}_${thread.id}`}
         thread={thread}
         isActive={selectedThread?.id === thread.id}
         onSelect={handleThreadSelect}
