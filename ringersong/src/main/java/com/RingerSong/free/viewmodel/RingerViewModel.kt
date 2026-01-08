@@ -363,10 +363,9 @@ class RingerViewModel @Inject constructor(
                 val videoId = track.uri!!.substringAfterLast(":")
                 val downloadResult = youtubeMusicRepo.downloadTrack(videoId)
 
-                val localFilePath = when (downloadResult) {
+                when (downloadResult) {
                     is DownloadResult.Success -> {
                         clearDownloadError()
-                        downloadResult.filePath
                     }
                     is DownloadResult.Failure -> {
                         val message = mapDownloadError(downloadResult.error)
@@ -375,18 +374,18 @@ class RingerViewModel @Inject constructor(
                     }
                 }
 
-                val localFileUri = "file://$localFilePath"
+                // Keep the YouTube URI format so RingerPlaybackService knows it's a YouTube song
+                // The service will look up the downloaded file path when needed
                 val songEntry = SongEntry(
                     id = track.id ?: java.util.UUID.randomUUID().toString(),
                     title = "${track.name ?: "Unknown Track"} - ${track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"}",
-                    uri = localFileUri,
-                    source = SongSource.LOCAL,
+                    uri = track.uri!!,  // Keep "youtube:video:VIDEO_ID" format
+                    source = SongSource.YOUTUBE_MUSIC,  // Mark as YouTube Music, not LOCAL
                     durationMs = track.duration_ms,
                     addedAt = System.currentTimeMillis()
                 )
 
-                 // Update local state (no sync for local files implemented in this snippet for simplicity, or add to FS with local uri which is tricky across devices)
-                 // But for consistency with original code, let's just add to local store.
+                // Update local state
                 withContext(Dispatchers.IO) {
                     store.update { current ->
                         val updatedSongs = current.songs + songEntry
@@ -394,7 +393,7 @@ class RingerViewModel @Inject constructor(
                         current.copy(songs = updatedSongs, songOrder = updatedOrder)
                     }
                 }
-                onResult("Added ${track.name} (Offline)")
+                onResult("Added ${track.name} (Downloaded from YouTube Music)")
                 return@launch
             }
 

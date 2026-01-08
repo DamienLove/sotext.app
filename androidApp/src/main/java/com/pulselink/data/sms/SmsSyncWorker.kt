@@ -37,7 +37,11 @@ class SmsSyncWorker @AssistedInject constructor(
         val isPro = settings.proUnlocked
         val hasReadSms = hasSmsPermission()
 
-        val user = auth.currentUser ?: return Result.failure()
+        val user = auth.currentUser ?: run {
+            // No signed-in user; log and stop gracefully
+            writeDiagnostics("unknown", settingsRepository.ensureDeviceId(), "unknown", 0, 0, hasReadSms, "no user")
+            return Result.success()
+        }
 
         return try {
             val userRef = firestore.collection("users").document(user.uid)
@@ -49,7 +53,13 @@ class SmsSyncWorker @AssistedInject constructor(
                 isPro -> "pro"
                 else -> "free"
             }
-            userRef.set(mapOf("subscriptionStatus" to status), SetOptions.merge()).await()
+            userRef.set(
+                mapOf(
+                    "subscriptionStatus" to status,
+                    "remoteWebAccessEnabled" to settings.remoteWebAccessEnabled
+                ),
+                SetOptions.merge()
+            ).await()
 
             // If the user hasn't enabled remote web access, there's nothing to sync.
             if (!settings.remoteWebAccessEnabled) {
@@ -133,6 +143,9 @@ class SmsSyncWorker @AssistedInject constructor(
                     lineBatch.commit().await()
                 }
             }
+
+            // Mark last sync for the line
+            lineRef.set(mapOf("lastSyncAt" to FieldValue.serverTimestamp()), SetOptions.merge()).await()
 
             writeDiagnostics(
                 user.uid,

@@ -9,6 +9,7 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("kotlin-kapt")
     id("com.google.firebase.crashlytics")
+    id("com.github.triplet.play") version "3.10.1"
 }
 
 val keystorePropsFile = rootProject.file("ringersong-keystore/keystore.properties")
@@ -27,8 +28,8 @@ android {
         applicationId = "com.RingerSong.free"
         minSdk = 35
         targetSdk = 35
-        versionCode = 24
-        versionName = "24"
+        versionCode = 25
+        versionName = "25"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -159,4 +160,10 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+play {
+    serviceAccountCredentials.set(rootProject.file("secrets/service-account-key.json"))
+    track.set("internal")
+    defaultToAppBundles.set(true)
 }

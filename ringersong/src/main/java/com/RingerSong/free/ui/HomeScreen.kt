@@ -215,6 +215,7 @@ fun HomeScreen(
                             permissionLauncher.launch(requiredPermissions())
                         }
                     )
+                    WriteSettingsPermissionCard(context = context)
                     ShuffleCard(
                         shuffle = state.settings.shuffle,
                         onToggle = onToggleShuffle
@@ -525,6 +526,45 @@ private fun PermissionsCard(context: Context, onRequest: () -> Unit) {
             )
             OutlinedButton(onClick = onRequest) {
                 Text("Grant permissions")
+            }
+        }
+    }
+}
+
+@Composable
+private fun WriteSettingsPermissionCard(context: Context) {
+    val hasPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        android.provider.Settings.System.canWrite(context)
+    } else {
+        true
+    }
+
+    if (hasPermission) return
+
+    SectionCard(
+        accent = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "⚠️ System Settings Permission Required",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "RingerSong needs permission to modify system settings to change your ringtone dynamically. This is required for progressive ringtone playback.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedButton(
+                onClick = {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS)
+                        intent.data = android.net.Uri.parse("package:" + context.packageName)
+                        context.startActivity(intent)
+                    }
+                }
+            ) {
+                Text("Open Settings")
             }
         }
     }

@@ -201,51 +201,54 @@ class RingerPlaybackService : Service() {
                 return@launch
             }
 
-            // Determine which song to play
-            val song: SongEntry = if (state.settings.shuffle) {
-                state.songs.random()
-            } else {
-                // Progression logic: Use the saved global playlist index
-                val currentIndex = state.playback.globalPlaylistIndex
-                // Ensure index is valid
-                val validIndex = if (currentIndex in state.songs.indices) currentIndex else 0
-                val nextSong = state.songs[validIndex]
+            // Use ProgressionEngine to get the correct segment to play
+            val (updatedState, segmentPlay) = com.RingerSong.free.data.ProgressionEngine.advance(
+                state,
+                contactId = null, // Could look up by phoneNumber if needed
+                callerKey = phoneNumber
+            )
 
-                // Advance the index for next time (loop back to 0 if at end)
-                val nextIndex = (validIndex + 1) % state.songs.size
-                appStateStore.update { it.copy(playback = it.playback.copy(globalPlaylistIndex = nextIndex)) }
+            // Save the updated state (includes incremented segment index)
+            appStateStore.update { updatedState }
 
-                nextSong
+            if (segmentPlay == null) {
+                Log.w(TAG, "No segment to play")
+                stopSelf()
+                return@launch
             }
 
-            Log.d(TAG, "Selected song: ${song.title} (${song.source})")
+            val song = segmentPlay.song
+            Log.d(TAG, "Playing segment: ${song.title} from ${segmentPlay.startMs}ms for ${segmentPlay.durationMs}ms")
 
             when (song.source) {
-                SongSource.SPOTIFY -> playSpotifySong(song)
-                SongSource.LOCAL -> playLocalSong(song)
-                SongSource.YOUTUBE_MUSIC -> {
-                    Log.w(TAG, "YouTube Music playback not supported directly in service")
-                    // Could try fallback to local or Spotify if available?
-                }
+                SongSource.SPOTIFY -> playSpotifySong(song, segmentPlay.startMs, segmentPlay.durationMs)
+                SongSource.LOCAL -> playLocalSong(song, segmentPlay.startMs, segmentPlay.durationMs)
+                SongSource.YOUTUBE_MUSIC -> playYouTubeSong(song, segmentPlay.startMs, segmentPlay.durationMs)
             }
         }
     }
 
-    private fun playSpotifySong(song: SongEntry) {
+    private fun playSpotifySong(song: SongEntry, startMs: Long, durationMs: Long) {
         // Spotify App Remote plays on the Spotify app (STREAM_MUSIC), so it works fine while Ring is 0.
+        // Note: Spotify SDK doesn't support seeking to specific positions easily via App Remote
+        // For now, we'll just play from the start. A full implementation would need Web API.
         scope.launch {
-            // connect(false) is called inside playUri if needed
             val success = spotifyPlayer.playUri(song.uri)
             if (!success) {
                 Log.e(TAG, "Spotify playback failed")
                 // Fallback logic could go here
             } else {
                 isPlaying = true
+                // Schedule stop after durationMs
+                launch {
+                    kotlinx.coroutines.delay(durationMs)
+                    stopPlayback()
+                }
             }
         }
     }
 
-    private fun playLocalSong(song: SongEntry) {
+    private fun playLocalSong(song: SongEntry, startMs: Long, durationMs: Long) {
         if (song.uri.isEmpty()) {
             Log.e(TAG, "Local song URI is empty")
             return
@@ -262,16 +265,52 @@ class RingerPlaybackService : Service() {
                 )
                 prepareAsync()
                 setOnPreparedListener { mp ->
-                    // Logic to start from a specific point (0 for now as Model doesn't support offsets yet)
-                    mp.seekTo(0)
+                    // Seek to the start of this segment
+                    mp.seekTo(startMs.toInt())
                     mp.start()
-                    mp.isLooping = true // Ringtones should loop
+                    // Don't loop - we want to play only this segment
+                    mp.isLooping = false
                     this@RingerPlaybackService.isPlaying = true
+
+                    // Schedule stop after durationMs
+                    scope.launch {
+                        kotlinx.coroutines.delay(durationMs)
+                        Log.d(TAG, "Segment playback complete after ${durationMs}ms")
+                        stopPlayback()
+                        restoreSystemRinger()
+                        stopForeground(true)
+                        stopSelf()
+                    }
+                }
+                setOnCompletionListener {
+                    Log.d(TAG, "MediaPlayer completed playback")
+                    stopPlayback()
+                    restoreSystemRinger()
+                    stopForeground(true)
+                    stopSelf()
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error playing local song", e)
         }
+    }
+
+    private fun playYouTubeSong(song: SongEntry, startMs: Long, durationMs: Long) {
+        // YouTube Music songs are downloaded as local files
+        // Extract the video ID from the URI (format: "youtube:video:VIDEO_ID")
+        val videoId = song.uri.removePrefix("youtube:video:")
+        val youtubeMusicRepo = com.RingerSong.free.data.YouTubeMusicRepository(this)
+        val localPath = youtubeMusicRepo.getLocalFilePath(videoId)
+
+        if (localPath == null) {
+            Log.e(TAG, "YouTube track not downloaded: $videoId")
+            stopSelf()
+            return
+        }
+
+        // Play the downloaded file using the same logic as local songs
+        val localSong = song.copy(uri = localPath)
+        playLocalSong(localSong, startMs, durationMs)
     }
 
     private fun stopPlayback() {
