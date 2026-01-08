@@ -221,8 +221,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 123
-        versionName = "123"
+        versionCode = 124
+        versionName = "124"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "google_maps_key", mapsApiKey)
