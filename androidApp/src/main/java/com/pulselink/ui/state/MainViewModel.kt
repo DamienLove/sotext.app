@@ -89,6 +89,23 @@ class MainViewModel @Inject constructor(
         workManager.enqueueUniqueWork("SmsSync-$reason", ExistingWorkPolicy.REPLACE, request)
     }
 
+    fun forceWebSync() {
+        viewModelScope.launch {
+            val settings = settingsRepository.settings.first()
+            if (!settings.remoteWebAccessEnabled) return@launch
+            val user = firebaseAuthManager.currentUser()
+            if (user != null && !user.isAnonymous) {
+                val subscriptionStatus = when {
+                    settings.premiumUnlocked || BuildConfig.PREMIUM_FEATURES -> "premium"
+                    settings.proUnlocked -> "pro"
+                    else -> "free"
+                }
+                pushSettingsToCloud(user, mapOf("subscriptionStatus" to subscriptionStatus))
+            }
+            triggerWebSync("Manual")
+        }
+    }
+
     private val _deleteAccountState = MutableStateFlow<DeleteAccountState>(DeleteAccountState.Idle)
     val deleteAccountState: StateFlow<DeleteAccountState> = _deleteAccountState
 

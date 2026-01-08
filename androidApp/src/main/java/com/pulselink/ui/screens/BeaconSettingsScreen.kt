@@ -69,6 +69,7 @@ fun BeaconSettingsScreen(
     remoteWebAccessEnabled: Boolean,
     isPremiumActive: Boolean,
     onToggleRemoteWebAccess: (Boolean) -> Unit,
+    onForceWebSync: () -> Unit,
     otpCleanupEnabled: Boolean,
     otpCleanupDays: Int,
     onToggleOtpCleanup: (Boolean) -> Unit,
@@ -254,6 +255,25 @@ fun BeaconSettingsScreen(
                     },
                     leadingIcon = Icons.Filled.Language
                 )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, start = 8.dp, end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(
+                        onClick = onForceWebSync,
+                        enabled = remoteWebAccessEnabled && isPremiumActive
+                    ) {
+                        Text("Sync now")
+                    }
+                    Text(
+                        text = "Push latest threads/messages to web instantly.",
+                        modifier = Modifier.padding(start = 8.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
             }
 
             BeaconCollapsibleSection(title = "AI features") {

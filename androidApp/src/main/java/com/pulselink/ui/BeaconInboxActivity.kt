@@ -889,6 +889,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         remoteWebAccessEnabled = state.settings.remoteWebAccessEnabled,
                                         isPremiumActive = premiumActive,
                                         onToggleRemoteWebAccess = { enabled -> viewModel.setRemoteWebAccess(enabled) },
+                                        onForceWebSync = { viewModel.forceWebSync() },
                                         otpCleanupEnabled = state.settings.otpCleanupEnabled,
                                         otpCleanupDays = state.settings.otpCleanupDays,
                                         onToggleOtpCleanup = { enabled -> viewModel.setOtpCleanupEnabled(enabled) },
