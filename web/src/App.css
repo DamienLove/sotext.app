@@ -889,15 +889,33 @@
 .settings-toggle {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
   cursor: pointer;
   user-select: none;
+  padding: 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 16px;
+  transition: all 0.2s;
+}
+
+.settings-toggle:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.1);
 }
 
 .settings-toggle input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.settings-label-text {
+  flex: 1;
+  font-weight: 500;
+  font-size: 1.05em;
 }
 
 /* Theme Gallery Specifics */

@@ -4,8 +4,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// Future Deep v2 Design System Tokens
-// Aligned with PulseLinkTheme.kt and Web v2 Redesign
+// Future Deep v3 Design System Tokens
+// Aligned with PulseLinkTheme.kt and Web v3 Redesign
 
 // Colors
 val DeepBackground = Color(0xFF05070F)
@@ -26,11 +26,11 @@ object Spacing {
 }
 
 object Layout {
-    val cardCornerRadius = 24.dp // Increased for smoother look
-    val buttonCornerRadius = 16.dp
-    val inputCornerRadius = 16.dp
-    val bottomSheetCornerRadius = 32.dp
-    val dialogCornerRadius = 24.dp
+    val cardCornerRadius = 26.dp // Increased for v3 smoother look
+    val buttonCornerRadius = 18.dp
+    val inputCornerRadius = 18.dp
+    val bottomSheetCornerRadius = 36.dp
+    val dialogCornerRadius = 28.dp
 }
 
 object Gradients {
@@ -41,15 +41,19 @@ object Gradients {
     
     // Vibrant accent gradient for buttons/FABs
     val BrandGradient = Brush.linearGradient(
-        colors = listOf(DeepAccent, DeepAccentStrong)
+        colors = listOf(
+            DeepAccent,
+            DeepAccentStrong,
+            Color(0xFF38BDF8) // Sky 400 for extra pop
+        )
     )
 
     // Futuristic Holographic Gradient for special cards
     val Holographic = Brush.linearGradient(
         colors = listOf(
-            DeepAccent.copy(alpha = 0.8f),
-            DeepTertiary.copy(alpha = 0.8f),
-            DeepAccentStrong.copy(alpha = 0.8f)
+            DeepAccent.copy(alpha = 0.9f),
+            Color(0xFFD8B4FE).copy(alpha = 0.8f), // Soft Purple
+            DeepAccentStrong.copy(alpha = 0.9f)
         )
     )
 
@@ -57,7 +61,7 @@ object Gradients {
     val NeonGlow = Brush.horizontalGradient(
         colors = listOf(
             DeepAccent.copy(alpha = 0.0f),
-            DeepAccent.copy(alpha = 0.5f),
+            DeepAccent.copy(alpha = 0.6f),
             DeepAccent.copy(alpha = 0.0f)
         )
     )
@@ -69,8 +73,16 @@ object Gradients {
     // Glassmorphic border gradient simulation
     val GlassBorder = Brush.verticalGradient(
         colors = listOf(
-            Color.White.copy(alpha = 0.15f),
+            Color.White.copy(alpha = 0.25f), // Brighter top for highlight
             Color.White.copy(alpha = 0.05f)
+        )
+    )
+
+    val SurfaceShine = Brush.linearGradient(
+        colors = listOf(
+            Color.White.copy(alpha = 0.0f),
+            Color.White.copy(alpha = 0.03f),
+            Color.White.copy(alpha = 0.0f)
         )
     )
 }

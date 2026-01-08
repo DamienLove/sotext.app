@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap");
 
 :root {
-  /* Core Palette: "Future Deep v2" */
+  /* Core Palette: "Future Deep v3" */
   --bg: #05070f;
   --bg-accent: #0a0e17;
   --surface: #0e121e;
@@ -31,6 +31,7 @@
   /* Glassmorphism */
   --glass-bg: rgba(5, 7, 15, 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.12); /* New Highlight Token */
   --glass-blur: 24px;
 
   /* Shadows */
@@ -67,20 +68,22 @@ html, body {
 }
 
 /*
-   "Alive" Background:
+   "Alive" Background v3:
    - Deep radial gradient
    - Subtle grid
    - Noise overlay (simulated via grain)
+   - Slow "breathing" animation
 */
 body {
   background-color: var(--bg);
   background-image:
       radial-gradient(circle at 50% 0%, var(--bg-radial-start) 0%, transparent 80%),
-      radial-gradient(circle at 85% 90%, rgba(188, 19, 254, 0.03) 0%, transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(188, 19, 254, 0.04) 0%, transparent 45%),
       linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
       linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 60px 60px, 60px 60px;
   background-attachment: fixed;
+  animation: breathe 24s ease-in-out infinite alternate;
 }
 
 /* Subtle Vignette Overlay */
@@ -88,9 +91,21 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.4) 100%);
+  background: radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.5) 100%);
   pointer-events: none;
   z-index: 0;
+}
+
+@keyframes breathe {
+  0% {
+    background-position: 50% 0%, 85% 90%, 0 0, 0 0;
+  }
+  50% {
+    background-position: 50% 10%, 80% 85%, 0 0, 0 0; /* Slight shift down/left */
+  }
+  100% {
+    background-position: 50% 0%, 90% 95%, 0 0, 0 0; /* Slight shift right/down */
+  }
 }
 
 a {
@@ -121,12 +136,12 @@ select {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   transition: background 0.2s;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.3); /* Cyan hint on hover */
+  background: rgba(34, 211, 238, 0.4); /* Cyan hint on hover */
 }
 
 /* Global Animation Keyframes */

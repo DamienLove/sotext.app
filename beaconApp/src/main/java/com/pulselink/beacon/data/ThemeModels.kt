@@ -77,14 +77,15 @@ data class ThemePalette(
     ).joinToString("|")
 
     companion object {
+        // Updated to "Future Deep v3" Default Palette (Dark Mode)
         fun default(): ThemePalette = ThemePalette(
-            incoming = 0xFFE8F4FF,
-            outgoing = 0xFFD7F8D6,
-            frame = 0xFF2B7BFF,
-            accent = 0xFF2B7BFF,
-            threadBackground = 0xFFF6F7FB,
-            inboxBackground = 0xFFFFFFFF,
-            bubbleRadius = 18f,
+            incoming = 0xFF161B2E, // Surface Alt
+            outgoing = 0xFF22D3EE, // Cyan Accent
+            frame = 0xFF0E121E,    // Deep Surface
+            accent = 0xFF22D3EE,
+            threadBackground = 0xFF05070F, // Deep Background
+            inboxBackground = 0xFF05070F,  // Deep Background
+            bubbleRadius = 22f, // Smoother bubbles
             font = ThemeFont.System,
             iconVariant = InboxIconVariant.Beacon
         )
