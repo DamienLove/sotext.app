@@ -2560,6 +2560,7 @@ function App() {
               className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
               onClick={() => setActivePanel('home')}
               title="Home"
+              aria-label="Home"
               aria-current={activePanel === 'home' ? 'page' : undefined}
             >
               <HomeIcon />
@@ -2569,6 +2570,7 @@ function App() {
               className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
               onClick={() => setActivePanel('pulselink')}
               title="PulseLink"
+              aria-label="PulseLink"
               aria-current={activePanel === 'pulselink' ? 'page' : undefined}
             >
               <img src={logo} alt="PulseLink" />
@@ -2578,6 +2580,7 @@ function App() {
               className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
               onClick={() => setActivePanel('beacon')}
               title="Beacon"
+              aria-label="Beacon"
               aria-current={activePanel === 'beacon' ? 'page' : undefined}
             >
               <img src={beaconLogo} alt="Beacon" />
@@ -2587,6 +2590,7 @@ function App() {
               className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
               onClick={() => setActivePanel('ringersong')}
               title="RingerSong"
+              aria-label="RingerSong"
               aria-current={activePanel === 'ringersong' ? 'page' : undefined}
             >
               <img src={ringersongLogo} alt="RingerSong" />
@@ -2596,6 +2600,7 @@ function App() {
               className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
               onClick={() => setActivePanel('map')}
               title="Map"
+              aria-label="Map"
               aria-current={activePanel === 'map' ? 'page' : undefined}
             >
               <MapIcon />
@@ -2605,6 +2610,7 @@ function App() {
               className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
               onClick={() => setActivePanel('contacts')}
               title="Contacts"
+              aria-label="Contacts"
               aria-current={activePanel === 'contacts' ? 'page' : undefined}
             >
               <ContactIcon />
@@ -2614,6 +2620,7 @@ function App() {
               className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
               onClick={() => setActivePanel('themes')}
               title="Themes"
+              aria-label="Themes"
               aria-current={activePanel === 'themes' ? 'page' : undefined}
             >
               <ThemeIcon />
@@ -2623,6 +2630,7 @@ function App() {
               className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
               onClick={() => setActivePanel('extensions')}
               title="Extensions"
+              aria-label="Extensions"
               aria-current={activePanel === 'extensions' ? 'page' : undefined}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
@@ -2633,6 +2641,7 @@ function App() {
               className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
               onClick={() => setActivePanel('settings')}
               title="Settings"
+              aria-label="Settings"
               aria-current={activePanel === 'settings' ? 'page' : undefined}
             >
               <SettingsIcon />
