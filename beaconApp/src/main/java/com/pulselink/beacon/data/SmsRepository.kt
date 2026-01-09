@@ -27,12 +27,13 @@ class SmsRepository(private val context: Context) {
     private val observerFlow = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val otpRegex = Regex("\\b\\d{4,8}\\b")
 
-    private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
-    private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
-
     companion object {
         private const val ADDRESS_CACHE_SIZE = 1000 // Increased cache
         private const val CONTACT_CACHE_SIZE = 2000 // Increased cache
+
+        // Static caches to survive ViewModel recreation
+        private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
+        private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
 
         // Classification Regex
         private val NUMERIC_REGEX = Regex("[^0-9]")
