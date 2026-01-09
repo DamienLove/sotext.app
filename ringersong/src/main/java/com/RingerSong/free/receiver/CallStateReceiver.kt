@@ -51,7 +51,7 @@ class CallStateReceiver : BroadcastReceiver() {
                             }
 
                             // Set the NEXT ringtone (for the next incoming call)
-                            ringtoneManager.setNextRingtone()
+                            ringtoneManager.setRingtoneForIncomingCall(null)
 
                             // Cleanup old segments
                             ringtoneManager.cleanupOldSegments()

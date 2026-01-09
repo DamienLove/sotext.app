@@ -359,14 +359,11 @@ class MainActivity : AppCompatActivity() {
                     beaconFlowStage = BeaconFlowStage.Idle
                     showBeaconAssist = true
                     beaconAssistState = BeaconAssistState(
-                        iconEnabled = state.settings.beaconLauncherEnabled,
+                        iconEnabled = state.settings.beaconLauncherEnabled,     
                         defaultSmsGranted = isDefaultSms,
-                        smsPermissionsGranted = missingSmsPerms.isEmpty(),
+                        smsPermissionsGranted = missingSmsPerms.isEmpty(),      
                         message = context.getString(R.string.settings_beacon_title)
                     )
-                    if (!state.settings.beaconLauncherEnabled) {
-                        viewModel.setBeaconLauncherEnabled(true)
-                    }
                     inboxShortcutFlow.tryEmit(Unit)
                 }
                 val initialInboxShortcut = intent?.getBooleanExtra("open_sms_inbox", false) == true
@@ -1281,6 +1278,11 @@ class MainActivity : AppCompatActivity() {
                             onSettingsClick = { navController.navigate("settings") { launchSingleTop = true } },
                             onFaqClick = { navController.navigate("faq") { launchSingleTop = true } },
                             onBeaconClick = launchBeaconInbox,
+                            onOpenContacts = {
+                                navController.navigate("sms/inbox?filter=contacts") {
+                                    launchSingleTop = true
+                                }
+                            },
                             showBeaconIcon = state.settings.beaconLauncherEnabled,
                             showBeaconHint = !state.settings.beaconHintDismissed,
                             onBeaconHintDismiss = { viewModel.setBeaconHintDismissed(true) },

@@ -229,23 +229,19 @@ class RingerPlaybackService : Service() {
     }
 
     private fun playSpotifySong(song: SongEntry, startMs: Long, durationMs: Long) {
-        // Spotify App Remote plays on the Spotify app (STREAM_MUSIC), so it works fine while Ring is 0.
-        // Note: Spotify SDK doesn't support seeking to specific positions easily via App Remote
-        // For now, we'll just play from the start. A full implementation would need Web API.
-        scope.launch {
-            val success = spotifyPlayer.playUri(song.uri)
-            if (!success) {
-                Log.e(TAG, "Spotify playback failed")
-                // Fallback logic could go here
-            } else {
-                isPlaying = true
-                // Schedule stop after durationMs
-                launch {
-                    kotlinx.coroutines.delay(durationMs)
-                    stopPlayback()
-                }
-            }
+        // Premium builds should rely on downloaded audio for reliability.
+        // Look for a locally downloaded copy of this Spotify track; if missing, skip playback.
+        val downloader = com.RingerSong.free.data.SpotifyDownloaderRepository(applicationContext)
+        val localPath = downloader.getLocalFilePathFromUri(song.uri)
+        if (localPath.isNullOrBlank()) {
+            Log.w(TAG, "Spotify track not downloaded locally; skipping playback for ${song.title}")
+            stopPlayback()
+            stopForeground(true)
+            stopSelf()
+            return
         }
+        val localSong = song.copy(uri = localPath, source = SongSource.LOCAL)
+        playLocalSong(localSong, startMs, durationMs)
     }
 
     private fun playLocalSong(song: SongEntry, startMs: Long, durationMs: Long) {

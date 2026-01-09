@@ -1335,6 +1335,20 @@ function App() {
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
 
+  const subscriptionStatus = userData?.subscriptionStatus;
+  const isPremiumUser = useMemo(() => {
+    return subscriptionStatus === "premium" ||
+      userData?.premiumUnlocked === true ||
+      userData?.hasPremiumHistory === true;
+  }, [subscriptionStatus, userData?.premiumUnlocked, userData?.hasPremiumHistory]);
+
+  const isProUser = useMemo(() => {
+    return isPremiumUser ||
+      subscriptionStatus === "pro" ||
+      userData?.proUnlocked === true ||
+      userData?.hasProHistory === true;
+  }, [isPremiumUser, subscriptionStatus, userData?.proUnlocked, userData?.hasProHistory]);
+
   // Toggle DevTools with Ctrl+Shift+D
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1541,8 +1555,8 @@ function App() {
     const unsubscribe = onSnapshot(userRef, (snapshot) => {
       const data = snapshot.data() || {};
       setUserData(data);
-      const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
-      const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
+      const isPremium = data.subscriptionStatus === 'premium' || data.premiumUnlocked === true || data.hasPremiumHistory;
+      const isPro = isPremium || data.subscriptionStatus === 'pro' || data.proUnlocked === true || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
       const tenureDays = data.createdAt ? (Date.now() - toMillis(data.createdAt)) / (1000 * 60 * 60 * 24) : 0;
       setProfile({
@@ -1623,6 +1637,19 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    if (!user || !isPremiumUser || !userData) return;
+    if (userData.remoteWebAccessEnabled === undefined) {
+      setDoc(doc(db, "users", user.uid), {
+        remoteWebAccessEnabled: true,
+        subscriptionStatus: userData.subscriptionStatus ?? "premium",
+        premiumUnlocked: true
+      }, { merge: true }).catch((err) => {
+        console.error("Failed to auto-enable remote web access", err);
+      });
+    }
+  }, [user, userData, isPremiumUser]);
+
+  useEffect(() => {
     if (!user) {
       setTrustedContacts([]);
       setDeviceContacts([]);
@@ -1641,7 +1668,6 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    const isPremiumUser = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
     const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
 
     if (!user || !isPremiumUser || !hasRemoteAccess) {
@@ -1658,10 +1684,9 @@ function App() {
       setDeviceContacts(items);
     });
     return () => unsubscribe();
-  }, [user, userData, remoteSettings.remoteWebAccessEnabled]);
+  }, [user, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
 
   useEffect(() => {
-    const isPremiumUser = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
     const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
 
     if (user && isPremiumUser && hasRemoteAccess) {
@@ -1719,7 +1744,7 @@ function App() {
       setLineThreads({});
       setIsLoadingThreads(false);
     }
-  }, [user, userData, remoteSettings.remoteWebAccessEnabled]);
+  }, [user, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -1742,14 +1767,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const isPremiumUser = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
     const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
 
     if (user && selectedThread && isPremiumUser && hasRemoteAccess) {
       // Listen to messages only if user has premium and remote web access enabled
       const basePath = selectedThread.lineId
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
-        : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];
+        : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
       const messagesRef = collection(db, ...basePath);
       const q = query(messagesRef, orderBy("date", "asc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -1763,7 +1787,7 @@ function App() {
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread, userData, remoteSettings.remoteWebAccessEnabled]);
+  }, [user, selectedThread, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
 
   useEffect(() => {
     if (selectedThread?.address) {
@@ -2497,7 +2521,8 @@ function App() {
     ))
   ), [activeLineThreads, selectedThread?.id, handleThreadSelect, showPreviews]);
 
-  const isPremium = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
+  const isPremium = isPremiumUser;
+  const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
 
   if (!user) {
     return (
@@ -2606,7 +2631,7 @@ function App() {
               <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
               <div>
                 <div className="brand-title">PulseLink Suite</div>
-                <div className="brand-subtitle">Premium Web Access</div>
+                <div className="brand-subtitle">{tierLabel} Web Access</div>        
               </div>
             </div>
             <div className="sidebar-actions">
