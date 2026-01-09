@@ -1275,6 +1275,31 @@ function App() {
     timeFormat: 'AUTO',
     thirdPartyExtensionsEnabled: true
   });
+  const [devExtensions, setDevExtensions] = useState(() => {
+    const saved = localStorage.getItem('pulselink.devExtensions');
+    if (saved) return JSON.parse(saved);
+    return [
+      {
+        id: 'hello-world',
+        name: 'Hello World Webhook',
+        endpoint: '',
+        description: 'Shows a toast when triggered. Great for validating the pipeline.',
+        sample: true
+      },
+      {
+        id: 'pulse-check',
+        name: 'Pulse Check Logger',
+        endpoint: 'https://postman-echo.com/post',
+        description: 'Sends a payload with your user + sample message to a test echo endpoint.',
+        sample: true
+      }
+    ];
+  });
+  const [extensionForm, setExtensionForm] = useState({ name: '', endpoint: '', description: '' });
+  const [extensionStatus, setExtensionStatus] = useState('');
+  useEffect(() => {
+    localStorage.setItem('pulselink.devExtensions', JSON.stringify(devExtensions));
+  }, [devExtensions]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -2279,6 +2304,54 @@ function App() {
       setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+  const handleAddExtension = (e) => {
+    e?.preventDefault();
+    if (!extensionForm.name.trim()) {
+      setExtensionStatus('Name is required.');
+      return;
+    }
+    const id = `${Date.now()}`;
+    setDevExtensions((prev) => [
+      ...prev,
+      {
+        id,
+        name: extensionForm.name.trim(),
+        endpoint: extensionForm.endpoint.trim(),
+        description: extensionForm.description.trim(),
+        sample: false
+      }
+    ]);
+    setExtensionForm({ name: '', endpoint: '', description: '' });
+    setExtensionStatus('Saved extension to your device.');
+  };
+
+  const handleTestExtension = async (ext) => {
+    if (!remoteSettings.thirdPartyExtensionsEnabled) {
+      setExtensionStatus('Enable third-party extensions in Settings first.');
+      return;
+    }
+    setExtensionStatus(`Testing ${ext.name}...`);
+    if (!ext.endpoint) {
+      setExtensionStatus(`${ext.name} is active locally (no endpoint needed).`);
+      return;
+    }
+    try {
+      const resp = await fetch(ext.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'ping',
+          user: user?.uid ?? 'anonymous',
+          sampleMessage: messages[0]?.body ?? 'hello from PulseLink',
+          timestamp: Date.now()
+        })
+      });
+      const text = await resp.text();
+      setExtensionStatus(`Response from ${ext.name}: ${text.slice(0, 180)}`);
+    } catch (err) {
+      setExtensionStatus(`Couldn't reach ${ext.name}: ${err.message}`);
     }
   };
 
@@ -3421,10 +3494,55 @@ function App() {
                         <p className="settings-note">Unlock the full potential of PulseLink by enabling community extensions.</p>
                         <button className="primary-btn" onClick={() => {
                             setRemoteSettings(prev => ({ ...prev, thirdPartyExtensionsEnabled: true }));
-                            handleRemoteSettingsSave();
+                        handleRemoteSettingsSave();
                         }}>Enable Beta Extensions</button>
                     </div>
                 )}
+              </div>
+              <div className="settings-card">
+                <h4>Developer sandbox</h4>
+                <p className="settings-note">Add webhook-style extensions that run against your own account. Stored locally so you can iterate safely.</p>
+                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                  <div className="settings-warning">Extensions stay dormant until you enable 3rd-party access in Settings.</div>
+                )}
+                <div className="extensions-list" style={{display: 'grid', gap: 12}}>
+                  {devExtensions.map((ext) => (
+                    <div key={ext.id} className="home-card" style={{margin: 0}}>
+                      <h4>{ext.name}</h4>
+                      <p className="settings-note">{ext.description || ext.endpoint || 'No description provided.'}</p>
+                      {ext.endpoint && <code className="mono" style={{fontSize: 12}}>{ext.endpoint}</code>}
+                      <div className="settings-row" style={{justifyContent: 'flex-start', gap: 8, marginTop: 8}}>
+                        <button className="secondary-btn" type="button" onClick={() => handleTestExtension(ext)}>Test</button>
+                        <button className="ghost-btn" type="button" onClick={() => setDevExtensions((prev) => prev.filter((d) => d.id !== ext.id))}>Remove</button>
+                      </div>
+                    </div>
+                  ))}
+                  {devExtensions.length === 0 && <p className="settings-note">No custom extensions yet.</p>}
+                </div>
+                <form className="login-form" style={{marginTop: 12}} onSubmit={handleAddExtension}>
+                  <label className="login-field">
+                    Name
+                    <input className="login-input" value={extensionForm.name} onChange={(e) => setExtensionForm((prev) => ({ ...prev, name: e.target.value }))} />
+                  </label>
+                  <label className="login-field">
+                    Webhook URL (https://…)
+                    <input className="login-input" value={extensionForm.endpoint} onChange={(e) => setExtensionForm((prev) => ({ ...prev, endpoint: e.target.value }))} />
+                  </label>
+                  <label className="login-field">
+                    Description
+                    <textarea className="login-input" rows={2} value={extensionForm.description} onChange={(e) => setExtensionForm((prev) => ({ ...prev, description: e.target.value }))} />
+                  </label>
+                  <button type="submit" className="primary-btn">Save extension</button>
+                </form>
+                {extensionStatus && <div className="settings-status" role="status">{extensionStatus}</div>}
+              </div>
+              <div className="settings-card">
+                <h4>Submit to gallery</h4>
+                <p className="settings-note">Share your extension with other testers.</p>
+                <div className="settings-row" style={{gap: 8, flexWrap: 'wrap'}}>
+                  <a className="secondary-btn" href="https://github.com/DamienLove/pulselink/blob/Suite-Beta/docs/extensions-dev.md" target="_blank" rel="noreferrer">Read dev guide</a>
+                  <a className="ghost-btn" href="mailto:extensions@pulselink.app?subject=PulseLink%20Extension%20Submission">Email us your zip</a>
+                </div>
               </div>
             </div>
           )}

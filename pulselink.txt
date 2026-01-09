@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2026-01-08: v127 fixes — custom vibration creator now applies across alerts, compose FAB anchored bottom-right, contacts shortcut routes to contacts filter with address-backed contact tab, trusted contacts restore from cloud on login, bug report uses Custom Tabs fallback, web adds developer sandbox for 3rd-party extensions, built free/pro release bundles and ran lint+unit tests.
 - 2026-01-06: Fixed AlertDispatcher settings reference and VibrationPatternPicker OutlinedButton compile errors; :androidApp:compileFreeDebugKotlin now succeeds; SMS sync instant triggers validated after build.
 - 2026-01-06: Bumped PulseLink to versionCode/Name 120; built free/pro release AABs (androidApp/build/outputs/bundle/(freeRelease|proRelease)/); uploaded free+pro v120 to Play internal → beta → production; deployed web via firebase hosting (pulselink-24899.web.app).
 - 2026-01-05: v120 release — PR cleanup (merged 23 PRs total: security fixes #418/#405/#430, bug fixes #402/#409/#412/#443/#445, features #404/#406/#408/#415/#416/#419/#427/#398/#440/#442/#439/#431/#432/#444; closed 20 redundant/conflicting PRs); fixed v115 critical issues: multiple Beacon icons (#428, UnifiedLauncherManager.kt removed auto-enable of beacon variants), settings reorganization (#356, moved location/crash to Permissions & System), web app sync for premium (#285, added premium + remote access checks to Firestore listeners in App.jsx); bumped to versionCode/Name 120; built all flavors free/pro/premium AABs (androidApp/build/outputs/bundle/*/androidApp-*-release.aab) 45-46MB each ready for Play upload.
@@ -70,6 +71,8 @@ Ads (free flavor)
 - Native: ca-app-pub-5327057757821609/2153424615
 - App open: ca-app-pub-5327057757821609/4210125201
 - Ads off for pro/premium; premium has SUBSCRIPTION_ENABLED.
+
+meta native banner 1176755504106648_1189632496152282
 
 Product tiers (as of 2025-12-13)
 - Beacon (free): default SMS, ads on.

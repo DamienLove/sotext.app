@@ -661,8 +661,13 @@ class RingerViewModel @Inject constructor(
                     onComplete(result.filePath)
                 }
                 is DownloadResult.Failure -> {
-                    val message = mapDownloadError(result.error)
-                    setDownloadError(message)
+                    if (result.error is DownloadError.NoApiKey) {
+                        // Fallback to streaming-only mode; keep UI informative but do not block add-to-playlist flow.
+                        setDownloadError("Streaming only – add rapidapi.key in local.properties to enable downloads.")
+                    } else {
+                        val message = mapDownloadError(result.error)
+                        setDownloadError(message)
+                    }
                     onComplete(null)
                 }
             }

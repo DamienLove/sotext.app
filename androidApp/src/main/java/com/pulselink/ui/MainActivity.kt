@@ -845,7 +845,7 @@ class MainActivity : AppCompatActivity() {
                     state.onboardingComplete
                 ) {
                     when {
-                        initialInboxShortcut -> "sms/inbox"
+                        initialInboxShortcut -> "sms/inbox?filter={filter}"
                         !state.onboardingComplete -> "splash"
                         unifiedModeActive -> "unified_inbox"
                         else -> "home"
@@ -934,7 +934,11 @@ class MainActivity : AppCompatActivity() {
                             onSendCheckIn = viewModel::sendCheckIn,
                             onSettingsClick = { navController.navigate("settings") { launchSingleTop = true } },
                             onFaqClick = { navController.navigate("faq") { launchSingleTop = true } },
-                            onOpenContacts = { navController.navigate("sms/contacts") { launchSingleTop = true } },
+                            onOpenContacts = {
+                                navController.navigate("sms/inbox?filter=contacts") {
+                                    launchSingleTop = true
+                                }
+                            },
                             onOpenNotifications = { navController.navigate("notifications/message_sound") { launchSingleTop = true } },
                             onOpenThemes = { navController.navigate("visual_settings") { launchSingleTop = true } },
                             onAddContact = viewModel::saveContact,
@@ -961,7 +965,7 @@ class MainActivity : AppCompatActivity() {
                             onWebAccessHintAction = {
                                 viewModel.setWebAccessHintDismissed(true)
                                 if (isPremium) {
-                                    navController.navigate("sms/inbox")
+                                    navController.navigate("sms/inbox?filter=all")
                                 } else {
                                     navController.navigate("account_settings")
                                 }
@@ -989,7 +993,7 @@ class MainActivity : AppCompatActivity() {
                                     "sms/thread/${thread.threadId}/${Uri.encode(thread.address)}?lineId=$lineSuffix"
                                 )
                             },
-                            onViewAllMessages = { navController.navigate("sms/inbox") },
+                            onViewAllMessages = { navController.navigate("sms/inbox?filter=all") },
                             onOpenContactForThread = { thread ->
                                 val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
                                 if (contact != null) {
@@ -1806,7 +1810,20 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() }
                         )
                     }
-                    composable("sms/inbox") {
+                    composable(
+                        route = "sms/inbox?filter={filter}",
+                        arguments = listOf(
+                            navArgument("filter") {
+                                type = NavType.StringType
+                                defaultValue = "all"
+                                nullable = true
+                            }
+                        )
+                    ) { entry ->
+                        val initialFilter = entry.arguments?.getString("filter")
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { runCatching { com.pulselink.ui.screens.InboxFilter.valueOf(it.uppercase()) }.getOrNull() }
+                            ?: com.pulselink.ui.screens.InboxFilter.ALL
                         val smsInboxViewModel: SmsInboxViewModel = hiltViewModel()
                         val threads by smsInboxViewModel.threads.collectAsStateWithLifecycle()
                         val archivedThreads by smsInboxViewModel.archived.collectAsStateWithLifecycle()
@@ -1890,6 +1907,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         SmsInboxScreen(
                             threads = threads,
+                            initialFilter = initialFilter,
                             archivedThreads = archivedThreads,
                             onOpenThread = { thread ->
                                 val lineSuffix = thread.lineId?.let { Uri.encode(it) }.orEmpty()
@@ -2203,15 +2221,22 @@ class MainActivity : AppCompatActivity() {
                             onBack = { navController.popBackStack() },
                             onSubmit = { data ->
                                 val uri = viewModel.buildBugReportUri(context, data)
-                                val intent = Intent(Intent.ACTION_VIEW, uri)
-                                runCatching { context.startActivity(intent) }
-                                    .onFailure {
-                                        Toast.makeText(
-                                            context,
-                                            "Couldn't open bug report page. Please try again later.",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
+                                val customTabs = androidx.browser.customtabs.CustomTabsIntent.Builder()
+                                    .setShowTitle(true)
+                                    .build()
+                                val launched = runCatching {
+                                    customTabs.launchUrl(context, uri)
+                                }.isSuccess
+                                if (!launched) {
+                                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, uri)) }
+                                        .onFailure {
+                                            Toast.makeText(
+                                                context,
+                                                "Couldn't open bug report page. Please try again later.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                }
                             }
                         )
                     }
