@@ -22,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -228,20 +229,30 @@ class RingerPlaybackService : Service() {
         }
     }
 
-    private fun playSpotifySong(song: SongEntry, startMs: Long, durationMs: Long) {
-        // Premium builds should rely on downloaded audio for reliability.
-        // Look for a locally downloaded copy of this Spotify track; if missing, skip playback.
-        val downloader = com.RingerSong.free.data.SpotifyDownloaderRepository(applicationContext)
-        val localPath = downloader.getLocalFilePathFromUri(song.uri)
-        if (localPath.isNullOrBlank()) {
-            Log.w(TAG, "Spotify track not downloaded locally; skipping playback for ${song.title}")
+    private suspend fun playSpotifySong(song: SongEntry, startMs: Long, durationMs: Long) {
+        // Direct streaming implementation using Spotify App Remote
+        Log.d(TAG, "Attempting to stream Spotify song: ${song.title} (${song.uri})")
+
+        val success = spotifyPlayer.playUri(song.uri, startMs)
+
+        if (success) {
+            this@RingerPlaybackService.isPlaying = true
+            Log.d(TAG, "Spotify stream started successfully")
+
+            // Schedule stop
+            delay(durationMs)
+            Log.d(TAG, "Segment playback complete (Spotify)")
             stopPlayback()
+            restoreSystemRinger()
             stopForeground(true)
             stopSelf()
-            return
+        } else {
+            Log.e(TAG, "Failed to stream Spotify song")
+            stopPlayback()
+            restoreSystemRinger()
+            stopForeground(true)
+            stopSelf()
         }
-        val localSong = song.copy(uri = localPath, source = SongSource.LOCAL)
-        playLocalSong(localSong, startMs, durationMs)
     }
 
     private fun playLocalSong(song: SongEntry, startMs: Long, durationMs: Long) {
@@ -270,7 +281,7 @@ class RingerPlaybackService : Service() {
 
                     // Schedule stop after durationMs
                     scope.launch {
-                        kotlinx.coroutines.delay(durationMs)
+                        delay(durationMs)
                         Log.d(TAG, "Segment playback complete after ${durationMs}ms")
                         stopPlayback()
                         restoreSystemRinger()
@@ -311,11 +322,18 @@ class RingerPlaybackService : Service() {
 
     private fun stopPlayback() {
         if (isPlaying) {
-            spotifyPlayer.pause() // Or disconnect
+            Log.d(TAG, "Executing stopPlayback")
+            // Ensure we pause Spotify explicitly
+            spotifyPlayer.pause()
+
             mediaPlayer?.stop()
             mediaPlayer?.release()
             mediaPlayer = null
             isPlaying = false
+        } else {
+             // Even if isPlaying is false, try to pause Spotify just in case it was playing
+             // but our state got desynced or it was connecting.
+             spotifyPlayer.pause()
         }
     }
 
@@ -339,6 +357,7 @@ class RingerPlaybackService : Service() {
     }
 
     override fun onDestroy() {
+        Log.d(TAG, "Service Destroyed")
         scope.cancel()
         restoreSystemRinger() // Safety net
         super.onDestroy()
