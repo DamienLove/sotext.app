@@ -345,6 +345,37 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
 });
 MapAlertItem.displayName = 'MapAlertItem';
 
+// Bolt: Custom comparator for ThemeGalleryItem to handle Firestore object reference changes
+const areThemeGalleryItemsEqual = (prev, next) => {
+  if (prev.onImport !== next.onImport) return false;
+  const p = prev.themeDoc;
+  const n = next.themeDoc;
+  if (p === n) return true;
+  if (p.id !== n.id) return false;
+
+  // Bolt: Check updatedAt if available (handling Firestore Timestamps)
+  const getMillis = (t) => {
+    if (!t) return 0;
+    if (typeof t === 'number') return t;
+    if (typeof t.toMillis === 'function') return t.toMillis();
+    if (typeof t.seconds === 'number') return t.seconds * 1000;
+    return 0;
+  };
+
+  const pTime = getMillis(p.updatedAt);
+  const nTime = getMillis(n.updatedAt);
+  if (pTime > 0 && nTime > 0) {
+    return pTime === nTime;
+  }
+
+  // Fallback to deep check if timestamps are missing/invalid
+  return p.name === n.name &&
+         p.authorName === n.authorName &&
+         p.authorHandle === n.authorHandle &&
+         p.anonymous === n.anonymous &&
+         JSON.stringify(p.theme) === JSON.stringify(n.theme);
+};
+
 // Bolt: Optimized ThemeGalleryItem to prevent re-renders when list doesn't change
 const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
   const [isImporting, setIsImporting] = useState(false);
@@ -410,9 +441,7 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
       </button>
     </div>
   );
-}, (prev, next) => {
-  return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
-});
+}, areThemeGalleryItemsEqual);
 
 ThemeGalleryItem.displayName = 'ThemeGalleryItem';
 
