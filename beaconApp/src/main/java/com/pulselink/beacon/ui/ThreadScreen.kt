@@ -3,6 +3,10 @@ package com.pulselink.beacon.ui
 import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,6 +37,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DatePicker
@@ -110,14 +115,31 @@ fun ThreadScreen(
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    // Constants
+    val SCROLL_THRESHOLD_ITEMS = 2
+    val AUTO_SCROLL_THRESHOLD = 3
+
+    // UX: Show "Scroll to Bottom" if user is scrolled up
+    val showScrollToBottom by androidx.compose.runtime.remember {
+        androidx.compose.runtime.derivedStateOf {
+            listState.firstVisibleItemIndex > SCROLL_THRESHOLD_ITEMS
+        }
+    }
 
     // Auto-scroll logic for new messages
-    // Since reverseLayout=true, item 0 is at bottom.
-    // If the list grows (new message), it should stay at bottom if already there.
-    // However, if we just opened, we want to be at bottom.
-    LaunchedEffect(uiItems.firstOrNull()) {
+    // Trigger only when the size changes or the latest item ID changes
+    val latestItemId = uiItems.firstOrNull()?.let {
+        when(it) {
+            is ThreadUiItem.Message -> it.message.id
+            is ThreadUiItem.DateHeader -> it.date.hashCode().toLong()
+        }
+    }
+    LaunchedEffect(uiItems.size, latestItemId) {
         if (uiItems.isNotEmpty()) {
-             if (listState.firstVisibleItemIndex < 3) {
+             // If near bottom, auto-scroll to show new message
+             if (listState.firstVisibleItemIndex < AUTO_SCROLL_THRESHOLD) {
                 listState.animateScrollToItem(0)
              }
         }
@@ -265,6 +287,35 @@ fun ThreadScreen(
                 }
 
                 item { Spacer(modifier = Modifier.height(20.dp)) }
+            }
+
+            // Scroll to Bottom FAB
+            AnimatedVisibility(
+                visible = showScrollToBottom,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(bottom = 8.dp)
+            ) {
+                Surface(
+                    onClick = {
+                        scope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    },
+                    shape = CircleShape,
+                    color = theme.accentColor.copy(alpha = 0.9f),
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Scroll to newest",
+                        tint = Color.White,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
             }
 
             // Input Area
