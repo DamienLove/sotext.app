@@ -1512,8 +1512,6 @@ function App() {
   }, [deviceContacts, contactSearch]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
-  // const threadListElements = useMemo(() => { ... }); // removed unused
-
   const messageListElements = useMemo(() => (
     messages.map(msg => (
       <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
@@ -1621,7 +1619,6 @@ function App() {
       if (newUnlocks.length > 0) {
         updates.unlockedThemeIds = [...currentUnlockedIds, ...newUnlocks];
       }
-      // Removed unused setUnlockedThemes call
 
       if (newAvatarUnlocks.length > 0) {
         updates.unlockedAvatarIds = [...currentUnlockedAvatars, ...newAvatarUnlocks];
