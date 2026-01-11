@@ -2599,6 +2599,7 @@ function App() {
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
+        <div className="noise-overlay" />
         {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <div className="container login-container" id="main-content">
@@ -2694,6 +2695,7 @@ function App() {
 
   return (
     <div className="app-shell" style={themeVars}>
+      <div className="noise-overlay" />
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
