@@ -1777,7 +1777,29 @@ function App() {
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(line => line.disabled !== true);
         setLines(lineItems);
+
+        // Attach listeners for new/active lines
         lineItems.forEach(line => attachLine(line.id));
+
+        // Detach listeners for removed or disabled lines
+        const activeIds = new Set(lineItems.map(l => l.id));
+        // Safe iteration: collect IDs to remove first
+        const idsToRemove = Array.from(threadUnsubs.keys()).filter(id => !activeIds.has(id));
+
+        if (idsToRemove.length > 0) {
+          idsToRemove.forEach(id => {
+            const unsub = threadUnsubs.get(id);
+            if (unsub) unsub();
+            threadUnsubs.delete(id);
+          });
+
+          setLineThreads(prev => {
+            const next = { ...prev };
+            idsToRemove.forEach(id => delete next[id]);
+            return next;
+          });
+        }
+
         setIsLoadingThreads(false);
       });
 
