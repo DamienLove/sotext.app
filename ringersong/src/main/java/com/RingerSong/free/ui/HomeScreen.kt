@@ -1406,22 +1406,22 @@ private fun HowToAddMusicHelper() {
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Search & add songs from Spotify or YouTube Music using the sections above. Songs will be downloaded for offline playback.",
+            text = "Streaming First: Connect your Spotify Premium account above to stream songs directly as your ringtone.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "You can also use local audio files (MP3/WAV/M4A) by selecting them from your device.",
+            text = "We automatically silence your default ringer and play your stream instead.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Tip: Share audio files from apps like Zedge to import them here.",
+            text = "Note: YouTube Music tracks will be downloaded. Local files are also supported.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "⚠️ IMPORTANT: Set your phone's default ringtone to Silent in Settings > Sounds for best results. RingerSong will still play your progressive ringer!",
+            text = "⚠️ TIP: For the best experience, manually set your phone's default ringtone to 'Silent' in System Settings to prevent any overlap.",
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.primary

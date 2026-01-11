@@ -397,23 +397,12 @@ class RingerViewModel @Inject constructor(
                 return@launch
             }
 
-            onResult("Downloading ${track.name} for offline playback...")
-            val downloadResult = spotifyDownloader.downloadTrack(track.uri!!)
-            val localPath = when (downloadResult) {
-                is DownloadResult.Success -> {
-                    clearDownloadError()
-                    downloadResult.filePath
-                }
-                is DownloadResult.Failure -> {
-                    val message = mapDownloadError(downloadResult.error)
-                    setDownloadError(message)
-                    onResult("Download failed: $message")
-                    return@launch
-                }
-            }
+            // STREAMING MODE: No download required for Spotify.
+            // We rely on the user's installed Spotify app and Premium subscription (or Free with restrictions).
+            onResult("Adding ${track.name} for streaming...")
 
             val songEntry = SongEntry(
-                id = track.id ?: java.util.UUID.randomUUID().toString(),        
+                id = track.id ?: java.util.UUID.randomUUID().toString(),
                 title = "${track.name ?: "Unknown Track"} - ${track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"}",
                 uri = track.uri!!,
                 source = SongSource.SPOTIFY,
@@ -440,14 +429,14 @@ class RingerViewModel @Inject constructor(
                 "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
                 "durationMs" to (track.duration_ms ?: 0L),
                 "addedAt" to com.google.firebase.Timestamp.now(),
-                "localPath" to localPath,
-                "downloaded" to true
+                "localPath" to null, // No local path for streaming
+                "downloaded" to false
             )
 
-            db.collection("users").document(uid).collection("ringer_playlist")  
+            db.collection("users").document(uid).collection("ringer_playlist")
                 .add(trackData)
                 .addOnSuccessListener {
-                    onResult("Added ${track.name} (Downloaded for offline ringer)")
+                    onResult("Added ${track.name} (Streaming enabled)")
                 }
                 .addOnFailureListener { e ->
                     // Revert local state if sync fails
