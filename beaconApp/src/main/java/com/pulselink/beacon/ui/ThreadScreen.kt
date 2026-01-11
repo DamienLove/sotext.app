@@ -111,18 +111,29 @@ fun ThreadScreen(
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
+    // Constants
+    val SCROLL_THRESHOLD_ITEMS = 2
+    val AUTO_SCROLL_THRESHOLD = 3
+
     // UX: Show "Scroll to Bottom" if user is scrolled up
     val showScrollToBottom by androidx.compose.runtime.remember {
         androidx.compose.runtime.derivedStateOf {
-            listState.firstVisibleItemIndex > 2
+            listState.firstVisibleItemIndex > SCROLL_THRESHOLD_ITEMS
         }
     }
 
     // Auto-scroll logic for new messages
-    LaunchedEffect(uiItems.firstOrNull()) {
+    // Trigger only when the size changes or the latest item ID changes
+    val latestItemId = uiItems.firstOrNull()?.let {
+        when(it) {
+            is ThreadUiItem.Message -> it.message.id
+            is ThreadUiItem.DateHeader -> it.date.hashCode().toLong()
+        }
+    }
+    LaunchedEffect(uiItems.size, latestItemId) {
         if (uiItems.isNotEmpty()) {
              // If near bottom, auto-scroll to show new message
-             if (listState.firstVisibleItemIndex < 3) {
+             if (listState.firstVisibleItemIndex < AUTO_SCROLL_THRESHOLD) {
                 listState.animateScrollToItem(0)
              }
         }
@@ -283,7 +294,7 @@ fun ThreadScreen(
             ) {
                 Surface(
                     onClick = {
-                        kotlinx.coroutines.launch {
+                        scope.launch {
                             listState.animateScrollToItem(0)
                         }
                     },

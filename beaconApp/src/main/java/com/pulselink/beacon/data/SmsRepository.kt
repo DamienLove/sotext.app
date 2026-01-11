@@ -32,8 +32,15 @@ class SmsRepository(private val context: Context) {
         private const val CONTACT_CACHE_SIZE = 2000 // Increased cache
 
         // Static caches to survive ViewModel recreation
+        // These hold only Strings, which are safe from Context leaks.
         private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
         private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
+
+        // Clear caches on memory warning or low memory if needed
+        fun clearCaches() {
+            addressCache.evictAll()
+            contactCache.evictAll()
+        }
 
         // Classification Regex
         private val NUMERIC_REGEX = Regex("[^0-9]")

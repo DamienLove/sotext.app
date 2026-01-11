@@ -498,7 +498,6 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
                             imageVector = when(filter) {
                                 InboxFilter.ARCHIVED -> Icons.Default.Inbox
                                 InboxFilter.UNREAD -> Icons.Default.CheckCircle
-                                InboxFilter.PERSONAL -> Icons.Default.Sms
                                 else -> Icons.Default.Sms
                             },
                             contentDescription = null,
