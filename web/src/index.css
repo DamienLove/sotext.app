@@ -41,7 +41,7 @@
 
   /* Typography */
   --font-display: "Space Grotesk", sans-serif;
-  --font-body: "DM Sans", sans-serif;
+  --font-body: "Inter", "DM Sans", sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", monospace;
 
   font-family: var(--font-body);
