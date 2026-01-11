@@ -247,7 +247,8 @@ fun HomeScreen(
                 }
             }
         },
-        floatingActionButtonPosition = FabPosition.Start
+        // Primary actions (compose) should live bottom-right to match Beacon inbox + Material defaults.
+        floatingActionButtonPosition = FabPosition.End
     ) { innerPadding ->
         Column(
             modifier = Modifier

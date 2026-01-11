@@ -86,6 +86,9 @@ object UnifiedLauncherManager {
                     val retryState = pm.getComponentEnabledSetting(targetUnified)
                     if (!retryState.isEnabledOrDefault()) {
                         Log.e(TAG, "Failed to enable unified component after retry. State: $retryState")
+                        // Fallback: ensure at least the PulseLink launcher icon stays visible
+                        enable(pm, pulseLinkLauncher, "PulseLinkLauncher (fallback)")
+                        enable(pm, main, "MainActivity (fallback)")
                         return false
                     }
                 }

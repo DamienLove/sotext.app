@@ -136,6 +136,13 @@ class MainViewModel @Inject constructor(
             pruneLocalUnreachable()
         }
         viewModelScope.launch {
+            authState.collect { auth ->
+                if (auth is AuthState.Authenticated) {
+                    restoreTrustedContactsFromCloudIfMissing()
+                }
+            }
+        }
+        viewModelScope.launch {
             var lastRemoteWebEnabled = false
             var lastPremium = false
             settingsRepository.settings.collect { settings ->
@@ -497,12 +504,32 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun saveCustomVibrationPattern(name: String, pattern: List<Long>) {
+    fun saveCustomVibrationPattern(
+        name: String,
+        pattern: List<Long>,
+        applyToAlerts: Boolean = true,
+        applyToMessages: Boolean = true,
+        applyToCheckIns: Boolean = true
+    ) {
         viewModelScope.launch {
             settingsRepository.setCustomVibrationPattern(name, pattern)
             settingsRepository.update { settings ->
                 settings.copy(
-                    messageNotificationVibrationPattern = VibrationPatterns.CUSTOM_KEY
+                    messageNotificationVibrationPattern = if (applyToMessages) {
+                        VibrationPatterns.CUSTOM_KEY
+                    } else {
+                        settings.messageNotificationVibrationPattern
+                    },
+                    emergencyProfile = if (applyToAlerts) {
+                        settings.emergencyProfile.copy(vibrationPatternKey = VibrationPatterns.CUSTOM_KEY)
+                    } else {
+                        settings.emergencyProfile
+                    },
+                    checkInProfile = if (applyToCheckIns) {
+                        settings.checkInProfile.copy(vibrationPatternKey = VibrationPatterns.CUSTOM_KEY)
+                    } else {
+                        settings.checkInProfile
+                    }
                 )
             }
         }
@@ -1392,6 +1419,57 @@ class MainViewModel @Inject constructor(
             .appendQueryParameter("body", formattedBody)
             .appendQueryParameter("email", bugReportData.userEmail)
             .build()
+    }
+
+    private fun decodeStringList(field: Any?): List<String> =
+        (field as? List<*>)?.mapNotNull { it?.toString()?.trim() }?.filter { it.isNotBlank() }.orEmpty()
+
+    private fun restoreTrustedContactsFromCloudIfMissing() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val local = contactRepository.observeContacts().first()
+            if (local.isNotEmpty()) return@launch
+            val user = firebaseAuthManager.currentUser() ?: return@launch
+            runCatching {
+                val snapshot = firestore.collection(COLLECTION_USERS)
+                    .document(user.uid)
+                    .collection(COLLECTION_TRUSTED_CONTACTS)
+                    .get()
+                    .await()
+                val restored = snapshot.documents.mapNotNull { doc ->
+                    val name = doc.getString("displayName") ?: return@mapNotNull null
+                    val phone = doc.getString("phoneNumber").orEmpty()
+                    Contact(
+                        displayName = name,
+                        phoneNumber = phone,
+                        email = doc.getString("email"),
+                        additionalPhones = decodeStringList(doc.get("additionalPhones")),
+                        additionalEmails = decodeStringList(doc.get("additionalEmails")),
+                        escalationTier = doc.getString("escalationTier")
+                            ?.let { runCatching { EscalationTier.valueOf(it) }.getOrNull() }
+                            ?: EscalationTier.EMERGENCY,
+                        includeLocation = doc.getBoolean("includeLocation") ?: true,
+                        autoCall = doc.getBoolean("autoCall") ?: false,
+                        emergencySoundKey = doc.getString("emergencySoundKey"),
+                        checkInSoundKey = doc.getString("checkInSoundKey"),
+                        contactOrder = doc.getLong("contactOrder")?.toInt() ?: 0,
+                        linkStatus = doc.getString("linkStatus")
+                            ?.let { runCatching { LinkStatus.valueOf(it) }.getOrNull() }
+                            ?: LinkStatus.NONE,
+                        linkCode = doc.getString("linkCode"),
+                        remoteDeviceId = doc.getString("remoteDeviceId"),
+                        allowRemoteOverride = doc.getBoolean("allowRemoteOverride") ?: true,
+                        allowRemoteSoundChange = doc.getBoolean("allowRemoteSoundChange") ?: false,
+                        pendingApproval = doc.getBoolean("pendingApproval") ?: false,
+                        remoteUid = doc.getString("remoteUid")
+                    )
+                }
+                if (restored.isNotEmpty()) {
+                    restored.sortedBy { it.contactOrder }.forEach { contactRepository.upsert(it) }
+                }
+            }.onFailure { error ->
+                Log.w(TAG, "Unable to restore trusted contacts from cloud", error)
+            }
+        }
     }
 
     private fun ensureSoundDefaults(settings: com.pulselink.domain.model.PulseLinkSettings): com.pulselink.domain.model.PulseLinkSettings {

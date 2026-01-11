@@ -221,8 +221,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 127
-        versionName = "127"
+        versionCode = 128
+        versionName = "128"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "google_maps_key", mapsApiKey)
@@ -541,3 +541,4 @@ dependencies {
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.57.2")
     kaptAndroidTest("com.google.dagger:hilt-compiler:2.57.2")
 }
+

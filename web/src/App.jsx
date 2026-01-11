@@ -59,6 +59,14 @@ const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="no
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
 const CopyIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
 const CheckIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+const SmartToyIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h4Z"/><rect x="4" y="10" width="16" height="8" rx="2"/><path d="M9 22v-4"/><path d="M15 22v-4"/><circle cx="8" cy="14" r="1" fill="currentColor"/><circle cx="16" cy="14" r="1" fill="currentColor"/></svg>;
+const DeleteSweepIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
+const EmailIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>;
+const CarCrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 16H9m10 0h3v-3.15M17 12.89l1.45-1.45M9 16.02L6.68 18.34M4.34 20.68L2 23M9 12V8h6v4"/><rect x="4" y="16" width="10" height="6" rx="2"/><path d="M14 10l-2-3-2 3"/></svg>;
+const CloudSyncIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-14.33 6"/><polyline points="1 20 5 20 5 16"/><path d="M1 20a9 9 0 0 0 9 9 9 9 0 0 0 4-10"/><polyline points="23 4 19 4 19 8"/><path d="M23 4a9 9 0 0 0-9-9 9 9 0 0 0-4 10"/></svg>;
+const ExtensionIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.5 11a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1-5 0V11h5Z"/><path d="M8 11V6a2.5 2.5 0 0 1 5 0 2.5 2.5 0 0 1 0 5H8Z"/><path d="M11 8h5a2.5 2.5 0 0 1 0 5 2.5 2.5 0 0 1-5 0v-5Z"/><path d="M12 21a9 9 0 0 0 9-9 9 9 0 0 0-9-9 9 9 0 0 0-9 9 9 9 0 0 0 9 9Z"/></svg>;
+const BoltIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>;
+const StarIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const Spinner = ({ className = '', style = {} }) => (
   <span className={`spinner ${className}`} style={style} aria-hidden="true" />
 );
@@ -216,6 +224,13 @@ const TrustedContactRow = memo(({ contact, isConfirmingDelete, onEdit, onDeleteR
           onClick={() => onDeleteConfirm(contact.id)}
           aria-label={`Confirm remove ${contact.displayName}`}
           onBlur={onDeleteCancel}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              onDeleteCancel();
+            }
+          }}
         >
           Confirm?
         </button>
@@ -330,13 +345,56 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
 });
 MapAlertItem.displayName = 'MapAlertItem';
 
+// Bolt: Custom comparator for ThemeGalleryItem to handle Firestore object reference changes
+const areThemeGalleryItemsEqual = (prev, next) => {
+  if (prev.onImport !== next.onImport) return false;
+  const p = prev.themeDoc;
+  const n = next.themeDoc;
+  if (p === n) return true;
+  if (p.id !== n.id) return false;
+
+  // Bolt: Check updatedAt if available (handling Firestore Timestamps)
+  const getMillis = (t) => {
+    if (!t) return 0;
+    if (typeof t === 'number') return t;
+    if (typeof t.toMillis === 'function') return t.toMillis();
+    if (typeof t.seconds === 'number') return t.seconds * 1000;
+    return 0;
+  };
+
+  const pTime = getMillis(p.updatedAt);
+  const nTime = getMillis(n.updatedAt);
+  if (pTime > 0 && nTime > 0) {
+    return pTime === nTime;
+  }
+
+  // Fallback to deep check if timestamps are missing/invalid
+  return p.name === n.name &&
+         p.authorName === n.authorName &&
+         p.authorHandle === n.authorHandle &&
+         p.anonymous === n.anonymous &&
+         JSON.stringify(p.theme) === JSON.stringify(n.theme);
+};
+
 // Bolt: Optimized ThemeGalleryItem to prevent re-renders when list doesn't change
 const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
+  const [isImporting, setIsImporting] = useState(false);
   const previewTheme = normalizeTheme(themeDoc.theme || {});
   const previewStyle = buildThemePreviewStyle(previewTheme);
   const authorLabel = themeDoc.anonymous
     ? 'Anonymous'
     : (themeDoc.authorHandle || themeDoc.authorName || 'Community');
+
+  const handleImport = useCallback(async () => {
+    setIsImporting(true);
+    try {
+      await onImport(themeDoc);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsImporting(false);
+    }
+  }, [onImport, themeDoc]);
 
   return (
     <div className="theme-card">
@@ -369,16 +427,21 @@ const ThemeGalleryItem = memo(({ themeDoc, onImport }) => {
       <button
         className="primary-btn"
         type="button"
-        onClick={() => onImport(themeDoc)}
+        onClick={handleImport}
+        disabled={isImporting}
+        aria-busy={isImporting}
         aria-label={`Import theme ${themeDoc.name || 'Untitled'}`}
       >
-        Import
+        {isImporting ? (
+          <>
+            <Spinner />
+            Importing...
+          </>
+        ) : 'Import'}
       </button>
     </div>
   );
-}, (prev, next) => {
-  return prev.themeDoc === next.themeDoc && prev.onImport === next.onImport;
-});
+}, areThemeGalleryItemsEqual);
 
 ThemeGalleryItem.displayName = 'ThemeGalleryItem';
 
@@ -1273,8 +1336,40 @@ function App() {
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
     timeFormat: 'AUTO',
-    thirdPartyExtensionsEnabled: true
+    thirdPartyExtensionsEnabled: true,
+    beaconLauncherEnabled: false,
+    otpCleanupEnabled: false,
+    emailFallbackEnabled: false,
+    crashDetectionEnabled: false,
+    aiSummariesEnabled: false,
+    firebaseMessagingEnabled: true,
+    mergedExperienceEnabled: false
   });
+  const [devExtensions, setDevExtensions] = useState(() => {
+    const saved = localStorage.getItem('pulselink.devExtensions');
+    if (saved) return JSON.parse(saved);
+    return [
+      {
+        id: 'hello-world',
+        name: 'Hello World Webhook',
+        endpoint: '',
+        description: 'Shows a toast when triggered. Great for validating the pipeline.',
+        sample: true
+      },
+      {
+        id: 'pulse-check',
+        name: 'Pulse Check Logger',
+        endpoint: 'https://postman-echo.com/post',
+        description: 'Sends a payload with your user + sample message to a test echo endpoint.',
+        sample: true
+      }
+    ];
+  });
+  const [extensionForm, setExtensionForm] = useState({ name: '', endpoint: '', description: '' });
+  const [extensionStatus, setExtensionStatus] = useState('');
+  useEffect(() => {
+    localStorage.setItem('pulselink.devExtensions', JSON.stringify(devExtensions));
+  }, [devExtensions]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -1309,6 +1404,20 @@ function App() {
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
+
+  const subscriptionStatus = userData?.subscriptionStatus;
+  const isPremiumUser = useMemo(() => {
+    return subscriptionStatus === "premium" ||
+      userData?.premiumUnlocked === true ||
+      userData?.hasPremiumHistory === true;
+  }, [subscriptionStatus, userData?.premiumUnlocked, userData?.hasPremiumHistory]);
+
+  const isProUser = useMemo(() => {
+    return isPremiumUser ||
+      subscriptionStatus === "pro" ||
+      userData?.proUnlocked === true ||
+      userData?.hasProHistory === true;
+  }, [isPremiumUser, subscriptionStatus, userData?.proUnlocked, userData?.hasProHistory]);
 
   // Toggle DevTools with Ctrl+Shift+D
   useEffect(() => {
@@ -1473,8 +1582,6 @@ function App() {
   }, [deviceContacts, contactSearch]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
-  // const threadListElements = useMemo(() => { ... }); // removed unused
-
   const messageListElements = useMemo(() => (
     messages.map(msg => (
       <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
@@ -1516,8 +1623,8 @@ function App() {
     const unsubscribe = onSnapshot(userRef, (snapshot) => {
       const data = snapshot.data() || {};
       setUserData(data);
-      const isPremium = data.subscriptionStatus === 'premium' || data.hasPremiumHistory;
-      const isPro = data.subscriptionStatus === 'pro' || data.hasProHistory;
+      const isPremium = data.subscriptionStatus === 'premium' || data.premiumUnlocked === true || data.hasPremiumHistory;
+      const isPro = isPremium || data.subscriptionStatus === 'pro' || data.proUnlocked === true || data.hasProHistory;
       const isBeta = data.isBetaTester === true;
       const tenureDays = data.createdAt ? (Date.now() - toMillis(data.createdAt)) / (1000 * 60 * 60 * 24) : 0;
       setProfile({
@@ -1536,7 +1643,14 @@ function App() {
         remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? isPremium,
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
-        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true
+        thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true,
+        beaconLauncherEnabled: data.beaconLauncherEnabled ?? false,
+        otpCleanupEnabled: data.otpCleanupEnabled ?? false,
+        emailFallbackEnabled: data.emailFallbackEnabled ?? false,
+        crashDetectionEnabled: data.crashDetectionEnabled ?? false,
+        aiSummariesEnabled: data.aiSummariesEnabled ?? false,
+        firebaseMessagingEnabled: data.firebaseMessagingEnabled ?? true,
+        mergedExperienceEnabled: data.mergedExperienceEnabled ?? false
       });
       if (data.lineInboxMode) setLineInboxMode(data.lineInboxMode);
       if (data.activeLineId) setActiveLineId(data.activeLineId);
@@ -1582,7 +1696,6 @@ function App() {
       if (newUnlocks.length > 0) {
         updates.unlockedThemeIds = [...currentUnlockedIds, ...newUnlocks];
       }
-      // Removed unused setUnlockedThemes call
 
       if (newAvatarUnlocks.length > 0) {
         updates.unlockedAvatarIds = [...currentUnlockedAvatars, ...newAvatarUnlocks];
@@ -1596,6 +1709,19 @@ function App() {
     });
     return () => unsubscribe();
   }, [user]);
+
+  useEffect(() => {
+    if (!user || !isPremiumUser || !userData) return;
+    if (userData.remoteWebAccessEnabled === undefined) {
+      setDoc(doc(db, "users", user.uid), {
+        remoteWebAccessEnabled: true,
+        subscriptionStatus: userData.subscriptionStatus ?? "premium",
+        premiumUnlocked: true
+      }, { merge: true }).catch((err) => {
+        console.error("Failed to auto-enable remote web access", err);
+      });
+    }
+  }, [user, userData, isPremiumUser]);
 
   useEffect(() => {
     if (!user) {
@@ -1616,7 +1742,6 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    const isPremiumUser = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
     const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
 
     if (!user || !isPremiumUser || !hasRemoteAccess) {
@@ -1633,10 +1758,9 @@ function App() {
       setDeviceContacts(items);
     });
     return () => unsubscribe();
-  }, [user, userData, remoteSettings.remoteWebAccessEnabled]);
+  }, [user, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
 
   useEffect(() => {
-    const isPremiumUser = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
     const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
 
     if (user && isPremiumUser && hasRemoteAccess) {
@@ -1679,7 +1803,29 @@ function App() {
           .map(doc => ({ id: doc.id, ...doc.data() }))
           .filter(line => line.disabled !== true);
         setLines(lineItems);
+
+        // Attach listeners for new/active lines
         lineItems.forEach(line => attachLine(line.id));
+
+        // Detach listeners for removed or disabled lines
+        const activeIds = new Set(lineItems.map(l => l.id));
+        // Safe iteration: collect IDs to remove first
+        const idsToRemove = Array.from(threadUnsubs.keys()).filter(id => !activeIds.has(id));
+
+        if (idsToRemove.length > 0) {
+          idsToRemove.forEach(id => {
+            const unsub = threadUnsubs.get(id);
+            if (unsub) unsub();
+            threadUnsubs.delete(id);
+          });
+
+          setLineThreads(prev => {
+            const next = { ...prev };
+            idsToRemove.forEach(id => delete next[id]);
+            return next;
+          });
+        }
+
         setIsLoadingThreads(false);
       });
 
@@ -1694,7 +1840,7 @@ function App() {
       setLineThreads({});
       setIsLoadingThreads(false);
     }
-  }, [user, userData, remoteSettings.remoteWebAccessEnabled]);
+  }, [user, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -1717,14 +1863,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const isPremiumUser = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
     const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
 
     if (user && selectedThread && isPremiumUser && hasRemoteAccess) {
       // Listen to messages only if user has premium and remote web access enabled
       const basePath = selectedThread.lineId
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
-        : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];
+        : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
       const messagesRef = collection(db, ...basePath);
       const q = query(messagesRef, orderBy("date", "asc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -1738,7 +1883,7 @@ function App() {
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread, userData, remoteSettings.remoteWebAccessEnabled]);
+  }, [user, selectedThread, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
 
   useEffect(() => {
     if (selectedThread?.address) {
@@ -2271,6 +2416,14 @@ function App() {
         remoteWebAccessEnabled: remoteSettings.remoteWebAccessEnabled,
         autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
         timeFormat: remoteSettings.timeFormat,
+        thirdPartyExtensionsEnabled: remoteSettings.thirdPartyExtensionsEnabled,
+        beaconLauncherEnabled: remoteSettings.beaconLauncherEnabled,
+        otpCleanupEnabled: remoteSettings.otpCleanupEnabled,
+        emailFallbackEnabled: remoteSettings.emailFallbackEnabled,
+        crashDetectionEnabled: remoteSettings.crashDetectionEnabled,
+        aiSummariesEnabled: remoteSettings.aiSummariesEnabled,
+        firebaseMessagingEnabled: remoteSettings.firebaseMessagingEnabled,
+        mergedExperienceEnabled: remoteSettings.mergedExperienceEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -2279,6 +2432,96 @@ function App() {
       setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleQuickSetup = async (mode) => {
+    if (!user) return;
+    const isEssentials = mode === 'essentials';
+    const isPower = mode === 'power';
+
+    // Logic mirroring Android
+    const newSettings = { ...remoteSettings };
+
+    if (isEssentials) {
+      newSettings.beaconLauncherEnabled = true;
+      newSettings.firebaseMessagingEnabled = true;
+      newSettings.emailFallbackEnabled = true;
+      newSettings.otpCleanupEnabled = true;
+      newSettings.aiSummariesEnabled = false;
+      newSettings.remoteWebAccessEnabled = false;
+      newSettings.crashDetectionEnabled = false;
+      newSettings.mergedExperienceEnabled = false;
+    } else if (isPower) {
+      newSettings.beaconLauncherEnabled = true;
+      newSettings.firebaseMessagingEnabled = true;
+      newSettings.emailFallbackEnabled = true;
+      newSettings.otpCleanupEnabled = true;
+      newSettings.aiSummariesEnabled = isPremiumUser; // Check premium
+      newSettings.remoteWebAccessEnabled = isPremiumUser;
+      newSettings.crashDetectionEnabled = isPremiumUser;
+      newSettings.mergedExperienceEnabled = true;
+      newSettings.thirdPartyExtensionsEnabled = true;
+    }
+
+    setRemoteSettings(newSettings);
+    // Auto-save
+    try {
+      await setDoc(doc(db, "users", user.uid), {
+        ...newSettings,
+        settingsUpdatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (e) {
+      console.error("Quick setup failed", e);
+    }
+  };
+
+  const handleAddExtension = (e) => {
+    e?.preventDefault();
+    if (!extensionForm.name.trim()) {
+      setExtensionStatus('Name is required.');
+      return;
+    }
+    const id = `${Date.now()}`;
+    setDevExtensions((prev) => [
+      ...prev,
+      {
+        id,
+        name: extensionForm.name.trim(),
+        endpoint: extensionForm.endpoint.trim(),
+        description: extensionForm.description.trim(),
+        sample: false
+      }
+    ]);
+    setExtensionForm({ name: '', endpoint: '', description: '' });
+    setExtensionStatus('Saved extension to your device.');
+  };
+
+  const handleTestExtension = async (ext) => {
+    if (!remoteSettings.thirdPartyExtensionsEnabled) {
+      setExtensionStatus('Enable third-party extensions in Settings first.');
+      return;
+    }
+    setExtensionStatus(`Testing ${ext.name}...`);
+    if (!ext.endpoint) {
+      setExtensionStatus(`${ext.name} is active locally (no endpoint needed).`);
+      return;
+    }
+    try {
+      const resp = await fetch(ext.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'ping',
+          user: user?.uid ?? 'anonymous',
+          sampleMessage: messages[0]?.body ?? 'hello from PulseLink',
+          timestamp: Date.now()
+        })
+      });
+      const text = await resp.text();
+      setExtensionStatus(`Response from ${ext.name}: ${text.slice(0, 180)}`);
+    } catch (err) {
+      setExtensionStatus(`Couldn't reach ${ext.name}: ${err.message}`);
     }
   };
 
@@ -2424,11 +2667,13 @@ function App() {
     ))
   ), [activeLineThreads, selectedThread?.id, handleThreadSelect, showPreviews]);
 
-  const isPremium = userData?.subscriptionStatus === 'premium' || userData?.hasPremiumHistory;
+  const isPremium = isPremiumUser;
+  const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
 
   if (!user) {
     return (
       <div className="app-shell" style={themeVars}>
+        <div className="noise-overlay" />
         {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <div className="container login-container" id="main-content">
@@ -2524,6 +2769,7 @@ function App() {
 
   return (
     <div className="app-shell" style={themeVars}>
+      <div className="noise-overlay" />
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
@@ -2533,7 +2779,7 @@ function App() {
               <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
               <div>
                 <div className="brand-title">PulseLink Suite</div>
-                <div className="brand-subtitle">Premium Web Access</div>
+                <div className="brand-subtitle">{tierLabel} Web Access</div>        
               </div>
             </div>
             <div className="sidebar-actions">
@@ -2560,6 +2806,7 @@ function App() {
               className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
               onClick={() => setActivePanel('home')}
               title="Home"
+              aria-label="Home"
               aria-current={activePanel === 'home' ? 'page' : undefined}
             >
               <HomeIcon />
@@ -2569,6 +2816,7 @@ function App() {
               className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
               onClick={() => setActivePanel('pulselink')}
               title="PulseLink"
+              aria-label="PulseLink"
               aria-current={activePanel === 'pulselink' ? 'page' : undefined}
             >
               <img src={logo} alt="PulseLink" />
@@ -2578,6 +2826,7 @@ function App() {
               className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
               onClick={() => setActivePanel('beacon')}
               title="Beacon"
+              aria-label="Beacon"
               aria-current={activePanel === 'beacon' ? 'page' : undefined}
             >
               <img src={beaconLogo} alt="Beacon" />
@@ -2587,6 +2836,7 @@ function App() {
               className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
               onClick={() => setActivePanel('ringersong')}
               title="RingerSong"
+              aria-label="RingerSong"
               aria-current={activePanel === 'ringersong' ? 'page' : undefined}
             >
               <img src={ringersongLogo} alt="RingerSong" />
@@ -2596,6 +2846,7 @@ function App() {
               className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
               onClick={() => setActivePanel('map')}
               title="Map"
+              aria-label="Map"
               aria-current={activePanel === 'map' ? 'page' : undefined}
             >
               <MapIcon />
@@ -2605,6 +2856,7 @@ function App() {
               className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
               onClick={() => setActivePanel('contacts')}
               title="Contacts"
+              aria-label="Contacts"
               aria-current={activePanel === 'contacts' ? 'page' : undefined}
             >
               <ContactIcon />
@@ -2614,6 +2866,7 @@ function App() {
               className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
               onClick={() => setActivePanel('themes')}
               title="Themes"
+              aria-label="Themes"
               aria-current={activePanel === 'themes' ? 'page' : undefined}
             >
               <ThemeIcon />
@@ -2623,6 +2876,7 @@ function App() {
               className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
               onClick={() => setActivePanel('extensions')}
               title="Extensions"
+              aria-label="Extensions"
               aria-current={activePanel === 'extensions' ? 'page' : undefined}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
@@ -2633,6 +2887,7 @@ function App() {
               className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
               onClick={() => setActivePanel('settings')}
               title="Settings"
+              aria-label="Settings"
               aria-current={activePanel === 'settings' ? 'page' : undefined}
             >
               <SettingsIcon />
@@ -3390,41 +3645,128 @@ function App() {
                 <h3>Extensions</h3>
                 <p>Enhance your PulseLink experience with powerful add-ons.</p>
               </div>
-              <div className="home-grid">
-                <div className="home-card">
-                  <div className="home-icon beacon">
-                    <img src={beaconLogo} alt="Beacon" />
-                  </div>
-                  <h3>Beacon Inbox</h3>
-                  <p>Advanced SMS handling with cross-device sync and theming.</p>
-                  <div className="badge" style={{background: 'var(--accent)', color: '#000', marginTop: 12, display: 'inline-block'}}>Installed</div>
-                </div>
-                <div className="home-card">
-                   <div className="home-icon ringersong">
-                    <img src={ringersongLogo} alt="RingerSong" />
-                  </div>
-                  <h3>RingerSong</h3>
-                  <p>Smart ringtone progressions using Spotify.</p>
-                  <div className="badge" style={{background: 'var(--accent)', color: '#000', marginTop: 12, display: 'inline-block'}}>Installed</div>
-                </div>
-                <div className="home-card" style={{opacity: 0.7}}>
-                  <div className="home-icon pulselink">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
-                  </div>
-                  <h3>PulseLink AI</h3>
-                  <p>Smart summaries and auto-replies. Coming soon.</p>
-                  <div className="badge" style={{background: 'var(--border)', color: 'var(--muted)', marginTop: 12, display: 'inline-block'}}>Coming Soon</div>
-                </div>
-                {!remoteSettings.thirdPartyExtensionsEnabled && (
-                    <div className="settings-card" style={{gridColumn: '1 / -1'}}>
-                        <h4>Enable Third-Party Extensions</h4>
-                        <p className="settings-note">Unlock the full potential of PulseLink by enabling community extensions.</p>
-                        <button className="primary-btn" onClick={() => {
-                            setRemoteSettings(prev => ({ ...prev, thirdPartyExtensionsEnabled: true }));
-                            handleRemoteSettingsSave();
-                        }}>Enable Beta Extensions</button>
+
+              <div className="settings-card" style={{marginBottom: 20}}>
+                <h4>Quick Setup</h4>
+                <div className="settings-row" style={{alignItems: 'stretch', gap: 16}}>
+                  <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('essentials')}>
+                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
+                      <BoltIcon />
                     </div>
+                    <h4 style={{marginTop: 8}}>Essentials</h4>
+                    <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Just the basics: Beacon, Relay, Email Backup, and OTP Cleanup.</p>
+                  </button>
+                  <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('power')}>
+                    <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
+                      <StarIcon />
+                    </div>
+                    <h4 style={{marginTop: 8}}>Power User</h4>
+                    <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Everything enabled: AI, Crash Detection, Web Access, and more.</p>
+                  </button>
+                </div>
+              </div>
+
+              <div className="home-grid">
+                {[
+                  { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
+                  { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> },
+                  { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
+                  { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
+                  { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true },
+                  { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
+                  { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
+                  { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true }
+                ].map(ext => {
+                  const isEnabled = remoteSettings[ext.id];
+                  const isLocked = ext.premium && !isPremiumUser;
+
+                  return (
+                    <div className="home-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
+                      <div className="home-icon" style={{
+                         background: ext.isImg ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+                         display: 'grid',
+                         placeItems: 'center'
+                      }}>
+                        {ext.isImg ? <img src={ext.icon} alt={ext.name} /> : ext.icon}
+                      </div>
+                      <h3 style={{marginTop: 12, marginBottom: 4}}>{ext.name}</h3>
+                      <p style={{marginBottom: 16, minHeight: 40}}>{ext.desc}</p>
+
+                      {isLocked ? (
+                        <div className="badge badge-premium" style={{background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)'}}>
+                          Premium Required
+                        </div>
+                      ) : (
+                        <button
+                          className={isEnabled ? "secondary-btn" : "primary-btn"}
+                          style={{width: '100%'}}
+                          onClick={() => {
+                            setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
+                            // We trigger a save after a short delay or user leaves, but here we can just auto-save for UX
+                            // But handleRemoteSettingsSave uses current state, so we need to wait for state update or pass new state
+                            // Better to just update state and let user click specific save or use effect.
+                            // Actually, let's use a specialized save or the existing save button in Settings.
+                            // But users expect "Install/Remove" to be immediate.
+                            // We can duplicate the save logic here.
+                             const next = { ...remoteSettings, [ext.id]: !isEnabled };
+                             setDoc(doc(db, "users", user.uid), {
+                               ...next,
+                               settingsUpdatedAt: serverTimestamp()
+                             }, { merge: true });
+                          }}
+                        >
+                          {isEnabled ? "Remove" : "Install"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="settings-card">
+                <h4>Developer sandbox</h4>
+                <p className="settings-note">Add webhook-style extensions that run against your own account. Stored locally so you can iterate safely.</p>
+                {!remoteSettings.thirdPartyExtensionsEnabled && (
+                  <div className="settings-warning">Extensions stay dormant until you enable 3rd-party access in Settings.</div>
                 )}
+                <div className="extensions-list" style={{display: 'grid', gap: 12}}>
+                  {devExtensions.map((ext) => (
+                    <div key={ext.id} className="home-card" style={{margin: 0}}>
+                      <h4>{ext.name}</h4>
+                      <p className="settings-note">{ext.description || ext.endpoint || 'No description provided.'}</p>
+                      {ext.endpoint && <code className="mono" style={{fontSize: 12}}>{ext.endpoint}</code>}
+                      <div className="settings-row" style={{justifyContent: 'flex-start', gap: 8, marginTop: 8}}>
+                        <button className="secondary-btn" type="button" onClick={() => handleTestExtension(ext)}>Test</button>
+                        <button className="ghost-btn" type="button" onClick={() => setDevExtensions((prev) => prev.filter((d) => d.id !== ext.id))}>Remove</button>
+                      </div>
+                    </div>
+                  ))}
+                  {devExtensions.length === 0 && <p className="settings-note">No custom extensions yet.</p>}
+                </div>
+                <form className="login-form" style={{marginTop: 12}} onSubmit={handleAddExtension}>
+                  <label className="login-field">
+                    Name
+                    <input className="login-input" value={extensionForm.name} onChange={(e) => setExtensionForm((prev) => ({ ...prev, name: e.target.value }))} />
+                  </label>
+                  <label className="login-field">
+                    Webhook URL (https://…)
+                    <input className="login-input" value={extensionForm.endpoint} onChange={(e) => setExtensionForm((prev) => ({ ...prev, endpoint: e.target.value }))} />
+                  </label>
+                  <label className="login-field">
+                    Description
+                    <textarea className="login-input" rows={2} value={extensionForm.description} onChange={(e) => setExtensionForm((prev) => ({ ...prev, description: e.target.value }))} />
+                  </label>
+                  <button type="submit" className="primary-btn">Save extension</button>
+                </form>
+                {extensionStatus && <div className="settings-status" role="status">{extensionStatus}</div>}
+              </div>
+              <div className="settings-card">
+                <h4>Submit to gallery</h4>
+                <p className="settings-note">Share your extension with other testers.</p>
+                <div className="settings-row" style={{gap: 8, flexWrap: 'wrap'}}>
+                  <a className="secondary-btn" href="https://github.com/DamienLove/pulselink/blob/Suite-Beta/docs/extensions-dev.md" target="_blank" rel="noreferrer">Read dev guide</a>
+                  <a className="ghost-btn" href="mailto:extensions@pulselink.app?subject=PulseLink%20Extension%20Submission">Email us your zip</a>
+                </div>
               </div>
             </div>
           )}

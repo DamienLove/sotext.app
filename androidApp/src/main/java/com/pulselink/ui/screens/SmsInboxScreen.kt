@@ -115,6 +115,7 @@ import com.pulselink.ui.branding.unifiedBrandName
 @Composable
 fun SmsInboxScreen(
     threads: List<SmsThreadItem>,
+    initialFilter: InboxFilter = InboxFilter.ALL,
     archivedThreads: List<SmsThreadItem>,
     onOpenThread: (SmsThreadItem) -> Unit,
     onOpenContactForThread: (SmsThreadItem) -> Unit = {},
@@ -161,8 +162,10 @@ fun SmsInboxScreen(
     isPro: Boolean = false,
     isUnifiedMode: Boolean = false
 ) {
-    var filter by rememberSaveable(archivedOnly) {
-        mutableStateOf(if (archivedOnly) InboxFilter.ARCHIVED else InboxFilter.ALL)
+    var filter by rememberSaveable(archivedOnly, initialFilter) {
+        mutableStateOf(
+            if (archivedOnly) InboxFilter.ARCHIVED else initialFilter
+        )
     }
     var searchText by rememberSaveable { mutableStateOf("") }
 
@@ -193,7 +196,12 @@ fun SmsInboxScreen(
     val archivedIds = remember(gatedArchivedThreads, localDeviceId) {
         gatedArchivedThreads.map { threadKey(it) }.toSet()
     }
-    val filtered = remember(filter, gatedThreads, gatedArchivedThreads, privateThreadIds, showPrivateOnly) {
+    val contactAddresses = remember(contactsByNumber, contactRecipients) {
+        (contactsByNumber.keys + contactRecipients.map { normalizeSmsAddress(it.phoneNumber) })
+            .filter { it.isNotBlank() }
+            .toSet()
+    }
+    val filtered = remember(filter, gatedThreads, gatedArchivedThreads, privateThreadIds, showPrivateOnly, contactAddresses) {
         val base = when (filter) {
             InboxFilter.ARCHIVED -> gatedArchivedThreads
             else -> gatedThreads
@@ -214,7 +222,7 @@ fun SmsInboxScreen(
                 InboxFilter.TRUSTED -> thread.isTrusted
                 InboxFilter.FAVORITES -> thread.isFavorite
                 InboxFilter.PRIVATE -> thread.isPrivate || privateThreadIds.contains(thread.threadId)
-                InboxFilter.CONTACTS -> false
+                InboxFilter.CONTACTS -> normalizeSmsAddress(thread.address) in contactAddresses
                 InboxFilter.READ -> !thread.unread
                 InboxFilter.UNREAD -> thread.unread
                 InboxFilter.ARCHIVED -> true

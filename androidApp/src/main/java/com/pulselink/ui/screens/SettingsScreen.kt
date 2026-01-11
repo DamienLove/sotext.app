@@ -340,14 +340,23 @@ fun SettingsScreen(
                 ) {
                 val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
                 val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                SettingsActionRow(
-                    title = "Default SMS Check",
-                    subtitle = if (isDefaultSmsApp) "PulseLink is your default SMS app" else "PulseLink is NOT set as default",
-                    actionLabel = "Check",
-                    onAction = onRequestDefaultSms,
-                    leadingIcon = smsStatusIcon,
-                    iconTint = smsStatusColor
-                )
+                if (isDefaultSmsApp) {
+                    Text(
+                        text = "PulseLink is your default SMS app",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = smsStatusColor,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                } else {
+                    SettingsActionRow(
+                        title = "Default SMS",
+                        subtitle = "PulseLink is NOT set as default",
+                        actionLabel = "Make default",
+                        onAction = onRequestDefaultSms,
+                        leadingIcon = smsStatusIcon,
+                        iconTint = smsStatusColor
+                    )
+                }
 
                 SettingsToggleRow(
                     title = stringResource(id = R.string.settings_beacon_icon_title),
