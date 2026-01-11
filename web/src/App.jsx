@@ -224,6 +224,13 @@ const TrustedContactRow = memo(({ contact, isConfirmingDelete, onEdit, onDeleteR
           onClick={() => onDeleteConfirm(contact.id)}
           aria-label={`Confirm remove ${contact.displayName}`}
           onBlur={onDeleteCancel}
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              onDeleteCancel();
+            }
+          }}
         >
           Confirm?
         </button>
