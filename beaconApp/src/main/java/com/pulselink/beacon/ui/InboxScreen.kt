@@ -475,47 +475,62 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
-            .alpha(0.8f),
+            .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Surface(
-                shape = CircleShape,
-                color = theme.frameColor.copy(alpha = 0.05f),
-                modifier = Modifier.size(80.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = when(filter) {
-                            InboxFilter.ARCHIVED -> Icons.Default.Inbox
-                            InboxFilter.UNREAD -> Icons.Default.MarkChatUnread
-                            else -> Icons.Default.Sms
-                        },
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(40.dp)
-                    )
+            Box(contentAlignment = Alignment.Center) {
+                // Outer glow
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .alpha(0.1f)
+                        .background(iconTint, CircleShape)
+                )
+                // Icon container
+                Surface(
+                    shape = CircleShape,
+                    color = theme.frameColor.copy(alpha = 0.08f),
+                    modifier = Modifier.size(90.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = when(filter) {
+                                InboxFilter.ARCHIVED -> Icons.Default.Inbox
+                                InboxFilter.UNREAD -> Icons.Default.CheckCircle
+                                else -> Icons.Default.Sms
+                            },
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "No messages here",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Medium
+                text = when (filter) {
+                    InboxFilter.UNREAD -> "All caught up"
+                    InboxFilter.ARCHIVED -> "No archives"
+                    else -> "Inbox Empty"
+                },
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = theme.frameColor
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = when (filter) {
-                    InboxFilter.UNREAD -> "You're all caught up!"
-                    InboxFilter.PERSONAL -> "No personal messages yet."
-                    InboxFilter.TRANSACTIONS -> "No transactions found."
-                    InboxFilter.PROMOTIONS -> "No promotions found."
-                    InboxFilter.ARCHIVED -> "No archived conversations."
-                    else -> "Start a conversation to see it here."
+                    InboxFilter.UNREAD -> "No unread messages. Nice work!"
+                    InboxFilter.PERSONAL -> "Personal conversations will appear here."
+                    InboxFilter.TRANSACTIONS -> "Bank alerts and codes appear here."
+                    InboxFilter.PROMOTIONS -> "Marketing offers appear here."
+                    InboxFilter.ARCHIVED -> "Archived threads are hidden here."
+                    else -> "Your messages will appear here once you start chatting."
                 },
-                style = MaterialTheme.typography.bodyMedium,
-                color = theme.frameColor.copy(alpha = 0.6f)
+                style = MaterialTheme.typography.bodyLarge,
+                color = theme.frameColor.copy(alpha = 0.6f),
+                modifier = Modifier.alpha(0.8f)
             )
         }
     }

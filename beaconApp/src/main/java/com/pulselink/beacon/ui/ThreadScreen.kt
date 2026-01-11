@@ -2,6 +2,11 @@ package com.pulselink.beacon.ui
 
 import android.text.format.DateUtils
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
@@ -31,6 +37,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DatePicker
@@ -45,6 +52,7 @@ import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimePicker
@@ -63,6 +71,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -89,8 +98,11 @@ fun ThreadScreen(
     address: String,
     uiItems: List<ThreadUiItem>,
     theme: ThemePalette,
+    pendingMessage: SmsViewModel.PendingMessage? = null,
     onBack: () -> Unit,
     onSend: (String) -> Unit,
+    onCancelPending: () -> Unit = {},
+    onSendNow: () -> Unit = {},
     onScheduleMessage: (String, Long) -> Unit = { _, _ -> },
     onDeleteThread: () -> Unit,
     onEditNotificationSound: () -> Unit,
@@ -103,14 +115,31 @@ fun ThreadScreen(
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    // Constants
+    val SCROLL_THRESHOLD_ITEMS = 2
+    val AUTO_SCROLL_THRESHOLD = 3
+
+    // UX: Show "Scroll to Bottom" if user is scrolled up
+    val showScrollToBottom by androidx.compose.runtime.remember {
+        androidx.compose.runtime.derivedStateOf {
+            listState.firstVisibleItemIndex > SCROLL_THRESHOLD_ITEMS
+        }
+    }
 
     // Auto-scroll logic for new messages
-    // Since reverseLayout=true, item 0 is at bottom.
-    // If the list grows (new message), it should stay at bottom if already there.
-    // However, if we just opened, we want to be at bottom.
-    LaunchedEffect(uiItems.firstOrNull()) {
+    // Trigger only when the size changes or the latest item ID changes
+    val latestItemId = uiItems.firstOrNull()?.let {
+        when(it) {
+            is ThreadUiItem.Message -> it.message.id
+            is ThreadUiItem.DateHeader -> it.date.hashCode().toLong()
+        }
+    }
+    LaunchedEffect(uiItems.size, latestItemId) {
         if (uiItems.isNotEmpty()) {
-             if (listState.firstVisibleItemIndex < 3) {
+             // If near bottom, auto-scroll to show new message
+             if (listState.firstVisibleItemIndex < AUTO_SCROLL_THRESHOLD) {
                 listState.animateScrollToItem(0)
              }
         }
@@ -260,6 +289,35 @@ fun ThreadScreen(
                 item { Spacer(modifier = Modifier.height(20.dp)) }
             }
 
+            // Scroll to Bottom FAB
+            AnimatedVisibility(
+                visible = showScrollToBottom,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(bottom = 8.dp)
+            ) {
+                Surface(
+                    onClick = {
+                        scope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    },
+                    shape = CircleShape,
+                    color = theme.accentColor.copy(alpha = 0.9f),
+                    shadowElevation = 4.dp,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Scroll to newest",
+                        tint = Color.White,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
+
             // Input Area
             Surface(
                 tonalElevation = 0.dp,
@@ -267,6 +325,39 @@ fun ThreadScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column {
+                    // Pending Message UI (Delayed Send)
+                    AnimatedVisibility(visible = pendingMessage != null) {
+                        Surface(
+                            color = theme.accentColor.copy(alpha = 0.1f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        "Sending...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = theme.accentColor,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    TextButton(onClick = onCancelPending) {
+                                        Text("Undo", color = theme.frameColor)
+                                    }
+                                    TextButton(onClick = onSendNow) {
+                                        Text("Send Now", color = theme.accentColor)
+                                    }
+                                }
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = theme.accentColor,
+                                    trackColor = theme.accentColor.copy(alpha = 0.2f)
+                                )
+                            }
+                        }
+                    }
+
                     LazyRow(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -394,7 +485,7 @@ fun TimePickerDialog(
 }
 
 @Composable
-private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
+private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = emptyList(), theme: ThemePalette) {
     val isOutgoing = message.outgoing
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
     val alignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
@@ -426,7 +517,7 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 1.dp), // Tight vertical spacing within group
+            .padding(vertical = if (reactions.isNotEmpty()) 8.dp else 1.dp),
         contentAlignment = alignment
     ) {
         Surface(
@@ -516,6 +607,31 @@ private fun MessageBubble(message: SmsMessageItem, theme: ThemePalette) {
                         fontWeight = FontWeight.Medium,
                         color = (if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming).copy(alpha = 0.7f)
                     )
+                }
+            }
+        }
+
+        // Reactions Overlay
+        if (reactions.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .align(if (isOutgoing) Alignment.BottomEnd else Alignment.BottomStart)
+                    .offset(y = 10.dp, x = if (isOutgoing) (-4).dp else 4.dp)
+                    .zIndex(1f),
+                horizontalArrangement = Arrangement.spacedBy((-4).dp)
+            ) {
+                reactions.forEach { reaction ->
+                    Surface(
+                        shape = CircleShape,
+                        color = theme.threadBackgroundColor,
+                        border = BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f)),
+                        modifier = Modifier.size(24.dp),
+                        shadowElevation = 2.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(text = reaction.emoji, fontSize = 12.sp)
+                        }
+                    }
                 }
             }
         }
