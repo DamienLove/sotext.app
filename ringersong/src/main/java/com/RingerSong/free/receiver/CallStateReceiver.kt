@@ -1,6 +1,5 @@
 package com.RingerSong.free.receiver
 
-import android.app.ForegroundServiceStartNotAllowedException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -19,6 +18,9 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class CallStateReceiver : BroadcastReceiver() {
+
+    @Inject lateinit var appStateStore: AppStateStore
+
     companion object {
         private const val TAG = "CallStateReceiver"
         private var lastState = TelephonyManager.EXTRA_STATE_IDLE
@@ -51,7 +53,6 @@ class CallStateReceiver : BroadcastReceiver() {
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to start service (likely Android 12+ background restriction)", e)
                     // Fallback or retry logic could go here, but for now we log and proceed safely.
-                    // If we can't start the service, we can't play streaming audio.
                 }
             }
 
@@ -73,15 +74,15 @@ class CallStateReceiver : BroadcastReceiver() {
                     // We still keep the "Next Ringtone" logic for fallback/LOCAL support if needed,
                     // but for Streaming, the service handles it.
                     val pending = goAsync()
+                    // Use IO dispatcher for database/disk operations
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            val store = AppStateStore(context)
-                            val ringtoneManager = RingtoneSegmentManager(context, store)
+                            val ringtoneManager = RingtoneSegmentManager(context, appStateStore)
 
                             // Check if enabled
-                            val state = store.stateFlow.first()
+                            val state = appStateStore.stateFlow.first()
                             if (!state.settings.enabled) {
-                                pending.finish()
+                                Log.d(TAG, "RingerSong is disabled, skipping next ringtone setup")
                                 return@launch
                             }
 

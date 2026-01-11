@@ -39,6 +39,8 @@ class RingerPlaybackService : Service() {
     private var originalRingerVolume = -1
     private var originalMusicVolume = -1
     private var isPlaying = false
+    private var playbackJob: Job? = null
+    private var audioFocusRequest: AudioFocusRequest? = null
 
     companion object {
         const val ACTION_PLAY_SEGMENT = "com.RingerSong.action.PLAY_SEGMENT"
@@ -138,7 +140,7 @@ class RingerPlaybackService : Service() {
     private fun requestAudioFocus() {
         audioManager?.let { am ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                     .setAudioAttributes(
                         AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -146,7 +148,7 @@ class RingerPlaybackService : Service() {
                             .build()
                     )
                     .build()
-                am.requestAudioFocus(focusRequest)
+                audioFocusRequest?.let { am.requestAudioFocus(it) }
             } else {
                 @Suppress("DEPRECATION")
                 am.requestAudioFocus(
@@ -161,8 +163,10 @@ class RingerPlaybackService : Service() {
     private fun abandonAudioFocus() {
          audioManager?.let { am ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).build()
-                am.abandonAudioFocusRequest(focusRequest)
+                audioFocusRequest?.let {
+                    am.abandonAudioFocusRequest(it)
+                    audioFocusRequest = null
+                }
             } else {
                 @Suppress("DEPRECATION")
                 am.abandonAudioFocus(null)
@@ -171,24 +175,20 @@ class RingerPlaybackService : Service() {
     }
 
     private fun restoreSystemRinger() {
-        if (originalRingerVolume != -1) {
-            try {
+        try {
+            if (originalRingerVolume != -1) {
                 audioManager?.setStreamVolume(AudioManager.STREAM_RING, originalRingerVolume, 0)
                 Log.d(TAG, "Restored system ringer to $originalRingerVolume")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error restoring ringer", e)
+                originalRingerVolume = -1
             }
-            originalRingerVolume = -1
-        }
 
-        if (originalMusicVolume != -1) {
-            try {
+            if (originalMusicVolume != -1) {
                 audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, originalMusicVolume, 0)
                 Log.d(TAG, "Restored music volume to $originalMusicVolume")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error restoring music volume", e)
+                originalMusicVolume = -1
             }
-            originalMusicVolume = -1
+        } catch (e: Exception) {
+            Log.e(TAG, "Error restoring ringer/music volume", e)
         }
         abandonAudioFocus()
     }
@@ -239,13 +239,15 @@ class RingerPlaybackService : Service() {
             this@RingerPlaybackService.isPlaying = true
             Log.d(TAG, "Spotify stream started successfully")
 
-            // Schedule stop
-            delay(durationMs)
-            Log.d(TAG, "Segment playback complete (Spotify)")
-            stopPlayback()
-            restoreSystemRinger()
-            stopForeground(true)
-            stopSelf()
+            // Schedule stop with cancellable job
+            playbackJob = scope.launch {
+                delay(durationMs)
+                Log.d(TAG, "Segment playback complete (Spotify)")
+                stopPlayback()
+                restoreSystemRinger()
+                stopForeground(true)
+                stopSelf()
+            }
         } else {
             Log.e(TAG, "Failed to stream Spotify song")
             stopPlayback()
@@ -279,8 +281,8 @@ class RingerPlaybackService : Service() {
                     mp.isLooping = false
                     this@RingerPlaybackService.isPlaying = true
 
-                    // Schedule stop after durationMs
-                    scope.launch {
+                    // Schedule stop after durationMs with cancellable job
+                    playbackJob = scope.launch {
                         delay(durationMs)
                         Log.d(TAG, "Segment playback complete after ${durationMs}ms")
                         stopPlayback()
@@ -321,20 +323,23 @@ class RingerPlaybackService : Service() {
     }
 
     private fun stopPlayback() {
-        if (isPlaying) {
-            Log.d(TAG, "Executing stopPlayback")
-            // Ensure we pause Spotify explicitly
-            spotifyPlayer.pause()
+        Log.d(TAG, "Executing stopPlayback")
 
+        // Cancel any pending stop/cleanup jobs
+        playbackJob?.cancel()
+        playbackJob = null
+
+        // Ensure we pause Spotify explicitly - simplified logic
+        spotifyPlayer.pause()
+
+        // Cleanup media player
+        if (mediaPlayer != null) {
             mediaPlayer?.stop()
             mediaPlayer?.release()
             mediaPlayer = null
-            isPlaying = false
-        } else {
-             // Even if isPlaying is false, try to pause Spotify just in case it was playing
-             // but our state got desynced or it was connecting.
-             spotifyPlayer.pause()
         }
+
+        isPlaying = false
     }
 
     private fun buildNotification() = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -358,6 +363,7 @@ class RingerPlaybackService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "Service Destroyed")
+        stopPlayback() // Ensure cleanup happens even if destroyed unexpectedly
         scope.cancel()
         restoreSystemRinger() // Safety net
         super.onDestroy()
