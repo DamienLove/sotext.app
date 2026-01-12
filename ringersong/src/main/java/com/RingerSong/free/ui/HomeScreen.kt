@@ -1,6 +1,7 @@
 package com.RingerSong.free.ui
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -215,6 +216,7 @@ fun HomeScreen(
                             permissionLauncher.launch(requiredPermissions())
                         }
                     )
+                    NotificationPolicyCard(context = context)
                     WriteSettingsPermissionCard(context = context)
                     ShuffleCard(
                         shuffle = state.settings.shuffle,
@@ -526,6 +528,45 @@ private fun PermissionsCard(context: Context, onRequest: () -> Unit) {
             )
             OutlinedButton(onClick = onRequest) {
                 Text("Grant permissions")
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationPolicyCard(context: Context) {
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val hasPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        notificationManager.isNotificationPolicyAccessGranted
+    } else {
+        true
+    }
+
+    if (hasPermission) return
+
+    SectionCard(
+        accent = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "⚠️ Do Not Disturb Access Required",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "RingerSong needs 'Do Not Disturb' access to automatically silence the default ringtone so you can hear your streamed music.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedButton(
+                onClick = {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                        context.startActivity(intent)
+                    }
+                }
+            ) {
+                Text("Allow Access")
             }
         }
     }
