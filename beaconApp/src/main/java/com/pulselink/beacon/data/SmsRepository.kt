@@ -754,8 +754,9 @@ class SmsRepository(private val context: Context) {
             )
         }.getOrNull() ?: return emptyList()
 
-        val items = mutableListOf<SmsThreadItem>()
+        val rawItems = mutableListOf<RawSmsThreadData>()
         val seenThreads = HashSet<Long>()
+
         cursor.use { c ->
             val threadIdx = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
             val addrIdx = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
@@ -766,23 +767,112 @@ class SmsRepository(private val context: Context) {
             while (c.moveToNext() && count < limit) {
                 val threadId = c.getLong(threadIdx)
                 if (!seenThreads.add(threadId)) continue
-                val body = c.getString(bodyIdx) ?: ""
-                val ts = c.getLong(dateIdx)
-                val unread = c.getInt(readIdx) == 0
-                val rawAddr = c.getString(addrIdx)
-                val address = resolveAddress(rawAddr)
 
-                items += SmsThreadItem(
+                rawItems.add(RawSmsThreadData(
                     threadId = threadId,
-                    address = address,
-                    snippet = body,
-                    timestamp = ts,
-                    unread = unread,
-                    category = classifyThread(address, body)
-                )
+                    rawAddress = c.getString(addrIdx) ?: "",
+                    body = c.getString(bodyIdx) ?: "",
+                    timestamp = c.getLong(dateIdx),
+                    unread = c.getInt(readIdx) == 0
+                ))
                 count++
             }
         }
-        return items
+
+        if (rawItems.isEmpty()) return emptyList()
+
+        // Batch resolve addresses
+        val resolvedMap = resolveAddressesForStrings(rawItems.map { it.rawAddress })
+
+        return rawItems.map { raw ->
+            val finalAddress = resolvedMap[raw.rawAddress] ?: raw.rawAddress
+            SmsThreadItem(
+                threadId = raw.threadId,
+                address = finalAddress,
+                snippet = raw.body,
+                timestamp = raw.timestamp,
+                unread = raw.unread,
+                category = classifyThread(finalAddress, raw.body)
+            )
+        }
+    }
+
+    private data class RawSmsThreadData(
+        val threadId: Long,
+        val rawAddress: String,
+        val body: String,
+        val timestamp: Long,
+        val unread: Boolean
+    )
+
+    private fun resolveAddressesForStrings(rawAddresses: List<String>): Map<String, String> {
+        val result = mutableMapOf<String, String>()
+        val toLookup = mutableSetOf<String>()
+
+        // 1. Check Cache
+        rawAddresses.forEach { raw ->
+            if (raw.isBlank()) return@forEach
+            val cached = contactCache[raw]
+            if (cached != null) {
+                result[raw] = cached
+            } else {
+                toLookup.add(raw)
+            }
+        }
+
+        if (toLookup.isEmpty()) return result
+
+        // 2. Batch Lookup
+        toLookup.chunked(100).forEach { batch ->
+            // Sanitize batch for SQL (single quotes escaping not strictly needed with placeholders but good to be careful)
+            // ContactsContract.CommonDataKinds.Phone.NUMBER lookup
+            val cursor = runCatching {
+                context.contentResolver.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME),
+                    "${ContactsContract.CommonDataKinds.Phone.NUMBER} IN (${batch.joinToString(",") { "?" }})",
+                    batch.toTypedArray(),
+                    null
+                )
+            }.getOrNull()
+
+            cursor?.use { c ->
+                val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                while (c.moveToNext()) {
+                    val num = c.getString(numIdx) ?: continue
+                    val name = c.getString(nameIdx) ?: continue
+                    if (name.isNotBlank()) {
+                        val formatted = if (name != num) "$name \u2022 $num" else num
+
+                        // Try to match back to our lookup set (normalization might be needed)
+                        // Simple exact match first
+                        if (toLookup.contains(num)) {
+                            result[num] = formatted
+                            contactCache.put(num, formatted)
+                        }
+
+                        // Try stripped match
+                        val stripped = num.replace(" ", "").replace("-", "")
+                        batch.forEach { pending ->
+                             if (pending.replace(" ", "").replace("-", "") == stripped) {
+                                 result[pending] = formatted
+                                 contactCache.put(pending, formatted)
+                             }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fill remaining with raw
+        toLookup.forEach { raw ->
+            if (!result.containsKey(raw)) {
+                contactCache.put(raw, raw)
+                result[raw] = raw
+            }
+        }
+
+        return result
     }
 }

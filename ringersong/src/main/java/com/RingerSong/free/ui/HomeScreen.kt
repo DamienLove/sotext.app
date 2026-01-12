@@ -1,6 +1,7 @@
 package com.RingerSong.free.ui
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -215,6 +216,7 @@ fun HomeScreen(
                             permissionLauncher.launch(requiredPermissions())
                         }
                     )
+                    NotificationPolicyCard(context = context)
                     WriteSettingsPermissionCard(context = context)
                     ShuffleCard(
                         shuffle = state.settings.shuffle,
@@ -526,6 +528,45 @@ private fun PermissionsCard(context: Context, onRequest: () -> Unit) {
             )
             OutlinedButton(onClick = onRequest) {
                 Text("Grant permissions")
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationPolicyCard(context: Context) {
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val hasPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        notificationManager.isNotificationPolicyAccessGranted
+    } else {
+        true
+    }
+
+    if (hasPermission) return
+
+    SectionCard(
+        accent = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "⚠️ Do Not Disturb Access Required",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "RingerSong needs 'Do Not Disturb' access to automatically silence the default ringtone so you can hear your streamed music.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedButton(
+                onClick = {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+                        context.startActivity(intent)
+                    }
+                }
+            ) {
+                Text("Allow Access")
             }
         }
     }
@@ -1406,22 +1447,22 @@ private fun HowToAddMusicHelper() {
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Search & add songs from Spotify or YouTube Music using the sections above. Songs will be downloaded for offline playback.",
+            text = "Streaming First: Connect your Spotify Premium account above to stream songs directly as your ringtone.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "You can also use local audio files (MP3/WAV/M4A) by selecting them from your device.",
+            text = "We automatically silence your default ringer and play your stream instead.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Tip: Share audio files from apps like Zedge to import them here.",
+            text = "Note: YouTube Music tracks will be downloaded. Local files are also supported.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "⚠️ IMPORTANT: Set your phone's default ringtone to Silent in Settings > Sounds for best results. RingerSong will still play your progressive ringer!",
+            text = "⚠️ TIP: For the best experience, manually set your phone's default ringtone to 'Silent' in System Settings to prevent any overlap.",
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.primary

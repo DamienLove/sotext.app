@@ -120,6 +120,7 @@ fun InboxScreen(
     onOpenNotificationSettings: () -> Unit,
     filter: InboxFilter,
     onFilterChange: (InboxFilter) -> Unit,
+    searchText: String,
     isLoading: Boolean = false,
     isRefreshing: Boolean = false,
     selectionMode: Boolean = false,
@@ -137,7 +138,6 @@ fun InboxScreen(
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var searchText by rememberSaveable { mutableStateOf("") }
     var navigatedFromSearch by remember { mutableStateOf(false) }
     val iconTint = theme.accentColor
 
@@ -148,24 +148,11 @@ fun InboxScreen(
         }
     }
 
-    // Pre-calculate filtered list efficiently
-    val filtered = remember(filter, threads, searchText) {
-        // If searching, show threads if they match name (quick filter), otherwise show SearchResults UI
-        // But here we are filtering the main list.
-        if (searchText.isNotBlank()) threads else {
-            val all = threads
-            when (filter) {
-                InboxFilter.ALL -> all.filter { !it.isArchived }
-                InboxFilter.READ -> all.filter { !it.unread && !it.isArchived }
-                InboxFilter.UNREAD -> all.filter { it.unread && !it.isArchived }
-                InboxFilter.PERSONAL -> all.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
-                InboxFilter.TRANSACTIONS -> all.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
-                InboxFilter.PROMOTIONS -> all.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
-                InboxFilter.ARCHIVED -> all.filter { it.isArchived }
-            }
-        }
-    }
+    // Use passed threads which are already filtered by ViewModel
+    val filtered = threads
 
+    // Calculate unread count (this might be inaccurate if threads is filtered by search, but okay for now)
+    // Ideally ViewModel should pass unread count too.
     val unreadCount = remember(threads) { threads.count { it.unread && !it.isArchived } }
     val mutedTint = theme.frameColor.copy(alpha = 0.7f)
     val topAppBarState = rememberTopAppBarState()
@@ -320,14 +307,12 @@ fun InboxScreen(
                 OutlinedTextField(
                     value = searchText,
                     onValueChange = {
-                        searchText = it
                         onSearch(it)
                     },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = mutedTint) },
                     trailingIcon = {
                         if (searchText.isNotBlank()) {
                             IconButton(onClick = {
-                                searchText = ""
                                 onClearSearch()
                             }) { Icon(Icons.Default.Clear, contentDescription = "Clear", tint = mutedTint) }
                         }
