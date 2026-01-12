@@ -93,6 +93,14 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private var rawThreads: List<SmsThreadItem> = emptyList()
     private var inboxState: InboxState = InboxState()
 
+    // Filtered state
+    var filteredThreads by mutableStateOf<List<SmsThreadItem>>(emptyList())
+        private set
+    var currentFilter by mutableStateOf(InboxFilter.ALL)
+        private set
+    var currentSearchText by mutableStateOf("")
+        private set
+
     private var searchJob: Job? = null
 
     init {
@@ -111,6 +119,17 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 mergeThreads()
             }
         }
+    }
+
+    fun updateFilter(filter: InboxFilter) {
+        currentFilter = filter
+        updateFilteredList()
+    }
+
+    fun updateSearchText(text: String) {
+        currentSearchText = text
+        updateFilteredList()
+        search(text) // Trigger full search logic too
     }
 
     fun refreshThreads(initial: Boolean = false) {
@@ -141,6 +160,36 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 .thenByDescending { it.timestamp }
         )
         threads = merged
+        updateFilteredList()
+    }
+
+    private fun updateFilteredList() {
+        viewModelScope.launch(Dispatchers.Default) {
+            val list = threads
+            val filter = currentFilter
+            val search = currentSearchText
+
+            val result = if (search.isNotBlank()) {
+                // If searching, show all non-archived matching items in the main list
+                // (Though SearchResults UI might handle this, keeping list consistent is good)
+                list.filter {
+                    !it.isArchived && (it.address.contains(search, true) || it.snippet.contains(search, true))
+                }
+            } else {
+                 when (filter) {
+                    InboxFilter.ALL -> list.filter { !it.isArchived }
+                    InboxFilter.READ -> list.filter { !it.unread && !it.isArchived }
+                    InboxFilter.UNREAD -> list.filter { it.unread && !it.isArchived }
+                    InboxFilter.PERSONAL -> list.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
+                    InboxFilter.TRANSACTIONS -> list.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
+                    InboxFilter.PROMOTIONS -> list.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
+                    InboxFilter.ARCHIVED -> list.filter { it.isArchived }
+                }
+            }
+            withContext(Dispatchers.Main) {
+                filteredThreads = result
+            }
+        }
     }
 
     fun togglePin(threadId: Long) {

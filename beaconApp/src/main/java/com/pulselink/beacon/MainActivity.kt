@@ -190,7 +190,10 @@ private fun BeaconNav(
         ) {
             composable("inbox") {
                     InboxScreen(
-                        threads = vm.threads,
+                        threads = vm.filteredThreads,
+                        filter = vm.currentFilter,
+                        onFilterChange = { vm.updateFilter(it) },
+                        searchText = vm.currentSearchText,
                         theme = themeState.global,
                         searchState = vm.searchState,
                         isDefaultSms = isDefaultSms,
@@ -220,8 +223,8 @@ private fun BeaconNav(
                     onTogglePin = { vm.togglePin(it) },
                     onToggleArchive = { vm.toggleArchive(it) },
                     onRefresh = { vm.refreshThreads() },
-                    onSearch = { vm.search(it) },
-                    onClearSearch = { vm.clearSearch() },
+                    onSearch = { vm.updateSearchText(it) },
+                    onClearSearch = { vm.updateSearchText("") },
                     onCustomize = { navController.navigate("customize?address=") },
                     onCompose = { navController.navigate("newMessage") },
                     onOpenNotifications = { navController.navigate("notifications") },
