@@ -8,8 +8,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,6 +60,8 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -484,6 +488,7 @@ fun TimePickerDialog(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = emptyList(), theme: ThemePalette) {
     val isOutgoing = message.outgoing
@@ -513,6 +518,7 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
     val otp = remember(message.body) { extractOtp(message.body) }
     val extractedUrl = remember(message.body) { LinkPreviewHelper.extractUrl(message.body) }
     val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -528,8 +534,27 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
                 .width(if (message.body.length > 40) 300.dp else Box.Unspecified) // Limit width for long text
                 .padding(horizontal = 0.dp)
                 .clip(bubbleShape)
-                .clickable { /* Toggle timestamp expansion? */ }
+                .combinedClickable(
+                    onClick = { /* Toggle timestamp expansion? */ },
+                    onLongClick = { showMenu = true }
+                )
         ) {
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Copy Text") },
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(message.body))
+                        Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+                        showMenu = false
+                    },
+                    leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }
+                )
+                // Add more actions here (e.g., Forward, React, etc. in future)
+            }
+
             Column(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {

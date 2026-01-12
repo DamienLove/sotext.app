@@ -93,6 +93,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private var rawThreads: List<SmsThreadItem> = emptyList()
     private var inboxState: InboxState = InboxState()
 
+    val delayedSendTimeout: Int get() = inboxState.delayedSendTimeout
+
     // Filtered state
     var filteredThreads by mutableStateOf<List<SmsThreadItem>>(emptyList())
         private set
@@ -309,7 +311,19 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun sendDelayedMessage(body: String, delaySeconds: Int = 5) {
+    fun setDelayedSendTimeout(seconds: Int) {
+        viewModelScope.launch {
+            inboxPrefs.setDelayedSendTimeout(seconds)
+        }
+    }
+
+    fun sendDelayedMessage(body: String) {
+        val delaySeconds = delayedSendTimeout
+        if (delaySeconds <= 0) {
+            sendMessage(body)
+            return
+        }
+
         // If there is already a pending message, send it immediately before starting the new one
         if (pendingMessage != null) {
              sendNow()
