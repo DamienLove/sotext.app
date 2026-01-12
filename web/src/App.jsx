@@ -566,26 +566,26 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#22D3EE",
+  secondaryColor: "#0EA5E9",
+  bubbleOutgoing: "#22D3EE",
+  bubbleIncoming: "#161B2E",
+  backgroundColor: "#05070F",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
-  inboxIconVariant: "Default",
-  onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  bubbleCornerRadius: 22,
+  inboxIconVariant: "Beacon",
+  onBubbleOutgoing: "#04060C",
+  onBubbleIncoming: "#EEF2FB",
+  onBackground: "#EEF2FB",
+  topBarColor: "#0C1326",
+  onTopBarColor: "#EEF2FB",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
   bubbleCornerRadiusBottomEnd: null,
-  timestampColor: null,
-  dividerColor: null,
+  timestampColor: "#9FB3C8",
+  dividerColor: "#1E293B",
   appBackgroundGradientStart: null,
   appBackgroundGradientEnd: null,
   fontScale: 1.0,
@@ -1404,6 +1404,7 @@ function App() {
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
+  const [settingsSearch, setSettingsSearch] = useState('');
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const isPremiumUser = useMemo(() => {
@@ -3777,126 +3778,162 @@ function App() {
                 <h3>Settings</h3>
                 <p>Manage account details and shared preferences.</p>
               </div>
+
+              <div className="settings-search-container">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity: 0.5}}>
+                  <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  className="settings-search-input"
+                  placeholder="Search settings..."
+                  value={settingsSearch}
+                  onChange={(e) => setSettingsSearch(e.target.value)}
+                />
+              </div>
+
               <div className="settings-grid">
-                <div className="settings-card">
-                  <h4>Account</h4>
-                  <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
-                    <span className="settings-value">{user.email || 'Unknown'}</span>
-                  </div>
-                  <div className="settings-row">
-                    <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">
-                      {user.uid}
-                      <CopyButton text={user.uid} label="Copy User ID" />
-                    </span>
-                  </div>
-                  <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
-                    Send password reset email
-                  </button>
-                  {settingsStatus && <div className="settings-status" role="status" aria-live="polite">{settingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>Web preferences</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={showPreviews}
-                      onChange={(e) => setShowPreviews(e.target.checked)}
-                    />
-                    Show message previews
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={autoScroll}
-                      onChange={(e) => setAutoScroll(e.target.checked)}
-                    />
-                    Auto-scroll to latest message
-                  </label>
-                  <p className="settings-note">
-                    Preferences apply to this browser only.
-                  </p>
-                </div>
-                <div className="settings-card">
-                  <h4>PulseLink settings</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.remoteWebAccessEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
-                    />
-                    Enable remote web access
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.autoUpdateContactInfo}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
-                    />
-                    Auto-update contact info
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.thirdPartyExtensionsEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
-                    />
-                    Enable 3rd-party extensions (beta)
-                  </label>
-                  <label className="login-field">
-                    Time format
-                    <select
-                      className="login-input"
-                      value={remoteSettings.timeFormat}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
-                    >
-                      <option value="AUTO">Auto</option>
-                      <option value="TWELVE_HOUR">12-hour</option>
-                      <option value="TWENTY_FOUR_HOUR">24-hour</option>
-                    </select>
-                  </label>
-                  <button
-                    className="secondary-btn"
-                    type="button"
-                    onClick={handleRemoteSettingsSave}
-                    disabled={isSavingSettings}
-                    aria-busy={isSavingSettings}
-                  >
-                    {isSavingSettings ? (
-                      <>
-                        <Spinner />
-                        Saving...
-                      </>
-                    ) : 'Save PulseLink settings'}
-                  </button>
-                  {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>Account data</h4>
-                  <p className="settings-note">
-                    Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
-                  </p>
-                  <div className="contact-actions">
-                    <button
-                      className="secondary-btn"
-                      type="button"
-                      onClick={handleDeleteAccountData}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
-                    </button>
-                    <button
-                      className="primary-btn"
-                      type="button"
-                      onClick={handleDeleteAccount}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'account' ? "Deleting..." : "Delete account"}
-                    </button>
-                  </div>
-                  {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
-                </div>
+                {(() => {
+                  const term = settingsSearch.toLowerCase().trim();
+                  const show = (keywords) => {
+                    if (!term) return true;
+                    return keywords.some(k => k.includes(term));
+                  };
+
+                  return (
+                    <>
+                      {show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']) && (
+                        <div className="settings-card">
+                          <h4>Account</h4>
+                          <div className="settings-row">
+                            <span className="settings-label">Signed in as</span>
+                            <span className="settings-value">{user.email || 'Unknown'}</span>
+                          </div>
+                          <div className="settings-row">
+                            <span className="settings-label">User ID</span>
+                            <span className="settings-value mono">
+                              {user.uid}
+                              <CopyButton text={user.uid} label="Copy User ID" />
+                            </span>
+                          </div>
+                          <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
+                            Send password reset email
+                          </button>
+                          {settingsStatus && <div className="settings-status" role="status" aria-live="polite">{settingsStatus}</div>}
+                        </div>
+                      )}
+
+                      {show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']) && (
+                        <div className="settings-card">
+                          <h4>Web preferences</h4>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={showPreviews}
+                              onChange={(e) => setShowPreviews(e.target.checked)}
+                            />
+                            Show message previews
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={autoScroll}
+                              onChange={(e) => setAutoScroll(e.target.checked)}
+                            />
+                            Auto-scroll to latest message
+                          </label>
+                          <p className="settings-note">
+                            Preferences apply to this browser only.
+                          </p>
+                        </div>
+                      )}
+
+                      {show(['pulselink', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']) && (
+                        <div className="settings-card">
+                          <h4>PulseLink settings</h4>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.remoteWebAccessEnabled}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
+                            />
+                            Enable remote web access
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.autoUpdateContactInfo}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
+                            />
+                            Auto-update contact info
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.thirdPartyExtensionsEnabled}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
+                            />
+                            Enable 3rd-party extensions (beta)
+                          </label>
+                          <label className="login-field">
+                            Time format
+                            <select
+                              className="login-input"
+                              value={remoteSettings.timeFormat}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
+                            >
+                              <option value="AUTO">Auto</option>
+                              <option value="TWELVE_HOUR">12-hour</option>
+                              <option value="TWENTY_FOUR_HOUR">24-hour</option>
+                            </select>
+                          </label>
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={handleRemoteSettingsSave}
+                            disabled={isSavingSettings}
+                            aria-busy={isSavingSettings}
+                          >
+                            {isSavingSettings ? (
+                              <>
+                                <Spinner />
+                                Saving...
+                              </>
+                            ) : 'Save PulseLink settings'}
+                          </button>
+                          {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
+                        </div>
+                      )}
+
+                      {show(['data', 'delete', 'clear', 'cloud', 'account data', 'remove', 'privacy']) && (
+                        <div className="settings-card">
+                          <h4>Account data</h4>
+                          <p className="settings-note">
+                            Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
+                          </p>
+                          <div className="contact-actions">
+                            <button
+                              className="secondary-btn"
+                              type="button"
+                              onClick={handleDeleteAccountData}
+                              disabled={!!deleteAction}
+                            >
+                              {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
+                            </button>
+                            <button
+                              className="primary-btn"
+                              type="button"
+                              onClick={handleDeleteAccount}
+                              disabled={!!deleteAction}
+                            >
+                              {deleteAction === 'account' ? "Deleting..." : "Delete account"}
+                            </button>
+                          </div>
+                          {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
