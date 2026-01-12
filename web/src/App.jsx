@@ -565,6 +565,121 @@ const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
 ), areSpotifyResultsEqual);
 SpotifyResultItem.displayName = 'SpotifyResultItem';
 
+// Bolt: MessageComposer extracted to prevent App re-renders on typing
+const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+  const [address, setAddress] = useState('');
+  const [body, setBody] = useState('');
+  const [lineId, setLineId] = useState('');
+  const [status, setStatus] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    if (selectedThread) {
+      setAddress(selectedThread.address || '');
+      setLineId(selectedThread.lineId || '');
+    } else {
+      setAddress('');
+      // When clearing (New message), reset lineId to empty to allow user selection or fallback
+      setLineId('');
+    }
+    setBody('');
+    setStatus('');
+  }, [selectedThread]);
+
+  const handleSendMessage = async () => {
+    if (!user) return;
+    const cleanAddress = address.trim();
+    const cleanBody = body.trim();
+    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (lineId || activeLineId || lines[0]?.id || null) : null;
+
+    if (!cleanAddress || !cleanBody) {
+      setStatus("Add a phone number and message.");
+      return;
+    }
+    setIsSending(true);
+    setStatus('');
+    try {
+      await addDoc(collection(db, "users", user.uid, "outbox"), {
+        address: cleanAddress,
+        body: cleanBody,
+        createdAt: serverTimestamp(),
+        source: "web",
+        lineId: effectiveLineId
+      });
+      setBody('');
+      setStatus("Queued for sending from your device.");
+    } catch (error) {
+      console.error("Send failed", error);
+      setStatus("Send failed. Try again.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="composer">
+      <div className="composer-row">
+        <label className="composer-label" htmlFor="compose-address">To</label>
+        <input
+          id="compose-address"
+          className="composer-input"
+          type="tel"
+          placeholder="Phone number"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+        />
+      </div>
+      {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+        <div className="composer-row">
+          <label className="composer-label" htmlFor="compose-line">Send from</label>
+          <select
+            id="compose-line"
+            className="composer-input"
+            value={lineId}
+            onChange={(e) => setLineId(e.target.value)}
+          >
+            <option value="">Primary device</option>
+            {lines.map(line => (
+              <option key={line.id} value={line.id}>
+                {(line.label || line.phoneNumber || line.id.slice(0, 6))}
+                {line.primaryDeviceId ? ' • primary' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      <div className="composer-row composer-actions">
+        <textarea
+          className="composer-textarea"
+          placeholder="Type a message... (Ctrl+Enter to send)"
+          aria-label="Message body"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
+        />
+        <button
+          onClick={handleSendMessage}
+          disabled={isSending || isLoggingIn}
+          className="primary-btn"
+        >
+          {isSending ? "Sending..." : "Send"}
+        </button>
+      </div>
+      {status && <div className="compose-status" role="status" aria-live="polite">{status}</div>}
+      <div className="compose-hint">
+        Messages are sent from your phone when it&apos;s online and signed in.
+      </div>
+    </div>
+  );
+});
+
+MessageComposer.displayName = 'MessageComposer';
+
 const defaultTheme = {
   primaryColor: "#6750A4",
   secondaryColor: "#625B71",
@@ -1374,11 +1489,6 @@ function App() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [composeAddress, setComposeAddress] = useState('');
-  const [composeBody, setComposeBody] = useState('');
-  const [sendLineId, setSendLineId] = useState('');
-  const [sendStatus, setSendStatus] = useState('');
-  const [isSending, setIsSending] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
   const [alertLocations, setAlertLocations] = useState([]);
@@ -1885,13 +1995,6 @@ function App() {
     }
   }, [user, selectedThread, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
 
-  useEffect(() => {
-    if (selectedThread?.address) {
-      setComposeAddress(selectedThread.address);
-    }
-    setComposeBody('');
-    setSendStatus('');
-  }, [selectedThread?.address]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -2588,40 +2691,8 @@ function App() {
   const handleLogout = useCallback(async () => {
     await signOut(auth);
     setSelectedThread(null);
-    setComposeAddress('');
-    setComposeBody('');
-    setSendStatus('');
     setActivePanel('home');
   }, []);
-
-  const handleSendMessage = async () => {
-    if (!user) return;
-    const address = composeAddress.trim();
-    const body = composeBody.trim();
-    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (sendLineId || activeLineId || lines[0]?.id || null) : null;
-    if (!address || !body) {
-      setSendStatus("Add a phone number and message.");
-      return;
-    }
-    setIsSending(true);
-    setSendStatus('');
-    try {
-      await addDoc(collection(db, "users", user.uid, "outbox"), {
-        address,
-        body,
-        createdAt: serverTimestamp(),
-        source: "web",
-        lineId: effectiveLineId
-      });
-      setComposeBody('');
-      setSendStatus("Queued for sending from your device.");
-    } catch (error) {
-      console.error("Send failed", error);
-      setSendStatus("Send failed. Try again.");
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
@@ -2629,7 +2700,6 @@ function App() {
     setSelectedThread(thread);
     if (thread?.lineId) {
       setActiveLineId((prev) => prev ?? thread.lineId);
-      setSendLineId(thread.lineId);
     }
   }, []);
 
@@ -2788,9 +2858,6 @@ function App() {
                   onClick={() => {
                     setActivePanel('beacon');
                     setSelectedThread(null);
-                    setComposeAddress('');
-                    setComposeBody('');
-                    setSendStatus('');
                   }}
                   className="secondary-btn"
                   aria-label="Start new conversation"
@@ -3950,64 +4017,15 @@ function App() {
                     <div>Select a thread or start a new message</div>
                   </div>
                 )}
-                <div className="composer">
-                  <div className="composer-row">
-                    <label className="composer-label" htmlFor="compose-address">To</label>
-                    <input
-                      id="compose-address"
-                      className="composer-input"
-                      type="tel"
-                      placeholder="Phone number"
-                      value={composeAddress}
-                      onChange={(e) => setComposeAddress(e.target.value)}
-                    />
-                  </div>
-                  {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-                    <div className="composer-row">
-                      <label className="composer-label" htmlFor="compose-line">Send from</label>
-                      <select
-                        id="compose-line"
-                        className="composer-input"
-                        value={sendLineId || ''}
-                        onChange={(e) => setSendLineId(e.target.value)}
-                      >
-                        <option value="">Primary device</option>
-                        {lines.map(line => (
-                          <option key={line.id} value={line.id}>
-                            {(line.label || line.phoneNumber || line.id.slice(0, 6))}
-                            {line.primaryDeviceId ? ' • primary' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  <div className="composer-row composer-actions">
-                    <textarea
-                      className="composer-textarea"
-                      placeholder="Type a message... (Ctrl+Enter to send)"
-                      aria-label="Message body"
-                      value={composeBody}
-                      onChange={(e) => setComposeBody(e.target.value)}
-                      onKeyDown={(e) => {
-                        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={handleSendMessage}
-                      disabled={isSending || isLoggingIn}
-                      className="primary-btn"
-                    >
-                      {isSending ? "Sending..." : "Send"}
-                    </button>
-                  </div>
-                  {sendStatus && <div className="compose-status" role="status" aria-live="polite">{sendStatus}</div>}
-                  <div className="compose-hint">
-                    Messages are sent from your phone when it&apos;s online and signed in.
-                  </div>
-                </div>
+                <MessageComposer
+                  user={user}
+                  db={db}
+                  selectedThread={selectedThread}
+                  lineInboxMode={lineInboxMode}
+                  activeLineId={activeLineId}
+                  lines={lines}
+                  isLoggingIn={isLoggingIn}
+                />
               </>
             ) : (
               <div className="empty-state">
