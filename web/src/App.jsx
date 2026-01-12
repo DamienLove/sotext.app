@@ -681,26 +681,26 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
 MessageComposer.displayName = 'MessageComposer';
 
 const defaultTheme = {
-  primaryColor: "#6750A4",
-  secondaryColor: "#625B71",
-  bubbleOutgoing: "#D0BCFF",
-  bubbleIncoming: "#E8DEF8",
-  backgroundColor: "#FFFFFF",
+  primaryColor: "#22D3EE",
+  secondaryColor: "#0EA5E9",
+  bubbleOutgoing: "#22D3EE",
+  bubbleIncoming: "#161B2E",
+  backgroundColor: "#05070F",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
-  bubbleCornerRadius: 12,
-  inboxIconVariant: "Default",
-  onBubbleOutgoing: "#000000",
-  onBubbleIncoming: "#000000",
-  onBackground: "#000000",
-  topBarColor: "#FFFFFF",
-  onTopBarColor: "#000000",
+  bubbleCornerRadius: 22,
+  inboxIconVariant: "Beacon",
+  onBubbleOutgoing: "#04060C",
+  onBubbleIncoming: "#EEF2FB",
+  onBackground: "#EEF2FB",
+  topBarColor: "#0C1326",
+  onTopBarColor: "#EEF2FB",
   bubbleCornerRadiusTopStart: null,
   bubbleCornerRadiusTopEnd: null,
   bubbleCornerRadiusBottomStart: null,
   bubbleCornerRadiusBottomEnd: null,
-  timestampColor: null,
-  dividerColor: null,
+  timestampColor: "#9FB3C8",
+  dividerColor: "#1E293B",
   appBackgroundGradientStart: null,
   appBackgroundGradientEnd: null,
   fontScale: 1.0,
@@ -1396,6 +1396,199 @@ const loadGoogleMaps = (() => {
   };
 })();
 
+// Bolt: Optimized Sidebar to prevent re-renders on high-frequency parent updates (typing)
+const Sidebar = memo(({
+  activePanel,
+  setActivePanel,
+  tierLabel,
+  handleLogout,
+  handleNewThread,
+  lines,
+  activeLineId,
+  setActiveLineId,
+  lineInboxMode,
+  isLoadingThreads,
+  threadCount,
+  threadListElements,
+  isPremium
+}) => (
+  <div className="sidebar">
+    <div className="sidebar-header">
+      <div className="sidebar-brand">
+        <img src={logo} alt="PulseLink Suite" className="brand-logo small" />
+        <div>
+          <div className="brand-title">PulseLink Suite</div>
+          <div className="brand-subtitle">{tierLabel} Web Access</div>
+        </div>
+      </div>
+      <div className="sidebar-actions">
+        {activePanel === 'beacon' && (
+          <button
+            onClick={handleNewThread}
+            className="secondary-btn"
+            aria-label="Start new conversation"
+          >
+            New
+          </button>
+        )}
+        <button onClick={handleLogout} className="ghost-btn">Logout</button>
+      </div>
+    </div>
+    <div className="sidebar-nav">
+      <button
+        className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
+        onClick={() => setActivePanel('home')}
+        title="Home"
+        aria-current={activePanel === 'home' ? 'page' : undefined}
+      >
+        <HomeIcon />
+        <span>Home</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
+        onClick={() => setActivePanel('pulselink')}
+        title="PulseLink"
+        aria-current={activePanel === 'pulselink' ? 'page' : undefined}
+      >
+        <img src={logo} alt="PulseLink" />
+        <span>PulseLink</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+        onClick={() => setActivePanel('beacon')}
+        title="Beacon"
+        aria-current={activePanel === 'beacon' ? 'page' : undefined}
+      >
+        <img src={beaconLogo} alt="Beacon" />
+        <span>Beacon</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
+        onClick={() => setActivePanel('ringersong')}
+        title="RingerSong"
+        aria-current={activePanel === 'ringersong' ? 'page' : undefined}
+      >
+        <img src={ringersongLogo} alt="RingerSong" />
+        <span>RingerSong</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+        onClick={() => setActivePanel('map')}
+        title="Map"
+        aria-current={activePanel === 'map' ? 'page' : undefined}
+      >
+        <MapIcon />
+        <span>Map</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
+        onClick={() => setActivePanel('contacts')}
+        title="Contacts"
+        aria-current={activePanel === 'contacts' ? 'page' : undefined}
+      >
+        <ContactIcon />
+        <span>Contacts</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+        onClick={() => setActivePanel('themes')}
+        title="Themes"
+        aria-current={activePanel === 'themes' ? 'page' : undefined}
+      >
+        <ThemeIcon />
+        <span>Themes</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
+        onClick={() => setActivePanel('extensions')}
+        title="Extensions"
+        aria-current={activePanel === 'extensions' ? 'page' : undefined}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        <span>Extensions</span>
+        <span className="badge-new">NEW</span>
+      </button>
+      <button
+        className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
+        onClick={() => setActivePanel('settings')}
+        title="Settings"
+        aria-current={activePanel === 'settings' ? 'page' : undefined}
+      >
+        <SettingsIcon />
+        <span>Settings</span>
+      </button>
+    </div>
+    {activePanel === 'beacon' ? (
+      <div className="thread-list">
+        {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+          <div className="line-tabs" aria-label="Device lines">
+            <button
+              className={`chip ${!activeLineId ? 'active' : ''}`}
+              onClick={() => setActiveLineId(null)}
+            >
+              All
+            </button>
+            {lines.map((line) => (
+              <button
+                key={line.id}
+                className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                onClick={() => setActiveLineId(line.id)}
+                title={line.phoneNumber || 'Line'}
+              >
+                {line.label || line.phoneNumber || line.id.slice(0, 6)}
+              </button>
+            ))}
+          </div>
+        )}
+        {isLoadingThreads ? (
+          <div className="sidebar-placeholder">
+            <Spinner />
+            <div className="sidebar-tip muted">Loading conversations...</div>
+          </div>
+        ) : threadCount === 0 ? (
+          <div className="sidebar-placeholder">
+            <div className="sidebar-tip">
+              <strong>No conversations found</strong>
+            </div>
+            <div className="sidebar-tip muted">
+              To see your messages here:
+              <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
+                <li>Open PulseLink on your phone</li>
+                <li>Go to Extensions Store</li>
+                <li>Enable &quot;Remote Web Access&quot;</li>
+              </ol>
+              {!isPremium && (
+                <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
+                  Premium Required
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          threadListElements
+        )}
+      </div>
+    ) : (
+      <div className="sidebar-placeholder">
+        <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
+        <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
+      </div>
+    )}
+  </div>
+), (prev, next) => {
+  return prev.activePanel === next.activePanel &&
+         prev.tierLabel === next.tierLabel &&
+         prev.isLoadingThreads === next.isLoadingThreads &&
+         prev.threadCount === next.threadCount &&
+         prev.lines === next.lines &&
+         prev.activeLineId === next.activeLineId &&
+         prev.lineInboxMode === next.lineInboxMode &&
+         prev.isPremium === next.isPremium &&
+         prev.threadListElements === next.threadListElements;
+});
+
+Sidebar.displayName = 'Sidebar';
+
 function App() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -1514,6 +1707,7 @@ function App() {
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
+  const [settingsSearch, setSettingsSearch] = useState('');
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const isPremiumUser = useMemo(() => {
@@ -2694,6 +2888,44 @@ function App() {
     setActivePanel('home');
   }, []);
 
+  // Bolt: Stable handler for new thread button
+  const handleNewThread = useCallback(() => {
+    setActivePanel('beacon');
+    setSelectedThread(null);
+    setComposeAddress('');
+    setComposeBody('');
+    setSendStatus('');
+  }, []);
+
+  const handleSendMessage = async () => {
+    if (!user) return;
+    const address = composeAddress.trim();
+    const body = composeBody.trim();
+    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (sendLineId || activeLineId || lines[0]?.id || null) : null;
+    if (!address || !body) {
+      setSendStatus("Add a phone number and message.");
+      return;
+    }
+    setIsSending(true);
+    setSendStatus('');
+    try {
+      await addDoc(collection(db, "users", user.uid, "outbox"), {
+        address,
+        body,
+        createdAt: serverTimestamp(),
+        source: "web",
+        lineId: effectiveLineId
+      });
+      setComposeBody('');
+      setSendStatus("Queued for sending from your device.");
+    } catch (error) {
+      console.error("Send failed", error);
+      setSendStatus("Send failed. Try again.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
@@ -3018,6 +3250,22 @@ function App() {
             </div>
           )}
         </div>
+        <Sidebar
+          activePanel={activePanel}
+          setActivePanel={setActivePanel}
+          tierLabel={tierLabel}
+          handleLogout={handleLogout}
+          handleNewThread={handleNewThread}
+          lines={lines}
+          activeLineId={activeLineId}
+          setActiveLineId={setActiveLineId}
+          lineInboxMode={lineInboxMode}
+          isLoadingThreads={isLoadingThreads}
+          threadCount={activeLineThreads.length}
+          threadListElements={threadListElements}
+          isPremium={isPremium}
+          remoteSettings={remoteSettings}
+        />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
@@ -3844,126 +4092,162 @@ function App() {
                 <h3>Settings</h3>
                 <p>Manage account details and shared preferences.</p>
               </div>
+
+              <div className="settings-search-container">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity: 0.5}}>
+                  <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  className="settings-search-input"
+                  placeholder="Search settings..."
+                  value={settingsSearch}
+                  onChange={(e) => setSettingsSearch(e.target.value)}
+                />
+              </div>
+
               <div className="settings-grid">
-                <div className="settings-card">
-                  <h4>Account</h4>
-                  <div className="settings-row">
-                    <span className="settings-label">Signed in as</span>
-                    <span className="settings-value">{user.email || 'Unknown'}</span>
-                  </div>
-                  <div className="settings-row">
-                    <span className="settings-label">User ID</span>
-                    <span className="settings-value mono">
-                      {user.uid}
-                      <CopyButton text={user.uid} label="Copy User ID" />
-                    </span>
-                  </div>
-                  <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
-                    Send password reset email
-                  </button>
-                  {settingsStatus && <div className="settings-status" role="status" aria-live="polite">{settingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>Web preferences</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={showPreviews}
-                      onChange={(e) => setShowPreviews(e.target.checked)}
-                    />
-                    Show message previews
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={autoScroll}
-                      onChange={(e) => setAutoScroll(e.target.checked)}
-                    />
-                    Auto-scroll to latest message
-                  </label>
-                  <p className="settings-note">
-                    Preferences apply to this browser only.
-                  </p>
-                </div>
-                <div className="settings-card">
-                  <h4>PulseLink settings</h4>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.remoteWebAccessEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
-                    />
-                    Enable remote web access
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.autoUpdateContactInfo}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
-                    />
-                    Auto-update contact info
-                  </label>
-                  <label className="settings-toggle">
-                    <input
-                      type="checkbox"
-                      checked={remoteSettings.thirdPartyExtensionsEnabled}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
-                    />
-                    Enable 3rd-party extensions (beta)
-                  </label>
-                  <label className="login-field">
-                    Time format
-                    <select
-                      className="login-input"
-                      value={remoteSettings.timeFormat}
-                      onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
-                    >
-                      <option value="AUTO">Auto</option>
-                      <option value="TWELVE_HOUR">12-hour</option>
-                      <option value="TWENTY_FOUR_HOUR">24-hour</option>
-                    </select>
-                  </label>
-                  <button
-                    className="secondary-btn"
-                    type="button"
-                    onClick={handleRemoteSettingsSave}
-                    disabled={isSavingSettings}
-                    aria-busy={isSavingSettings}
-                  >
-                    {isSavingSettings ? (
-                      <>
-                        <Spinner />
-                        Saving...
-                      </>
-                    ) : 'Save PulseLink settings'}
-                  </button>
-                  {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
-                </div>
-                <div className="settings-card">
-                  <h4>Account data</h4>
-                  <p className="settings-note">
-                    Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
-                  </p>
-                  <div className="contact-actions">
-                    <button
-                      className="secondary-btn"
-                      type="button"
-                      onClick={handleDeleteAccountData}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
-                    </button>
-                    <button
-                      className="primary-btn"
-                      type="button"
-                      onClick={handleDeleteAccount}
-                      disabled={!!deleteAction}
-                    >
-                      {deleteAction === 'account' ? "Deleting..." : "Delete account"}
-                    </button>
-                  </div>
-                  {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
-                </div>
+                {(() => {
+                  const term = settingsSearch.toLowerCase().trim();
+                  const show = (keywords) => {
+                    if (!term) return true;
+                    return keywords.some(k => k.includes(term));
+                  };
+
+                  return (
+                    <>
+                      {show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']) && (
+                        <div className="settings-card">
+                          <h4>Account</h4>
+                          <div className="settings-row">
+                            <span className="settings-label">Signed in as</span>
+                            <span className="settings-value">{user.email || 'Unknown'}</span>
+                          </div>
+                          <div className="settings-row">
+                            <span className="settings-label">User ID</span>
+                            <span className="settings-value mono">
+                              {user.uid}
+                              <CopyButton text={user.uid} label="Copy User ID" />
+                            </span>
+                          </div>
+                          <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
+                            Send password reset email
+                          </button>
+                          {settingsStatus && <div className="settings-status" role="status" aria-live="polite">{settingsStatus}</div>}
+                        </div>
+                      )}
+
+                      {show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']) && (
+                        <div className="settings-card">
+                          <h4>Web preferences</h4>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={showPreviews}
+                              onChange={(e) => setShowPreviews(e.target.checked)}
+                            />
+                            Show message previews
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={autoScroll}
+                              onChange={(e) => setAutoScroll(e.target.checked)}
+                            />
+                            Auto-scroll to latest message
+                          </label>
+                          <p className="settings-note">
+                            Preferences apply to this browser only.
+                          </p>
+                        </div>
+                      )}
+
+                      {show(['pulselink', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']) && (
+                        <div className="settings-card">
+                          <h4>PulseLink settings</h4>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.remoteWebAccessEnabled}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, remoteWebAccessEnabled: e.target.checked }))}
+                            />
+                            Enable remote web access
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.autoUpdateContactInfo}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, autoUpdateContactInfo: e.target.checked }))}
+                            />
+                            Auto-update contact info
+                          </label>
+                          <label className="settings-toggle">
+                            <input
+                              type="checkbox"
+                              checked={remoteSettings.thirdPartyExtensionsEnabled}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, thirdPartyExtensionsEnabled: e.target.checked }))}
+                            />
+                            Enable 3rd-party extensions (beta)
+                          </label>
+                          <label className="login-field">
+                            Time format
+                            <select
+                              className="login-input"
+                              value={remoteSettings.timeFormat}
+                              onChange={(e) => setRemoteSettings((prev) => ({ ...prev, timeFormat: e.target.value }))}
+                            >
+                              <option value="AUTO">Auto</option>
+                              <option value="TWELVE_HOUR">12-hour</option>
+                              <option value="TWENTY_FOUR_HOUR">24-hour</option>
+                            </select>
+                          </label>
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={handleRemoteSettingsSave}
+                            disabled={isSavingSettings}
+                            aria-busy={isSavingSettings}
+                          >
+                            {isSavingSettings ? (
+                              <>
+                                <Spinner />
+                                Saving...
+                              </>
+                            ) : 'Save PulseLink settings'}
+                          </button>
+                          {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
+                        </div>
+                      )}
+
+                      {show(['data', 'delete', 'clear', 'cloud', 'account data', 'remove', 'privacy']) && (
+                        <div className="settings-card">
+                          <h4>Account data</h4>
+                          <p className="settings-note">
+                            Delete account removes your login and all cloud data. Clear data keeps your login but deletes synced content.
+                          </p>
+                          <div className="contact-actions">
+                            <button
+                              className="secondary-btn"
+                              type="button"
+                              onClick={handleDeleteAccountData}
+                              disabled={!!deleteAction}
+                            >
+                              {deleteAction === 'data' ? "Clearing..." : "Clear cloud data"}
+                            </button>
+                            <button
+                              className="primary-btn"
+                              type="button"
+                              onClick={handleDeleteAccount}
+                              disabled={!!deleteAction}
+                            >
+                              {deleteAction === 'account' ? "Deleting..." : "Delete account"}
+                            </button>
+                          </div>
+                          {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
