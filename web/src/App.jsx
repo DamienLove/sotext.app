@@ -3538,13 +3538,25 @@ function App() {
                 <div className="contact-count">
                   {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
                 </div>
-                <input
-                  className="login-input contact-search"
-                  placeholder="Search by name, phone, or email"
-                  aria-label="Search contacts"
-                  value={contactSearch}
-                  onChange={(e) => setContactSearch(e.target.value)}
-                />
+                <div className="sidebar-actions" style={{ flex: 1 }}>
+                  <input
+                    className="login-input contact-search"
+                    placeholder="Search by name, phone, or email"
+                    aria-label="Search contacts"
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  {contactSearch && (
+                    <button
+                      className="secondary-btn"
+                      onClick={() => setContactSearch('')}
+                      aria-label="Clear search"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="contact-list contact-list--full">
                 {contactListElements}
@@ -3765,7 +3777,9 @@ function App() {
                       />
                     ))}
                     {filteredThemes.length === 0 && (
-                      <div className="theme-empty">No themes yet. Be the first to publish!</div>
+                      <div className="theme-empty">
+                        No themes found.
+                      </div>
                     )}
                   </div>
                   {themeGalleryStatus && <div className="settings-status" role="status" aria-live="polite">{themeGalleryStatus}</div>}
