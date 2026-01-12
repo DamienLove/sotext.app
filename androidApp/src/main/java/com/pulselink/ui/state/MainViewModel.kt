@@ -1704,6 +1704,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setPrivateSafeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(privateSafeEnabled = enabled) }
+        }
+    }
+
+    fun setSmartRepliesEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(smartRepliesEnabled = enabled) }
+        }
+    }
+
     private fun emitDndStatus(result: AlertResult?) {
         val overrideResult = result?.overrideResult ?: run {
             dndStatus.value = null

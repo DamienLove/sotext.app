@@ -387,7 +387,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                                             currentRoute = route
                                                         }
                                                     },
-                                                    theme = state.settings.themePreferences
+                                                    theme = state.settings.themePreferences,
+                                                    privateSafeEnabled = state.settings.privateSafeEnabled
                                                 )
                                             }
                                         } else {
@@ -644,7 +645,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                                             currentRoute = route
                                                         }
                                                     },
-                                                    theme = state.settings.themePreferences
+                                                    theme = state.settings.themePreferences,
+                                                    privateSafeEnabled = state.settings.privateSafeEnabled
                                                 )
                                             }
                                         )
@@ -858,7 +860,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                         aiSummaryEnabled = premiumActive && state.settings.aiSummariesEnabled,
                                         aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled,
                                         onLoadMore = { threadViewModel.loadMoreMessages() },
-                                        hasMoreToLoad = threadViewModel.hasMoreMessages.collectAsStateWithLifecycle().value
+                                        hasMoreToLoad = threadViewModel.hasMoreMessages.collectAsStateWithLifecycle().value,
+                                        smartRepliesEnabled = state.settings.smartRepliesEnabled
                                     )
                                 }
                                 composable("beacon_settings") {
@@ -934,6 +937,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                                         onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                                         onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                                        onTogglePrivateSafe = viewModel::setPrivateSafeEnabled,
+                                        onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
                                         onBack = { navController.popBackStack() }
                                     )
                                 }
