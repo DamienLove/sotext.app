@@ -1010,3 +1010,36 @@
   text-align: center;
   border: 1px solid rgba(34, 211, 238, 0.2);
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Web App Hint                                                              */
+/* -------------------------------------------------------------------------- */
+
+.web-app-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(34, 211, 238, 0.15);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 32px;
+  color: var(--ink);
+  font-size: 0.95em;
+  line-height: 1.5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.web-app-hint .hint-icon {
+  font-size: 1.2em;
+  color: var(--accent);
+}
+
+.web-app-hint .hint-content {
+  flex: 1;
+}
+
+.web-app-hint strong {
+  color: var(--accent);
+  font-weight: 600;
+}
