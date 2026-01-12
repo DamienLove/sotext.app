@@ -2897,35 +2897,6 @@ function App() {
     setSendStatus('');
   }, []);
 
-  const handleSendMessage = async () => {
-    if (!user) return;
-    const address = composeAddress.trim();
-    const body = composeBody.trim();
-    const effectiveLineId = lineInboxMode === 'PER_LINE' ? (sendLineId || activeLineId || lines[0]?.id || null) : null;
-    if (!address || !body) {
-      setSendStatus("Add a phone number and message.");
-      return;
-    }
-    setIsSending(true);
-    setSendStatus('');
-    try {
-      await addDoc(collection(db, "users", user.uid, "outbox"), {
-        address,
-        body,
-        createdAt: serverTimestamp(),
-        source: "web",
-        lineId: effectiveLineId
-      });
-      setComposeBody('');
-      setSendStatus("Queued for sending from your device.");
-    } catch (error) {
-      console.error("Send failed", error);
-      setSendStatus("Send failed. Try again.");
-    } finally {
-      setIsSending(false);
-    }
-  };
-
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
