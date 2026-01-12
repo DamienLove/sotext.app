@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -246,6 +247,7 @@ fun ThreadScreen(
         ) {
             LazyColumn(
                 state = listState,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp),
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -485,7 +487,7 @@ fun TimePickerDialog(
 }
 
 @Composable
-private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = emptyList(), theme: ThemePalette) {
+private fun LazyItemScope.MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = emptyList(), theme: ThemePalette) {
     val isOutgoing = message.outgoing
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
     val alignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
@@ -514,10 +516,12 @@ private fun MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = e
     val extractedUrl = remember(message.body) { LinkPreviewHelper.extractUrl(message.body) }
     val context = LocalContext.current
 
+    @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = if (reactions.isNotEmpty()) 8.dp else 1.dp),
+            .padding(vertical = if (reactions.isNotEmpty()) 8.dp else 1.dp)
+            .animateItemPlacement(),
         contentAlignment = alignment
     ) {
         Surface(

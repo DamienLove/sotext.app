@@ -126,9 +126,18 @@ class SmsRepository(private val context: Context) {
             val recipIdx = c.getColumnIndexOrThrow(Telephony.Threads.RECIPIENT_IDS)
             var count = 0
             while (c.moveToNext() && count < limit) {
+                val threadId = c.getLong(idIdx)
+                var snippet = c.getString(snippetIdx) ?: ""
+
+                // Fallback: If snippet is empty/stale, try to fetch the latest message body manually
+                // This ensures "new messages are seen FIRST" even if the system Threads table is lagging
+                if (snippet.isBlank()) {
+                    snippet = getLastMessageSnippet(threadId)
+                }
+
                 rawThreads.add(RawThreadData(
-                    id = c.getLong(idIdx),
-                    snippet = c.getString(snippetIdx) ?: "",
+                    id = threadId,
+                    snippet = snippet,
                     timestamp = c.getLong(dateIdx),
                     unread = c.getInt(readIdx) == 0,
                     recipientIds = c.getString(recipIdx) ?: ""
@@ -343,6 +352,21 @@ class SmsRepository(private val context: Context) {
             }
             return@withContext items
         }
+    }
+
+    private fun getLastMessageSnippet(threadId: Long): String {
+        // Fast query for just the body of the latest message
+        return runCatching {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                arrayOf(Telephony.Sms.BODY),
+                "${Telephony.Sms.THREAD_ID}=?",
+                arrayOf(threadId.toString()),
+                "${Telephony.Sms.DATE} DESC LIMIT 1"
+            )?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else ""
+            }
+        }.getOrNull() ?: ""
     }
 
     private suspend fun resolveMmsAddress(mmsId: Long): String = withContext(Dispatchers.IO) {
