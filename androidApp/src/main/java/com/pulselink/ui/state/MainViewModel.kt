@@ -1415,6 +1415,7 @@ class MainViewModel @Inject constructor(
             }
             appendLine()
             appendLine("App Version: $versionName ($versionCode)")
+            appendLine("Build Flavor: ${if (BuildConfig.PREMIUM_FEATURES) "Premium" else if (BuildConfig.PRO_FEATURES) "Pro" else "Free"}")
             appendLine("Device: $manufacturer $model")
             appendLine("OS: Android $osVersion (API $apiLevel)")
         }
