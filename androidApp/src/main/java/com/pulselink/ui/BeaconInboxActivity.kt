@@ -47,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -294,6 +295,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                     }
 
                                     var currentRoute by remember { mutableStateOf(BeaconNavRoute.Inbox) }
+                                    var contactSearchQuery by rememberSaveable { mutableStateOf("") }
 
                 val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
                 val deviceContacts by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
@@ -337,6 +339,18 @@ class BeaconInboxActivity : ComponentActivity() {
                     }
                     // Return list sorted by name
                     normalized.values.sortedBy { it.displayName.lowercase() }
+                }
+                val filteredContacts = remember(mergedContacts, contactSearchQuery) {
+                    val query = contactSearchQuery.trim()
+                    if (query.isBlank()) {
+                        mergedContacts
+                    } else {
+                        mergedContacts.filter { contact ->
+                            contact.displayName.contains(query, ignoreCase = true) ||
+                                contact.phoneNumber.contains(query, ignoreCase = true) ||
+                                contact.additionalPhones.any { it.contains(query, ignoreCase = true) }
+                        }
+                    }
                 }
                 val contactRecipients = remember(state.contacts, deviceContacts) {
                     val trustedRecipients = state.contacts.flatMap { contact ->
@@ -396,7 +410,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                             // Show contacts list instead of messages
                                             Column(modifier = Modifier.fillMaxSize()) {
                                                 BeaconContactsScreen(
-                                                    contacts = mergedContacts,
+                                                    contacts = filteredContacts,
                                                     theme = state.settings.themePreferences,
                                                     hasContactsPermission = hasContactsPermission,
                                                     onRequestContactsPermission = {
@@ -406,11 +420,17 @@ class BeaconInboxActivity : ComponentActivity() {
                                                         if (contact.phoneNumber.isNotBlank()) {
                                                             navController.navigate("sms/thread/0/${Uri.encode(contact.phoneNumber)}")
                                                         }
-                                                    }
+                                                    },
+                                                    searchQuery = contactSearchQuery,
+                                                    onSearchChange = { contactSearchQuery = it },
+                                                    onClearSearch = { contactSearchQuery = "" }
                                                 )
                                                 BeaconNavBar(
                                                     currentRoute = currentRoute,
                                                     onNavigate = { route ->
+                                                        if (currentRoute == BeaconNavRoute.Contacts && route != BeaconNavRoute.Contacts) {
+                                                            contactSearchQuery = ""
+                                                        }
                                                         if (route == BeaconNavRoute.Private && currentRoute != BeaconNavRoute.Private) {
                                                             if (state.settings.privatePinHash.isNullOrBlank()) {
                                                                 navController.navigate("private_pin")

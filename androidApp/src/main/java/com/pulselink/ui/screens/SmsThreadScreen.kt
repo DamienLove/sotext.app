@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -528,9 +529,7 @@ private fun MessageInput(
                                 containerColor = primary.copy(alpha = 0.1f),
                                 labelColor = primary
                             ),
-                            border = SuggestionChipDefaults.suggestionChipBorder(
-                                borderColor = primary.copy(alpha = 0.3f)
-                            )
+                            border = BorderStroke(1.dp, primary.copy(alpha = 0.3f))
                         )
                     }
                 }

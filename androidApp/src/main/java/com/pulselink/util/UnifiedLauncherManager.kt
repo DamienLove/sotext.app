@@ -67,14 +67,15 @@ object UnifiedLauncherManager {
             if (unifiedEnabled) {
                 Log.d(TAG, "Enabling unified mode")
                 // Enable unified launcher; keep MainActivity enabled so the alias can open
-                enable(pm, targetUnified, "unified target")
+                // Use killApp=true for the unified target to force launcher refresh
+                enable(pm, targetUnified, "unified target", killApp = true)
                 enable(pm, main, "MainActivity")
 
                 // Verify the target unified component was enabled before hiding other icons.
                 delay(100) // Small delay to allow launcher to process
                 if (!isComponentEnabled(pm, targetUnified)) {
                     Log.w(TAG, "Target unified component not enabled after first attempt. Retrying...")
-                    enable(pm, targetUnified, "unified target (retry)")
+                    enable(pm, targetUnified, "unified target (retry)", killApp = true)
                     delay(100)
                 }
                 if (!isComponentEnabled(pm, targetUnified)) {
@@ -122,12 +123,18 @@ object UnifiedLauncherManager {
         }
     }
 
-    private fun enable(pm: PackageManager, component: ComponentName, label: String) {
-        Log.d(TAG, "Enabling $label: ${component.className}")
+    private fun enable(
+        pm: PackageManager,
+        component: ComponentName,
+        label: String,
+        killApp: Boolean = false
+    ) {
+        Log.d(TAG, "Enabling $label: ${component.className} (killApp=$killApp)")
+        val flags = if (killApp) 0 else PackageManager.DONT_KILL_APP
         pm.setComponentEnabledSetting(
             component,
             PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-            PackageManager.DONT_KILL_APP
+            flags
         )
     }
 
