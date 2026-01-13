@@ -1626,6 +1626,7 @@ function App() {
   });
   const [editingContactId, setEditingContactId] = useState(null);
   const [contactStatus, setContactStatus] = useState('');
+  const [isSavingContact, setIsSavingContact] = useState(false);
   const [profileStatus, setProfileStatus] = useState('');
   const [themePrefs, setThemePrefs] = useState(defaultTheme);
   const [themeStatus, setThemeStatus] = useState('');
@@ -1640,6 +1641,7 @@ function App() {
     backgroundImageUrl: ''
   });
   const [themePublishStatus, setThemePublishStatus] = useState('');
+  const [isPublishingTheme, setIsPublishingTheme] = useState(false);
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
@@ -2564,6 +2566,7 @@ function App() {
       setContactStatus("Display name is required.");
       return;
     }
+    setIsSavingContact(true);
     setContactStatus("Saving contact...");
     try {
       const payload = {
@@ -2593,6 +2596,8 @@ function App() {
     } catch (error) {
       console.error("Contact save failed", error);
       setContactStatus(error?.message ?? "Contact save failed.");
+    } finally {
+      setIsSavingContact(false);
     }
   };
 
@@ -2656,6 +2661,7 @@ function App() {
       setThemePublishStatus("Theme name is required.");
       return;
     }
+    setIsPublishingTheme(true);
     setThemePublishStatus("Publishing theme...");
     const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
     const normalized = normalizeTheme({
@@ -2701,6 +2707,8 @@ function App() {
     } catch (error) {
       console.error("Theme publish failed", error);
       setThemePublishStatus(error?.message ?? "Theme publish failed.");
+    } finally {
+      setIsPublishingTheme(false);
     }
   };
 
@@ -2892,9 +2900,6 @@ function App() {
   const handleNewThread = useCallback(() => {
     setActivePanel('beacon');
     setSelectedThread(null);
-    setComposeAddress('');
-    setComposeBody('');
-    setSendStatus('');
   }, []);
 
   // Bolt: Stable handler to prevent ghost content when switching threads
@@ -3515,10 +3520,20 @@ function App() {
                     Allow remote sound changes
                   </label>
                   <div className="contact-actions">
-                    <button className="primary-btn" onClick={handleSaveContact}>
-                      {editingContactId ? 'Update contact' : 'Add contact'}
+                    <button
+                      className="primary-btn"
+                      onClick={handleSaveContact}
+                      disabled={isSavingContact}
+                      aria-busy={isSavingContact}
+                    >
+                      {isSavingContact ? (
+                        <>
+                          <Spinner />
+                          {editingContactId ? 'Updating...' : 'Saving...'}
+                        </>
+                      ) : (editingContactId ? 'Update contact' : 'Add contact')}
                     </button>
-                    <button className="ghost-btn" onClick={resetContactForm}>
+                    <button className="ghost-btn" onClick={resetContactForm} disabled={isSavingContact}>
                       Clear
                     </button>
                   </div>
@@ -3833,8 +3848,19 @@ function App() {
                   <p className="settings-note">
                     Suggested max: 1920x1080 and under 1.5MB. Image themes require approval.
                   </p>
-                  <button className="primary-btn" type="button" onClick={handlePublishTheme}>
-                    Publish theme
+                  <button
+                    className="primary-btn"
+                    type="button"
+                    onClick={handlePublishTheme}
+                    disabled={isPublishingTheme}
+                    aria-busy={isPublishingTheme}
+                  >
+                    {isPublishingTheme ? (
+                      <>
+                        <Spinner />
+                        Publishing...
+                      </>
+                    ) : 'Publish theme'}
                   </button>
                   {themePublishStatus && <div className="settings-status" role="status" aria-live="polite">{themePublishStatus}</div>}
                 </div>
