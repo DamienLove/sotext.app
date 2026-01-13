@@ -79,10 +79,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.ScrollState
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import com.pulselink.beacon.data.SmsMessageItem
@@ -134,17 +137,62 @@ fun InboxScreen(
     onPinSelected: () -> Unit = {},
     onMarkAsUnread: (Long) -> Unit = {},
     userMessage: String? = null,
-    onClearUserMessage: () -> Unit = {}
+    onClearUserMessage: () -> Unit = {},
+    delayedSendTimeout: Int = 5,
+    onSetDelayedSendTimeout: (Int) -> Unit = {}
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var navigatedFromSearch by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     val iconTint = theme.accentColor
 
     LaunchedEffect(userMessage) {
         userMessage?.let {
             host.showSnackbar(it)
             onClearUserMessage()
+        }
+    }
+
+    if (showSettingsDialog) {
+        Dialog(onDismissRequest = { showSettingsDialog = false }) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Beacon Settings", style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text("Delayed Send Timeout: ${delayedSendTimeout}s")
+                    Slider(
+                        value = delayedSendTimeout.toFloat(),
+                        onValueChange = { onSetDelayedSendTimeout(it.toInt()) },
+                        valueRange = 0f..10f,
+                        steps = 9,
+                        colors = SliderDefaults.colors(
+                            thumbColor = theme.accentColor,
+                            activeTrackColor = theme.accentColor
+                        )
+                    )
+                    Text(
+                        if (delayedSendTimeout == 0) "Disabled" else "Delays sending by $delayedSendTimeout seconds",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = theme.frameColor.copy(alpha = 0.6f)
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    TextButton(onClick = { showSettingsDialog = false }) {
+                        Text("Done")
+                    }
+                }
+            }
         }
     }
 
@@ -268,6 +316,9 @@ fun InboxScreen(
                         }
                         IconButton(onClick = onCustomize) {
                             Icon(Icons.Default.ColorLens, contentDescription = "Customize", tint = iconTint)
+                        }
+                        IconButton(onClick = { showSettingsDialog = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = iconTint)
                         }
                     },
                     colors = TopAppBarDefaults.largeTopAppBarColors(
