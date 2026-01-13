@@ -77,6 +77,7 @@ import com.pulselink.ui.screens.PrivatePinScreen
 import com.pulselink.ui.screens.NewMessageScreen
 import com.pulselink.ui.screens.MessageNotificationSoundScreen
 import com.pulselink.ui.screens.VibrationPatternPickerScreen
+import com.pulselink.ui.screens.CustomVibrationCreatorScreen
 import com.pulselink.ui.screens.ProfileSettingsScreen
 import com.pulselink.ui.screens.MultiLineSetupDialog
 import com.pulselink.ui.screens.LineLimitDialog
@@ -296,14 +297,19 @@ class BeaconInboxActivity : ComponentActivity() {
 
                 val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
                 val deviceContacts by deviceContactsViewModel.contacts.collectAsStateWithLifecycle()
-                val hasContactsPermission = ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.READ_CONTACTS
-                ) == PackageManager.PERMISSION_GRANTED
+                var hasContactsPermission by remember {
+                    mutableStateOf(checkContactsPermission(context))
+                }
                 val contactsPermissionLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestPermission()
                 ) { granted ->
+                    hasContactsPermission = granted
                     if (granted) {
+                        deviceContactsViewModel.refresh()
+                    }
+                }
+                LaunchedEffect(hasContactsPermission) {
+                    if (hasContactsPermission) {
                         deviceContactsViewModel.refresh()
                     }
                 }
@@ -331,6 +337,38 @@ class BeaconInboxActivity : ComponentActivity() {
                     }
                     // Return list sorted by name
                     normalized.values.sortedBy { it.displayName.lowercase() }
+                }
+                val contactRecipients = remember(state.contacts, deviceContacts) {
+                    val trustedRecipients = state.contacts.flatMap { contact ->
+                        val phones = (listOf(contact.phoneNumber) + contact.additionalPhones)
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+                        phones.mapIndexed { index, phone ->
+                            MessageRecipient(
+                                id = (contact.id * 10_000L) + index,
+                                displayName = contact.displayName,
+                                phoneNumber = phone,
+                                isTrusted = true
+                            )
+                        }
+                    }
+                    val trustedNumbers = trustedRecipients
+                        .map { normalizePhone(it.phoneNumber) }
+                        .toSet()
+                    val deviceRecipients = deviceContacts.map { device ->
+                        MessageRecipient(
+                            id = -device.id,
+                            displayName = device.displayName.ifBlank { device.phoneNumber },
+                            phoneNumber = device.phoneNumber,
+                            isTrusted = false
+                        )
+                    }.filter { candidate -> normalizePhone(candidate.phoneNumber) !in trustedNumbers }
+                    (trustedRecipients + deviceRecipients)
+                        .distinctBy { normalizePhone(it.phoneNumber) }
+                        .sortedWith(
+                            compareByDescending<MessageRecipient> { it.isTrusted }
+                                .thenBy { it.displayName.lowercase() }
+                        )
                 }
 
                                     val displayedThreads = when (currentRoute) {
@@ -481,6 +519,11 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onClearSearch = { smsInboxViewModel.clearSearch() },
                                             archivedOnly = currentRoute == BeaconNavRoute.Archived,
                                             contactsByNumber = contactsByNumber,
+                                            contactRecipients = contactRecipients,
+                                            hasContactsPermission = hasContactsPermission,
+                                            onRequestContactsPermission = {
+                                                contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                                            },
                                             banner = {
                                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                                     if (!notificationsEnabled || notificationsSilent) {
@@ -989,6 +1032,15 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val normalized = addressArg?.let { com.pulselink.util.normalizeSmsAddress(it) }
                                     val overrideKey = normalized?.let { state.settings.messageNotificationVibrationOverrides[it] }
                                     val isContact = addressArg != null
+                                    val customOption = VibrationPatterns.customOption(
+                                        state.settings.customVibrationPatternName,
+                                        state.settings.customVibrationPattern
+                                    )
+                                    val messageOptions = if (customOption != null) {
+                                        VibrationPatterns.messageOptions + customOption
+                                    } else {
+                                        VibrationPatterns.messageOptions
+                                    }
                                     VibrationPatternPickerScreen(
                                         title = if (isContact) "Notification vibration" else "Message vibration pattern",
                                         subtitle = if (isContact) {
@@ -996,7 +1048,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         } else {
                                             "Choose the vibration style for incoming texts."
                                         },
-                                        options = VibrationPatterns.messageOptions,
+                                        options = messageOptions,
                                         selectedKey = if (isContact) overrideKey else state.settings.messageNotificationVibrationPattern,
                                         defaultLabel = if (isContact) "Use global message pattern" else null,
                                         onSelect = { key ->
@@ -1008,7 +1060,17 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 )
                                             }
                                         },
-                                        onBack = { navController.popBackStack() }
+                                        onBack = { navController.popBackStack() },
+                                        onCreateCustom = { navController.navigate("notifications/custom_vibration") }
+                                    )
+                                }
+                                composable("notifications/custom_vibration") {
+                                    CustomVibrationCreatorScreen(
+                                        onBack = { navController.popBackStack() },
+                                        onSave = { name, pattern ->
+                                            viewModel.saveCustomVibrationPattern(name, pattern.toList())
+                                            navController.popBackStack()
+                                        }
                                     )
                                 }
                                 composable(

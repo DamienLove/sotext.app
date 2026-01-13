@@ -215,23 +215,30 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             firebaseAuthManager.authState.collect { state ->
                 val user = (state as? AuthState.Authenticated)?.user
-                if (user != null && !user.isAnonymous) {
-                    syncProfileFromCloud(user)
+                if (user != null) {
                     syncContactsFromCloud(user, forcePushLocal = true)
-                    linkManager.syncLinksOnLogin()
-                    startRemoteSettingsListener(user)
-                    val settings = settingsRepository.settings.first()
-                    if (settings.remoteWebAccessEnabled) {
-                        triggerWebSync("Login")
-                    }
-                    val currentPhone = user.phoneNumber
-                    val currentEmail = user.email
-                    if (currentPhone != lastKnownPhone || currentEmail != lastKnownEmail) {
-                        linkManager.broadcastProfileUpdate()
-                        lastKnownPhone = currentPhone
-                        lastKnownEmail = currentEmail
-                        settingsRepository.setLastKnownPhone(currentPhone)
-                        settingsRepository.setLastKnownEmail(currentEmail)
+                    if (!user.isAnonymous) {
+                        syncProfileFromCloud(user)
+                        linkManager.syncLinksOnLogin()
+                        startRemoteSettingsListener(user)
+                        val settings = settingsRepository.settings.first()
+                        if (settings.remoteWebAccessEnabled) {
+                            triggerWebSync("Login")
+                        }
+                        val currentPhone = user.phoneNumber
+                        val currentEmail = user.email
+                        if (currentPhone != lastKnownPhone || currentEmail != lastKnownEmail) {
+                            linkManager.broadcastProfileUpdate()
+                            lastKnownPhone = currentPhone
+                            lastKnownEmail = currentEmail
+                            settingsRepository.setLastKnownPhone(currentPhone)
+                            settingsRepository.setLastKnownEmail(currentEmail)
+                        }
+                    } else {
+                        remoteSettingsListener?.remove()
+                        remoteSettingsListener = null
+                        remoteSettingsUserId = null
+                        pushedThemeFromDevice = false
                     }
                 } else {
                     remoteSettingsListener?.remove()
@@ -269,7 +276,7 @@ class MainViewModel @Inject constructor(
             }
 
             // Mirror to cloud for authenticated users
-            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+            firebaseAuthManager.currentUser()?.let { user ->
                 upsertContactInCloud(user, storedContact)
             }
 
@@ -310,7 +317,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val contact = contactRepository.getContact(id)
             contact?.let {
-                (firebaseAuthManager.currentUser()?.takeIf { user -> !user.isAnonymous })?.let { user ->
+                firebaseAuthManager.currentUser()?.let { user ->
                     deleteContactInCloud(user, it)
                 }
                 blockedContactRepository.block(
@@ -360,12 +367,14 @@ class MainViewModel @Inject constructor(
     fun syncContactsNow() {
         viewModelScope.launch {
             val user = firebaseAuthManager.currentUser()
-            if (user == null || user.isAnonymous) {
-                Log.i(TAG, "Manual sync skipped: no signed-in user")
+            if (user == null) {
+                Log.i(TAG, "Manual sync skipped: no authenticated user")
                 return@launch
             }
             syncContactsFromCloud(user, forcePushLocal = true)
-            linkManager.syncLinksOnLogin()
+            if (!user.isAnonymous) {
+                linkManager.syncLinksOnLogin()
+            }
         }
         // Also trigger SMS sync if applicable
         if (BuildConfig.PREMIUM_FEATURES) {
@@ -1412,17 +1421,13 @@ class MainViewModel @Inject constructor(
 
         val subjectSuffix = bugReportData.summary.ifBlank { "General issue" }
 
-        // Always direct to the canonical bug-report site (opens in-app WebView/Custom Tab)
-        return Uri.parse("https://damiennichols.com/report-bug/")
+        // Direct to GitHub issue form so users land on the correct bug report page.
+        return Uri.parse(BUG_REPORT_PAGE_URL)
             .buildUpon()
-            .appendQueryParameter("summary", subjectSuffix)
+            .appendQueryParameter("title", subjectSuffix)
             .appendQueryParameter("body", formattedBody)
-            .appendQueryParameter("email", bugReportData.userEmail)
             .build()
     }
-
-    private fun decodeStringList(field: Any?): List<String> =
-        (field as? List<*>)?.mapNotNull { it?.toString()?.trim() }?.filter { it.isNotBlank() }.orEmpty()
 
     private fun restoreTrustedContactsFromCloudIfMissing() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -1430,42 +1435,7 @@ class MainViewModel @Inject constructor(
             if (local.isNotEmpty()) return@launch
             val user = firebaseAuthManager.currentUser() ?: return@launch
             runCatching {
-                val snapshot = firestore.collection(COLLECTION_USERS)
-                    .document(user.uid)
-                    .collection(COLLECTION_TRUSTED_CONTACTS)
-                    .get()
-                    .await()
-                val restored = snapshot.documents.mapNotNull { doc ->
-                    val name = doc.getString("displayName") ?: return@mapNotNull null
-                    val phone = doc.getString("phoneNumber").orEmpty()
-                    Contact(
-                        displayName = name,
-                        phoneNumber = phone,
-                        email = doc.getString("email"),
-                        additionalPhones = decodeStringList(doc.get("additionalPhones")),
-                        additionalEmails = decodeStringList(doc.get("additionalEmails")),
-                        escalationTier = doc.getString("escalationTier")
-                            ?.let { runCatching { EscalationTier.valueOf(it) }.getOrNull() }
-                            ?: EscalationTier.EMERGENCY,
-                        includeLocation = doc.getBoolean("includeLocation") ?: true,
-                        autoCall = doc.getBoolean("autoCall") ?: false,
-                        emergencySoundKey = doc.getString("emergencySoundKey"),
-                        checkInSoundKey = doc.getString("checkInSoundKey"),
-                        contactOrder = doc.getLong("contactOrder")?.toInt() ?: 0,
-                        linkStatus = doc.getString("linkStatus")
-                            ?.let { runCatching { LinkStatus.valueOf(it) }.getOrNull() }
-                            ?: LinkStatus.NONE,
-                        linkCode = doc.getString("linkCode"),
-                        remoteDeviceId = doc.getString("remoteDeviceId"),
-                        allowRemoteOverride = doc.getBoolean("allowRemoteOverride") ?: true,
-                        allowRemoteSoundChange = doc.getBoolean("allowRemoteSoundChange") ?: false,
-                        pendingApproval = doc.getBoolean("pendingApproval") ?: false,
-                        remoteUid = doc.getString("remoteUid")
-                    )
-                }
-                if (restored.isNotEmpty()) {
-                    restored.sortedBy { it.contactOrder }.forEach { contactRepository.upsert(it) }
-                }
+                syncContactsFromCloud(user, forcePushLocal = true)
             }.onFailure { error ->
                 Log.w(TAG, "Unable to restore trusted contacts from cloud", error)
             }
