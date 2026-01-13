@@ -218,6 +218,7 @@ fun HomeScreen(
                     )
                     NotificationPolicyCard(context = context)
                     WriteSettingsPermissionCard(context = context)
+                    SystemAlertWindowPermissionCard(context = context)
                     ShuffleCard(
                         shuffle = state.settings.shuffle,
                         onToggle = onToggleShuffle
@@ -606,6 +607,45 @@ private fun WriteSettingsPermissionCard(context: Context) {
                 }
             ) {
                 Text("Open Settings")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SystemAlertWindowPermissionCard(context: Context) {
+    val hasPermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        android.provider.Settings.canDrawOverlays(context)
+    } else {
+        true
+    }
+
+    if (hasPermission) return
+
+    SectionCard(
+        accent = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "⚠️ 'Display Over Other Apps' Required",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "To start the ringer instantly when a call comes in (even when the app is closed), RingerSong needs permission to display over other apps.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedButton(
+                onClick = {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+                        intent.data = android.net.Uri.parse("package:" + context.packageName)
+                        context.startActivity(intent)
+                    }
+                }
+            ) {
+                Text("Allow Display Over Apps")
             }
         }
     }
