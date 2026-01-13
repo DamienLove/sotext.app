@@ -68,9 +68,14 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -131,7 +136,8 @@ fun SmsThreadScreen(
     aiSignInRequired: Boolean = false,
     onRequestAiSignIn: () -> Unit = {},
     onLoadMore: () -> Unit = {},
-    hasMoreToLoad: Boolean = true
+    hasMoreToLoad: Boolean = true,
+    smartRepliesEnabled: Boolean = false
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -208,7 +214,8 @@ fun SmsThreadScreen(
                 aiState = aiComposeState,
                 onAiAction = { action ->
                     onRequestCompose(action, draft, lastInbound)
-                }
+                },
+                smartRepliesEnabled = smartRepliesEnabled
             )
         },
         topBar = {
@@ -484,7 +491,8 @@ private fun MessageInput(
     aiSignInRequired: Boolean,
     onRequestAiSignIn: () -> Unit,
     aiState: AiComposeState,
-    onAiAction: (AiComposeAction) -> Unit
+    onAiAction: (AiComposeAction) -> Unit,
+    smartRepliesEnabled: Boolean
 ) {
     var showAiMenu by remember { mutableStateOf(false) }
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
@@ -505,6 +513,28 @@ private fun MessageInput(
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            if (smartRepliesEnabled) {
+                val suggestions = stringArrayResource(com.pulselink.R.array.smart_replies_defaults).toList()
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    items(suggestions) { label ->
+                        SuggestionChip(
+                            onClick = { onDraftChange(if (draft.isBlank()) label else "$draft $label") },
+                            label = { Text(label) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = primary.copy(alpha = 0.1f),
+                                labelColor = primary
+                            ),
+                            border = SuggestionChipDefaults.suggestionChipBorder(
+                                borderColor = primary.copy(alpha = 0.3f)
+                            )
+                        )
+                    }
+                }
+            }
             if (aiSignInRequired) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
