@@ -46,7 +46,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private val workManager = WorkManager.getInstance(app)
 
     private companion object {
-        const val THREAD_LIMIT = 70 // Decreased for speed
+        const val THREAD_LIMIT = 100
         const val MESSAGE_LIMIT = 300
     }
 
