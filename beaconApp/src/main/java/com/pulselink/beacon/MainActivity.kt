@@ -260,6 +260,7 @@ private fun BeaconNav(
                     ThreadScreen(
                         address = address.ifBlank { "Unknown" },
                         uiItems = vm.uiMessages,
+                        reactions = vm.reactions,
                         theme = contactTheme,
                         pendingMessage = vm.pendingMessage,
                         onBack = { navController.popBackStack() },
@@ -280,7 +281,8 @@ private fun BeaconNav(
                                 data = Uri.parse("tel:$address")
                             }
                             context.startActivity(intent)
-                        }
+                        },
+                        onReact = { msgId, emoji -> vm.addReaction(msgId, emoji) }
                     )
                 }
             }

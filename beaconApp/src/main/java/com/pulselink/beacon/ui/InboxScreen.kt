@@ -399,6 +399,7 @@ fun InboxScreen(
                         is SearchResultState.Messages -> SearchResults(
                             hits = searchState.hits,
                             theme = theme,
+                query = searchText,
                             onOpenThread = onOpenThread
                         )
                         SearchResultState.Empty -> {
@@ -448,8 +449,8 @@ fun InboxScreen(
                                             scope.launch { host.showSnackbar(msg) }
                                         }
                                         SwipeToDismissBoxValue.StartToEnd -> {
-                                            onTogglePin(item.threadId)
-                                            val msg = if (item.isPinned) "Unpinned" else "Pinned"
+                                            onMarkAsUnread(item.threadId) // This is now toggle unread/read
+                                            val msg = if (item.unread) "Marked as read" else "Marked as unread"
                                             scope.launch { host.showSnackbar(msg) }
                                         }
                                         else -> {}
@@ -686,6 +687,7 @@ private fun PermissionsBanners(
 private fun SearchResults(
     hits: List<SmsMessageItem>,
     theme: ThemePalette,
+    query: String,
     onOpenThread: (Long, String) -> Unit
 ) {
     LazyColumn(
@@ -721,8 +723,26 @@ private fun SearchResults(
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
+
+                    val annotatedString = remember(msg.body, query) {
+                        val builder = androidx.compose.ui.text.AnnotatedString.Builder(msg.body)
+                        val startIndex = msg.body.indexOf(query, ignoreCase = true)
+                        if (startIndex >= 0) {
+                            builder.addStyle(
+                                style = androidx.compose.ui.text.SpanStyle(
+                                    fontWeight = FontWeight.Bold,
+                                    background = theme.accentColor.copy(alpha = 0.2f),
+                                    color = theme.frameColor
+                                ),
+                                start = startIndex,
+                                end = startIndex + query.length
+                            )
+                        }
+                        builder.toAnnotatedString()
+                    }
+
                     Text(
-                        text = msg.body,
+                        text = annotatedString,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 2,
                         color = theme.frameColor.copy(alpha = 0.8f)
@@ -753,7 +773,7 @@ private fun SwipeableThreadRow(
         backgroundContent = {
             val (color, alignment, icon) = when (state.targetValue) {
                 SwipeToDismissBoxValue.EndToStart -> Triple(theme.frameColor.copy(alpha = 0.2f), Alignment.CenterEnd, Icons.Default.Inbox)
-                SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor.copy(alpha = 0.8f), Alignment.CenterStart, Icons.Default.PushPin)
+                SwipeToDismissBoxValue.StartToEnd -> Triple(theme.accentColor.copy(alpha = 0.8f), Alignment.CenterStart, if (thread.unread) Icons.Default.CheckCircle else Icons.Default.MarkChatUnread)
                 else -> Triple(Color.Transparent, Alignment.CenterEnd, Icons.Default.Inbox)
             }
 
