@@ -825,6 +825,19 @@ class MainViewModel @Inject constructor(
                 val remoteWebAccess = snapshot.getBoolean("remoteWebAccessEnabled")
                 val autoUpdate = snapshot.getBoolean("autoUpdateContactInfo")
                 val timeFormatRaw = snapshot.getString("timeFormat")
+
+                // Extensions
+                val beaconLauncher = snapshot.getBoolean("beaconLauncherEnabled")
+                val firebaseMessaging = snapshot.getBoolean("firebaseMessagingEnabled")
+                val emailFallback = snapshot.getBoolean("emailFallbackEnabled")
+                val otpCleanup = snapshot.getBoolean("otpCleanupEnabled")
+                val aiSummaries = snapshot.getBoolean("aiSummariesEnabled")
+                val crashDetection = snapshot.getBoolean("crashDetectionEnabled")
+                val thirdParty = snapshot.getBoolean("thirdPartyExtensionsEnabled")
+                val mergedExperience = snapshot.getBoolean("mergedExperienceEnabled")
+                val privateSafe = snapshot.getBoolean("privateSafeEnabled")
+                val smartReplies = snapshot.getBoolean("smartRepliesEnabled")
+
                 viewModelScope.launch {
                     val current = settingsRepository.settings.first()
                     if (themeMap != null) {
@@ -856,6 +869,23 @@ class MainViewModel @Inject constructor(
                             }
                         }
                     }
+
+                    // Sync Extensions
+                    beaconLauncher?.let {
+                        if (it != current.beaconLauncherEnabled) {
+                            settingsRepository.setBeaconLauncherEnabled(it)
+                            applyInboxIconVariant(current.themePreferences.inboxIconVariant, enabled = it)
+                        }
+                    }
+                    firebaseMessaging?.let { if (it != current.firebaseMessagingEnabled) settingsRepository.setFirebaseMessagingEnabled(it) }
+                    emailFallback?.let { if (it != current.emailFallbackEnabled) settingsRepository.setEmailFallbackEnabled(it) }
+                    otpCleanup?.let { if (it != current.otpCleanupEnabled) settingsRepository.setOtpCleanupEnabled(it) }
+                    aiSummaries?.let { if (it != current.aiSummariesEnabled) settingsRepository.setAiSummariesEnabled(it) }
+                    crashDetection?.let { if (it != current.crashDetectionEnabled) settingsRepository.setCrashDetectionEnabled(it) }
+                    thirdParty?.let { if (it != current.thirdPartyExtensionsEnabled) settingsRepository.setThirdPartyExtensionsEnabled(it) }
+                    mergedExperience?.let { if (it != current.mergedExperienceEnabled) settingsRepository.setMergedExperienceEnabled(it) }
+                    privateSafe?.let { if (it != current.privateSafeEnabled) settingsRepository.update { s -> s.copy(privateSafeEnabled = it) } }
+                    smartReplies?.let { if (it != current.smartRepliesEnabled) settingsRepository.update { s -> s.copy(smartRepliesEnabled = it) } }
                 }
             }
     }
@@ -1550,6 +1580,9 @@ class MainViewModel @Inject constructor(
     fun setOtpCleanupEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setOtpCleanupEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("otpCleanupEnabled" to enabled))
+            }
         }
     }
 
@@ -1589,6 +1622,9 @@ class MainViewModel @Inject constructor(
             settingsRepository.setBeaconLauncherEnabled(enabled)
             val variant = settingsRepository.settings.first().themePreferences.inboxIconVariant
             applyInboxIconVariant(variant, enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("beaconLauncherEnabled" to enabled))
+            }
         }
     }
 
@@ -1607,24 +1643,36 @@ class MainViewModel @Inject constructor(
     fun setFirebaseMessagingEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setFirebaseMessagingEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("firebaseMessagingEnabled" to enabled))
+            }
         }
     }
 
     fun setEmailFallbackEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setEmailFallbackEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("emailFallbackEnabled" to enabled))
+            }
         }
     }
 
     fun setThirdPartyExtensionsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setThirdPartyExtensionsEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("thirdPartyExtensionsEnabled" to enabled))
+            }
         }
     }
 
     fun setMergedExperienceEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setMergedExperienceEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("mergedExperienceEnabled" to enabled))
+            }
         }
     }
 
@@ -1641,12 +1689,18 @@ class MainViewModel @Inject constructor(
     fun setCrashDetectionEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setCrashDetectionEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("crashDetectionEnabled" to enabled))
+            }
         }
     }
 
     fun setAiSummariesEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAiSummariesEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("aiSummariesEnabled" to enabled))
+            }
         }
     }
 
@@ -1677,12 +1731,18 @@ class MainViewModel @Inject constructor(
     fun setPrivateSafeEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.update { it.copy(privateSafeEnabled = enabled) }
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("privateSafeEnabled" to enabled))
+            }
         }
     }
 
     fun setSmartRepliesEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.update { it.copy(smartRepliesEnabled = enabled) }
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("smartRepliesEnabled" to enabled))
+            }
         }
     }
 

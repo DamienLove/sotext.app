@@ -74,6 +74,7 @@ data class PulseLinkSettings(
     val lineSendPreference: LineSendPreference = LineSendPreference.LAST_USED,
     val threadLineOverrides: Map<String, String> = emptyMap(),
     val devicePhoneNumber: String? = null,
+    // Extensions
     val privateSafeEnabled: Boolean = false,
     val smartRepliesEnabled: Boolean = false
 ) {
