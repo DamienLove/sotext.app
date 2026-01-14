@@ -18,6 +18,7 @@ import com.pulselink.beacon.data.InboxPreferencesRepository
 import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.data.scheduled.BeaconDatabase
 import com.pulselink.beacon.data.scheduled.ScheduledMessage
+import com.pulselink.beacon.data.scheduled.MessageReaction
 import com.pulselink.beacon.data.scheduled.MessageStatus
 import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.util.ThreadDateUtils
@@ -43,6 +44,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SmsRepository(app.applicationContext)
     private val inboxPrefs = InboxPreferencesRepository(app.applicationContext)
     private val scheduledDao = BeaconDatabase.getDatabase(app).scheduledMessageDao()
+    private val reactionDao = BeaconDatabase.getDatabase(app).reactionDao()
     private val workManager = WorkManager.getInstance(app)
 
     private companion object {
@@ -55,6 +57,10 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     // Changed to hold UiItems for display
     var uiMessages by mutableStateOf<List<ThreadUiItem>>(emptyList())
         private set
+
+    var reactions by mutableStateOf<Map<Long, List<MessageReaction>>>(emptyMap())
+        private set
+
     // Keep raw messages for internal logic
     private var rawMessages = emptyList<SmsMessageItem>()
 
@@ -88,6 +94,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     )
 
     private var delayedSendJob: Job? = null
+    private var reactionJob: Job? = null
 
     // Internal holder for raw threads before merging preferences
     private var rawThreads: List<SmsThreadItem> = emptyList()
@@ -307,7 +314,61 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             // Transform for UI (Group by Date)
             uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages)
 
+            // Load reactions
+            reactionJob?.cancel()
+            val ids = rawMessages.map { it.id }
+            if (ids.isNotEmpty()) {
+                reactionJob = launch {
+                    reactionDao.getReactionsForMessages(ids).collectLatest { list ->
+                        reactions = list.groupBy { it.messageId }
+                    }
+                }
+            } else {
+                reactions = emptyMap()
+            }
+
             if (refreshRead) runCatching { repo.markThreadRead(threadId) }
+        }
+    }
+
+    fun addReaction(messageId: Long, emoji: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // Toggle local reaction
+            val current = reactions[messageId]?.find { it.emoji == emoji }
+            if (current != null) {
+                reactionDao.removeReaction(messageId, emoji)
+            } else {
+                reactionDao.insert(MessageReaction(messageId = messageId, emoji = emoji))
+
+                // Send "Tapback" SMS text
+                // "Liked a message", "Loved...", etc.
+                // Standard: "Liked " + original text (truncated)
+                val originalMsg = rawMessages.find { it.id == messageId }
+                if (originalMsg != null && !originalMsg.outgoing) {
+                    // Only send Tapback if we are reacting to SOMEONE ELSE'S message
+                    // Reacting to our own message locally is fine, but sending "Liked my own message" is weird.
+                    val prefix = when(emoji) {
+                        "👍" -> "Liked"
+                        "❤️" -> "Loved"
+                        "😂" -> "Laughed at"
+                        "😮" -> "Questioned" // Or Surprised
+                        "😢" -> "Emphasized" // Or Sad
+                        "👎" -> "Disliked"
+                        else -> "Reacted $emoji to"
+                    }
+                    val snippet = if (originalMsg.body.length > 20) originalMsg.body.take(20) + "..." else originalMsg.body
+                    val tapbackBody = "$prefix \"$snippet\""
+
+                    // Send it
+                    // NOTE: In a real app we might want to delay this or confirm.
+                    val ok = runCatching { repo.sendSms(originalMsg.address, tapbackBody) }.getOrDefault(false)
+                    if (ok) {
+                         withContext(Dispatchers.Main) {
+                             currentThreadId?.let { refreshThread(it, refreshRead = true) }
+                         }
+                    }
+                }
+            }
         }
     }
 

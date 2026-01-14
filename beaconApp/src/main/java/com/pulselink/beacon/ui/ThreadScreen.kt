@@ -88,6 +88,7 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.ThemePalette
+import com.pulselink.beacon.data.scheduled.MessageReaction
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.util.LinkPreviewData
 import com.pulselink.beacon.util.LinkPreviewHelper
@@ -102,6 +103,7 @@ import android.net.Uri
 fun ThreadScreen(
     address: String,
     uiItems: List<ThreadUiItem>,
+    reactions: Map<Long, List<MessageReaction>> = emptyMap(),
     theme: ThemePalette,
     pendingMessage: SmsViewModel.PendingMessage? = null,
     onBack: () -> Unit,
@@ -112,7 +114,8 @@ fun ThreadScreen(
     onDeleteThread: () -> Unit,
     onEditNotificationSound: () -> Unit,
     onCustomize: () -> Unit,
-    onCall: () -> Unit = {}
+    onCall: () -> Unit = {},
+    onReact: (Long, String) -> Unit = { _, _ -> }
 ) {
     var draft by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -277,7 +280,15 @@ fun ThreadScreen(
                     }
                 ) { item ->
                     when (item) {
-                        is ThreadUiItem.Message -> MessageBubble(message = item.message, theme = theme)
+                        is ThreadUiItem.Message -> {
+                            val msgReactions = reactions[item.message.id] ?: emptyList()
+                            MessageBubble(
+                                message = item.message,
+                                reactions = msgReactions,
+                                theme = theme,
+                                onReact = onReact
+                            )
+                        }
                         is ThreadUiItem.DateHeader -> DateHeader(date = item.date, theme = theme)
                     }
                 }
@@ -492,7 +503,12 @@ fun TimePickerDialog(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun LazyItemScope.MessageBubble(message: SmsMessageItem, reactions: List<Reaction> = emptyList(), theme: ThemePalette) {
+private fun LazyItemScope.MessageBubble(
+    message: SmsMessageItem,
+    reactions: List<MessageReaction> = emptyList(),
+    theme: ThemePalette,
+    onReact: (Long, String) -> Unit
+) {
     val isOutgoing = message.outgoing
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
     val alignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
@@ -547,6 +563,25 @@ private fun LazyItemScope.MessageBubble(message: SmsMessageItem, reactions: List
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false }
             ) {
+                // Quick Reactions Row
+                DropdownMenuItem(
+                    text = {
+                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                             listOf("👍", "❤️", "😂", "😮", "😢", "👎").forEach { emoji ->
+                                 Text(
+                                     text = emoji,
+                                     fontSize = 24.sp,
+                                     modifier = Modifier.clickable {
+                                         onReact(message.id, emoji)
+                                         showMenu = false
+                                     }
+                                 )
+                             }
+                         }
+                    },
+                    onClick = { }
+                )
+                androidx.compose.material3.HorizontalDivider()
                 DropdownMenuItem(
                     text = { Text("Copy Text") },
                     onClick = {
@@ -556,7 +591,6 @@ private fun LazyItemScope.MessageBubble(message: SmsMessageItem, reactions: List
                     },
                     leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }
                 )
-                // Add more actions here (e.g., Forward, React, etc. in future)
             }
 
             Column(
@@ -640,31 +674,33 @@ private fun LazyItemScope.MessageBubble(message: SmsMessageItem, reactions: List
             }
         }
 
-        // Reactions Overlay
-        if (reactions.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .align(if (isOutgoing) Alignment.BottomEnd else Alignment.BottomStart)
-                    .offset(y = 10.dp, x = if (isOutgoing) (-4).dp else 4.dp)
-                    .zIndex(1f),
-                horizontalArrangement = Arrangement.spacedBy((-4).dp)
-            ) {
-                reactions.forEach { reaction ->
-                    Surface(
-                        shape = CircleShape,
-                        color = theme.threadBackgroundColor,
-                        border = BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f)),
-                        modifier = Modifier.size(24.dp),
-                        shadowElevation = 2.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(text = reaction.emoji, fontSize = 12.sp)
-                        }
+    }
+
+    // Reactions Overlay
+    if (reactions.isNotEmpty()) {
+        Row(
+            modifier = Modifier
+                .align(if (isOutgoing) Alignment.BottomEnd else Alignment.BottomStart)
+                .offset(y = 10.dp, x = if (isOutgoing) (-4).dp else 4.dp)
+                .zIndex(1f),
+            horizontalArrangement = Arrangement.spacedBy((-4).dp)
+        ) {
+            reactions.forEach { reaction ->
+                Surface(
+                    shape = CircleShape,
+                    color = theme.threadBackgroundColor,
+                    border = BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f)),
+                    modifier = Modifier.size(24.dp),
+                    shadowElevation = 2.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(text = reaction.emoji, fontSize = 12.sp)
                     }
                 }
             }
         }
     }
+  }
 }
 
 private fun formatMessageTime(timestamp: Long): String {
