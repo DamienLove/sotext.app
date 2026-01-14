@@ -1897,33 +1897,35 @@ function App() {
       return name.includes(term) || author.includes(term) || handle.includes(term);
     });
   }, [publicThemes, themeSearch]);
+  // Bolt: Pre-compute search strings for contacts to avoid expensive string operations on every keystroke
+  const contactSearchIndex = useMemo(() => {
+    return deviceContacts.map(contact => {
+      const parts = [
+        contact.displayName,
+        contact.phoneNumber,
+        contact.email,
+        ...(Array.isArray(contact.additionalPhones) ? contact.additionalPhones : []),
+        ...(Array.isArray(contact.additionalEmails) ? contact.additionalEmails : [])
+      ];
+
+      const searchString = parts
+        .filter(part => part !== null && part !== undefined)
+        .map(part => String(part).toLowerCase())
+        .join(' ');
+
+      return { contact, searchString };
+    });
+  }, [deviceContacts]);
+
   const filteredDeviceContacts = useMemo(() => {
     const term = contactSearch.trim().toLowerCase();
     if (!term) return deviceContacts;
-    return deviceContacts.filter((contact) => {
-      // Bolt: Direct property checks avoid creating intermediate arrays (GC pressure)
-      // and .some() callback overhead during high-frequency typing events.
-      if ((contact.displayName ?? '').toString().toLowerCase().includes(term)) return true;
-      if ((contact.phoneNumber ?? '').toString().toLowerCase().includes(term)) return true;
-      if ((contact.email ?? '').toString().toLowerCase().includes(term)) return true;
 
-      const addPhones = contact.additionalPhones;
-      if (Array.isArray(addPhones)) {
-        for (let i = 0; i < addPhones.length; i++) {
-          if ((addPhones[i] ?? '').toString().toLowerCase().includes(term)) return true;
-        }
-      }
-
-      const addEmails = contact.additionalEmails;
-      if (Array.isArray(addEmails)) {
-        for (let i = 0; i < addEmails.length; i++) {
-          if ((addEmails[i] ?? '').toString().toLowerCase().includes(term)) return true;
-        }
-      }
-
-      return false;
-    });
-  }, [deviceContacts, contactSearch]);
+    // Bolt: Use the pre-computed index for O(N) simple string inclusion check
+    return contactSearchIndex
+      .filter(({ searchString }) => searchString.includes(term))
+      .map(({ contact }) => contact);
+  }, [contactSearchIndex, contactSearch, deviceContacts]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const messageListElements = useMemo(() => (
