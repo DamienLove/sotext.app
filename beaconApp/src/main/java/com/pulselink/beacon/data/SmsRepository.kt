@@ -129,11 +129,8 @@ class SmsRepository(private val context: Context) {
                 val threadId = c.getLong(idIdx)
                 var snippet = c.getString(snippetIdx) ?: ""
 
-                // Fallback: If snippet is empty/stale, try to fetch the latest message body manually
-                // This ensures "new messages are seen FIRST" even if the system Threads table is lagging
-                if (snippet.isBlank()) {
-                    snippet = getLastMessageSnippet(threadId)
-                }
+                // Optimization: Fallback logic removed to prevent N+1 queries.
+                // Blank snippets are handled in UI (e.g. "Media" or hidden) to prioritize load speed.
 
                 rawThreads.add(RawThreadData(
                     id = threadId,
@@ -188,7 +185,7 @@ class SmsRepository(private val context: Context) {
         if (TRANSACTION_PATTERN.matcher(body).find()) return ThreadCategory.TRANSACTIONS
         if (PROMOTION_PATTERN.matcher(body).find()) return ThreadCategory.PROMOTIONS
 
-        return ThreadCategory.TRANSACTIONS
+        return ThreadCategory.PERSONAL
     }
 
     private fun resolveAddressesForThreads(threads: List<RawThreadData>): Map<Long, String> {

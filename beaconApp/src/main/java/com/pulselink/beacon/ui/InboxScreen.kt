@@ -4,8 +4,10 @@ import android.text.format.DateUtils
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,12 +17,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ColorLens
@@ -840,48 +846,110 @@ private fun ThreadRow(
                 onLongClick = onLongClick
             )
     ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!selectionMode) {
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(text = { Text(if (thread.isPinned) "Unpin" else "Pin") }, onClick = { onTogglePin(); showMenu = false })
-                    DropdownMenuItem(text = { Text(if (thread.isArchived) "Unarchive" else "Archive") }, onClick = { onToggleArchive(); showMenu = false })
-                    DropdownMenuItem(text = { Text("Delete") }, onClick = { onDelete(); showMenu = false })
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Avatar / Selection State
+            Box(
+                modifier = Modifier.padding(end = 16.dp),
+                contentAlignment = Alignment.BottomEnd
+            ) {
                 if (isSelected) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = theme.accentColor, modifier = Modifier.padding(end = 8.dp).size(20.dp))
-                } else if (thread.isPinned) {
-                    Icon(Icons.Default.PushPin, contentDescription = "Pinned", tint = theme.accentColor, modifier = Modifier.padding(end = 4.dp).size(16.dp))
+                    Surface(shape = CircleShape, color = theme.accentColor, modifier = Modifier.size(48.dp)) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = theme.inboxBackgroundColor)
+                        }
+                    }
+                } else {
+                    LetterAvatar(name = thread.address, theme = theme, size = 48.dp)
                 }
 
+                if (thread.isPinned && !isSelected) {
+                    Surface(
+                        shape = CircleShape,
+                        color = theme.inboxBackgroundColor,
+                        shadowElevation = 2.dp,
+                        modifier = Modifier.size(18.dp).offset(x = 4.dp, y = 4.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.PushPin,
+                                contentDescription = "Pinned",
+                                tint = theme.accentColor,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                if (!selectionMode) {
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(text = { Text(if (thread.isPinned) "Unpin" else "Pin") }, onClick = { onTogglePin(); showMenu = false })
+                        DropdownMenuItem(text = { Text(if (thread.isArchived) "Unarchive" else "Archive") }, onClick = { onToggleArchive(); showMenu = false })
+                        DropdownMenuItem(text = { Text("Delete") }, onClick = { onDelete(); showMenu = false })
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = thread.address.ifBlank { "Unknown" },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
+                        color = theme.frameColor,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = DateUtils.getRelativeTimeSpanString(thread.timestamp, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (thread.unread) theme.accentColor else theme.frameColor.copy(alpha = 0.6f),
+                        fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = thread.address.ifBlank { "Unknown" },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.Medium,
-                    color = theme.frameColor,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = DateUtils.getRelativeTimeSpanString(thread.timestamp, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = theme.frameColor.copy(alpha = 0.6f)
+                    text = if (thread.snippet.isBlank()) "Media" else thread.snippet,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    fontWeight = if (thread.unread) FontWeight.Medium else FontWeight.Normal,
+                    color = if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.7f)
                 )
             }
-            Spacer(modifier = Modifier.height(4.dp))
+        }
+    }
+}
+
+@Composable
+fun LetterAvatar(name: String, theme: ThemePalette, size: androidx.compose.ui.unit.Dp) {
+    val initial = name.firstOrNull()?.uppercase() ?: "?"
+    // Deterministic color based on name hash
+    val colorIndex = kotlin.math.abs(name.hashCode()) % 5
+    val avatarColor = when(colorIndex) {
+        0 -> theme.accentColor
+        1 -> Color(0xFF4CAF50) // Green
+        2 -> Color(0xFFFF9800) // Orange
+        3 -> Color(0xFFE91E63) // Pink
+        else -> Color(0xFF9C27B0) // Purple
+    }
+
+    Surface(
+        shape = CircleShape,
+        color = avatarColor.copy(alpha = 0.2f),
+        modifier = Modifier.size(size)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
             Text(
-                text = thread.snippet,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                fontWeight = if (thread.unread) FontWeight.Medium else FontWeight.Normal,
-                color = if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.7f)
+                text = initial,
+                style = MaterialTheme.typography.titleLarge,
+                color = avatarColor,
+                fontWeight = FontWeight.Bold
             )
         }
     }
