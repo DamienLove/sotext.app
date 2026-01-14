@@ -556,7 +556,7 @@ private fun NotificationPolicyCard(context: Context) {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "RingerSong needs 'Do Not Disturb' access to automatically silence the default ringtone so you can hear your streamed music.",
+                text = "RingerSong needs 'Do Not Disturb' access to automatically silence the default ringtone so you can hear your downloaded music.",
                 style = MaterialTheme.typography.bodySmall
             )
             OutlinedButton(
@@ -838,17 +838,10 @@ private fun SpotifySection(
                     }
                 }
                 Text(
-                    text = "Search for tracks on Spotify. Songs will be streamed directly from your Spotify App.",
+                    text = "Search for tracks on Spotify. Songs are downloaded for ringtone playback.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (userCapabilities == "Free") {
-                    Text(
-                        text = "⚠️ Free accounts may experience random playback (shuffle mode) due to Spotify restrictions.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
             }
 
             Button(
@@ -1487,17 +1480,17 @@ private fun HowToAddMusicHelper() {
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Streaming First: Connect your Spotify Premium account above to stream songs directly as your ringtone.",
+            text = "Download First: Spotify and YouTube Music tracks are downloaded before use.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "We automatically silence your default ringer and play your stream instead.",
+            text = "We automatically silence your default ringer and play your downloaded track instead.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Note: YouTube Music tracks will be downloaded. Local files are also supported.",
+            text = "Note: Local files are also supported.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
