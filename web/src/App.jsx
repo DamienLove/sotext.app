@@ -70,7 +70,10 @@ const StarIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 const LockIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
 const MessageSquareIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
 const Spinner = ({ className = '', style = {} }) => (
-  <span className={`spinner ${className}`} style={style} aria-hidden="true" />
+  <svg className={`spinner ${className}`} style={style} viewBox="0 0 50 50" aria-hidden="true">
+    <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="5" opacity="0.2" />
+    <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="5" strokeDasharray="80" strokeDashoffset="60" strokeLinecap="round" />
+  </svg>
 );
 
 const CopyButton = ({ text, label = "Copy" }) => {
