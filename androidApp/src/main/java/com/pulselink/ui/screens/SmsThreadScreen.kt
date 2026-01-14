@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.AutoFixHigh
@@ -117,6 +118,8 @@ fun SmsThreadScreen(
     onEditNotificationSound: () -> Unit = {},
     onEditNotificationVibration: () -> Unit = {},
     onEditContact: () -> Unit = {},
+    onCall: (() -> Unit)? = null,
+    callEnabled: Boolean = false,
     onSendMessage: (String, String?) -> Unit,
     lineOptions: List<com.pulselink.domain.model.SmsLine> = emptyList(),
     selectedLineId: String? = null,
@@ -249,6 +252,22 @@ fun SmsThreadScreen(
                     }
                 },
                 actions = {
+                    if (onCall != null) {
+                        val callTint = parseColorOr(
+                            MaterialTheme.colorScheme.onSurface,
+                            effectiveTheme.onTopBarColor
+                        )
+                        IconButton(onClick = onCall, enabled = callEnabled) {
+                            ThemeIcon(
+                                iconKey = ThemeIconKey.CALL,
+                                theme = effectiveTheme,
+                                imageVector = Icons.Filled.Call,
+                                contentDescription = "Call",
+                                tint = if (callEnabled) callTint else callTint.copy(alpha = 0.3f),
+                                modifier = Modifier.size(iconSize)
+                            )
+                        }
+                    }
                     IconButton(onClick = onToggleArchive) {
                         val icon = if (isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
                         val iconKey = if (isArchived) ThemeIconKey.UNARCHIVE else ThemeIconKey.ARCHIVE
