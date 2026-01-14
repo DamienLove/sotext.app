@@ -4183,9 +4183,24 @@ function App() {
                 <input
                   className="settings-search-input"
                   placeholder="Search settings..."
+                  aria-label="Search settings"
                   value={settingsSearch}
                   onChange={(e) => setSettingsSearch(e.target.value)}
                 />
+                {settingsSearch && (
+                  <button
+                    className="ghost-btn icon-only"
+                    onClick={() => setSettingsSearch('')}
+                    aria-label="Clear search"
+                    title="Clear search"
+                    style={{ width: '28px', height: '28px' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                )}
               </div>
 
               <div className="settings-grid">
