@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.MarkChatUnread
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -541,6 +542,7 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
                             imageVector = when(filter) {
                                 InboxFilter.ARCHIVED -> Icons.Default.Inbox
                                 InboxFilter.UNREAD -> Icons.Default.CheckCircle
+                                    InboxFilter.STARRED -> Icons.Default.Star
                                 else -> Icons.Default.Sms
                             },
                             contentDescription = null,
@@ -555,6 +557,7 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
                 text = when (filter) {
                     InboxFilter.UNREAD -> "All caught up"
                     InboxFilter.ARCHIVED -> "No archives"
+                    InboxFilter.STARRED -> "No starred messages"
                     else -> "Inbox Empty"
                 },
                 style = MaterialTheme.typography.headlineSmall,
@@ -569,6 +572,7 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
                     InboxFilter.TRANSACTIONS -> "Bank alerts and codes appear here."
                     InboxFilter.PROMOTIONS -> "Marketing offers appear here."
                     InboxFilter.ARCHIVED -> "Archived threads are hidden here."
+                    InboxFilter.STARRED -> "Star important messages to find them here."
                     else -> "Your messages will appear here once you start chatting."
                 },
                 style = MaterialTheme.typography.bodyLarge,
@@ -978,6 +982,7 @@ private fun TabsRow(
         TabChip("Transactions", filter == InboxFilter.TRANSACTIONS, theme) { onFilterChange(InboxFilter.TRANSACTIONS) }
         TabChip("Promotions", filter == InboxFilter.PROMOTIONS, theme) { onFilterChange(InboxFilter.PROMOTIONS) }
         TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
+        TabChip("Starred", filter == InboxFilter.STARRED, theme) { onFilterChange(InboxFilter.STARRED) }
         TabChip("Archived", filter == InboxFilter.ARCHIVED, theme) { onFilterChange(InboxFilter.ARCHIVED) }
     }
 }
@@ -999,4 +1004,4 @@ private fun TabChip(label: String, selected: Boolean, theme: ThemePalette, onCli
     }
 }
 
-enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS }
+enum class InboxFilter { ALL, READ, UNREAD, STARRED, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS }

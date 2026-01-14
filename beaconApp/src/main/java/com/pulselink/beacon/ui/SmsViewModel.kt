@@ -19,6 +19,8 @@ import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.data.scheduled.BeaconDatabase
 import com.pulselink.beacon.data.scheduled.ScheduledMessage
 import com.pulselink.beacon.data.scheduled.MessageReaction
+import com.pulselink.beacon.data.scheduled.MessageStar
+import com.pulselink.beacon.data.scheduled.BlockedNumber
 import com.pulselink.beacon.data.scheduled.MessageStatus
 import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.util.ThreadDateUtils
@@ -45,6 +47,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private val inboxPrefs = InboxPreferencesRepository(app.applicationContext)
     private val scheduledDao = BeaconDatabase.getDatabase(app).scheduledMessageDao()
     private val reactionDao = BeaconDatabase.getDatabase(app).reactionDao()
+    private val starDao = BeaconDatabase.getDatabase(app).messageStarDao()
+    private val blockedDao = BeaconDatabase.getDatabase(app).blockedNumberDao()
     private val workManager = WorkManager.getInstance(app)
 
     private companion object {
@@ -60,6 +64,14 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     var reactions by mutableStateOf<Map<Long, List<MessageReaction>>>(emptyMap())
         private set
+
+    var starredMessageIds by mutableStateOf<Set<Long>>(emptySet())
+        private set
+
+    // Store threads that have starred messages for filtering
+    private var threadsWithStars: Set<Long> = emptySet()
+
+    private var blockedNumbers: Set<String> = emptySet()
 
     // Keep raw messages for internal logic
     private var rawMessages = emptyList<SmsMessageItem>()
@@ -128,6 +140,22 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 mergeThreads()
             }
         }
+
+        viewModelScope.launch {
+            starDao.getAllStarred().collectLatest { stars ->
+                starredMessageIds = stars.map { it.messageId }.toSet()
+                threadsWithStars = stars.map { it.threadId }.toSet()
+                // Refresh list if filter is STARRED
+                if (currentFilter == InboxFilter.STARRED) updateFilteredList()
+            }
+        }
+
+        viewModelScope.launch {
+            blockedDao.getAllBlocked().collectLatest { blocked ->
+                blockedNumbers = blocked.map { it.normalizedNumber }.toSet()
+                mergeThreads() // Re-filter blocked threads
+            }
+        }
     }
 
     fun updateFilter(filter: InboxFilter) {
@@ -152,22 +180,26 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun mergeThreads() {
-        // Optimized sorting
-        val merged = rawThreads.map { thread ->
-            val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
-            // Only copy if needed
-            if (isPinned != thread.isPinned || inboxState.archivedThreadIds.contains(thread.threadId) != thread.isArchived) {
-                thread.copy(
-                    isPinned = isPinned,
-                    isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
-                )
-            } else {
-                thread
+        // Optimized sorting and filtering blocked
+        val merged = rawThreads.asSequence()
+            .filter { !blockedNumbers.contains(it.address) } // Naive normalization check, ideally normalize 'it.address' too
+            .map { thread ->
+                val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
+                // Only copy if needed
+                if (isPinned != thread.isPinned || inboxState.archivedThreadIds.contains(thread.threadId) != thread.isArchived) {
+                    thread.copy(
+                        isPinned = isPinned,
+                        isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
+                    )
+                } else {
+                    thread
+                }
             }
-        }.sortedWith(
-            compareByDescending<SmsThreadItem> { it.isPinned }
-                .thenByDescending { it.timestamp }
-        )
+            .sortedWith(
+                compareByDescending<SmsThreadItem> { it.isPinned }
+                    .thenByDescending { it.timestamp }
+            )
+            .toList()
         threads = merged
         updateFilteredList()
     }
@@ -189,6 +221,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     InboxFilter.ALL -> list.filter { !it.isArchived }
                     InboxFilter.READ -> list.filter { !it.unread && !it.isArchived }
                     InboxFilter.UNREAD -> list.filter { it.unread && !it.isArchived }
+                    InboxFilter.STARRED -> list.filter { threadsWithStars.contains(it.threadId) && !it.isArchived }
                     InboxFilter.PERSONAL -> list.filter { it.category == ThreadCategory.PERSONAL && !it.isArchived }
                     InboxFilter.TRANSACTIONS -> list.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
                     InboxFilter.PROMOTIONS -> list.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
@@ -204,6 +237,28 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun togglePin(threadId: Long) {
         viewModelScope.launch {
             inboxPrefs.togglePin(threadId)
+        }
+    }
+
+    fun toggleStar(messageId: Long, threadId: Long) {
+        viewModelScope.launch {
+            if (starredMessageIds.contains(messageId)) {
+                starDao.remove(messageId)
+            } else {
+                starDao.insert(MessageStar(messageId = messageId, threadId = threadId))
+            }
+        }
+    }
+
+    fun blockNumber(address: String) {
+        viewModelScope.launch {
+            blockedDao.block(BlockedNumber(normalizedNumber = address, originalNumber = address))
+        }
+    }
+
+    fun unblockNumber(address: String) {
+        viewModelScope.launch {
+            blockedDao.unblock(address)
         }
     }
 
