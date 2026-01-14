@@ -548,6 +548,17 @@
   box-shadow: none;
 }
 
+.secondary-btn:disabled, .ghost-btn:disabled {
+  opacity: 0.6;
+  filter: grayscale(0.8);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.01);
+  border-color: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+}
+
 /* Loading shine animation */
 .primary-btn[aria-busy="true"]::after {
   content: "";
