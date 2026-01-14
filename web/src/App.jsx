@@ -1901,16 +1901,27 @@ function App() {
     const term = contactSearch.trim().toLowerCase();
     if (!term) return deviceContacts;
     return deviceContacts.filter((contact) => {
-      const values = [
-        contact.displayName,
-        contact.phoneNumber,
-        contact.email,
-        ...(contact.additionalPhones || []),
-        ...(contact.additionalEmails || [])
-      ];
-      return values.some((value) =>
-        (value ?? '').toString().toLowerCase().includes(term)
-      );
+      // Bolt: Direct property checks avoid creating intermediate arrays (GC pressure)
+      // and .some() callback overhead during high-frequency typing events.
+      if ((contact.displayName ?? '').toString().toLowerCase().includes(term)) return true;
+      if ((contact.phoneNumber ?? '').toString().toLowerCase().includes(term)) return true;
+      if ((contact.email ?? '').toString().toLowerCase().includes(term)) return true;
+
+      const addPhones = contact.additionalPhones;
+      if (Array.isArray(addPhones)) {
+        for (let i = 0; i < addPhones.length; i++) {
+          if ((addPhones[i] ?? '').toString().toLowerCase().includes(term)) return true;
+        }
+      }
+
+      const addEmails = contact.additionalEmails;
+      if (Array.isArray(addEmails)) {
+        for (let i = 0; i < addEmails.length; i++) {
+          if ((addEmails[i] ?? '').toString().toLowerCase().includes(term)) return true;
+        }
+      }
+
+      return false;
     });
   }, [deviceContacts, contactSearch]);
 
