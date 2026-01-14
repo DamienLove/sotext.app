@@ -45,14 +45,23 @@ class CallStateReceiver : BroadcastReceiver() {
                 }
 
                 try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(serviceIntent)
+                    val canStartBg = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        android.provider.Settings.canDrawOverlays(context)
                     } else {
-                        context.startService(serviceIntent)
+                        true
+                    }
+
+                    if (canStartBg) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(serviceIntent)
+                        } else {
+                            context.startService(serviceIntent)
+                        }
+                    } else {
+                        Log.w(TAG, "Missing SYSTEM_ALERT_WINDOW permission. Cannot start service from background on Android 10+.")
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to start service (likely Android 12+ background restriction)", e)
-                    // Fallback or retry logic could go here, but for now we log and proceed safely.
+                    Log.e(TAG, "Failed to start service", e)
                 }
             }
 
