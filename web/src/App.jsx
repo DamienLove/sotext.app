@@ -114,7 +114,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
     className={`thread-item ${isActive ? 'active' : ''}`}
     onClick={() => onSelect(thread)}
     aria-current={isActive ? 'true' : undefined}
-    aria-label={`Select conversation with ${thread.display_name || thread.address}`}
+    aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
   >
     <div className="thread-name">{thread.display_name || thread.address}</div>
     <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
@@ -455,6 +455,7 @@ const ThemePresetItem = memo(({ preset, onApply }) => (
   <button
     className="theme-chip"
     onClick={() => onApply(preset.theme)}
+    aria-label={`Apply ${preset.name} theme`}
   >
     <div className="theme-chip-title">
       <span className="theme-dot" style={{ background: preset.theme.primaryColor }} />

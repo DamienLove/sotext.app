@@ -5,3 +5,7 @@
 ## 2025-05-20 - Focus Management in Inline Confirmation
 **Learning:** Replacing a button with a confirmation state (Confirm/Cancel) traps keyboard users if focus isn't managed. The 'Confirm' button needs `autoFocus` to be discoverable.
 **Action:** Always add `autoFocus` to conditional confirmation buttons and handle `Escape` to revert state.
+
+## 2025-05-21 - Decorative Text in Interactive Elements
+**Learning:** Decorative preview text inside buttons (like "Sample incoming" in a theme picker) creates excessive noise for screen readers, cluttering the navigation flow.
+**Action:** Use `aria-label` on the container button to override its text content with a concise action description (e.g., "Apply Midnight theme"), effectively silencing the decorative children.
