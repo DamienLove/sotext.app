@@ -52,11 +52,12 @@
 }
 
 :root {
-  /* Core Palette: "Future Deep v4" - Richer blacks, vibrant accents */
-  --bg: #03050a; /* Deeper black */
+  /* Core Palette: "Future Deep v5" - The Definitive Edition */
+  --bg: #03050a; /* Deepest Black/Blue */
   --bg-accent: #080b14;
   --surface: #0b101b;
   --surface-alt: #131826;
+  --surface-hover: #1c2235;
 
   /* Text & Ink */
   --ink: #f0f6fc;
@@ -78,22 +79,25 @@
 
   --danger: #ff4757;
   --success: #2ed573;
+  --warning: #ffa502;
 
   --border: rgba(255, 255, 255, 0.08);
   --border-light: rgba(255, 255, 255, 0.15);
+  --border-neon: rgba(34, 211, 238, 0.3);
   --bg-radial-start: #0a0f1c;
 
-  /* Glassmorphism Refined */
-  --glass-bg: rgba(3, 5, 10, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-highlight: rgba(255, 255, 255, 0.08);
-  --glass-blur: 20px;
+  /* Glassmorphism Refined V5 */
+  --glass-bg: rgba(3, 5, 10, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.1);
+  --glass-blur: 24px;
 
   /* Shadows */
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
   --shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
   --shadow-lg: 0 32px 64px -12px rgba(0, 0, 0, 0.9);
   --shadow-glow: 0 0 30px var(--accent-glow);
+  --shadow-neon: 0 0 10px var(--accent-glow), 0 0 20px var(--accent-dim);
 
   /* Typography */
   --font-display: "Space Grotesk", system-ui, -apple-system, sans-serif;
@@ -117,7 +121,7 @@
 
 ::selection {
   background: rgba(34, 211, 238, 0.25);
-  color: var(--ink);
+  color: #fff;
   text-shadow: 0 0 8px var(--accent);
 }
 
@@ -135,20 +139,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /*
-   "Alive" Background v4:
-   - Smoother transitions
-   - Deeper depth
+   "Alive" Background v5:
+   - More subtle, deep breathing effect
+   - Reduced visual noise, increased depth
 */
 body {
   background-color: var(--bg);
   background-image:
-      radial-gradient(circle at 50% 0%, var(--bg-radial-start) 0%, transparent 70%),
-      radial-gradient(circle at 85% 90%, rgba(188, 19, 254, 0.03) 0%, transparent 40%),
-      linear-gradient(rgba(34, 211, 238, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(34, 211, 238, 0.02) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 80px 80px, 80px 80px;
+      radial-gradient(circle at 50% 0%, var(--bg-radial-start) 0%, transparent 80%),
+      radial-gradient(circle at 90% 90%, rgba(188, 19, 254, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 10% 80%, rgba(34, 211, 238, 0.03) 0%, transparent 40%),
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 60px 60px, 60px 60px;
   background-attachment: fixed;
-  animation: breathe 30s ease-in-out infinite alternate;
+  animation: breathe 40s ease-in-out infinite alternate;
 }
 
 /* Subtle Vignette Overlay */
@@ -156,12 +161,12 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.6) 100%);
+  background: radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.7) 100%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Film Grain / Noise Overlay */
+/* Film Grain / Noise Overlay - Reduced opacity for v5 clarity */
 .noise-overlay {
   position: fixed;
   inset: 0;
@@ -169,16 +174,16 @@ body::after {
   height: 100%;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.03;
+  opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
 }
 
 @keyframes breathe {
   0% {
-    background-position: 50% 0%, 85% 90%, 0 0, 0 0;
+    background-position: 50% 0%, 90% 90%, 10% 80%, 0 0, 0 0;
   }
   100% {
-    background-position: 50% 15%, 80% 95%, 0 0, 0 0;
+    background-position: 50% 10%, 85% 95%, 15% 85%, 0 0, 0 0;
   }
 }
 
@@ -186,6 +191,7 @@ a {
   color: inherit;
   text-decoration: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 a:hover {
@@ -201,24 +207,22 @@ select {
   outline: none;
 }
 
-/* Adaptive Scrollbar */
+/* V5 Neon Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  border: 2px solid transparent; /* Padding effect */
-  background-clip: content-box;
-  transition: background 0.2s, border 0.2s;
+  background: rgba(34, 211, 238, 0.2);
+  border-radius: 3px;
+  transition: background 0.2s, box-shadow 0.2s;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--accent);
-  border: 0 solid transparent; /* Expands on hover */
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 ::-webkit-scrollbar-corner {
   background: transparent;
@@ -268,4 +272,33 @@ select {
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-panel:hover {
+    border-color: var(--glass-highlight);
+    box-shadow: var(--shadow-lg);
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--ink) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.neon-border {
+    position: relative;
+}
+.neon-border::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    background: linear-gradient(45deg, var(--accent), transparent, var(--tertiary));
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0.5;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
 }
