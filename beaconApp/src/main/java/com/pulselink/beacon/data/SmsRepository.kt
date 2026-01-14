@@ -531,6 +531,11 @@ class SmsRepository(private val context: Context) {
         return runCatching {
             val smsManager = android.telephony.SmsManager.getDefault()
             smsManager.sendTextMessage(address, null, body, null, null)
+
+            runCatching {
+                SmsSyncManager.getInstance(context).syncOutgoing(address, body)
+            }
+
             true
         }.getOrDefault(false)
     }
