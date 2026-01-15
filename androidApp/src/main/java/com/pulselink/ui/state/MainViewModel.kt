@@ -1217,7 +1217,8 @@ class MainViewModel @Inject constructor(
         val hasEmail = !contact.email.isNullOrBlank() || contact.additionalEmails.any { it.isNotBlank() }
         val hasLink = contact.linkStatus != LinkStatus.NONE || !contact.linkCode.isNullOrBlank()
         val hasRemote = !contact.remoteUid.isNullOrBlank() || !contact.remoteDeviceId.isNullOrBlank()
-        return !hasPhone && !hasEmail && !hasLink && !hasRemote
+        val hasName = contact.displayName.isNotBlank()
+        return !hasPhone && !hasEmail && !hasLink && !hasRemote && !hasName
     }
 
     private suspend fun pruneLocalUnreachable() {
@@ -1770,7 +1771,7 @@ class MainViewModel @Inject constructor(
         private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
-        const val BUG_REPORT_PAGE_URL = "https://github.com/DamienLove/pulselink/issues/new?template=bug_report.md"
+        const val BUG_REPORT_PAGE_URL = "https://github.com/DamienLove/pulselink/issues/new"
     }
 }
 
