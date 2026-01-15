@@ -1636,6 +1636,7 @@ function App() {
   const [trustedContacts, setTrustedContacts] = useState([]);
   const [deviceContacts, setDeviceContacts] = useState([]);
   const [contactSearch, setContactSearch] = useState('');
+  const [contactListLimit, setContactListLimit] = useState(50);
   const [unlockedAvatars, setUnlockedAvatars] = useState([]);
   const [contactForm, setContactForm] = useState({
     displayName: '',
@@ -1707,12 +1708,18 @@ function App() {
   useEffect(() => {
     localStorage.setItem('pulselink.devExtensions', JSON.stringify(devExtensions));
   }, [devExtensions]);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('home');
+
+  // Bolt: Reset contact list limit when search or panel changes
+  useEffect(() => {
+    setContactListLimit(50);
+  }, [contactSearch, activePanel]);
   const [alertLocations, setAlertLocations] = useState([]);
   const [alertStatus, setAlertStatus] = useState('');
   const [severityFilter, setSeverityFilter] = useState('emergency');
@@ -1932,11 +1939,12 @@ function App() {
     ))
   ), [messages, showPreviews]);
 
+  // Bolt: Pagination for contact list to improve performance
   const contactListElements = useMemo(() => (
-    filteredDeviceContacts.map((contact) => (
+    filteredDeviceContacts.slice(0, contactListLimit).map((contact) => (
       <DeviceContactItem key={contact.id} contact={contact} />
     ))
-  ), [filteredDeviceContacts]);
+  ), [filteredDeviceContacts, contactListLimit]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -3516,6 +3524,15 @@ function App() {
               </div>
               <div className="contact-list contact-list--full">
                 {contactListElements}
+                {filteredDeviceContacts.length > contactListLimit && (
+                  <button
+                    className="secondary-btn"
+                    style={{ marginTop: '16px', width: '100%' }}
+                    onClick={() => setContactListLimit(prev => prev + 50)}
+                  >
+                    Show more contacts
+                  </button>
+                )}
                 {filteredDeviceContacts.length === 0 && (
                   <div className="settings-note">
                     {contactSearch.trim()
