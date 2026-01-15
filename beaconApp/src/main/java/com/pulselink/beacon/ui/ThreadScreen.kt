@@ -41,6 +41,8 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DatePicker
@@ -104,6 +106,7 @@ fun ThreadScreen(
     address: String,
     uiItems: List<ThreadUiItem>,
     reactions: Map<Long, List<MessageReaction>> = emptyMap(),
+    starredMessageIds: Set<Long> = emptySet(),
     theme: ThemePalette,
     pendingMessage: SmsViewModel.PendingMessage? = null,
     onBack: () -> Unit,
@@ -115,7 +118,9 @@ fun ThreadScreen(
     onEditNotificationSound: () -> Unit,
     onCustomize: () -> Unit,
     onCall: () -> Unit = {},
-    onReact: (Long, String) -> Unit = { _, _ -> }
+    onReact: (Long, String) -> Unit = { _, _ -> },
+    onToggleStar: (Long) -> Unit = {},
+    onBlock: () -> Unit = {}
 ) {
     var draft by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -138,6 +143,8 @@ fun ThreadScreen(
 
     // Auto-scroll logic for new messages
     // Trigger only when the size changes or the latest item ID changes
+    var showMenu by remember { mutableStateOf(false) }
+
     val latestItemId = uiItems.firstOrNull()?.let {
         when(it) {
             is ThreadUiItem.Message -> it.message.id
@@ -227,14 +234,33 @@ fun ThreadScreen(
                     IconButton(onClick = onCall) {
                         Icon(Icons.Default.Call, contentDescription = "Call", tint = iconTint)
                     }
-                    IconButton(onClick = onCustomize) {
-                        Icon(Icons.Default.Palette, contentDescription = "Customize theme", tint = iconTint)
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(androidx.compose.material.icons.Icons.Default.MoreVert, contentDescription = "Options", tint = iconTint)
                     }
-                    IconButton(onClick = onEditNotificationSound) {
-                        Icon(Icons.Default.NotificationsActive, contentDescription = "Notification sound", tint = iconTint)
-                    }
-                    IconButton(onClick = onDeleteThread) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete thread", tint = iconTint)
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Customize theme") },
+                            onClick = { onCustomize(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Default.Palette, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Notification sound") },
+                            onClick = { onEditNotificationSound(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Default.NotificationsActive, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Block number") },
+                            onClick = { onBlock(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Default.Block, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Delete thread") },
+                            onClick = { onDeleteThread(); showMenu = false },
+                            leadingIcon = { Icon(Icons.Default.Delete, null) }
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -285,8 +311,10 @@ fun ThreadScreen(
                             MessageBubble(
                                 message = item.message,
                                 reactions = msgReactions,
+                                isStarred = starredMessageIds.contains(item.message.id),
                                 theme = theme,
-                                onReact = onReact
+                                onReact = onReact,
+                                onToggleStar = { onToggleStar(item.message.id) }
                             )
                         }
                         is ThreadUiItem.DateHeader -> DateHeader(date = item.date, theme = theme)
@@ -506,8 +534,10 @@ fun TimePickerDialog(
 private fun LazyItemScope.MessageBubble(
     message: SmsMessageItem,
     reactions: List<MessageReaction> = emptyList(),
+    isStarred: Boolean,
     theme: ThemePalette,
-    onReact: (Long, String) -> Unit
+    onReact: (Long, String) -> Unit,
+    onToggleStar: () -> Unit
 ) {
     val isOutgoing = message.outgoing
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
@@ -582,6 +612,14 @@ private fun LazyItemScope.MessageBubble(
                     onClick = { }
                 )
                 androidx.compose.material3.HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(if (isStarred) "Unstar" else "Star") },
+                    onClick = {
+                        onToggleStar()
+                        showMenu = false
+                    },
+                    leadingIcon = { Icon(Icons.Default.Star, contentDescription = null, tint = if (isStarred) theme.accentColor else Color.Unspecified) }
+                )
                 DropdownMenuItem(
                     text = { Text("Copy Text") },
                     onClick = {
@@ -659,11 +697,19 @@ private fun LazyItemScope.MessageBubble(
                     )
                 }
 
-                // Timestamp
+                // Timestamp and Star
                 Row(
                     modifier = Modifier.padding(top = 4.dp).align(Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (isStarred) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = "Starred",
+                            modifier = Modifier.size(10.dp).padding(end = 2.dp),
+                            tint = (if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming).copy(alpha = 0.8f)
+                        )
+                    }
                     Text(
                         text = formatMessageTime(message.timestamp),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),

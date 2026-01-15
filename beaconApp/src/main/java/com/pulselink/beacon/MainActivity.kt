@@ -260,6 +260,7 @@ private fun BeaconNav(
                         address = address.ifBlank { "Unknown" },
                         uiItems = vm.uiMessages,
                         reactions = vm.reactions,
+                        starredMessageIds = vm.starredMessageIds,
                         theme = contactTheme,
                         pendingMessage = vm.pendingMessage,
                         onBack = { navController.popBackStack() },
@@ -281,7 +282,9 @@ private fun BeaconNav(
                             }
                             context.startActivity(intent)
                         },
-                        onReact = { msgId, emoji -> vm.addReaction(msgId, emoji) }
+                        onReact = { msgId, emoji -> vm.addReaction(msgId, emoji) },
+                        onToggleStar = { msgId -> vm.toggleStar(msgId, threadId) },
+                        onBlock = { vm.blockNumber(address) }
                     )
                 }
             }

@@ -8,16 +8,24 @@ import androidx.room.RoomDatabase
 import androidx.room.AutoMigration
 
 @Database(
-    entities = [ScheduledMessage::class, MessageReaction::class],
-    version = 2,
+    entities = [
+        ScheduledMessage::class,
+        MessageReaction::class,
+        MessageStar::class,
+        BlockedNumber::class
+    ],
+    version = 3,
     exportSchema = true,
     autoMigrations = [
-        AutoMigration(from = 1, to = 2)
+        AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3)
     ]
 )
 abstract class BeaconDatabase : RoomDatabase() {
     abstract fun scheduledMessageDao(): ScheduledMessageDao
     abstract fun reactionDao(): MessageReactionDao
+    abstract fun messageStarDao(): MessageStarDao
+    abstract fun blockedNumberDao(): BlockedNumberDao
 
     companion object {
         @Volatile
