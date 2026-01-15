@@ -72,11 +72,11 @@ object UnifiedLauncherManager {
                 enable(pm, main, "MainActivity")
 
                 // Verify the target unified component was enabled before hiding other icons.
-                delay(100) // Small delay to allow launcher to process
+                delay(500) // Delay to allow launcher to process
                 if (!isComponentEnabled(pm, targetUnified)) {
                     Log.w(TAG, "Target unified component not enabled after first attempt. Retrying...")
                     enable(pm, targetUnified, "unified target (retry)", killApp = true)
-                    delay(100)
+                    delay(500)
                 }
                 if (!isComponentEnabled(pm, targetUnified)) {
                     Log.e(TAG, "Failed to enable unified component after retry.")
