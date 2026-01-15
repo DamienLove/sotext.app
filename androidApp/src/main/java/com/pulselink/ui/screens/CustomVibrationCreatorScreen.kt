@@ -75,9 +75,9 @@ fun CustomVibrationCreatorScreen(
     var recordingStartTime by remember { mutableLongStateOf(0L) }
     val tapEvents = remember { mutableStateListOf<VibrationTap>() }
     var elapsedTime by remember { mutableLongStateOf(0L) }
-    val maxRecordingTime = 5000L // 5 seconds max
+    val maxRecordingTime = 10000L // 10 seconds max
     val minPulseMs = 50L
-    val maxPulseMs = 1500L
+    val maxPulseMs = 10000L
     val minGapMs = 50L
 
     fun startRecording() {

@@ -2,8 +2,6 @@ package com.pulselink.beacon.ui
 
 import android.text.format.DateUtils
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -58,6 +56,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
@@ -72,11 +72,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -90,7 +90,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.semantics.Role
-import androidx.compose.foundation.ScrollState
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.foundation.horizontalScroll
@@ -98,10 +97,10 @@ import androidx.compose.foundation.rememberScrollState
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.ThemePalette
-import com.pulselink.beacon.data.ThreadCategory
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.R
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -207,6 +206,7 @@ fun InboxScreen(
     val filtered = threads
 
     // Calculate unread count (this might be inaccurate if threads is filtered by search, but okay for now)
+    // Calculate unread count
     val unreadCount = remember(threads) { threads.count { it.unread && !it.isArchived } }
     val mutedTint = theme.frameColor.copy(alpha = 0.7f)
     val topAppBarState = rememberTopAppBarState()
@@ -218,9 +218,16 @@ fun InboxScreen(
             navigatedFromSearch = true
             onOpenThread(searchState.threadId, searchState.address)
             onClearSearch()
-            searchText = ""
+            // searchText = "" // Avoid loop if managed by VM
         } else if (searchState !is SearchResultState.Contact) {
             navigatedFromSearch = false
+        }
+    }
+
+    // Grouping for Date Headers
+    val groupedThreads = remember(filtered) {
+        filtered.groupBy { item ->
+            getHeaderForTimestamp(item.timestamp)
         }
     }
 
@@ -286,8 +293,8 @@ fun InboxScreen(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                "Beacon Inbox",
-                                fontWeight = FontWeight.SemiBold,
+                                "Beacon",
+                                fontWeight = FontWeight.Bold,
                                 color = theme.frameColor
                             )
                             if (isRefreshing) {
@@ -306,8 +313,8 @@ fun InboxScreen(
                             contentDescription = "Beacon",
                             tint = Color.Unspecified,
                             modifier = Modifier
-                                .padding(start = 8.dp)
-                                .size(32.dp)
+                                .padding(start = 12.dp)
+                                .size(36.dp)
                                 .alpha(beaconIconAlpha)
                         )
                     },
@@ -339,7 +346,7 @@ fun InboxScreen(
             FloatingActionButton(
                 onClick = onCompose,
                 containerColor = theme.accentColor,
-                contentColor = Color.Black
+                contentColor = theme.inboxBackgroundColor
             ) {
                 Icon(
                     imageVector = Icons.Default.Edit,
@@ -359,7 +366,7 @@ fun InboxScreen(
             // Search Bar
             Surface(
                 color = Color.Transparent,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 OutlinedTextField(
                     value = searchText,
@@ -377,7 +384,7 @@ fun InboxScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(24.dp),
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Search messages & contacts") },
+                    placeholder = { Text("Search messages & contacts", color = mutedTint) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = theme.accentColor,
                         unfocusedBorderColor = theme.frameColor.copy(alpha = 0.2f),
@@ -436,60 +443,75 @@ fun InboxScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 12.dp),
+                            .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        itemsIndexed(filtered, key = { _, item -> item.threadId }) { index, item ->
-                            if (index == 3) {
-                                NativeAdCard(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
+                        groupedThreads.forEach { (header, items) ->
+                            item(contentType = "header") {
+                                Text(
+                                    text = header,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = theme.frameColor.copy(alpha = 0.5f),
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
                                 )
                             }
-                            val dismissState = rememberSwipeToDismissBoxState(
-                                confirmValueChange = { value ->
-                                    when (value) {
-                                        SwipeToDismissBoxValue.EndToStart -> {
-                                            onToggleArchive(item.threadId)
-                                            val msg = if (item.isArchived) "Unarchived" else "Archived"
-                                            scope.launch { host.showSnackbar(msg) }
-                                        }
-                                        SwipeToDismissBoxValue.StartToEnd -> {
-                                            onMarkAsUnread(item.threadId)
-                                            val msg = if (item.unread) "Marked as read" else "Marked as unread"
-                                            scope.launch { host.showSnackbar(msg) }
-                                        }
-                                        else -> {}
-                                    }
-                                    false
+
+                            itemsIndexed(items, key = { _, item -> item.threadId }) { index, item ->
+                                // Ad insertion logic (example)
+                                if (index == 3 && header == groupedThreads.keys.firstOrNull()) {
+                                    NativeAdCard(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp)
+                                    )
                                 }
-                            )
-                            if (selectionMode) {
-                                ThreadRow(
-                                    thread = item,
-                                    theme = theme,
-                                    isSelected = selectedThreadIds.contains(item.threadId),
-                                    selectionMode = true,
-                                    onClick = { onToggleSelection(item.threadId) },
-                                    onDelete = { onDeleteThread(item.threadId) },
-                                    onTogglePin = { onTogglePin(item.threadId) },
-                                    onToggleArchive = { onToggleArchive(item.threadId) },
-                                    onMarkAsUnread = { onMarkAsUnread(item.threadId) }
+
+                                val dismissState = rememberSwipeToDismissBoxState(
+                                    confirmValueChange = { value ->
+                                        when (value) {
+                                            SwipeToDismissBoxValue.EndToStart -> {
+                                                onToggleArchive(item.threadId)
+                                                val msg = if (item.isArchived) "Unarchived" else "Archived"
+                                                scope.launch { host.showSnackbar(msg) }
+                                            }
+                                            SwipeToDismissBoxValue.StartToEnd -> {
+                                                onMarkAsUnread(item.threadId)
+                                                val msg = if (item.unread) "Marked as read" else "Marked as unread"
+                                                scope.launch { host.showSnackbar(msg) }
+                                            }
+                                            else -> {}
+                                        }
+                                        false
+                                    }
                                 )
-                            } else {
-                                SwipeableThreadRow(
-                                    thread = item,
-                                    state = dismissState,
-                                    theme = theme,
-                                    onClick = { onOpenThread(item.threadId, item.address) },
-                                    onDelete = { onDeleteThread(item.threadId) },
-                                    onTogglePin = { onTogglePin(item.threadId) },
-                                    onToggleArchive = { onToggleArchive(item.threadId) },
-                                    onMarkAsUnread = { onMarkAsUnread(item.threadId) },
-                                    onLongClick = { onToggleSelection(item.threadId) },
-                                    modifier = Modifier.animateItemPlacement()
-                                )
+
+                                if (selectionMode) {
+                                    ThreadRow(
+                                        thread = item,
+                                        theme = theme,
+                                        isSelected = selectedThreadIds.contains(item.threadId),
+                                        selectionMode = true,
+                                        onClick = { onToggleSelection(item.threadId) },
+                                        onDelete = { onDeleteThread(item.threadId) },
+                                        onTogglePin = { onTogglePin(item.threadId) },
+                                        onToggleArchive = { onToggleArchive(item.threadId) },
+                                        onMarkAsUnread = { onMarkAsUnread(item.threadId) }
+                                    )
+                                } else {
+                                    SwipeableThreadRow(
+                                        thread = item,
+                                        state = dismissState,
+                                        theme = theme,
+                                        onClick = { onOpenThread(item.threadId, item.address) },
+                                        onDelete = { onDeleteThread(item.threadId) },
+                                        onTogglePin = { onTogglePin(item.threadId) },
+                                        onToggleArchive = { onToggleArchive(item.threadId) },
+                                        onMarkAsUnread = { onMarkAsUnread(item.threadId) },
+                                        onLongClick = { onToggleSelection(item.threadId) },
+                                        modifier = Modifier.animateItemPlacement()
+                                    )
+                                }
                             }
                         }
                         item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -514,6 +536,27 @@ fun InboxScreen(
     }
 }
 
+private fun getHeaderForTimestamp(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    return when {
+        DateUtils.isToday(timestamp) -> "Today"
+        diff < 2 * DateUtils.DAY_IN_MILLIS && isYesterday(timestamp) -> "Yesterday"
+        diff < 7 * DateUtils.DAY_IN_MILLIS -> "This Week"
+        diff < 30 * DateUtils.DAY_IN_MILLIS -> "This Month"
+        else -> "Older"
+    }
+}
+
+private fun isYesterday(timestamp: Long): Boolean {
+    // Simple check
+    val c1 = Calendar.getInstance()
+    c1.add(Calendar.DAY_OF_YEAR, -1)
+    val c2 = Calendar.getInstance()
+    c2.timeInMillis = timestamp
+    return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) && c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
+}
+
 @Composable
 private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color) {
     Box(
@@ -527,15 +570,21 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
                 // Outer glow
                 Box(
                     modifier = Modifier
-                        .size(120.dp)
+                        .size(140.dp)
                         .alpha(0.1f)
-                        .background(Brush.radialGradient(colors = listOf(iconTint, Color.Transparent)))
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = listOf(iconTint, Color.Transparent)
+                            ),
+                            shape = CircleShape
+                        )
                 )
                 // Icon container
                 Surface(
                     shape = CircleShape,
                     color = theme.frameColor.copy(alpha = 0.05f),
-                    modifier = Modifier.size(90.dp)
+                    modifier = Modifier.size(100.dp),
+                    border = BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.1f))
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -551,18 +600,18 @@ private fun EmptyState(filter: InboxFilter, theme: ThemePalette, iconTint: Color
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             Text(
                 text = when (filter) {
                     InboxFilter.UNREAD -> "All caught up"
                     InboxFilter.ARCHIVED -> "No archives"
                     else -> "Inbox Empty"
                 },
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = theme.frameColor
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = when (filter) {
                     InboxFilter.UNREAD -> "No unread messages. Nice work!"
@@ -663,7 +712,7 @@ private fun PermissionsBanners(
                     .fillMaxWidth()
                     .padding(12.dp),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f)
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
@@ -695,7 +744,7 @@ private fun PermissionsBanners(
                     .fillMaxWidth()
                     .padding(12.dp),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha=0.3f)
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
@@ -724,7 +773,7 @@ private fun PermissionsBanners(
                     .fillMaxWidth()
                     .padding(12.dp),
                 shape = RoundedCornerShape(12.dp),
-                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f)
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier.padding(12.dp),
@@ -765,23 +814,24 @@ private fun SearchResults(
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(hits) { msg ->
             Surface(
-                shape = RoundedCornerShape(14.dp),
-                tonalElevation = 1.dp,
+                shape = RoundedCornerShape(16.dp),
+                color = theme.frameColor.copy(alpha = 0.03f),
+                border = BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.05f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onOpenThread(msg.threadId, msg.address) }
             ) {
-                Column(Modifier.padding(12.dp)) {
+                Column(Modifier.padding(16.dp)) {
                     Row {
                         Text(
                             text = msg.address.ifBlank { "Unknown" },
                             style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = theme.accentColor,
                             modifier = Modifier.weight(1f)
                         )
@@ -791,10 +841,11 @@ private fun SearchResults(
                                 System.currentTimeMillis(),
                                 DateUtils.MINUTE_IN_MILLIS
                             ).toString(),
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall,
+                            color = theme.frameColor.copy(alpha = 0.6f)
                         )
                     }
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     val annotatedString = remember(msg.body, query) {
                         val builder = androidx.compose.ui.text.AnnotatedString.Builder(msg.body)
@@ -897,14 +948,15 @@ private fun ThreadRow(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
+    // Future Deep Design: Glassmorphic Surface
     Surface(
-        shape = RoundedCornerShape(theme.bubbleRadius.dp),
-        tonalElevation = if (isSelected) 4.dp else if (thread.unread) 2.dp else 0.dp,
-        border = androidx.compose.foundation.BorderStroke(
-            width = if (isSelected) 2.dp else 0.dp,
-            color = if (isSelected) theme.accentColor else Color.Transparent
+        shape = RoundedCornerShape(16.dp),
+        // Selection highlight or subtle glass background
+        color = if (isSelected) theme.accentColor.copy(alpha = 0.1f) else theme.frameColor.copy(alpha = 0.03f),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (isSelected) theme.accentColor else theme.frameColor.copy(alpha = 0.08f)
         ),
-        color = if (isSelected) theme.accentColor.copy(alpha = 0.1f) else theme.inboxBackgroundColor,
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(
@@ -913,7 +965,7 @@ private fun ThreadRow(
             )
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Avatar / Selection State
@@ -922,13 +974,13 @@ private fun ThreadRow(
                 contentAlignment = Alignment.BottomEnd
             ) {
                 if (isSelected) {
-                    Surface(shape = CircleShape, color = theme.accentColor, modifier = Modifier.size(48.dp)) {
+                    Surface(shape = CircleShape, color = theme.accentColor, modifier = Modifier.size(52.dp)) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = theme.inboxBackgroundColor)
                         }
                     }
                 } else {
-                    LetterAvatar(name = thread.address, theme = theme, size = 48.dp)
+                    LetterAvatar(name = thread.address, theme = theme, size = 52.dp)
                 }
 
                 if (thread.isPinned && !isSelected) {
@@ -936,7 +988,10 @@ private fun ThreadRow(
                         shape = CircleShape,
                         color = theme.inboxBackgroundColor,
                         shadowElevation = 2.dp,
-                        modifier = Modifier.size(18.dp).offset(x = 4.dp, y = 4.dp)
+                        modifier = Modifier
+                            .size(20.dp)
+                            .offset(x = 4.dp, y = 4.dp)
+                            .border(1.dp, theme.accentColor, CircleShape)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -966,8 +1021,8 @@ private fun ThreadRow(
                     Text(
                         text = thread.address.ifBlank { "Unknown" },
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
-                        color = theme.frameColor,
+                        fontWeight = if (thread.unread) FontWeight.ExtraBold else FontWeight.SemiBold,
+                        color = if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.9f),
                         maxLines = 1,
                         modifier = Modifier.weight(1f)
                     )
@@ -975,18 +1030,30 @@ private fun ThreadRow(
                     Text(
                         text = DateUtils.getRelativeTimeSpanString(thread.timestamp, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (thread.unread) theme.accentColor else theme.frameColor.copy(alpha = 0.6f),
+                        color = if (thread.unread) theme.accentColor else theme.frameColor.copy(alpha = 0.5f),
                         fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.Normal
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (thread.snippet.isBlank()) "Media" else thread.snippet,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    fontWeight = if (thread.unread) FontWeight.Medium else FontWeight.Normal,
-                    color = if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.7f)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = if (thread.snippet.isBlank()) "Media" else thread.snippet,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        fontWeight = if (thread.unread) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.6f),
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    if (thread.unread) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .background(theme.accentColor, CircleShape)
+                        )
+                    }
+                }
             }
         }
     }
@@ -1007,7 +1074,7 @@ fun LetterAvatar(name: String, theme: ThemePalette, size: androidx.compose.ui.un
 
     Surface(
         shape = CircleShape,
-        color = avatarColor.copy(alpha = 0.2f),
+        color = avatarColor.copy(alpha = 0.15f),
         modifier = Modifier.size(size)
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -1020,3 +1087,50 @@ fun LetterAvatar(name: String, theme: ThemePalette, size: androidx.compose.ui.un
         }
     }
 }
+
+@Composable
+private fun TabsRow(
+    filter: InboxFilter,
+    unreadCount: Int,
+    onFilterChange: (InboxFilter) -> Unit,
+    theme: ThemePalette
+) {
+    val scrollState = rememberScrollState()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectableGroup()
+            .horizontalScroll(scrollState)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Compact Tabs
+        TabChip("All", filter == InboxFilter.ALL, theme) { onFilterChange(InboxFilter.ALL) }
+        TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
+        TabChip("Personal", filter == InboxFilter.PERSONAL, theme) { onFilterChange(InboxFilter.PERSONAL) }
+        TabChip("Transactions", filter == InboxFilter.TRANSACTIONS, theme) { onFilterChange(InboxFilter.TRANSACTIONS) }
+        TabChip("Promotions", filter == InboxFilter.PROMOTIONS, theme) { onFilterChange(InboxFilter.PROMOTIONS) }
+        TabChip("Archived", filter == InboxFilter.ARCHIVED, theme) { onFilterChange(InboxFilter.ARCHIVED) }
+    }
+}
+
+@Composable
+private fun TabChip(label: String, selected: Boolean, theme: ThemePalette, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = if (selected) theme.accentColor.copy(alpha = 0.15f) else Color.Transparent,
+        border = if (selected) BorderStroke(1.dp, theme.accentColor.copy(alpha = 0.5f)) else BorderStroke(1.dp, theme.frameColor.copy(alpha = 0.15f)),
+        modifier = Modifier.selectable(selected = selected, role = Role.Tab, onClick = onClick)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if(selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) theme.accentColor else theme.frameColor.copy(alpha = 0.8f),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
+}
+
+enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS }

@@ -12,6 +12,10 @@ plugins {
     id("com.github.triplet.play") version "3.10.1"
 }
 
+configurations.configureEach {
+    exclude(group = "com.google.firebase", module = "firebase-sessions")
+}
+
 val keystorePropsFile = rootProject.file("ringersong-keystore/keystore.properties")
 
 val keystoreProps = Properties().apply {
@@ -28,8 +32,8 @@ android {
         applicationId = "com.RingerSong.free"
         minSdk = 35
         targetSdk = 35
-        versionCode = 26
-        versionName = "26"
+        versionCode = 27
+        versionName = "27"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

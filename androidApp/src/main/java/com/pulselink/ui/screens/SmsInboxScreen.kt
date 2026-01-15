@@ -615,7 +615,7 @@ fun SmsInboxScreen(
                             }
                         }
                     } else {
-                        items(contactList, key = { it.id }) { recipient ->
+                        items(contactList, key = { normalizeSmsAddress(it.phoneNumber) }) { recipient ->
                             ContactRecipientRow(
                                 recipient = recipient,
                                 theme = theme,

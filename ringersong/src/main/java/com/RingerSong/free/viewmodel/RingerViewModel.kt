@@ -428,22 +428,30 @@ class RingerViewModel @Inject constructor(
                 return@launch
             }
 
-            // STREAMING MODE: No download required for Spotify.
-            // We rely on the user's installed Spotify app and Premium subscription (or Free with restrictions).
-            onResult("Checking Spotify connection...")
+            val spotifyId = track.id
+                ?: track.uri
+                    ?.substringAfterLast(":")
+                    ?.substringAfterLast("/")
+                    ?.substringBefore("?")
+            if (spotifyId.isNullOrBlank()) {
+                onResult("Error: Missing Spotify track ID")
+                return@launch
+            }
 
-            // Verify Spotify capabilities before adding
-            val capabilities = spotifyPlayerManager.getUserCapabilities()
-            if (capabilities == "Error" || capabilities == "Not Connected") {
-                // Try to connect once
-                val connected = spotifyPlayerManager.connect(showAuthView = true)
-                if (!connected) {
-                    onResult("Error: Could not connect to Spotify App. Please ensure Spotify is installed and logged in.")
+            val spotifyUrl = "https://open.spotify.com/track/$spotifyId"
+            onResult("Downloading ${track.name} from Spotify...")
+
+            val localPath = when (val downloadResult = spotifyDownloader.downloadTrack(spotifyUrl)) {
+                is DownloadResult.Success -> {
+                    clearDownloadError()
+                    downloadResult.filePath
+                }
+                is DownloadResult.Failure -> {
+                    val message = mapDownloadError(downloadResult.error)
+                    setDownloadError(message)
                     return@launch
                 }
             }
-
-            onResult("Adding ${track.name} for streaming...")
 
             val songId = UUID.randomUUID().toString()
             val songEntry = SongEntry(
@@ -474,14 +482,14 @@ class RingerViewModel @Inject constructor(
                 "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
                 "durationMs" to (track.duration_ms ?: 0L),
                 "addedAt" to com.google.firebase.Timestamp.now(),
-                "localPath" to null, // No local path for streaming
-                "downloaded" to false
+                "localPath" to localPath,
+                "downloaded" to true
             )
 
             db.collection("users").document(uid).collection("ringer_playlist")
                 .add(trackData)
                 .addOnSuccessListener {
-                    onResult("Added ${track.name} (Streaming enabled)")
+                    onResult("Added ${track.name} (Downloaded from Spotify)")
                 }
                 .addOnFailureListener { e ->
                     // Revert local state if sync fails
@@ -711,8 +719,7 @@ class RingerViewModel @Inject constructor(
                 }
                 is DownloadResult.Failure -> {
                     if (result.error is DownloadError.NoApiKey) {
-                        // Fallback to streaming-only mode; keep UI informative but do not block add-to-playlist flow.
-                        setDownloadError("Streaming only – add rapidapi.key in local.properties to enable downloads.")
+                        setDownloadError("Downloads require rapidapi.key in local.properties.")
                     } else {
                         val message = mapDownloadError(result.error)
                         setDownloadError(message)
@@ -759,7 +766,7 @@ class RingerViewModel @Inject constructor(
 
     private fun mapDownloadError(error: DownloadError): String {
         return when (error) {
-            is DownloadError.NoApiKey -> "Download unavailable - app not configured"
+            is DownloadError.NoApiKey -> "Download unavailable - add rapidapi.key in local.properties"
             DownloadError.NetworkUnavailable -> "No internet connection"
             is DownloadError.RateLimitExceeded -> "Too many requests - try again in a few minutes"
             is DownloadError.ApiError -> {
