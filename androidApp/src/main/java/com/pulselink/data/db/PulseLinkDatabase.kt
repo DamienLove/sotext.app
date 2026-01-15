@@ -148,7 +148,7 @@ interface ArchivedThreadDao {
 
 @Database(
     entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class],
-    version = 16,
+    version = 17,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -267,6 +267,81 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                if (!tableExists(database, "contact_messages")) {
+                    database.execSQL(
+                        """
+                        CREATE TABLE IF NOT EXISTS contact_messages (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                            messageId TEXT NOT NULL DEFAULT '',
+                            contactId INTEGER NOT NULL,
+                            body TEXT NOT NULL,
+                            direction TEXT NOT NULL,
+                            timestamp INTEGER NOT NULL,
+                            overrideSucceeded INTEGER NOT NULL,
+                            status TEXT NOT NULL DEFAULT 'SENT'
+                        )
+                        """.trimIndent()
+                    )
+                    database.execSQL(
+                        "CREATE INDEX IF NOT EXISTS index_contact_messages_messageId ON contact_messages(messageId)"
+                    )
+                    return
+                }
+
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS contact_messages_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        messageId TEXT NOT NULL DEFAULT '',
+                        contactId INTEGER NOT NULL,
+                        body TEXT NOT NULL,
+                        direction TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        overrideSucceeded INTEGER NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'SENT'
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    INSERT INTO contact_messages_new (
+                        id,
+                        messageId,
+                        contactId,
+                        body,
+                        direction,
+                        timestamp,
+                        overrideSucceeded,
+                        status
+                    )
+                    SELECT
+                        id,
+                        CASE
+                            WHEN messageId IS NULL OR messageId = '' THEN CAST(id AS TEXT)
+                            ELSE messageId
+                        END,
+                        contactId,
+                        body,
+                        direction,
+                        timestamp,
+                        overrideSucceeded,
+                        CASE
+                            WHEN status IS NULL OR status = '' THEN 'SENT'
+                            ELSE status
+                        END
+                    FROM contact_messages
+                    """.trimIndent()
+                )
+                database.execSQL("DROP TABLE contact_messages")
+                database.execSQL("ALTER TABLE contact_messages_new RENAME TO contact_messages")
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_contact_messages_messageId ON contact_messages(messageId)"
+                )
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_3_4,
             MIGRATION_4_5,
@@ -280,7 +355,8 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             MIGRATION_12_13,
             MIGRATION_13_14,
             MIGRATION_14_15,
-            MIGRATION_15_16
+            MIGRATION_15_16,
+            MIGRATION_16_17
         )
 
         private fun addColumnIfMissing(
@@ -308,6 +384,18 @@ abstract class PulseLinkDatabase : RoomDatabase() {
                 }
             }
             return false
+        }
+
+        private fun tableExists(
+            database: SupportSQLiteDatabase,
+            table: String
+        ): Boolean {
+            database.query(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                arrayOf(table)
+            ).use { cursor ->
+                return cursor.moveToFirst()
+            }
         }
 
     }

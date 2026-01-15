@@ -70,6 +70,7 @@ import com.pulselink.R
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.LinkStatus
 import com.pulselink.domain.model.RemotePresence
+import com.pulselink.util.EmailUtils
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -276,9 +277,9 @@ private fun LinkStatusSection(
                                     val rawSubject = "Override Instructions"
                                     val rawBody = "You have been set as a trusted contact. Even without the PulseLink app, you can trigger an emergency alert on my phone by texting exactly:\n\n'pulselink ${contact.remotePin} emergency'\n\nto my number."
                                     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                        val encodedSubject = java.net.URLEncoder.encode(rawSubject, "UTF-8").replace("+", "%20")
-                                        val encodedBody = java.net.URLEncoder.encode(rawBody, "UTF-8").replace("+", "%20")
-                                        data = Uri.parse("mailto:${contact.email ?: ""}?subject=$encodedSubject&body=$encodedBody")
+                                        data = Uri.parse(EmailUtils.createMailtoUriString(contact.email, rawSubject, rawBody))
+                                        putExtra(Intent.EXTRA_SUBJECT, rawSubject)
+                                        putExtra(Intent.EXTRA_TEXT, rawBody)
                                     }
                                     try {
                                         context.startActivity(emailIntent)

@@ -25,6 +25,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
@@ -164,8 +165,16 @@ fun BeaconContactsScreen(
                     }
                 }
 
+                val filteredContacts = remember(contacts, searchQuery) {
+                    if (searchQuery.isBlank()) contacts
+                    else contacts.filter {
+                        it.displayName.contains(searchQuery, ignoreCase = true) ||
+                        it.phoneNumber.contains(searchQuery)
+                    }
+                }
+
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(contacts) { contact ->
+                items(filteredContacts) { contact ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -208,7 +217,7 @@ fun BeaconContactsScreen(
                         }
                     }
                 }
-                if (contacts.isEmpty()) {
+                if (filteredContacts.isEmpty()) {
                     item {
                         Text(
                             text = when {

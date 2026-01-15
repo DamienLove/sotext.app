@@ -2117,6 +2117,27 @@ class MainActivity : AppCompatActivity() {
                         val threadLineId = lineId ?: deviceLineId
                         val threadKey = "${threadLineId ?: deviceLineId}:$threadId"
                         val fallbackLineId = defaultSendLineId ?: threadLineId ?: deviceLineId
+                        val callNumber = contact?.primaryPhone()
+                            ?.takeIf { it.isNotBlank() }
+                            ?: decodedAddress.takeIf { it.isNotBlank() }
+                        val onCallThread = callNumber?.let { number ->
+                            {
+                                val contactValue = contact
+                                if (contactValue == null || contactValue.primaryPhone().isNullOrBlank()) {
+                                    val dialed = dialNumber(activity, number)
+                                    if (!dialed) {
+                                        Toast.makeText(
+                                            context,
+                                            context.getString(R.string.call_failed),
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } else {
+                                    scope.launch { callContactHandler(contactValue) }
+                                }
+                                Unit
+                            }
+                        }
                         val selectedLine = when (lineSendPreference) {
                             LineSendPreference.DEVICE_DEFAULT -> deviceLineId
                             LineSendPreference.LINE_DEFAULT -> fallbackLineId
@@ -2140,6 +2161,8 @@ class MainActivity : AppCompatActivity() {
                             onEditNotificationVibration = {
                                 navController.navigate("notifications/message_vibration?address=${Uri.encode(decodedAddress)}")
                             },
+                            onCall = onCallThread,
+                            callEnabled = onCallThread != null,
                             onSendMessage = { body, sendLineId ->
                                 threadViewModel.sendMessage(decodedAddress, body, sendLineId)
                             },
@@ -2521,6 +2544,16 @@ private fun placeCall(
         true
     } catch (error: SecurityException) {
         monitor.cancel()
+        false
+    }
+}
+
+private fun dialNumber(activity: MainActivity, phoneNumber: String): Boolean {
+    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber"))
+    return try {
+        activity.startActivity(intent)
+        true
+    } catch (_: Exception) {
         false
     }
 }

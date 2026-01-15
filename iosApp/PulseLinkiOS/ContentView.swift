@@ -459,6 +459,10 @@ private struct Card<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RelayColors.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(RelayColors.primary.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
@@ -544,11 +548,15 @@ enum RelayColors {
     static let primary = Color(red: 0.133, green: 0.827, blue: 0.933)
     // 0.055, 0.647, 0.914 -> #0EA5E9
     static let accent  = Color(red: 0.055, green: 0.647, blue: 0.914)
-    // 0.043, 0.055, 0.086 -> #0B0E16
-    static let deep    = Color(red: 0.043, green: 0.055, blue: 0.086)
+    // #03050A -> 3/255=0.012, 5/255=0.020, 10/255=0.039
+    static let deep    = Color(red: 0.012, green: 0.020, blue: 0.039)
+    // #0B101B -> 11/255=0.043, 16/255=0.063, 27/255=0.106
+    static let surface = Color(red: 0.043, green: 0.063, blue: 0.106)
+    // #BC13FE -> 188/255=0.737, 19/255=0.075, 254/255=0.996
+    static let tertiary = Color(red: 0.737, green: 0.075, blue: 0.996)
 
-    // Slightly lighter than deep, with opacity to allow background to bleed through if needed, simulating glass
-    static let cardBackground = Color(red: 0.09, green: 0.11, blue: 0.15).opacity(0.8)
+    // Using surface with slight opacity for glass effect
+    static let cardBackground = surface.opacity(0.8)
 }
 
 #Preview {
