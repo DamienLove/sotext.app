@@ -137,6 +137,7 @@
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.03);
   color: var(--ink);
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.01);
 }
 
 .nav-item:hover svg, .nav-item:hover img {
@@ -147,10 +148,11 @@
 
 /* "Lit LED" Active State */
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(34, 211, 238, 0.1), transparent);
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.15), transparent);
   color: var(--accent);
-  border: 1px solid rgba(34, 211, 238, 0.1);
-  box-shadow: inset 0 0 20px rgba(34, 211, 238, 0.05);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  box-shadow: inset 0 0 20px rgba(34, 211, 238, 0.1), 0 0 15px rgba(34, 211, 238, 0.05);
+  text-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
 }
 
 .nav-item.active::before {
@@ -162,13 +164,13 @@
   width: 3px;
   background: var(--accent);
   border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 10px var(--accent);
+  box-shadow: 0 0 15px var(--accent), 0 0 5px #fff;
 }
 
 .nav-item.active svg, .nav-item.active img {
   opacity: 1;
   color: var(--accent);
-  filter: drop-shadow(0 0 10px var(--accent));
+  filter: drop-shadow(0 0 12px var(--accent));
   transform: scale(1.05);
 }
 
@@ -292,8 +294,8 @@
 .home-card:hover {
   transform: translateY(-6px) scale(1.01);
   border-color: var(--accent);
-  background: rgba(34, 211, 238, 0.03);
-  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 20px var(--accent-glow);
+  background: rgba(34, 211, 238, 0.05);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.7), 0 0 25px var(--accent-glow), inset 0 0 20px rgba(34, 211, 238, 0.05);
 }
 
 .home-card:hover::after {
@@ -314,10 +316,10 @@
 }
 
 .home-card:hover .home-icon {
-  background: rgba(34, 211, 238, 0.15);
+  background: rgba(34, 211, 238, 0.2);
   border-color: var(--accent);
-  box-shadow: 0 0 20px var(--accent-glow);
-  transform: rotate(-3deg);
+  box-shadow: 0 0 25px var(--accent-glow);
+  transform: rotate(-5deg) scale(1.1);
 }
 
 .home-icon img, .home-icon svg {
@@ -419,11 +421,12 @@
 .composer-textarea:focus {
   outline: none;
   border-color: var(--accent);
-  background: rgba(34, 211, 238, 0.05);
+  background: rgba(34, 211, 238, 0.08);
   box-shadow:
     0 0 0 1px var(--accent),
-    0 0 20px rgba(34, 211, 238, 0.2),
+    0 0 25px rgba(34, 211, 238, 0.3),
     inset 0 2px 4px rgba(0,0,0,0.2);
+  transform: scale(1.01);
 }
 
 .login-input::placeholder {
@@ -532,7 +535,7 @@ textarea:focus-visible,
   font-size: 1em;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-shadow: 0 4px 15px -4px rgba(34, 211, 238, 0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+  box-shadow: 0 4px 15px -4px rgba(34, 211, 238, 0.4), inset 0 1px 0 rgba(255,255,255,0.4);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -540,11 +543,12 @@ textarea:focus-visible,
   letter-spacing: 0.02em;
   position: relative;
   overflow: hidden;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
 }
 
 .primary-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px -8px rgba(34, 211, 238, 0.6), inset 0 1px 0 rgba(255,255,255,0.4);
+  box-shadow: 0 12px 30px -8px rgba(34, 211, 238, 0.6), inset 0 1px 0 rgba(255,255,255,0.6), 0 0 20px rgba(34, 211, 238, 0.4);
   filter: brightness(1.1);
 }
 
@@ -978,6 +982,8 @@ textarea:focus-visible,
   color: #04060c;
   border-bottom-right-radius: 4px;
   font-weight: 500;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 12px rgba(0,0,0,0.4);
+  text-shadow: 0 1px 1px rgba(255,255,255,0.1);
 }
 
 .message.received .message-bubble {
@@ -1521,9 +1527,9 @@ textarea:focus-visible,
 }
 
 .empty-state:hover .empty-logo {
-  opacity: 0.8;
-  filter: grayscale(0) drop-shadow(0 0 20px var(--accent-glow));
-  transform: scale(1.1);
+  opacity: 0.9;
+  filter: grayscale(0) drop-shadow(0 0 25px var(--accent-glow));
+  transform: scale(1.15) rotate(5deg);
 }
 
 .settings-warning {

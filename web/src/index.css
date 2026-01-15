@@ -120,9 +120,9 @@
 }
 
 ::selection {
-  background: rgba(34, 211, 238, 0.25);
+  background: rgba(34, 211, 238, 0.3);
   color: #fff;
-  text-shadow: 0 0 8px var(--accent);
+  text-shadow: 0 0 12px var(--accent);
 }
 
 html, body {
@@ -218,11 +218,14 @@ select {
 ::-webkit-scrollbar-thumb {
   background: rgba(34, 211, 238, 0.2);
   border-radius: 3px;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
-  box-shadow: 0 0 10px var(--accent-glow);
+  background-color: var(--accent);
+  box-shadow: 0 0 15px var(--accent-glow);
+  border: 0px solid transparent;
 }
 ::-webkit-scrollbar-corner {
   background: transparent;
