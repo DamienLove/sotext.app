@@ -4028,39 +4028,84 @@ function App() {
                 </div>
               </div>
 
-              <div className="home-grid">
-                {[
-                  { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
-                  { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> },
-                  { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
-                  { id: 'privateSafeEnabled', name: 'Private Safe', desc: 'Lock and hide sensitive conversations.', icon: <LockIcon /> },
-                  { id: 'smartRepliesEnabled', name: 'Smart Replies', desc: 'One-tap suggestion chips for incoming messages.', icon: <MessageSquareIcon /> },
-                  { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
-                  { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true },
-                  { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
-                  { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
-                  { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon navigation into a single simplified experience.', icon: <HomeIcon />, premium: true },
-                  { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true }
-                ].map(ext => {
-                  const isEnabled = remoteSettings[ext.id];
-                  const isLocked = ext.premium && !isPremiumUser;
+              {[
+                {
+                  title: "Core",
+                  items: [
+                    { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
+                    { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> }
+                  ]
+                },
+                {
+                  title: "Safety & Security",
+                  items: [
+                    { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
+                    { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
+                    { id: 'privateSafeEnabled', name: 'Private Safe', desc: 'Lock and hide sensitive conversations.', icon: <LockIcon /> }
+                  ]
+                },
+                {
+                  title: "Smart Features",
+                  items: [
+                    { id: 'smartRepliesEnabled', name: 'Smart Replies', desc: 'One-tap suggestion chips for incoming messages.', icon: <MessageSquareIcon /> },
+                    { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
+                    { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true }
+                  ]
+                },
+                {
+                  title: "Integrations",
+                  items: [
+                    { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
+                    { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon navigation into a single simplified experience.', icon: <HomeIcon />, premium: true },
+                    { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true }
+                  ]
+                }
+              ].map((category) => (
+                <div key={category.title} className="extension-category" style={{marginBottom: 32}}>
+                  <h4 style={{marginBottom: 16, color: 'var(--ink)'}}>{category.title}</h4>
+                  <div className="home-grid">
+                    {category.items.map(ext => {
+                      const isEnabled = remoteSettings[ext.id];
+                      const isLocked = ext.premium && !isPremiumUser;
 
-                  return (
-                    <div className="home-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
-                      <div className="home-icon" style={{
-                         background: ext.isImg ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
-                         display: 'grid',
-                         placeItems: 'center'
-                      }}>
-                        {ext.isImg ? <img src={ext.icon} alt={ext.name} /> : ext.icon}
-                      </div>
-                      <h3 style={{marginTop: 12, marginBottom: 4}}>{ext.name}</h3>
-                      <p style={{marginBottom: 16, minHeight: 40}}>{ext.desc}</p>
+                      return (
+                        <div className="home-card" key={ext.id} style={{ opacity: isLocked ? 0.6 : 1, position: 'relative' }}>
+                          <div className="home-icon" style={{
+                             background: ext.isImg ? 'transparent' : 'rgba(255, 255, 255, 0.05)',
+                             display: 'grid',
+                             placeItems: 'center'
+                          }}>
+                            {ext.isImg ? <img src={ext.icon} alt={ext.name} /> : ext.icon}
+                          </div>
+                          <h3 style={{marginTop: 12, marginBottom: 4}}>{ext.name}</h3>
+                          <p style={{marginBottom: 16, minHeight: 40}}>{ext.desc}</p>
 
-                      {isLocked ? (
-                        <div className="badge badge-premium" style={{background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)'}}>
-                          Premium Required
+                          {isLocked ? (
+                            <div className="badge badge-premium" style={{background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)'}}>
+                              Premium Required
+                            </div>
+                          ) : (
+                            <button
+                              className={isEnabled ? "secondary-btn" : "primary-btn"}
+                              style={{width: '100%'}}
+                              onClick={() => {
+                                setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
+                                const next = { ...remoteSettings, [ext.id]: !isEnabled };
+                                setDoc(doc(db, "users", user.uid), {
+                                  ...next,
+                                  settingsUpdatedAt: serverTimestamp()
+                                }, { merge: true });
+                              }}
+                            >
+                              {isEnabled ? "Remove" : "Install"}
+                            </button>
+                          )}
                         </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
                       ) : (
                         <button
                           className={isEnabled ? "secondary-btn" : "primary-btn"}
