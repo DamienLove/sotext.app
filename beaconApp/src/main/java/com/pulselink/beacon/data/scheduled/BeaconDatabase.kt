@@ -12,13 +12,15 @@ import androidx.room.AutoMigration
         ScheduledMessage::class,
         MessageReaction::class,
         MessageStar::class,
-        BlockedNumber::class
+        BlockedNumber::class,
+        ThreadDraft::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
-        AutoMigration(from = 2, to = 3)
+        AutoMigration(from = 2, to = 3),
+        AutoMigration(from = 3, to = 4)
     ]
 )
 abstract class BeaconDatabase : RoomDatabase() {
@@ -26,6 +28,7 @@ abstract class BeaconDatabase : RoomDatabase() {
     abstract fun reactionDao(): MessageReactionDao
     abstract fun messageStarDao(): MessageStarDao
     abstract fun blockedNumberDao(): BlockedNumberDao
+    abstract fun threadDraftDao(): ThreadDraftDao
 
     companion object {
         @Volatile

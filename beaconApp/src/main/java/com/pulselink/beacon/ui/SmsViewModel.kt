@@ -22,6 +22,7 @@ import com.pulselink.beacon.data.scheduled.MessageReaction
 import com.pulselink.beacon.data.scheduled.MessageStar
 import com.pulselink.beacon.data.scheduled.BlockedNumber
 import com.pulselink.beacon.data.scheduled.MessageStatus
+import com.pulselink.beacon.data.scheduled.ThreadDraft
 import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.util.ThreadDateUtils
 import com.pulselink.beacon.BuildConfig
@@ -49,6 +50,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private val reactionDao = BeaconDatabase.getDatabase(app).reactionDao()
     private val starDao = BeaconDatabase.getDatabase(app).messageStarDao()
     private val blockedDao = BeaconDatabase.getDatabase(app).blockedNumberDao()
+    private val draftDao = BeaconDatabase.getDatabase(app).threadDraftDao()
     private val workManager = WorkManager.getInstance(app)
 
     private companion object {
@@ -72,6 +74,11 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private var threadsWithStars: Set<Long> = emptySet()
 
     private var blockedNumbers: Set<String> = emptySet()
+    var draftsMap by mutableStateOf<Map<Long, String>>(emptyMap())
+        private set
+
+    var isDraftsLoaded by mutableStateOf(false)
+        private set
 
     // Keep raw messages for internal logic
     private var rawMessages = emptyList<SmsMessageItem>()
@@ -156,6 +163,14 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 mergeThreads() // Re-filter blocked threads
             }
         }
+
+        viewModelScope.launch {
+            draftDao.getAllDrafts().collectLatest { drafts ->
+                draftsMap = drafts.associate { it.threadId to it.body }
+                isDraftsLoaded = true
+                mergeThreads()
+            }
+        }
     }
 
     fun updateFilter(filter: InboxFilter) {
@@ -185,11 +200,15 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             .filter { !blockedNumbers.contains(it.address) } // Naive normalization check, ideally normalize 'it.address' too
             .map { thread ->
                 val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
-                // Only copy if needed
-                if (isPinned != thread.isPinned || inboxState.archivedThreadIds.contains(thread.threadId) != thread.isArchived) {
+                val isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
+                val draft = draftsMap[thread.threadId]
+
+                // Always create copy if draft exists or other state changed
+                if (isPinned != thread.isPinned || isArchived != thread.isArchived || draft != thread.draftSnippet) {
                     thread.copy(
                         isPinned = isPinned,
-                        isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
+                        isArchived = isArchived,
+                        draftSnippet = draft
                     )
                 } else {
                     thread
@@ -197,6 +216,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             }
             .sortedWith(
                 compareByDescending<SmsThreadItem> { it.isPinned }
+                    .thenByDescending { it.draftSnippet != null } // Drafts bump to top? Maybe not, keep timestamp
                     .thenByDescending { it.timestamp }
             )
             .toList()
@@ -481,10 +501,34 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             val ok = runCatching { repo.sendSms(addr, body) }.getOrDefault(false)
             if (ok) {
                 withContext(Dispatchers.Main) {
-                    currentThreadId?.let { refreshThread(it, refreshRead = true) }
+                    currentThreadId?.let {
+                        deleteDraft(it)
+                        refreshThread(it, refreshRead = true)
+                    }
                 }
             }
         }
+    }
+
+    fun saveDraft(threadId: Long, body: String) {
+        if (threadId <= 0) return
+        if (body.isBlank()) {
+            deleteDraft(threadId)
+            return
+        }
+        viewModelScope.launch {
+            draftDao.insertDraft(ThreadDraft(threadId, body, System.currentTimeMillis()))
+        }
+    }
+
+    fun deleteDraft(threadId: Long) {
+        viewModelScope.launch {
+            draftDao.deleteDraft(threadId)
+        }
+    }
+
+    fun getDraftForThread(threadId: Long): String? {
+        return draftsMap[threadId]
     }
 
     fun scheduleMessage(body: String, scheduledTime: Long) {
