@@ -11,6 +11,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.debounce
 
 class SmsSyncManager(private val context: Context) {
 
@@ -56,6 +58,18 @@ class SmsSyncManager(private val context: Context) {
                 isPremium = false
             }
         }
+
+        // Listen for SMS database changes (incoming or outgoing from any app)
+        scope.launch {
+            repository.changes()
+                .debounce(1000L) // Debounce to prevent thrashing on rapid updates
+                .collectLatest {
+                    val user = auth.currentUser
+                    if (isPremium && user != null) {
+                        syncRecent(user.uid)
+                    }
+                }
+        }
     }
 
     private suspend fun performFullSync(uid: String) {
@@ -78,6 +92,23 @@ class SmsSyncManager(private val context: Context) {
             Log.e("SmsSyncManager", "Error during full sync", e)
         } finally {
             isSyncing.set(false)
+        }
+    }
+
+    private suspend fun syncRecent(uid: String) {
+        try {
+            // Sync top 10 most recent threads to catch any new activity
+            val threads = repository.listThreads(limit = 10)
+            threads.forEach { thread ->
+                syncThread(uid, thread)
+                // Sync latest messages for this thread
+                val messages = repository.messagesForThread(thread.threadId, limit = 10)
+                messages.forEach { msg ->
+                    syncMessage(uid, msg)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("SmsSyncManager", "Error syncing recent", e)
         }
     }
 

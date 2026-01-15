@@ -1217,7 +1217,8 @@ class MainViewModel @Inject constructor(
         val hasEmail = !contact.email.isNullOrBlank() || contact.additionalEmails.any { it.isNotBlank() }
         val hasLink = contact.linkStatus != LinkStatus.NONE || !contact.linkCode.isNullOrBlank()
         val hasRemote = !contact.remoteUid.isNullOrBlank() || !contact.remoteDeviceId.isNullOrBlank()
-        return !hasPhone && !hasEmail && !hasLink && !hasRemote
+        val hasName = contact.displayName.isNotBlank()
+        return !hasPhone && !hasEmail && !hasLink && !hasRemote && !hasName
     }
 
     private suspend fun pruneLocalUnreachable() {
