@@ -128,6 +128,13 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews }) => (
 
 ThreadItem.displayName = 'ThreadItem';
 
+const ThreadSkeleton = () => (
+  <div className="skeleton-thread">
+    <div className="skeleton-line" style={{ width: '40%' }}></div>
+    <div className="skeleton-line short"></div>
+  </div>
+);
+
 const areMessagesEqual = (prev, next) => {
   return prev.showPreviews === next.showPreviews &&
          prev.msg.id === next.msg.id &&
@@ -1423,7 +1430,9 @@ const Sidebar = memo(({
   threadListElements,
   isPremium,
   navLogo,
-  brandTitle
+  brandTitle,
+  threadSearch,
+  setThreadSearch
 }) => (
   <div className="sidebar">
     <div className="sidebar-header">
@@ -1541,55 +1550,65 @@ const Sidebar = memo(({
       </button>
     </div>
     {activePanel === 'beacon' ? (
-      <div className="thread-list">
-        {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-          <div className="line-tabs" aria-label="Device lines">
-            <button
-              className={`chip ${!activeLineId ? 'active' : ''}`}
-              onClick={() => setActiveLineId(null)}
-            >
-              All
-            </button>
-            {lines.map((line) => (
+      <>
+        <div className="sidebar-search-container">
+          <input
+            className="sidebar-search-input"
+            placeholder="Search messages..."
+            value={threadSearch}
+            onChange={(e) => setThreadSearch(e.target.value)}
+            aria-label="Search messages"
+          />
+        </div>
+        <div className="thread-list">
+          {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+            <div className="line-tabs" aria-label="Device lines">
               <button
-                key={line.id}
-                className={`chip ${activeLineId === line.id ? 'active' : ''}`}
-                onClick={() => setActiveLineId(line.id)}
-                title={line.phoneNumber || 'Line'}
+                className={`chip ${!activeLineId ? 'active' : ''}`}
+                onClick={() => setActiveLineId(null)}
               >
-                {line.label || line.phoneNumber || line.id.slice(0, 6)}
+                All
               </button>
-            ))}
-          </div>
-        )}
-        {isLoadingThreads ? (
-          <div className="sidebar-placeholder">
-            <Spinner />
-            <div className="sidebar-tip muted">Loading conversations...</div>
-          </div>
-        ) : threadCount === 0 ? (
-          <div className="sidebar-placeholder">
-            <div className="sidebar-tip">
-              <strong>No conversations found</strong>
+              {lines.map((line) => (
+                <button
+                  key={line.id}
+                  className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                  onClick={() => setActiveLineId(line.id)}
+                  title={line.phoneNumber || 'Line'}
+                >
+                  {line.label || line.phoneNumber || line.id.slice(0, 6)}
+                </button>
+              ))}
             </div>
-            <div className="sidebar-tip muted">
-              To see your messages here:
-              <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
-                <li>Open PulseLink on your phone</li>
-                <li>Go to Extensions Store</li>
-                <li>Enable &quot;Remote Web Access&quot;</li>
-              </ol>
-              {!isPremium && (
-                <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
-                  Premium Required
+          )}
+          {isLoadingThreads ? (
+             Array.from({ length: 5 }).map((_, i) => <ThreadSkeleton key={i} />)
+          ) : threadCount === 0 ? (
+            <div className="sidebar-placeholder">
+              <div className="sidebar-tip">
+                <strong>{threadSearch ? "No matches found" : "No conversations found"}</strong>
+              </div>
+              {!threadSearch && (
+                <div className="sidebar-tip muted">
+                  To see your messages here:
+                  <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
+                    <li>Open PulseLink on your phone</li>
+                    <li>Go to Extensions Store</li>
+                    <li>Enable &quot;Remote Web Access&quot;</li>
+                  </ol>
+                  {!isPremium && (
+                    <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
+                      Premium Required
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          </div>
-        ) : (
-          threadListElements
-        )}
-      </div>
+          ) : (
+            threadListElements
+          )}
+        </div>
+      </>
     ) : (
       <div className="sidebar-placeholder">
         <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
@@ -1613,6 +1632,14 @@ const Sidebar = memo(({
 });
 
 Sidebar.displayName = 'Sidebar';
+
+const getToastClass = (msg) => {
+  if (!msg) return 'toast';
+  const lower = msg.toLowerCase();
+  if (lower.includes('fail') || lower.includes('error') || lower.includes('missing')) return 'toast error';
+  if (lower.includes('success') || lower.includes('saved') || lower.includes('updated') || lower.includes('sent') || lower.includes('published') || lower.includes('imported') || lower.includes('cleared')) return 'toast success';
+  return 'toast';
+};
 
 function App() {
   const [user, setUser] = useState(null);
@@ -1744,6 +1771,7 @@ function App() {
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
+  const [threadSearch, setThreadSearch] = useState('');
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const isPremiumUser = useMemo(() => {
@@ -3045,11 +3073,20 @@ function App() {
     return [...current].sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
 
+  const filteredThreads = useMemo(() => {
+    const term = threadSearch.trim().toLowerCase();
+    if (!term) return activeLineThreads;
+    return activeLineThreads.filter(t =>
+      (t.display_name || t.address || '').toLowerCase().includes(term) ||
+      (t.snippet || '').toLowerCase().includes(term)
+    );
+  }, [activeLineThreads, threadSearch]);
+
   // Bolt: Memoize thread list elements to prevent re-rendering on every compose keystroke.
   // Note: handleThreadSelect is stable (useCallback) but included for exhaustive-deps correctness.
   // Note: selectedThread?.id is used to avoid re-rendering the whole list when non-visual props of selectedThread change.
   const threadListElements = useMemo(() => (
-    activeLineThreads.map(thread => (
+    filteredThreads.map(thread => (
       <ThreadItem
         key={`${thread.lineId || 'legacy'}_${thread.id}`}
         thread={thread}
@@ -3058,7 +3095,7 @@ function App() {
         showPreviews={showPreviews}
       />
     ))
-  ), [activeLineThreads, selectedThread?.id, handleThreadSelect, showPreviews]);
+  ), [filteredThreads, selectedThread?.id, handleThreadSelect, showPreviews]);
 
   const isPremium = isPremiumUser;
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
@@ -3184,12 +3221,14 @@ function App() {
           setActiveLineId={setActiveLineId}
           lineInboxMode={lineInboxMode}
           isLoadingThreads={isLoadingThreads}
-          threadCount={activeLineThreads.length}
+          threadCount={filteredThreads.length}
           threadListElements={threadListElements}
           isPremium={isPremium}
           remoteSettings={remoteSettings}
           navLogo={navLogo}
           brandTitle={remoteSettings.mergedExperienceEnabled ? "PulseLink Unified" : "PulseLink Suite"}
+          threadSearch={threadSearch}
+          setThreadSearch={setThreadSearch}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
@@ -3361,7 +3400,7 @@ function App() {
                       </>
                     ) : 'Save profile'}
                   </button>
-                  {profileStatus && <div className="settings-status" role="status" aria-live="polite">{profileStatus}</div>}
+                    {profileStatus && <div className={getToastClass(profileStatus)} role="status" aria-live="polite">{profileStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>Trusted contacts</h4>
@@ -3381,7 +3420,7 @@ function App() {
                       <div className="settings-note">No trusted contacts yet.</div>
                     )}
                   </div>
-                  {contactStatus && <div className="settings-status" role="status" aria-live="polite">{contactStatus}</div>}
+                  {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
                 <div className="settings-card">
                   <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
@@ -3486,7 +3525,7 @@ function App() {
                       Clear
                     </button>
                   </div>
-                  {contactStatus && <div className="settings-status" role="status" aria-live="polite">{contactStatus}</div>}
+                  {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
                 </div>
               </div>
             </div>
@@ -3609,7 +3648,7 @@ function App() {
                       <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env.local to load the map view.</p>
                     </div>
                   )}
-                  {mapStatus && <div className="map-status" role="status" aria-live="polite">{mapStatus}</div>}
+                  {mapStatus && <div className={getToastClass(mapStatus)} role="status" aria-live="polite">{mapStatus}</div>}
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
@@ -3712,7 +3751,7 @@ function App() {
                         </div>
                     )}
                     
-                    {settingsStatus && <div className="settings-status" style={{marginTop: 12}} role="status" aria-live="polite">{settingsStatus}</div>}
+                    {settingsStatus && <div className={getToastClass(settingsStatus)} style={{marginTop: 12}} role="status" aria-live="polite">{settingsStatus}</div>}
                 </div>
               </div>
             </div>
@@ -3755,7 +3794,7 @@ function App() {
                       </div>
                     )}
                   </div>
-                  {themeGalleryStatus && <div className="settings-status" role="status" aria-live="polite">{themeGalleryStatus}</div>}
+                  {themeGalleryStatus && <div className={getToastClass(themeGalleryStatus)} role="status" aria-live="polite">{themeGalleryStatus}</div>}
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Publish your theme</h4>
@@ -3820,7 +3859,7 @@ function App() {
                       </>
                     ) : 'Publish theme'}
                   </button>
-                  {themePublishStatus && <div className="settings-status" role="status" aria-live="polite">{themePublishStatus}</div>}
+                  {themePublishStatus && <div className={getToastClass(themePublishStatus)} role="status" aria-live="polite">{themePublishStatus}</div>}
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Quick presets</h4>
@@ -3917,7 +3956,7 @@ function App() {
                   <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
                     Save theme
                   </button>
-                  {themeStatus && <div className="settings-status" role="status" aria-live="polite">{themeStatus}</div>}
+                  {themeStatus && <div className={getToastClass(themeStatus)} role="status" aria-live="polite">{themeStatus}</div>}
                 </div>
               </div>
             </div>
@@ -4046,7 +4085,7 @@ function App() {
                   </label>
                   <button type="submit" className="primary-btn">Save extension</button>
                 </form>
-                {extensionStatus && <div className="settings-status" role="status">{extensionStatus}</div>}
+                {extensionStatus && <div className={getToastClass(extensionStatus)} role="status">{extensionStatus}</div>}
               </div>
               <div className="settings-card">
                 <h4>Submit to gallery</h4>
@@ -4120,7 +4159,7 @@ function App() {
                           <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                             Send password reset email
                           </button>
-                          {settingsStatus && <div className="settings-status" role="status" aria-live="polite">{settingsStatus}</div>}
+                          {settingsStatus && <div className={getToastClass(settingsStatus)} role="status" aria-live="polite">{settingsStatus}</div>}
                         </div>
                       )}
 
@@ -4202,7 +4241,7 @@ function App() {
                               </>
                             ) : 'Save PulseLink settings'}
                           </button>
-                          {remoteSettingsStatus && <div className="settings-status" role="status" aria-live="polite">{remoteSettingsStatus}</div>}
+                          {remoteSettingsStatus && <div className={getToastClass(remoteSettingsStatus)} role="status" aria-live="polite">{remoteSettingsStatus}</div>}
                         </div>
                       )}
 
@@ -4230,7 +4269,7 @@ function App() {
                               {deleteAction === 'account' ? "Deleting..." : "Delete account"}
                             </button>
                           </div>
-                          {deleteStatus && <div className="settings-status" role="status" aria-live="polite">{deleteStatus}</div>}
+                          {deleteStatus && <div className={getToastClass(deleteStatus)} role="status" aria-live="polite">{deleteStatus}</div>}
                         </div>
                       )}
                     </>

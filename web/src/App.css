@@ -508,6 +508,19 @@
 /*  Components: Buttons                                                       */
 /* -------------------------------------------------------------------------- */
 
+/* Accessibility: Focus Indicators */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.2);
+  z-index: 10;
+}
+
 .primary-btn {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: #04060c;
@@ -760,6 +773,29 @@
   gap: 6px;
 }
 
+/* Sidebar Search */
+.sidebar-search-container {
+  padding: 12px 12px 4px;
+}
+
+.sidebar-search-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--ink);
+  font-size: 0.9em;
+  transition: all 0.2s;
+}
+
+.sidebar-search-input:focus {
+  background: rgba(34, 211, 238, 0.05);
+  border-color: var(--accent-dim);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--accent-dim);
+}
+
 .thread-item {
   padding: 16px 20px;
   border-radius: 16px;
@@ -774,6 +810,11 @@
 
 .thread-item:hover {
   background: rgba(255, 255, 255, 0.03);
+}
+
+.thread-item:focus-visible {
+  background: rgba(34, 211, 238, 0.05);
+  border-color: var(--accent-dim);
 }
 
 .thread-item.active {
@@ -800,6 +841,37 @@
 
 .thread-item.active .thread-name {
   color: var(--accent);
+}
+
+/* Skeleton Loading */
+.skeleton-thread {
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+.skeleton-line::after {
+  content: "";
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  animation: shimmer 1.5s infinite;
 }
 
 .chat-header {
@@ -904,6 +976,71 @@
 /* -------------------------------------------------------------------------- */
 /*  Theme Gallery & Editor                                                    */
 /* -------------------------------------------------------------------------- */
+
+/* Theme Chip Styles */
+.theme-chip {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.theme-chip:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.theme-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.theme-chip-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1em;
+  color: var(--ink);
+}
+
+.theme-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.theme-chip-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0.8;
+}
+
+.theme-bubble {
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  max-width: 80%;
+}
+
+.theme-bubble.incoming {
+  align-self: flex-start;
+  border-bottom-left-radius: 2px;
+}
+
+.theme-bubble.outgoing {
+  align-self: flex-end;
+  border-bottom-right-radius: 2px;
+}
 
 .theme-card {
   padding: 0;
@@ -1078,7 +1215,7 @@
     width: 88px;
     padding: 0;
   }
-  .sidebar-brand div, .nav-item span, .sidebar-actions, .badge-new {
+  .sidebar-brand div, .nav-item span, .sidebar-actions, .badge-new, .sidebar-search-container {
     display: none;
   }
   .sidebar-header {
@@ -1132,6 +1269,9 @@
   }
   .login-card {
     padding: 40px 24px;
+  }
+  .sidebar-search-container {
+    display: none;
   }
 }
 
@@ -1274,7 +1414,7 @@
 .thread-item:nth-child(10) { animation-delay: 0.5s; }
 
 /* Alias for consistent status toasts */
-.map-status, .profile-status, .contact-status {
+.toast, .map-status, .profile-status, .contact-status {
   position: fixed;
   bottom: 32px;
   right: 32px;
@@ -1355,4 +1495,68 @@
 }
 .settings-warning::before {
   content: "⚠️";
+}
+
+
+/* Toast Modifiers */
+.toast::before {
+  content: "i";
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.toast.success {
+  border-color: var(--success);
+  color: var(--success);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(46, 213, 115, 0.4);
+}
+
+.toast.success::before {
+  background: var(--success);
+  content: "✓";
+}
+
+.toast.error {
+  border-color: var(--danger);
+  color: var(--danger);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(255, 71, 87, 0.4);
+}
+
+.toast.error::before {
+  background: var(--danger);
+  content: "!";
+}
+
+/* Polish: Mobile Scrollbar Hiding */
+@media (max-width: 768px) {
+  .sidebar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .sidebar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Polish: Empty State Animation */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.empty-logo {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Polish: Skeleton Shimmer Improvement */
+.skeleton-line::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
 }
