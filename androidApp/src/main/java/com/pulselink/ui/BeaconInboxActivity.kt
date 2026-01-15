@@ -135,7 +135,9 @@ class BeaconInboxActivity : ComponentActivity() {
         val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
         val hasPremium = subscriptionUiState.isPremiumActive ||
             state.settings.premiumUnlocked ||
-            BuildConfig.PREMIUM_FEATURES
+            BuildConfig.PREMIUM_FEATURES ||
+            state.settings.proUnlocked ||
+            BuildConfig.PRO_FEATURES
         val hasPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || state.settings.premiumUnlocked
         val isPro = hasPro || hasPremium
                 val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
@@ -840,7 +842,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                     }
                                     val premiumActive = subscriptionUiState.isPremiumActive ||
                                         state.settings.premiumUnlocked ||
-                                        BuildConfig.PREMIUM_FEATURES
+                                        BuildConfig.PREMIUM_FEATURES ||
+                                        state.settings.proUnlocked ||
+                                        BuildConfig.PRO_FEATURES
                                     val threadLineId = lineId ?: deviceLineId
                                     val threadKey = "${threadLineId ?: deviceLineId}:$threadId"
                                     val fallbackLineId = defaultSendLineId ?: threadLineId ?: deviceLineId
@@ -944,7 +948,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                 composable("beacon_settings") {
                                     val premiumActive = subscriptionUiState.isPremiumActive ||
                                         state.settings.premiumUnlocked ||
-                                        BuildConfig.PREMIUM_FEATURES
+                                        BuildConfig.PREMIUM_FEATURES ||
+                                        state.settings.proUnlocked ||
+                                        BuildConfig.PRO_FEATURES
                                     val messageSoundLabel = if (state.settings.messageNotificationSoundUri.isNullOrBlank()) {
                                         "Phone default notification"
                                     } else {

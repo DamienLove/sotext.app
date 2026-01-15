@@ -221,8 +221,8 @@ android {
         applicationId = "com.pulselink"
         minSdk = 26
         targetSdk = 35
-        versionCode = 133
-        versionName = "133"
+        versionCode = 134
+        versionName = "134"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "google_maps_key", mapsApiKey)
@@ -506,12 +506,12 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     // AdMob + mediation adapters
     implementation("com.google.android.gms:play-services-ads:24.9.0")
-    implementation("com.google.ads.mediation:applovin:13.5.1.0")
-    implementation("com.google.ads.mediation:inmobi:11.1.0.0")
-    implementation("com.google.ads.mediation:ironsource:9.2.0.0")
-    implementation("com.google.ads.mediation:facebook:6.21.0.0")
-    implementation("com.google.ads.mediation:pangle:7.8.0.8.0")
-    implementation("com.google.ads.mediation:vungle:7.5.0.0")
+    add("freeImplementation", "com.google.ads.mediation:applovin:13.5.1.0")
+    add("freeImplementation", "com.google.ads.mediation:inmobi:11.1.0.0")
+    add("freeImplementation", "com.google.ads.mediation:ironsource:9.2.0.0")
+    add("freeImplementation", "com.google.ads.mediation:facebook:6.21.0.0")
+    add("freeImplementation", "com.google.ads.mediation:pangle:7.8.0.8.0")
+    add("freeImplementation", "com.google.ads.mediation:vungle:7.5.0.0")
     implementation("com.google.android.gms:play-services-auth:21.1.0")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("com.android.billingclient:billing-ktx:8.2.1")

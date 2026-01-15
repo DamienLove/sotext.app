@@ -67,8 +67,8 @@ def upload_and_release(package, aab_path, version_code, name, tracks):
 base = pathlib.Path("C:/Projects/pulselink/disposable_aabs")
 upload_and_release(
     "com.RingerSong.free",
-    str(base / "ringersong-release-v26.aab"),
-    26,
-    "v26",
+    str(base / "ringersong-release-v27.aab"),
+    27,
+    "v27",
     ["internal", "alpha", "beta"],
 )

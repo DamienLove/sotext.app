@@ -279,6 +279,8 @@ private fun LinkStatusSection(
                                         val encodedSubject = java.net.URLEncoder.encode(rawSubject, "UTF-8").replace("+", "%20")
                                         val encodedBody = java.net.URLEncoder.encode(rawBody, "UTF-8").replace("+", "%20")
                                         data = Uri.parse("mailto:${contact.email ?: ""}?subject=$encodedSubject&body=$encodedBody")
+                                        putExtra(Intent.EXTRA_SUBJECT, rawSubject)
+                                        putExtra(Intent.EXTRA_TEXT, rawBody)
                                     }
                                     try {
                                         context.startActivity(emailIntent)

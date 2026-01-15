@@ -124,7 +124,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val proUnlocked = prefs[PRO_UNLOCKED] ?: defaults.proUnlocked
         val remoteWebAccessEnabled = when {
             prefs.contains(REMOTE_WEB_ACCESS) -> prefs[REMOTE_WEB_ACCESS] ?: false
-            premiumUnlocked || BuildConfig.PREMIUM_FEATURES -> true
+            premiumUnlocked || BuildConfig.PREMIUM_FEATURES || proUnlocked || BuildConfig.PRO_FEATURES -> true
             else -> defaults.remoteWebAccessEnabled
         }
 

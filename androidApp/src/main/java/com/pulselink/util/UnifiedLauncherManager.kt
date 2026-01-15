@@ -67,9 +67,16 @@ object UnifiedLauncherManager {
             if (unifiedEnabled) {
                 Log.d(TAG, "Enabling unified mode")
                 // Enable unified launcher; keep MainActivity enabled so the alias can open
-                // Use killApp=true for the unified target to force launcher refresh
-                enable(pm, targetUnified, "unified target", killApp = true)
-                enable(pm, main, "MainActivity")
+                // Use killApp=true for the unified target to force launcher refresh.
+                // IMPORTANT: Only do this if not already enabled, otherwise we kill the app on every startup!
+                if (!isComponentEnabled(pm, targetUnified)) {
+                    enable(pm, targetUnified, "unified target", killApp = true)
+                }
+
+                // Ensure MainActivity is enabled
+                if (!isComponentEnabled(pm, main)) {
+                    enable(pm, main, "MainActivity")
+                }
 
                 // Verify the target unified component was enabled before hiding other icons.
                 delay(100) // Small delay to allow launcher to process
