@@ -88,6 +88,7 @@ import com.RingerSong.free.data.ContactEntry
 import com.RingerSong.free.data.SongEntry
 import com.RingerSong.free.data.SongSource
 import com.RingerSong.free.data.SpotifyTrack
+import com.RingerSong.free.util.RingtoneUtils
 import com.RingerSong.free.viewmodel.SpotifySearchState
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdLoader
@@ -219,6 +220,7 @@ fun HomeScreen(
                     NotificationPolicyCard(context = context)
                     WriteSettingsPermissionCard(context = context)
                     SystemAlertWindowPermissionCard(context = context)
+                    RingtoneOptimizationCard(context = context)
                     ShuffleCard(
                         shuffle = state.settings.shuffle,
                         onToggle = onToggleShuffle
@@ -290,6 +292,14 @@ fun HomeScreen(
                     onAddTrack = onAddYouTubeTrack,
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+            AnimatedVisibility(
+                visible = showContent.value,
+                enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
+            ) {
+                AppleMusicPlaceholderSection(modifier = Modifier.fillMaxWidth())
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -556,7 +566,7 @@ private fun NotificationPolicyCard(context: Context) {
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "RingerSong needs 'Do Not Disturb' access to automatically silence the default ringtone so you can hear your streamed music.",
+                text = "RingerSong needs 'Do Not Disturb' access to automatically silence the default ringtone so you can hear your downloaded music.",
                 style = MaterialTheme.typography.bodySmall
             )
             OutlinedButton(
@@ -568,6 +578,68 @@ private fun NotificationPolicyCard(context: Context) {
                 }
             ) {
                 Text("Allow Access")
+            }
+        }
+    }
+}
+
+@Composable
+private fun RingtoneOptimizationCard(context: Context) {
+    // Only show if we have write settings permission, but haven't set the silent ringtone yet
+    val canWriteSettings = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        android.provider.Settings.System.canWrite(context)
+    } else {
+        true
+    }
+
+    if (!canWriteSettings) return
+
+    // We verify if the current default ringtone is our "Silent" one.
+    // This is a UI check, so we shouldn't block main thread too much, but RingtoneManager queries are usually fast enough for this specific check or we rely on user action.
+    // For simplicity, we assume if the user hasn't set it, we show the card.
+    // Ideally we'd use a state/effect to check this async.
+    var isOptimized by remember { mutableStateOf(true) } // Assume true initially to avoid flicker
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.Dispatchers.IO.let {
+            isOptimized = RingtoneUtils.isSilentRingtoneSet(context)
+        }
+    }
+
+    if (isOptimized) return
+
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    SectionCard(
+        accent = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "Optimize Experience",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "To hear your selected music clearly, we recommend setting your default system ringtone to 'Silent'. We can do this automatically.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Button(
+                onClick = {
+                    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                        val success = RingtoneUtils.setSilentRingtone(context)
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            if (success) {
+                                android.widget.Toast.makeText(context, "Default ringtone set to Silent", android.widget.Toast.LENGTH_SHORT).show()
+                                isOptimized = true
+                            } else {
+                                android.widget.Toast.makeText(context, "Failed to set silent ringtone", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+            ) {
+                Text("Set Default Ringtone to Silent")
             }
         }
     }
@@ -838,17 +910,10 @@ private fun SpotifySection(
                     }
                 }
                 Text(
-                    text = "Search for tracks on Spotify. Songs will be streamed directly from your Spotify App.",
+                    text = "Search for tracks on Spotify. Songs are downloaded for ringtone playback.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (userCapabilities == "Free") {
-                    Text(
-                        text = "⚠️ Free accounts may experience random playback (shuffle mode) due to Spotify restrictions.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
             }
 
             Button(
@@ -1071,6 +1136,37 @@ private fun SpotifyResultRow(
         }
         TextButton(onClick = onAdd) {
             Text("Add")
+        }
+    }
+}
+
+@Composable
+private fun AppleMusicPlaceholderSection(modifier: Modifier = Modifier) {
+    SectionCard(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Add from Apple Music",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "Apple Music integration is coming soon.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Button(
+                onClick = { /* No-op or show info dialog */ },
+                enabled = false,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
+                Text("Coming Soon")
+            }
         }
     }
 }
@@ -1487,17 +1583,17 @@ private fun HowToAddMusicHelper() {
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Streaming First: Connect your Spotify Premium account above to stream songs directly as your ringtone.",
+            text = "Download First: Spotify and YouTube Music tracks are downloaded before use.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "We automatically silence your default ringer and play your stream instead.",
+            text = "We automatically silence your default ringer and play your downloaded track instead.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Note: YouTube Music tracks will be downloaded. Local files are also supported.",
+            text = "Note: Local files are also supported.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
