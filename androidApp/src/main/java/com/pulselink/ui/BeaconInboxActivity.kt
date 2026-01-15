@@ -1022,6 +1022,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
                                         onTogglePrivateSafe = viewModel::setPrivateSafeEnabled,
                                         onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
+                                        onOpenThemes = { navController.navigate("visual_settings") },
+                                        onOpenRingerSong = { navController.navigate("notifications/message_sound") },
                                         onBack = { navController.popBackStack() }
                                     )
                                 }

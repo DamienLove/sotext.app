@@ -4106,33 +4106,6 @@ function App() {
                   </div>
                 </div>
               ))}
-                      ) : (
-                        <button
-                          className={isEnabled ? "secondary-btn" : "primary-btn"}
-                          style={{width: '100%'}}
-                          onClick={() => {
-                            setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
-                            // We trigger a save after a short delay or user leaves, but here we can just auto-save for UX
-                            // But handleRemoteSettingsSave uses current state, so we need to wait for state update or pass new state
-                            // Better to just update state and let user click specific save or use effect.
-                            // Actually, let's use a specialized save or the existing save button in Settings.
-                            // But users expect "Install/Remove" to be immediate.
-                            // We can duplicate the save logic here.
-                             const next = { ...remoteSettings, [ext.id]: !isEnabled };
-                             setDoc(doc(db, "users", user.uid), {
-                               ...next,
-                               settingsUpdatedAt: serverTimestamp()
-                             }, { merge: true });
-                          }}
-                          aria-label={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
-                        >
-                          {isEnabled ? "Remove" : "Install"}
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
 
               <div className="settings-card">
                 <h4>Developer sandbox</h4>
