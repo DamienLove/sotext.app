@@ -534,7 +534,7 @@ const RingerSongItem = memo(({ song, onDelete }) => {
   return (
     <div className="song-card">
       {song.albumArtUrl ? (
-        <img src={song.albumArtUrl} alt="" className="song-art" />
+        <img src={song.albumArtUrl} alt="" className="song-art" loading="lazy" />
       ) : (
         <div className="song-art" style={{ display: 'grid', placeItems: 'center' }}>♫</div>
       )}
@@ -566,7 +566,7 @@ const areSpotifyResultsEqual = (prev, next) => {
 // Bolt: Optimized SpotifyResultItem to prevent re-rendering all results when one is adding
 const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
   <div className="song-card">
-    <img src={track.album?.images[0]?.url} alt="" className="song-art" />
+    <img src={track.album?.images[0]?.url} alt="" className="song-art" loading="lazy" />
     <div className="song-info">
       <div className="song-title">{track.name}</div>
       <div className="song-artist">{track.artists.map(a => a.name).join(', ')}</div>
@@ -2009,16 +2009,23 @@ function App() {
       return true;
     });
   }, [alertLocations, incomingOnly, severityFilter]);
-  const filteredThemes = useMemo(() => {
-    const term = themeSearch.trim().toLowerCase();
-    if (!term) return publicThemes;
-    return publicThemes.filter((theme) => {
+  // Bolt: Pre-compute search strings for themes to avoid redundant lowercasing during typing
+  const themeSearchIndex = useMemo(() => {
+    return publicThemes.map(theme => {
       const name = (theme.name ?? '').toString().toLowerCase();
       const author = (theme.authorName ?? '').toString().toLowerCase();
       const handle = (theme.authorHandle ?? '').toString().toLowerCase();
-      return name.includes(term) || author.includes(term) || handle.includes(term);
+      return { theme, searchString: `${name} ${author} ${handle}` };
     });
-  }, [publicThemes, themeSearch]);
+  }, [publicThemes]);
+
+  const filteredThemes = useMemo(() => {
+    const term = themeSearch.trim().toLowerCase();
+    if (!term) return publicThemes;
+    return themeSearchIndex
+      .filter(({ searchString }) => searchString.includes(term))
+      .map(({ theme }) => theme);
+  }, [themeSearchIndex, themeSearch, publicThemes]);
   // Bolt: Pre-compute search strings for contacts to avoid expensive string operations on every keystroke
   const contactSearchIndex = useMemo(() => {
     return deviceContacts.map(contact => {
@@ -3162,14 +3169,22 @@ function App() {
     return [...current].sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
 
+  // Bolt: Pre-compute search strings for threads to avoid expensive string operations on every keystroke
+  const threadSearchIndex = useMemo(() => {
+    return activeLineThreads.map(t => {
+      const display = (t.display_name || t.address || '').toLowerCase();
+      const snippet = (t.snippet || '').toLowerCase();
+      return { thread: t, searchString: `${display} ${snippet}` };
+    });
+  }, [activeLineThreads]);
+
   const filteredThreads = useMemo(() => {
     const term = threadSearch.trim().toLowerCase();
     if (!term) return activeLineThreads;
-    return activeLineThreads.filter(t =>
-      (t.display_name || t.address || '').toLowerCase().includes(term) ||
-      (t.snippet || '').toLowerCase().includes(term)
-    );
-  }, [activeLineThreads, threadSearch]);
+    return threadSearchIndex
+      .filter(({ searchString }) => searchString.includes(term))
+      .map(({ thread }) => thread);
+  }, [threadSearchIndex, threadSearch, activeLineThreads]);
 
   // Bolt: Memoize thread list elements to prevent re-rendering on every compose keystroke.
   // Note: handleThreadSelect is stable (useCallback) but included for exhaustive-deps correctness.
