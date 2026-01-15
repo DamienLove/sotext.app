@@ -1,4 +1,4 @@
-/* PulseLink Suite - Future Deep v4 UI System */
+/* PulseLink Suite - Future Deep v5 UI System */
 
 /* -------------------------------------------------------------------------- */
 /*  Core Layout & Utilities                                                   */
@@ -50,7 +50,7 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: rgba(3, 5, 10, 0.6);
+  background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border-right: 1px solid var(--glass-border);
@@ -291,9 +291,9 @@
 
 .home-card:hover {
   transform: translateY(-6px) scale(1.01);
-  border-color: rgba(34, 211, 238, 0.3);
+  border-color: var(--accent);
   background: rgba(34, 211, 238, 0.03);
-  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 20px rgba(34, 211, 238, 0.1);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6), 0 0 20px var(--accent-glow);
 }
 
 .home-card:hover::after {

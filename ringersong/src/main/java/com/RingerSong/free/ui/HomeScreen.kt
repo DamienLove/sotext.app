@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,6 +52,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Slider
@@ -182,15 +184,7 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.surface,
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.background)
     ) {
         MusicBackdrop()
         Column(
@@ -200,7 +194,7 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             TopBar(onOpenSettings)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             AnimatedVisibility(
                 visible = showContent.value,
@@ -232,7 +226,7 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             AnimatedVisibility(
                 visible = showContent.value,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
@@ -246,7 +240,7 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             AnimatedVisibility(
                 visible = showContent.value,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
@@ -262,7 +256,7 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             AnimatedVisibility(
                 visible = showContent.value,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
@@ -279,7 +273,7 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             AnimatedVisibility(
                 visible = showContent.value,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { it / 3 })
@@ -332,6 +326,8 @@ fun HomeScreen(
         }
     }
 }
+
+// ... AdsSection, BannerAd, NativeAdSection ...
 
 @Composable
 private fun AdsSection() {
@@ -412,12 +408,13 @@ private fun TopBar(onOpenSettings: () -> Unit) {
             Text(
                 text = "RingerSong",
                 style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary // Cyan
             )
             Text(
                 text = "Progressive ringers, song by song",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.8f)
             )
         }
         IconButton(onClick = onOpenSettings) {
@@ -430,9 +427,13 @@ private fun TopBar(onOpenSettings: () -> Unit) {
     }
 }
 
+// ... StatusCard, ShuffleCard, etc. ...
+
 @Composable
 private fun StatusCard(enabled: Boolean, onToggle: (Boolean) -> Unit) {
-    SectionCard {
+    SectionCard(
+        accent = if(enabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha=0.2f) else MaterialTheme.colorScheme.surface
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -442,7 +443,8 @@ private fun StatusCard(enabled: Boolean, onToggle: (Boolean) -> Unit) {
                 Text(
                     text = if (enabled) "Progression Ringer On" else "Progression Ringer Off",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = if(enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = if (enabled) {
@@ -524,7 +526,7 @@ private fun PermissionsCard(context: Context, onRequest: () -> Unit) {
     }
     if (missing.isEmpty()) return
     SectionCard(
-        accent = MaterialTheme.colorScheme.tertiaryContainer,
+        accent = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha=0.3f),
         contentColor = MaterialTheme.colorScheme.onTertiaryContainer
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -556,7 +558,7 @@ private fun NotificationPolicyCard(context: Context) {
     if (hasPermission) return
 
     SectionCard(
-        accent = MaterialTheme.colorScheme.errorContainer,
+        accent = MaterialTheme.colorScheme.errorContainer.copy(alpha=0.3f),
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -656,7 +658,7 @@ private fun WriteSettingsPermissionCard(context: Context) {
     if (hasPermission) return
 
     SectionCard(
-        accent = MaterialTheme.colorScheme.errorContainer,
+        accent = MaterialTheme.colorScheme.errorContainer.copy(alpha=0.3f),
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -695,7 +697,7 @@ private fun SystemAlertWindowPermissionCard(context: Context) {
     if (hasPermission) return
 
     SectionCard(
-        accent = MaterialTheme.colorScheme.errorContainer,
+        accent = MaterialTheme.colorScheme.errorContainer.copy(alpha=0.3f),
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -722,6 +724,8 @@ private fun SystemAlertWindowPermissionCard(context: Context) {
         }
     }
 }
+
+// ... ContactsSection, ContactRow, TracksSection ...
 
 @Composable
 private fun ContactsSection(
@@ -874,6 +878,8 @@ private fun TracksSection(
     }
 }
 
+// ... SpotifySection, YouTubeMusicSection ...
+
 @Composable
 private fun SpotifySection(
     state: SpotifySearchState,
@@ -921,7 +927,6 @@ private fun SpotifySection(
                     isConnecting = true
                     onConnect { success ->
                         isConnecting = false
-                        // Optional: Show snackbar based on success
                     }
                 },
                 enabled = !isConnecting,
@@ -1100,6 +1105,8 @@ private fun YouTubeMusicSection(
         }
     }
 }
+
+// ... SpotifyResultRow, EmptyTracksHint ...
 
 @Composable
 private fun SpotifyResultRow(
@@ -1335,6 +1342,8 @@ private fun SongRow(
     }
 }
 
+// ... ContactSettingsDialog, SectionCard (Updated), MusicBackdrop, Helpers ...
+
 @Composable
 private fun ContactSettingsDialog(
     contact: ContactEntry,
@@ -1483,20 +1492,22 @@ private fun SectionCard(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     content: @Composable () -> Unit
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(20.dp)),
-        shape = RoundedCornerShape(20.dp)
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(26.dp),
+        color = accent.copy(alpha = 0.6f),
+        border = BorderStroke(1.dp, Brush.verticalGradient(
+            listOf(Color.White.copy(alpha = 0.1f), Color.White.copy(alpha = 0.02f))
+        )),
+        tonalElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
-                .background(accent)
-                .padding(18.dp)
+                .padding(24.dp)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            androidx.compose.runtime.CompositionLocalProvider(
+             androidx.compose.runtime.CompositionLocalProvider(
                 androidx.compose.material3.LocalContentColor provides contentColor
             ) {
                 content()
@@ -1511,12 +1522,12 @@ private fun BoxScope.MusicBackdrop() {
         val width = size.width
         val height = size.height
         drawCircle(
-            color = Color(0xFFB6D7F2).copy(alpha = 0.35f),
+            color = Color(0xFF22D3EE).copy(alpha = 0.05f),
             radius = width * 0.55f,
             center = androidx.compose.ui.geometry.Offset(width * 0.85f, height * 0.1f)
         )
         drawCircle(
-            color = Color(0xFF7CB2E4).copy(alpha = 0.25f),
+            color = Color(0xFFBC13FE).copy(alpha = 0.03f),
             radius = width * 0.45f,
             center = androidx.compose.ui.geometry.Offset(width * 0.1f, height * 0.2f)
         )
@@ -1528,7 +1539,7 @@ private fun BoxScope.MusicBackdrop() {
             .size(120.dp)
             .align(Alignment.TopEnd)
             .padding(top = 20.dp, end = 12.dp)
-            .alpha(0.08f),
+            .alpha(0.04f),
         tint = MaterialTheme.colorScheme.primary
     )
     Icon(
@@ -1538,10 +1549,12 @@ private fun BoxScope.MusicBackdrop() {
             .size(90.dp)
             .align(Alignment.BottomStart)
             .padding(bottom = 60.dp, start = 20.dp)
-            .alpha(0.06f),
-        tint = MaterialTheme.colorScheme.secondary
+            .alpha(0.03f),
+        tint = MaterialTheme.colorScheme.tertiary
     )
 }
+
+// ... rest of the file (helpers) ...
 
 private fun requiredPermissions(): Array<String> = arrayOf(
     Manifest.permission.READ_PHONE_STATE,
