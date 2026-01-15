@@ -69,6 +69,8 @@ const BoltIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="non
 const StarIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const LockIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
 const MessageSquareIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
+const SearchIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>;
+const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 const Spinner = ({ className = '', style = {} }) => (
   <svg className={`spinner ${className}`} style={style} viewBox="0 0 50 50" aria-hidden="true">
     <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" strokeWidth="5" opacity="0.2" />
@@ -1552,13 +1554,28 @@ const Sidebar = memo(({
     {activePanel === 'beacon' ? (
       <>
         <div className="sidebar-search-container">
-          <input
-            className="sidebar-search-input"
-            placeholder="Search messages..."
-            value={threadSearch}
-            onChange={(e) => setThreadSearch(e.target.value)}
-            aria-label="Search messages"
-          />
+          <div className="sidebar-search-wrapper">
+            <div className="search-icon-wrapper">
+              <SearchIcon />
+            </div>
+            <input
+              className="sidebar-search-input-field"
+              placeholder="Search messages..."
+              value={threadSearch}
+              onChange={(e) => setThreadSearch(e.target.value)}
+              aria-label="Search messages"
+            />
+            {threadSearch && (
+              <button
+                className="ghost-btn icon-only sidebar-search-clear-btn"
+                onClick={() => setThreadSearch('')}
+                aria-label="Clear search"
+                title="Clear search"
+              >
+                <CloseIcon />
+              </button>
+            )}
+          </div>
         </div>
         <div className="thread-list">
           {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
@@ -1628,7 +1645,8 @@ const Sidebar = memo(({
          prev.isPremium === next.isPremium &&
          prev.threadListElements === next.threadListElements &&
          prev.navLogo === next.navLogo &&
-         prev.brandTitle === next.brandTitle;
+         prev.brandTitle === next.brandTitle &&
+         prev.threadSearch === next.threadSearch;
 });
 
 Sidebar.displayName = 'Sidebar';
