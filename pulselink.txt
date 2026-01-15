@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2026-01-15: v135 — built PulseLink free/pro AABs (disposable_aabs/androidApp-*-release-v135.aab) and uploaded to Play internal/beta/production via upload_play.py; web build + Firebase Hosting deploy succeeded (pulselink-24899.web.app).
 - 2026-01-15: Built PulseLink v134 free/pro AABs (disposable_aabs/androidApp-*-release-v134.aab) and uploaded to Play internal/beta/production via upload_play.py; built RingerSong v27 AAB (disposable_aabs/ringersong-release-v27.aab) and uploaded to Play internal/alpha/beta via upload_play_ringersong.py.
 - 2026-01-15: Resumed crash-fix batch; ran .\gradlew lintFreeDebug testFreeDebugUnitTest (pass). No v134/v27 AABs built yet.
 - 2026-01-15: Crash sweep: moved AdMob mediation adapters to free-only dependencies to prevent AppLovin crashes in pro; added Play Store/Play Services/foreground guards + safe launchBillingFlow handling to avoid Billing ProxyBillingActivity null PendingIntent crashes; RingerSong now skips background service starts on Android 12+ and excludes firebase-sessions to avoid Process.myProcessName NoSuchMethodError.
