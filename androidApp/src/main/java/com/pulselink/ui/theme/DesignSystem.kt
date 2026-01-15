@@ -4,17 +4,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// Future Deep v3 Design System Tokens
-// Aligned with PulseLinkTheme.kt and Web v3 Redesign
+// Future Deep v5 Design System Tokens
+// The ultimate unified design language for PulseLink Suite.
 
 // Colors
-val DeepBackground = Color(0xFF05070F)
-val DeepSurface = Color(0xFF0E121E) // Slightly brighter than bg for surface
+val DeepBackground = Color(0xFF03050A) // V5 Deepest Black/Blue
+val DeepSurface = Color(0xFF0B101B) // V5 Surface
+val DeepSurfaceAlt = Color(0xFF131826) // V5 Surface Alt
 val DeepAccent = Color(0xFF22D3EE) // Cyan
 val DeepAccentStrong = Color(0xFF0EA5E9)
 val DeepTertiary = Color(0xFFBC13FE) // Neon Purple
-val DeepError = Color(0xFFEF4444)
-val DeepOnSurface = Color(0xFFEEF2FB)
+val DeepError = Color(0xFFFF4757) // V5 Error
+val DeepOnSurface = Color(0xFFF0F6FC) // V5 Ink
+val DeepMuted = Color(0xFF8B949E) // V5 Muted
 
 object Spacing {
     val extraSmall = 6.dp
@@ -26,7 +28,7 @@ object Spacing {
 }
 
 object Layout {
-    val cardCornerRadius = 26.dp // Increased for v3 smoother look
+    val cardCornerRadius = 26.dp
     val buttonCornerRadius = 18.dp
     val inputCornerRadius = 18.dp
     val bottomSheetCornerRadius = 36.dp
@@ -34,9 +36,9 @@ object Layout {
 }
 
 object Gradients {
-    // Subtle radial-like effect for backgrounds using vertical gradient approximation
+    // V5 "Alive" Background approximation
     val PrimaryBackground = Brush.verticalGradient(
-        colors = listOf(Color(0xFF0D1224), DeepBackground)
+        colors = listOf(Color(0xFF0A0F1C), DeepBackground)
     )
     
     // Vibrant accent gradient for buttons/FABs
@@ -44,15 +46,15 @@ object Gradients {
         colors = listOf(
             DeepAccent,
             DeepAccentStrong,
-            Color(0xFF38BDF8) // Sky 400 for extra pop
+            Color(0xFF38BDF8) // Sky 400
         )
     )
 
-    // Futuristic Holographic Gradient for special cards
+    // Futuristic Holographic Gradient
     val Holographic = Brush.linearGradient(
         colors = listOf(
             DeepAccent.copy(alpha = 0.9f),
-            Color(0xFFD8B4FE).copy(alpha = 0.8f), // Soft Purple
+            Color(0xFFD8B4FE).copy(alpha = 0.8f),
             DeepAccentStrong.copy(alpha = 0.9f)
         )
     )
@@ -66,14 +68,23 @@ object Gradients {
         )
     )
 
+    // New V5 Neon Border - softer, wider
+    val NeonBorder = Brush.linearGradient(
+        colors = listOf(
+            DeepAccent.copy(alpha = 0.5f),
+            DeepTertiary.copy(alpha = 0.3f),
+            DeepAccent.copy(alpha = 0.5f)
+        )
+    )
+
     val EmergencyGradient = Brush.linearGradient(
         colors = listOf(DeepError, Color(0xFF991B1B))
     )
 
-    // Glassmorphic border gradient simulation
+    // Refined V5 Glass Border
     val GlassBorder = Brush.verticalGradient(
         colors = listOf(
-            Color.White.copy(alpha = 0.25f), // Brighter top for highlight
+            Color.White.copy(alpha = 0.15f),
             Color.White.copy(alpha = 0.05f)
         )
     )
@@ -89,7 +100,7 @@ object Gradients {
 
 object Elevations {
     val flat = 0.dp
-    val card = 0.dp // Flat style with borders preferred in Future Deep
+    val card = 0.dp
     val floating = 8.dp
     val sticky = 4.dp
 }

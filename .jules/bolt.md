@@ -9,3 +9,7 @@
 ## 2024-05-22 - State Colocation & React.memo
 **Learning:** Lifting state to the root component (`App.jsx`) for high-frequency inputs (like a message composer) forces the entire component tree to re-render on every keystroke. This causes noticeable lag, especially when the tree contains expensive lists or maps.
 **Action:** Extract high-frequency state into a smaller, dedicated child component (e.g., `MessageComposer`) and wrap it in `React.memo`. This isolates the re-renders to just that small component, leaving the heavy parent and siblings untouched during typing.
+
+## 2025-02-24 - Search Index Pre-computation
+**Learning:** Filtering large arrays (like `deviceContacts`) on every keystroke using complex inline string manipulation (multiple `.toString().toLowerCase()` calls per item) causes significant main thread work.
+**Action:** Pre-compute a "search index" (e.g., a normalized string) in a separate `useMemo` that only updates when the source data changes. The filter step then becomes a simple `includes()` check, keeping the UI responsive during typing.

@@ -28,8 +28,8 @@ class SmsRepository(private val context: Context) {
     private val otpRegex = Regex("\\b\\d{4,8}\\b")
 
     companion object {
-        private const val ADDRESS_CACHE_SIZE = 1000 // Increased cache
-        private const val CONTACT_CACHE_SIZE = 2000 // Increased cache
+        private const val ADDRESS_CACHE_SIZE = 2000 // Increased cache
+        private const val CONTACT_CACHE_SIZE = 5000 // Increased cache
 
         // Static caches to survive ViewModel recreation
         // These hold only Strings, which are safe from Context leaks.
@@ -219,7 +219,7 @@ class SmsRepository(private val context: Context) {
         val recipientIdToNumber = mutableMapOf<Long, String>()
         if (neededRecipients.isNotEmpty()) {
             // Increased chunk size for better speed
-            neededRecipients.chunked(100).forEach { chunk ->
+            neededRecipients.chunked(150).forEach { chunk ->
                 val q = chunk.joinToString(",")
                 val c = runCatching {
                     context.contentResolver.query(

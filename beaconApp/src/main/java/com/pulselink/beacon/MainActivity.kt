@@ -26,7 +26,6 @@ import com.pulselink.beacon.ui.NewMessageScreen
 import com.pulselink.beacon.ui.SmsViewModel
 import com.pulselink.beacon.ui.ThreadScreen
 import com.pulselink.beacon.ui.ThemeViewModel
-import com.pulselink.beacon.data.ThemeState
 import com.pulselink.beacon.ui.customize.CustomizationScreen
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -61,7 +60,7 @@ class MainActivity : ComponentActivity() {
             val vm: SmsViewModel = viewModel(factory = SmsViewModel.factory(application))
             val themeVm: ThemeViewModel = viewModel(factory = ThemeViewModel.factory(application))
             BeaconTheme(theme = themeVm.themeState.global) {
-                BeaconNav(vm, themeVm, themeVm.themeState, notificationTarget)
+                BeaconNav(vm, themeVm, notificationTarget)
             }
         }
     }
@@ -90,9 +89,9 @@ private data class NotificationTarget(val threadId: Long, val address: String)
 private fun BeaconNav(
     vm: SmsViewModel,
     themeVm: ThemeViewModel,
-    themeState: ThemeState,
     notificationTarget: androidx.compose.runtime.MutableState<NotificationTarget?>
 ) {
+    val themeState = themeVm.themeState
     val navController = rememberNavController()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

@@ -17,6 +17,7 @@ import com.RingerSong.free.R
 import com.RingerSong.free.data.AppStateStore
 import com.RingerSong.free.data.SongEntry
 import com.RingerSong.free.data.SongSource
+import com.RingerSong.free.data.SpotifyDownloaderRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -230,31 +231,18 @@ class RingerPlaybackService : Service() {
     }
 
     private suspend fun playSpotifySong(song: SongEntry, startMs: Long, durationMs: Long) {
-        // Direct streaming implementation using Spotify App Remote
-        Log.d(TAG, "Attempting to stream Spotify song: ${song.title} (${song.uri})")
-
-        val success = spotifyPlayer.playUri(song.uri, startMs)
-
-        if (success) {
-            this@RingerPlaybackService.isPlaying = true
-            Log.d(TAG, "Spotify stream started successfully")
-
-            // Schedule stop with cancellable job
-            playbackJob = scope.launch {
-                delay(durationMs)
-                Log.d(TAG, "Segment playback complete (Spotify)")
-                stopPlayback()
-                restoreSystemRinger()
-                stopForeground(true)
-                stopSelf()
-            }
-        } else {
-            Log.e(TAG, "Failed to stream Spotify song")
-            stopPlayback()
-            restoreSystemRinger()
-            stopForeground(true)
-            stopSelf()
+        val localPath = SpotifyDownloaderRepository(this).getLocalFilePathFromUri(song.uri)
+        if (localPath != null) {
+            Log.d(TAG, "Playing downloaded Spotify track: ${song.title} ($localPath)")
+            playLocalSong(song.copy(uri = localPath), startMs, durationMs)
+            return
         }
+
+        Log.e(TAG, "Spotify track not downloaded: ${song.title} (${song.uri})")
+        stopPlayback()
+        restoreSystemRinger()
+        stopForeground(true)
+        stopSelf()
     }
 
     private fun playLocalSong(song: SongEntry, startMs: Long, durationMs: Long) {
