@@ -276,10 +276,15 @@ private fun LinkStatusSection(
                                 onClick = {
                                     val rawSubject = "Override Instructions"
                                     val rawBody = "You have been set as a trusted contact. Even without the PulseLink app, you can trigger an emergency alert on my phone by texting exactly:\n\n'pulselink ${contact.remotePin} emergency'\n\nto my number."
-                                    val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                        data = Uri.parse(EmailUtils.createMailtoUriString(contact.email, rawSubject, rawBody))
+                                    // Use ACTION_SEND with selector to ensure it targets email apps but handles Extras correctly
+                                    val emailIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "message/rfc822"
+                                        putExtra(Intent.EXTRA_EMAIL, arrayOf(contact.email))
                                         putExtra(Intent.EXTRA_SUBJECT, rawSubject)
                                         putExtra(Intent.EXTRA_TEXT, rawBody)
+                                        selector = Intent(Intent.ACTION_SENDTO).apply {
+                                            data = Uri.parse("mailto:")
+                                        }
                                     }
                                     try {
                                         context.startActivity(emailIntent)
