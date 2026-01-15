@@ -17,6 +17,7 @@ import com.RingerSong.free.R
 import com.RingerSong.free.data.AppStateStore
 import com.RingerSong.free.data.SongEntry
 import com.RingerSong.free.data.SongSource
+import com.RingerSong.free.data.SpotifyDownloaderRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -230,45 +231,18 @@ class RingerPlaybackService : Service() {
     }
 
     private suspend fun playSpotifySong(song: SongEntry, startMs: Long, durationMs: Long) {
-        // Direct streaming implementation using Spotify App Remote
-        Log.d(TAG, "Attempting to stream Spotify song: ${song.title} (${song.uri})")
-
-        // Retry logic for Spotify connection
-        var success = false
-        for (attempt in 1..3) {
-            success = spotifyPlayer.playUri(song.uri, startMs)
-            if (success) break
-
-            Log.w(TAG, "Spotify connection attempt $attempt failed, retrying...")
-            if (attempt < 3) delay(500) // Wait 500ms before retrying (unless it's the last attempt)
+        val localPath = SpotifyDownloaderRepository(this).getLocalFilePathFromUri(song.uri)
+        if (localPath != null) {
+            Log.d(TAG, "Playing downloaded Spotify track: ${song.title} ($localPath)")
+            playLocalSong(song.copy(uri = localPath), startMs, durationMs)
+            return
         }
 
-        if (success) {
-            this@RingerPlaybackService.isPlaying = true
-            Log.d(TAG, "Spotify stream started successfully")
-
-            // Schedule stop with cancellable job
-            playbackJob = scope.launch {
-                delay(durationMs)
-                Log.d(TAG, "Segment playback complete (Spotify)")
-                stopPlayback()
-                restoreSystemRinger()
-                stopForeground(true)
-                stopSelf()
-            }
-        } else {
-            Log.e(TAG, "Failed to stream Spotify song after retries")
-            // Instead of stopping immediately, check if we have other options?
-            // For now, we stop to avoid silence (if the ringer wasn't silenced, the user hears nothing).
-            // But we DID silence the ringer. So the user hears NOTHING.
-            // Ideally we should play a fallback sound.
-
-            // Attempt fallback to default behavior (restore ringer)
-            stopPlayback()
-            restoreSystemRinger()
-            stopForeground(true)
-            stopSelf()
-        }
+        Log.e(TAG, "Spotify track not downloaded: ${song.title} (${song.uri})")
+        stopPlayback()
+        restoreSystemRinger()
+        stopForeground(true)
+        stopSelf()
     }
 
     private fun playLocalSong(song: SongEntry, startMs: Long, durationMs: Long) {

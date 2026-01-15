@@ -1794,9 +1794,12 @@ function App() {
   const subscriptionStatus = userData?.subscriptionStatus;
   const isPremiumUser = useMemo(() => {
     return subscriptionStatus === "premium" ||
+      subscriptionStatus === "pro" ||
       userData?.premiumUnlocked === true ||
-      userData?.hasPremiumHistory === true;
-  }, [subscriptionStatus, userData?.premiumUnlocked, userData?.hasPremiumHistory]);
+      userData?.proUnlocked === true ||
+      userData?.hasPremiumHistory === true ||
+      userData?.hasProHistory === true;
+  }, [subscriptionStatus, userData?.premiumUnlocked, userData?.proUnlocked, userData?.hasPremiumHistory, userData?.hasProHistory]);
 
   const isProUser = useMemo(() => {
     return isPremiumUser ||

@@ -6,6 +6,8 @@ import android.content.Intent
 import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.Log
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.RingerSong.free.data.AppStateStore
 import com.RingerSong.free.service.RingerPlaybackService
 import com.RingerSong.free.service.RingtoneSegmentManager
@@ -45,6 +47,10 @@ class CallStateReceiver : BroadcastReceiver() {
                 }
 
                 try {
+                    if (!canStartServiceFromBackground()) {
+                        Log.w(TAG, "Skipping playback service start; app not in foreground.")
+                        return
+                    }
                     val canStartBg = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         android.provider.Settings.canDrawOverlays(context)
                     } else {
@@ -60,7 +66,7 @@ class CallStateReceiver : BroadcastReceiver() {
                     } else {
                         Log.w(TAG, "Missing SYSTEM_ALERT_WINDOW permission. Cannot start service from background on Android 10+.")
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Log.e(TAG, "Failed to start service", e)
                 }
             }
@@ -75,9 +81,13 @@ class CallStateReceiver : BroadcastReceiver() {
                         action = RingerPlaybackService.ACTION_STOP_PLAYBACK
                     }
                     try {
-                        context.startService(serviceIntent)
-                    } catch (e: Exception) {
-                         Log.e(TAG, "Failed to send STOP intent", e)
+                        if (!canStartServiceFromBackground()) {
+                            Log.w(TAG, "Skipping stop service start; app not in foreground.")
+                        } else {
+                            context.startService(serviceIntent)
+                        }
+                    } catch (e: Throwable) {
+                        Log.e(TAG, "Failed to send STOP intent", e)
                     }
 
                     // We still keep the "Next Ringtone" logic for fallback/LOCAL support if needed,
@@ -114,13 +124,23 @@ class CallStateReceiver : BroadcastReceiver() {
                     action = RingerPlaybackService.ACTION_STOP_PLAYBACK
                 }
                 try {
-                    context.startService(serviceIntent)
-                } catch (e: Exception) {
-                     Log.e(TAG, "Failed to send STOP intent", e)
+                    if (!canStartServiceFromBackground()) {
+                        Log.w(TAG, "Skipping stop service start; app not in foreground.")
+                    } else {
+                        context.startService(serviceIntent)
+                    }
+                } catch (e: Throwable) {
+                    Log.e(TAG, "Failed to send STOP intent", e)
                 }
             }
         }
 
         lastState = phoneState
+    }
+
+    private fun canStartServiceFromBackground(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        return ProcessLifecycleOwner.get().lifecycle.currentState
+            .isAtLeast(Lifecycle.State.STARTED)
     }
 }

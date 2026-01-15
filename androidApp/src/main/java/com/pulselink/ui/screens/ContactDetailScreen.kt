@@ -278,6 +278,8 @@ private fun LinkStatusSection(
                                     val rawBody = "You have been set as a trusted contact. Even without the PulseLink app, you can trigger an emergency alert on my phone by texting exactly:\n\n'pulselink ${contact.remotePin} emergency'\n\nto my number."
                                     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
                                         data = Uri.parse(EmailUtils.createMailtoUriString(contact.email, rawSubject, rawBody))
+                                        putExtra(Intent.EXTRA_SUBJECT, rawSubject)
+                                        putExtra(Intent.EXTRA_TEXT, rawBody)
                                     }
                                     try {
                                         context.startActivity(emailIntent)

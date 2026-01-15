@@ -33,7 +33,7 @@ class SmsSyncWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val settings = settingsRepository.settings.first()
-        val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
+        val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked || BuildConfig.PRO_FEATURES || settings.proUnlocked
         val isPro = settings.proUnlocked
         val hasReadSms = hasSmsPermission()
 

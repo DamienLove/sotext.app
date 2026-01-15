@@ -135,7 +135,9 @@ class BeaconInboxActivity : ComponentActivity() {
         val subscriptionUiState by subscriptionManager.subscriptionState.collectAsStateWithLifecycle()
         val hasPremium = subscriptionUiState.isPremiumActive ||
             state.settings.premiumUnlocked ||
-            BuildConfig.PREMIUM_FEATURES
+            BuildConfig.PREMIUM_FEATURES ||
+            state.settings.proUnlocked ||
+            BuildConfig.PRO_FEATURES
         val hasPro = BuildConfig.PRO_FEATURES || state.settings.proUnlocked || state.settings.premiumUnlocked
         val isPro = hasPro || hasPremium
                 val deleteAccountState by viewModel.deleteAccountState.collectAsStateWithLifecycle()
@@ -826,9 +828,23 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val summaryState by threadViewModel.summaryState.collectAsStateWithLifecycle()
                                     val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
                                     val decodedAddress = Uri.decode(address)
+                                    val callNumber = contact?.phoneNumber
+                                        ?.takeIf { it.isNotBlank() }
+                                        ?: contact?.additionalPhones?.firstOrNull { it.isNotBlank() }
+                                        ?: decodedAddress.takeIf { it.isNotBlank() }
+                                    val onCallThread = callNumber?.let { number ->
+                                        {
+                                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                                data = Uri.parse("tel:$number")
+                                            }
+                                            context.startActivity(intent)
+                                        }
+                                    }
                                     val premiumActive = subscriptionUiState.isPremiumActive ||
                                         state.settings.premiumUnlocked ||
-                                        BuildConfig.PREMIUM_FEATURES
+                                        BuildConfig.PREMIUM_FEATURES ||
+                                        state.settings.proUnlocked ||
+                                        BuildConfig.PRO_FEATURES
                                     val threadLineId = lineId ?: deviceLineId
                                     val threadKey = "${threadLineId ?: deviceLineId}:$threadId"
                                     val fallbackLineId = defaultSendLineId ?: threadLineId ?: deviceLineId
@@ -871,9 +887,11 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onEditNotificationSound = {
                                                 navController.navigate("notifications/message_sound?address=${Uri.encode(decodedAddress)}")
                                             },
-                                            onEditNotificationVibration = {
+                                            onEditNotificationVibration = {     
                                                 navController.navigate("notifications/message_vibration?address=${Uri.encode(decodedAddress)}")
                                             },
+                                            onCall = onCallThread,
+                                            callEnabled = onCallThread != null,
                                             onEditContact = {
                                                 // Navigate to PulseLink main activity to edit contact
                                                 val intent = Intent(context, MainActivity::class.java).apply {
@@ -930,7 +948,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                 composable("beacon_settings") {
                                     val premiumActive = subscriptionUiState.isPremiumActive ||
                                         state.settings.premiumUnlocked ||
-                                        BuildConfig.PREMIUM_FEATURES
+                                        BuildConfig.PREMIUM_FEATURES ||
+                                        state.settings.proUnlocked ||
+                                        BuildConfig.PRO_FEATURES
                                     val messageSoundLabel = if (state.settings.messageNotificationSoundUri.isNullOrBlank()) {
                                         "Phone default notification"
                                     } else {
