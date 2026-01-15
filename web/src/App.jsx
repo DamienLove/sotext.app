@@ -669,19 +669,35 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
         </div>
       )}
       <div className="composer-row composer-actions">
-        <textarea
-          className="composer-textarea"
-          placeholder="Type a message... (Ctrl+Enter to send)"
-          aria-label="Message body"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          onKeyDown={(e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-        />
+        <div style={{ flex: 1, position: 'relative' }}>
+          <textarea
+            className="composer-textarea"
+            style={{ width: '100%', paddingBottom: '24px' }}
+            placeholder="Type a message... (Ctrl+Enter to send)"
+            aria-label="Message body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
+          {body.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              bottom: '8px',
+              right: '12px',
+              fontSize: '0.75em',
+              color: 'var(--muted)',
+              pointerEvents: 'none',
+              fontWeight: 500
+            }}>
+              {body.length}
+            </div>
+          )}
+        </div>
         <button
           onClick={handleSendMessage}
           disabled={isSending || isLoggingIn}
