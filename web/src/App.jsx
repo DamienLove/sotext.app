@@ -741,10 +741,57 @@ const defaultTheme = {
   appBackgroundGradientEnd: null,
   fontScale: 1.0,
   backgroundImageUrl: null,
-  iconOverrides: {}
+  iconOverrides: {},
+  useGlassEffect: true,
+  useHolographicGlow: true,
+  uiDensity: 'Comfortable'
 };
 
 const themePresets = [
+  {
+    name: "Future Hologram",
+    theme: {
+      fontStyle: "Default",
+      bubbleCornerRadius: 24,
+      appBackgroundGradientStart: "#0F172A",
+      appBackgroundGradientEnd: "#1E1B4B",
+      onBackground: "#E2E8F0",
+      topBarColor: "#0F172A",
+      onTopBarColor: "#E2E8F0",
+      bubbleOutgoing: "#22D3EE",
+      onBubbleOutgoing: "#FFFFFF",
+      bubbleIncoming: "#312E81",
+      onBubbleIncoming: "#E2E8F0",
+      primaryColor: "#22D3EE",
+      secondaryColor: "#D8B4FE",
+      dividerColor: "#1E293B",
+      inboxIconVariant: "neon_noir",
+      useGlassEffect: true,
+      useHolographicGlow: true,
+      uiDensity: "Comfortable"
+    }
+  },
+  {
+    name: "Neon Cyber",
+    theme: {
+      fontStyle: "Monospace",
+      bubbleCornerRadius: 4,
+      backgroundColor: "#000000",
+      onBackground: "#00FF41",
+      topBarColor: "#000000",
+      onTopBarColor: "#00FF41",
+      bubbleOutgoing: "#003B00",
+      onBubbleOutgoing: "#00FF41",
+      bubbleIncoming: "#0D0D0D",
+      onBubbleIncoming: "#00FF41",
+      primaryColor: "#00FF41",
+      secondaryColor: "#008F11",
+      dividerColor: "#003B00",
+      inboxIconVariant: "midnight_oled",
+      useHolographicGlow: true,
+      uiDensity: "Compact"
+    }
+  },
   {
     name: "Default Light",
     theme: {
@@ -1325,7 +1372,10 @@ const normalizeTheme = (input = {}) => ({
   appBackgroundGradientStart: input.appBackgroundGradientStart ?? defaultTheme.appBackgroundGradientStart,
   appBackgroundGradientEnd: input.appBackgroundGradientEnd ?? defaultTheme.appBackgroundGradientEnd,
   backgroundImageUrl: input.backgroundImageUrl ?? defaultTheme.backgroundImageUrl,
-  iconOverrides: input.iconOverrides ?? defaultTheme.iconOverrides
+  iconOverrides: input.iconOverrides ?? defaultTheme.iconOverrides,
+  useGlassEffect: input.useGlassEffect ?? defaultTheme.useGlassEffect,
+  useHolographicGlow: input.useHolographicGlow ?? defaultTheme.useHolographicGlow,
+  uiDensity: input.uiDensity ?? defaultTheme.uiDensity
 });
 
 const buildThemeVars = (theme) => {
@@ -3148,7 +3198,7 @@ function App() {
 
   if (!user) {
     return (
-      <div className="app-shell" style={themeVars}>
+      <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
         <div className="noise-overlay" />
         {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
         <a href="#main-content" className="skip-link">Skip to main content</a>
@@ -3244,7 +3294,7 @@ function App() {
   }
 
   return (
-    <div className="app-shell" style={themeVars}>
+    <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
       <div className="noise-overlay" />
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
       <a href="#main-content" className="skip-link">Skip to main content</a>
