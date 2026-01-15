@@ -42,7 +42,14 @@ export const onMessageCreated = functions.firestore
       };
 
       // Add optional fields if present
-      if (message.body) dataPayload.body = message.body;
+      if (message.body) {
+        // Sentinel: Truncate body to prevent FCM payload size limit errors
+        // (4KB limit). If the body is too large, notifications will fail.
+        const maxBodyLength = 1000;
+        dataPayload.body = message.body.length > maxBodyLength ?
+            message.body.substring(0, maxBodyLength) + "..." :
+            message.body;
+      }
       if (message.linkCode) dataPayload.linkCode = message.linkCode;
 
       const payload = {
