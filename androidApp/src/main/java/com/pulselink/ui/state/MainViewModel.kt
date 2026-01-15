@@ -1267,7 +1267,10 @@ class MainViewModel @Inject constructor(
             dividerColor = map["dividerColor"] as? String,
             appBackgroundGradientStart = map["appBackgroundGradientStart"] as? String,
             appBackgroundGradientEnd = map["appBackgroundGradientEnd"] as? String,
-            fontScale = (map["fontScale"] as? Number)?.toFloat() ?: defaults.fontScale
+            fontScale = (map["fontScale"] as? Number)?.toFloat() ?: defaults.fontScale,
+            useGlassEffect = map["useGlassEffect"] as? Boolean ?: defaults.useGlassEffect,
+            useHolographicGlow = map["useHolographicGlow"] as? Boolean ?: defaults.useHolographicGlow,
+            uiDensity = (map["uiDensity"] as? Number)?.toFloat() ?: defaults.uiDensity
         )
     }
 
@@ -1287,7 +1290,10 @@ class MainViewModel @Inject constructor(
             "onBackground" to theme.onBackground,
             "topBarColor" to theme.topBarColor,
             "onTopBarColor" to theme.onTopBarColor,
-            "fontScale" to theme.fontScale
+            "fontScale" to theme.fontScale,
+            "useGlassEffect" to theme.useGlassEffect,
+            "useHolographicGlow" to theme.useHolographicGlow,
+            "uiDensity" to theme.uiDensity
         )
         theme.bubbleCornerRadiusTopStart?.let { payload["bubbleCornerRadiusTopStart"] = it }
         theme.bubbleCornerRadiusTopEnd?.let { payload["bubbleCornerRadiusTopEnd"] = it }

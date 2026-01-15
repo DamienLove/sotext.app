@@ -113,5 +113,8 @@ data class ThemePreferences(
     val appBackgroundGradientEnd: String? = null,
     val fontScale: Float = 1.0f,
     val backgroundImageUrl: String? = null,
-    val iconOverrides: Map<String, String> = emptyMap()
+    val iconOverrides: Map<String, String> = emptyMap(),
+    val useGlassEffect: Boolean = false,
+    val useHolographicGlow: Boolean = false,
+    val uiDensity: String = "Comfortable"
 )

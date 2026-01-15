@@ -879,7 +879,7 @@ private fun MessageBubble(
     onAvatarClick: (() -> Unit)? = null
 ) {
     val isOutgoing = msg.outgoing
-    val bubbleColor = if (isOutgoing) {
+    val rawBubbleColor = if (isOutgoing) {
         parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)
     } else {
         parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming)
@@ -916,6 +916,40 @@ private fun MessageBubble(
     }
 
     val fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
+
+    // Advanced Effects Logic
+    val bubbleColor = if (theme.useGlassEffect) {
+        rawBubbleColor.copy(alpha = 0.65f)
+    } else {
+        rawBubbleColor
+    }
+
+    var bubbleModifier: Modifier = Modifier
+    if (theme.useGlassEffect) {
+         bubbleModifier = bubbleModifier.border(
+            BorderStroke(1.dp, Brush.verticalGradient(
+                listOf(Color.White.copy(alpha = 0.4f), Color.White.copy(alpha = 0.1f))
+            )),
+            shape
+         )
+    }
+
+    if (theme.useHolographicGlow) {
+         val glowColor = if (isOutgoing) rawBubbleColor else parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+         bubbleModifier = bubbleModifier.border(
+             BorderStroke(
+                 1.dp,
+                 Brush.linearGradient(
+                     listOf(
+                         glowColor.copy(alpha = 0.3f),
+                         glowColor.copy(alpha = 0.8f),
+                         glowColor.copy(alpha = 0.3f)
+                     )
+                 )
+             ),
+             shape
+         )
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1000,7 +1034,8 @@ private fun MessageBubble(
             }
             Surface(
                 color = bubbleColor,
-                shape = shape
+                shape = shape,
+                modifier = bubbleModifier
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
