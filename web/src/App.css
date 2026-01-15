@@ -789,22 +789,56 @@ textarea:focus-visible,
   padding: 12px 12px 4px;
 }
 
-.sidebar-search-input {
+.sidebar-search-wrapper {
   width: 100%;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px 14px;
-  color: var(--ink);
-  font-size: 0.9em;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   transition: all 0.2s;
 }
 
-.sidebar-search-input:focus {
+.sidebar-search-wrapper:focus-within {
   background: rgba(34, 211, 238, 0.05);
   border-color: var(--accent-dim);
-  outline: none;
   box-shadow: 0 0 0 1px var(--accent-dim);
+}
+
+.sidebar-search-input-field {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  font-size: 0.9em;
+  min-width: 0;
+  padding: 0;
+  height: 20px;
+}
+
+.sidebar-search-input-field:focus {
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.sidebar-search-input-field::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.search-icon-wrapper {
+  opacity: 0.5;
+  display: flex;
+}
+
+.sidebar-search-clear-btn {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  padding: 0;
 }
 
 .thread-item {
