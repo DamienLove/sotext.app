@@ -12,7 +12,8 @@ data class SmsThreadItem(
     val unread: Boolean,
     val isPinned: Boolean = false,
     val isArchived: Boolean = false,
-    val category: ThreadCategory = ThreadCategory.PERSONAL
+    val category: ThreadCategory = ThreadCategory.PERSONAL,
+    val draftSnippet: String? = null
 )
 
 data class SmsMessageItem(

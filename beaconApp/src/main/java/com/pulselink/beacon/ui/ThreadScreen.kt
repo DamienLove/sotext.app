@@ -40,6 +40,8 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Block
@@ -99,6 +101,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import android.content.Intent
 import android.net.Uri
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +112,9 @@ fun ThreadScreen(
     starredMessageIds: Set<Long> = emptySet(),
     theme: ThemePalette,
     pendingMessage: SmsViewModel.PendingMessage? = null,
+    initialDraft: String? = null,
+    isDraftsLoaded: Boolean = false,
+    onSaveDraft: (String) -> Unit = {},
     onBack: () -> Unit,
     onSend: (String) -> Unit,
     onCancelPending: () -> Unit = {},
@@ -123,6 +129,25 @@ fun ThreadScreen(
     onBlock: () -> Unit = {}
 ) {
     var draft by remember { mutableStateOf("") }
+    var draftLoaded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isDraftsLoaded, initialDraft) {
+        if (!draftLoaded && isDraftsLoaded) {
+            draft = initialDraft.orEmpty()
+            draftLoaded = true
+        }
+    }
+
+    LaunchedEffect(draft) {
+        if (draftLoaded) {
+            delay(500)
+            onSaveDraft(draft)
+        }
+    }
+
+    var showSearch by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
@@ -141,18 +166,28 @@ fun ThreadScreen(
         }
     }
 
+    // Filter Items
+    val filteredItems = remember(uiItems, searchQuery) {
+        if (searchQuery.isBlank()) uiItems else uiItems.filter {
+            when(it) {
+                is ThreadUiItem.Message -> it.message.body.contains(searchQuery, true)
+                is ThreadUiItem.DateHeader -> true
+            }
+        }
+    }
+
     // Auto-scroll logic for new messages
     // Trigger only when the size changes or the latest item ID changes
     var showMenu by remember { mutableStateOf(false) }
 
-    val latestItemId = uiItems.firstOrNull()?.let {
+    val latestItemId = filteredItems.firstOrNull()?.let {
         when(it) {
             is ThreadUiItem.Message -> it.message.id
             is ThreadUiItem.DateHeader -> it.date.hashCode().toLong()
         }
     }
-    LaunchedEffect(uiItems.size, latestItemId) {
-        if (uiItems.isNotEmpty()) {
+    LaunchedEffect(filteredItems.size, latestItemId) {
+        if (filteredItems.isNotEmpty()) {
              // If near bottom, auto-scroll to show new message
              if (listState.firstVisibleItemIndex < AUTO_SCROLL_THRESHOLD) {
                 listState.animateScrollToItem(0)
@@ -231,6 +266,16 @@ fun ThreadScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        if (showSearch) {
+                            showSearch = false
+                            searchQuery = ""
+                        } else {
+                            showSearch = true
+                        }
+                    }) {
+                        Icon(if (showSearch) Icons.Default.Close else Icons.Default.Search, contentDescription = "Search", tint = iconTint)
+                    }
                     IconButton(onClick = onCall) {
                         Icon(Icons.Default.Call, contentDescription = "Call", tint = iconTint)
                     }
@@ -278,6 +323,28 @@ fun ThreadScreen(
                 .padding(padding)
                 .background(theme.threadBackgroundColor)
         ) {
+            AnimatedVisibility(visible = showSearch) {
+                Surface(
+                    color = theme.threadBackgroundColor,
+                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+                ) {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Search in conversation") },
+                        leadingIcon = { Icon(Icons.Default.Search, null) },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = theme.frameColor.copy(alpha = 0.05f),
+                            unfocusedContainerColor = theme.frameColor.copy(alpha = 0.05f),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            }
+
             LazyColumn(
                 state = listState,
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp),
@@ -291,7 +358,7 @@ fun ThreadScreen(
                 item { Spacer(modifier = Modifier.height(8.dp)) }
 
                 items(
-                    items = uiItems,
+                    items = filteredItems,
                     key = { item ->
                         when(item) {
                             is ThreadUiItem.Message -> item.message.id

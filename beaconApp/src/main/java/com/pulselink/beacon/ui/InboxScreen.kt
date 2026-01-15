@@ -1040,12 +1040,17 @@ private fun ThreadRow(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val draft = thread.draftSnippet
+                    val isDraft = !draft.isNullOrBlank()
+                    val snippetText = if (isDraft) "Draft: $draft" else if (thread.snippet.isBlank()) "Media" else thread.snippet
+                    val snippetColor = if (isDraft) theme.accentColor else if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.6f)
+
                     Text(
-                        text = if (thread.snippet.isBlank()) "Media" else thread.snippet,
+                        text = snippetText,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
-                        fontWeight = if (thread.unread) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.6f),
+                        fontWeight = if (thread.unread || isDraft) FontWeight.SemiBold else FontWeight.Normal,
+                        color = snippetColor,
                         modifier = Modifier.weight(1f)
                     )
 
