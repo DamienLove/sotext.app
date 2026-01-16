@@ -226,6 +226,10 @@ class RingerPlaybackService : Service() {
                 SongSource.SPOTIFY -> playSpotifySong(song, segmentPlay.startMs, segmentPlay.durationMs)
                 SongSource.LOCAL -> playLocalSong(song, segmentPlay.startMs, segmentPlay.durationMs)
                 SongSource.YOUTUBE_MUSIC -> playYouTubeSong(song, segmentPlay.startMs, segmentPlay.durationMs)
+                else -> {
+                    Log.w(TAG, "Unsupported song source: ${song.source}")
+                    stopSelf()
+                }
             }
         }
     }
