@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2026-01-16: Web - compacted overall UI spacing and typography (panel padding, headers, cards, buttons, search, map height, theme editor) to reduce vertical bloat; deployed Firebase Hosting (pulselink-24899.web.app).
 - 2026-01-16: Web - made the web access banner dismissible with a close button and persisted the dismissal in localStorage; deployed Firebase Hosting (pulselink-24899.web.app).
 - 2026-01-16: Web - reduced card and login sizing across modules (smaller home cards, settings cards, login form) and capped login card height for smaller viewports; deployed Firebase Hosting (pulselink-24899.web.app).
 - 2026-01-16: v141 - unblock web SMS sync: web now shows sync diagnostics and can request a phone sync (also forces remoteWebAccessEnabled on the user doc); Android honors cloud remote-web flag when handling sync requests so a web request triggers sync even if the local toggle was off. Bumped versionCode/Name to 141; ran .\gradlew testFreeDebugUnitTest; built free/pro release AABs (disposable_aabs/androidApp-*-release-v141.aab) and uploaded to Play internal/beta/production via upload_play.py; web rebuilt and Firebase Hosting deployed (pulselink-24899.web.app).
