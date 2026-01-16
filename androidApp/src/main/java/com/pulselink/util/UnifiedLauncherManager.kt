@@ -156,7 +156,13 @@ object UnifiedLauncherManager {
 
     private fun isComponentEnabled(pm: PackageManager, component: ComponentName): Boolean =
         try {
-            pm.getActivityInfo(component, 0).enabled
+            val state = pm.getComponentEnabledSetting(component)
+            // COMPONENT_ENABLED_STATE_DEFAULT means use manifest value, check that too
+            if (state == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
+                pm.getActivityInfo(component, 0).enabled
+            } else {
+                state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Unable to read component enabled state for ${component.className}", e)
             false
