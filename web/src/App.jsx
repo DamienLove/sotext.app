@@ -2229,9 +2229,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
-    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
-
-    if (!user || !isPremiumUser || !hasRemoteAccess) {
+    if (!user) {
       setDeviceContacts([]);
       return;
     }
@@ -2245,89 +2243,87 @@ function App() {
       setDeviceContacts(items);
     });
     return () => unsubscribe();
-  }, [user, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
+  }, [user]);
 
   useEffect(() => {
-    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
-
-    if (user && isPremiumUser && hasRemoteAccess) {
-      setIsLoadingThreads(true);
-      // Legacy single-line threads (synced_threads)
-      const legacyRef = collection(db, "users", user.uid, "synced_threads");
-      const legacyQuery = query(legacyRef, orderBy("date", "desc"));
-      const unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
-        const threadsData = snapshot.docs.map(doc => ({ id: doc.id, lineId: null, ...doc.data() }));
-        setLegacyThreads(threadsData);
-        // Only set loading to false if we have at least legacy threads or lines have also loaded.
-        // But for simplicity, we can set it to false here as we have *some* data.
-        // A better approach would be to wait for both, but onSnapshot is async.
-        // Let's assume lines load quickly or we just wait for the first data update.
-        setIsLoadingThreads(false);
-      });
-
-      // Multi-device: lines/{lineId}/threads
-      const linesRef = collection(db, "users", user.uid, "lines");
-      const threadUnsubs = new Map();
-
-      const attachLine = (lineId) => {
-        if (threadUnsubs.has(lineId)) return;
-        const lineThreadsRef = collection(db, "users", user.uid, "lines", lineId, "threads");
-        const lineQuery = query(lineThreadsRef, orderBy("date", "desc"));
-        const unsub = onSnapshot(lineQuery, (snapshot) => {
-          const items = snapshot.docs.map(doc => ({ id: doc.id, lineId, ...doc.data() }));
-          setLineThreads((prev) => ({ ...prev, [lineId]: items }));
-        });
-        threadUnsubs.set(lineId, unsub);
-      };
-
-      const detachAll = () => {
-        threadUnsubs.forEach((u) => u());
-        threadUnsubs.clear();
-      };
-
-      const unsubscribeLines = onSnapshot(linesRef, (snapshot) => {
-        const lineItems = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(line => line.disabled !== true);
-        setLines(lineItems);
-
-        // Attach listeners for new/active lines
-        lineItems.forEach(line => attachLine(line.id));
-
-        // Detach listeners for removed or disabled lines
-        const activeIds = new Set(lineItems.map(l => l.id));
-        // Safe iteration: collect IDs to remove first
-        const idsToRemove = Array.from(threadUnsubs.keys()).filter(id => !activeIds.has(id));
-
-        if (idsToRemove.length > 0) {
-          idsToRemove.forEach(id => {
-            const unsub = threadUnsubs.get(id);
-            if (unsub) unsub();
-            threadUnsubs.delete(id);
-          });
-
-          setLineThreads(prev => {
-            const next = { ...prev };
-            idsToRemove.forEach(id => delete next[id]);
-            return next;
-          });
-        }
-
-        setIsLoadingThreads(false);
-      });
-
-      return () => {
-        unsubscribeLegacy();
-        unsubscribeLines();
-        detachAll();
-      };
-    } else {
+    if (!user) {
       setLegacyThreads([]);
       setLines([]);
       setLineThreads({});
       setIsLoadingThreads(false);
+      return;
     }
-  }, [user, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
+    setIsLoadingThreads(true);
+    // Legacy single-line threads (synced_threads)
+    const legacyRef = collection(db, "users", user.uid, "synced_threads");
+    const legacyQuery = query(legacyRef, orderBy("date", "desc"));
+    const unsubscribeLegacy = onSnapshot(legacyQuery, (snapshot) => {
+      const threadsData = snapshot.docs.map(doc => ({ id: doc.id, lineId: null, ...doc.data() }));
+      setLegacyThreads(threadsData);
+      // Only set loading to false if we have at least legacy threads or lines have also loaded.
+      // But for simplicity, we can set it to false here as we have *some* data.
+      // A better approach would be to wait for both, but onSnapshot is async.
+      // Let's assume lines load quickly or we just wait for the first data update.
+      setIsLoadingThreads(false);
+    });
+
+    // Multi-device: lines/{lineId}/threads
+    const linesRef = collection(db, "users", user.uid, "lines");
+    const threadUnsubs = new Map();
+
+    const attachLine = (lineId) => {
+      if (threadUnsubs.has(lineId)) return;
+      const lineThreadsRef = collection(db, "users", user.uid, "lines", lineId, "threads");
+      const lineQuery = query(lineThreadsRef, orderBy("date", "desc"));
+      const unsub = onSnapshot(lineQuery, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, lineId, ...doc.data() }));
+        setLineThreads((prev) => ({ ...prev, [lineId]: items }));
+      });
+      threadUnsubs.set(lineId, unsub);
+    };
+
+    const detachAll = () => {
+      threadUnsubs.forEach((u) => u());
+      threadUnsubs.clear();
+    };
+
+    const unsubscribeLines = onSnapshot(linesRef, (snapshot) => {
+      const lineItems = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(line => line.disabled !== true);
+      setLines(lineItems);
+
+      // Attach listeners for new/active lines
+      lineItems.forEach(line => attachLine(line.id));
+
+      // Detach listeners for removed or disabled lines
+      const activeIds = new Set(lineItems.map(l => l.id));
+      // Safe iteration: collect IDs to remove first
+      const idsToRemove = Array.from(threadUnsubs.keys()).filter(id => !activeIds.has(id));
+
+      if (idsToRemove.length > 0) {
+        idsToRemove.forEach(id => {
+          const unsub = threadUnsubs.get(id);
+          if (unsub) unsub();
+          threadUnsubs.delete(id);
+        });
+
+        setLineThreads(prev => {
+          const next = { ...prev };
+          idsToRemove.forEach(id => delete next[id]);
+          return next;
+        });
+      }
+
+      setIsLoadingThreads(false);
+    });
+
+    return () => {
+      unsubscribeLegacy();
+      unsubscribeLines();
+      detachAll();
+    };
+  }, [user]);
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
@@ -2350,10 +2346,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const hasRemoteAccess = remoteSettings.remoteWebAccessEnabled;
-
-    if (user && selectedThread && isPremiumUser && hasRemoteAccess) {
-      // Listen to messages only if user has premium and remote web access enabled
+    if (user && selectedThread) {
+      // Listen to messages for the selected thread
       const basePath = selectedThread.lineId
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
         : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
@@ -2370,7 +2364,7 @@ function App() {
     } else {
       setMessages([]);
     }
-  }, [user, selectedThread, isPremiumUser, remoteSettings.remoteWebAccessEnabled]);
+  }, [user, selectedThread]);
 
 
   // Auto-scroll to bottom when messages change
@@ -3210,6 +3204,7 @@ function App() {
 
   const isPremium = isPremiumUser;
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
+  const hasBeaconData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
 
   const navLogo = useMemo(() => {
      if (remoteSettings.mergedExperienceEnabled) {
@@ -4409,7 +4404,7 @@ function App() {
           )}
 
           {activePanel === 'beacon' && (
-            isPremium ? (
+            hasBeaconData ? (
               <>
       {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
         <div className="line-tabs line-tabs--main">

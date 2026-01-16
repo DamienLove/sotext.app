@@ -272,13 +272,15 @@ class SmsSyncWorker @AssistedInject constructor(
 
     private fun hasSmsPermission(): Boolean {
         val ctx = applicationContext
-        val perms = listOf(
-            android.Manifest.permission.READ_SMS,
-            android.Manifest.permission.RECEIVE_SMS,
-            android.Manifest.permission.SEND_SMS
-        )
-        return perms.all { perm ->
-            ContextCompat.checkSelfPermission(ctx, perm) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val readGranted = ContextCompat.checkSelfPermission(
+            ctx,
+            android.Manifest.permission.READ_SMS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (readGranted) return true
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            Telephony.Sms.getDefaultSmsPackage(ctx) == ctx.packageName
+        } else {
+            true
         }
     }
 
