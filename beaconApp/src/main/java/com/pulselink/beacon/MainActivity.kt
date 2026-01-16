@@ -240,7 +240,13 @@ private fun BeaconNav(
                     userMessage = vm.userMessage,
                     onClearUserMessage = { vm.clearUserMessage() },
                     delayedSendTimeout = vm.delayedSendTimeout,
-                    onSetDelayedSendTimeout = { vm.setDelayedSendTimeout(it) }
+                    onSetDelayedSendTimeout = { vm.setDelayedSendTimeout(it) },
+                    autoReplyEnabled = vm.autoReplyEnabled,
+                    autoReplyMessage = vm.autoReplyMessage,
+                    quickReplies = vm.quickReplies,
+                    onSetAutoReplyEnabled = { vm.setAutoReplyEnabled(it) },
+                    onSetAutoReplyMessage = { vm.setAutoReplyMessage(it) },
+                    onUpdateQuickReplies = { vm.updateQuickReplies(it) }
                 )
             }
             composable(
@@ -265,6 +271,7 @@ private fun BeaconNav(
                         pendingMessage = vm.pendingMessage,
                         initialDraft = vm.getDraftForThread(threadId),
                         isDraftsLoaded = vm.isDraftsLoaded,
+                        quickReplies = vm.quickReplies,
                         onSaveDraft = { vm.saveDraft(threadId, it) },
                         onBack = { navController.popBackStack() },
                         onSend = { vm.sendDelayedMessage(it) },

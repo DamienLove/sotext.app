@@ -146,18 +146,61 @@ fun InboxScreen(
     userMessage: String? = null,
     onClearUserMessage: () -> Unit = {},
     delayedSendTimeout: Int = 5,
-    onSetDelayedSendTimeout: (Int) -> Unit = {}
+    onSetDelayedSendTimeout: (Int) -> Unit = {},
+    autoReplyEnabled: Boolean = false,
+    autoReplyMessage: String = "",
+    quickReplies: List<String> = emptyList(),
+    onSetAutoReplyEnabled: (Boolean) -> Unit = {},
+    onSetAutoReplyMessage: (String) -> Unit = {},
+    onUpdateQuickReplies: (List<String>) -> Unit = {}
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var navigatedFromSearch by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showQuickRepliesDialog by remember { mutableStateOf(false) }
     val iconTint = theme.accentColor
 
     LaunchedEffect(userMessage) {
         userMessage?.let {
             host.showSnackbar(it)
             onClearUserMessage()
+        }
+    }
+
+    if (showQuickRepliesDialog) {
+        var editedReplies by remember { mutableStateOf(quickReplies.joinToString("\n")) }
+        Dialog(onDismissRequest = { showQuickRepliesDialog = false }) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                tonalElevation = 6.dp,
+                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)
+            ) {
+                Column(Modifier.padding(24.dp)) {
+                    Text("Edit Quick Replies", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Enter one reply per line:", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = editedReplies,
+                        onValueChange = { editedReplies = it },
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = theme.accentColor,
+                            cursorColor = theme.accentColor
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showQuickRepliesDialog = false }) { Text("Cancel") }
+                        TextButton(onClick = {
+                            val newList = editedReplies.split("\n").map { it.trim() }.filter { it.isNotBlank() }
+                            onUpdateQuickReplies(newList)
+                            showQuickRepliesDialog = false
+                        }) { Text("Save") }
+                    }
+                }
+            }
         }
     }
 
@@ -193,6 +236,53 @@ fun InboxScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = theme.frameColor.copy(alpha = 0.6f)
                     )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    androidx.compose.material3.HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Auto Reply", fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.weight(1f))
+                        androidx.compose.material3.Switch(
+                            checked = autoReplyEnabled,
+                            onCheckedChange = onSetAutoReplyEnabled,
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = theme.accentColor,
+                                checkedTrackColor = theme.accentColor.copy(alpha = 0.3f)
+                            )
+                        )
+                    }
+
+                    if (autoReplyEnabled) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = autoReplyMessage,
+                            onValueChange = onSetAutoReplyMessage,
+                            label = { Text("Auto Reply Message") },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = theme.accentColor,
+                                focusedLabelColor = theme.accentColor,
+                                cursorColor = theme.accentColor
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = {
+                            showSettingsDialog = false
+                            showQuickRepliesDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Customize Quick Replies", color = theme.frameColor)
+                    }
 
                     Spacer(modifier = Modifier.height(24.dp))
                     TextButton(onClick = { showSettingsDialog = false }) {

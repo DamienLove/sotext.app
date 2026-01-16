@@ -120,6 +120,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private var inboxState: InboxState = InboxState()
 
     val delayedSendTimeout: Int get() = inboxState.delayedSendTimeout
+    val autoReplyEnabled: Boolean get() = inboxState.autoReplyEnabled
+    val autoReplyMessage: String get() = inboxState.autoReplyMessage
+    val quickReplies: List<String> get() = inboxState.quickReplies
 
     // Filtered state
     var filteredThreads by mutableStateOf<List<SmsThreadItem>>(emptyList())
@@ -450,6 +453,24 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun setDelayedSendTimeout(seconds: Int) {
         viewModelScope.launch {
             inboxPrefs.setDelayedSendTimeout(seconds)
+        }
+    }
+
+    fun setAutoReplyEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            inboxPrefs.setAutoReplyEnabled(enabled)
+        }
+    }
+
+    fun setAutoReplyMessage(message: String) {
+        viewModelScope.launch {
+            inboxPrefs.setAutoReplyMessage(message)
+        }
+    }
+
+    fun updateQuickReplies(replies: List<String>) {
+        viewModelScope.launch {
+            inboxPrefs.setQuickReplies(replies)
         }
     }
 

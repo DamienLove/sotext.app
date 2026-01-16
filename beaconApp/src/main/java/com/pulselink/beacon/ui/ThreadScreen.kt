@@ -114,6 +114,7 @@ fun ThreadScreen(
     pendingMessage: SmsViewModel.PendingMessage? = null,
     initialDraft: String? = null,
     isDraftsLoaded: Boolean = false,
+    quickReplies: List<String> = emptyList(),
     onSaveDraft: (String) -> Unit = {},
     onBack: () -> Unit,
     onSend: (String) -> Unit,
@@ -196,9 +197,7 @@ fun ThreadScreen(
     }
 
     val iconTint = theme.accentColor
-    val quickReplies = remember {
-        listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?")
-    }
+    // Using passed quickReplies list
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState()
