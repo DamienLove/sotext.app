@@ -94,7 +94,8 @@ class SmsSyncWorker @AssistedInject constructor(
 
             var syncedThreads = 0
             var syncedMessages = 0
-            val threads = smsRepository.listThreads(limit = 50)
+            val threadLimit = if (isPremium) 200 else 50
+            val threads = smsRepository.listThreads(limit = threadLimit)
             val lineThreadsRef = lineRef.collection("threads")
 
             // Identify existing threads in Firestore to delete those that are no longer present (or dropped out of top 50)
@@ -154,7 +155,8 @@ class SmsSyncWorker @AssistedInject constructor(
                 lineThreadDoc.set(threadData, SetOptions.merge()).await()
                 syncedThreads++
 
-                val messages = smsRepository.messagesForThread(thread.threadId, limit = 200)
+                val messageLimit = if (isPremium) 500 else 200
+                val messages = smsRepository.messagesForThread(thread.threadId, limit = messageLimit)
                 val lineMessagesRef = lineThreadDoc.collection("messages")
                 val lineBatch = firestore.batch()
                 var batchCount = 0
