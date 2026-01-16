@@ -4216,6 +4216,7 @@ function App() {
                                   settingsUpdatedAt: serverTimestamp()
                                 }, { merge: true });
                               }}
+                              aria-label={isEnabled ? `Remove ${ext.name}` : `Install ${ext.name}`}
                             >
                               {isEnabled ? "Remove" : "Install"}
                             </button>
