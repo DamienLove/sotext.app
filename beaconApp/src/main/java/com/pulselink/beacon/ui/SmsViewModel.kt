@@ -21,7 +21,8 @@ import com.pulselink.beacon.data.scheduled.ScheduledMessage
 import com.pulselink.beacon.data.scheduled.MessageReaction
 import com.pulselink.beacon.data.scheduled.MessageStar
 import com.pulselink.beacon.data.scheduled.BlockedNumber
-import com.pulselink.beacon.data.scheduled.MessageStatus
+import com.pulselink.beacon.data.scheduled.MessageStatus as ScheduledStatus
+import com.pulselink.beacon.data.MessageStatus
 import com.pulselink.beacon.data.scheduled.ThreadDraft
 import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.util.ThreadDateUtils
@@ -33,6 +34,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 
 sealed class SearchResultState {
     object Idle : SearchResultState()
@@ -82,6 +84,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     // Keep raw messages for internal logic
     private var rawMessages = emptyList<SmsMessageItem>()
+
+    // Pending messages (Optimistic UI)
+    private val pendingOutgoingMessages = mutableListOf<SmsMessageItem>()
 
     var currentThreadId by mutableStateOf<Long?>(null)
         private set
@@ -384,8 +389,24 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun refreshThread(threadId: Long, refreshRead: Boolean) {
         viewModelScope.launch {
-            rawMessages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
+            val dbMessages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
                 .getOrElse { emptyList() }
+
+            // Deduplicate pending messages: remove if found in DB
+            pendingOutgoingMessages.removeAll { pending ->
+                // Check if any DB message matches (body + similar timestamp)
+                dbMessages.any { db ->
+                    db.outgoing && db.body == pending.body && abs(db.timestamp - pending.timestamp) < 10000
+                }
+            }
+
+            // Merge pending messages for this thread
+            val pendingForThread = pendingOutgoingMessages.filter {
+                if (threadId == 0L) it.address == currentAddress else it.threadId == threadId
+            }
+
+            rawMessages = (pendingForThread + dbMessages).sortedByDescending { it.timestamp }
+
             // Transform for UI (Group by Date)
             uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages)
 
@@ -497,13 +518,43 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         val addr = currentAddress.ifBlank { rawMessages.lastOrNull()?.address.orEmpty() }
         if (addr.isBlank()) return
 
+        // Optimistic UI
+        val tempId = System.currentTimeMillis()
+        val pending = SmsMessageItem(
+            id = tempId,
+            threadId = currentThreadId ?: 0L,
+            address = addr,
+            body = body,
+            timestamp = System.currentTimeMillis(),
+            outgoing = true,
+            status = MessageStatus.SENDING
+        )
+        pendingOutgoingMessages.add(0, pending)
+
+        // Immediate UI Update
+        currentThreadId?.let {
+            deleteDraft(it)
+            refreshThread(it, refreshRead = false) // Don't mark read triggered by self-send
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             val ok = runCatching { repo.sendSms(addr, body) }.getOrDefault(false)
             if (ok) {
+                // Success: The ContentObserver will trigger refreshThread, which will eventually find the real message
+                // and remove the pending one.
                 withContext(Dispatchers.Main) {
-                    currentThreadId?.let {
-                        deleteDraft(it)
-                        refreshThread(it, refreshRead = true)
+                    // We could mark it as SENT here if we wanted to keep it until DB update
+                    // But relying on DB update is safer for consistency.
+                    // Trigger refresh just in case observer is slow?
+                    // currentThreadId?.let { refreshThread(it, refreshRead = true) }
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    // Mark failed
+                    val index = pendingOutgoingMessages.indexOfFirst { it.id == tempId }
+                    if (index != -1) {
+                        pendingOutgoingMessages[index] = pending.copy(status = MessageStatus.FAILED)
+                        currentThreadId?.let { refreshThread(it, refreshRead = false) }
                     }
                 }
             }
@@ -545,7 +596,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             val delay = scheduledTime - System.currentTimeMillis()
 
             if (delay <= 0) {
-                scheduledDao.insert(message.copy(status = MessageStatus.FAILED))
+                scheduledDao.insert(message.copy(status = ScheduledStatus.FAILED))
             } else {
                 val id = scheduledDao.insert(message)
                 val request = OneTimeWorkRequestBuilder<ScheduledMessageWorker>()
