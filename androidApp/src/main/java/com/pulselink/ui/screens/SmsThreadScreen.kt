@@ -159,7 +159,9 @@ fun SmsThreadScreen(
         derivedStateOf {
             val layout = listState.layoutInfo
             val lastVisible = layout.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= (layout.totalItemsCount - 2).coerceAtLeast(0)
+            // Consider "near bottom" if within 5 items of the end, so user isn't disrupted
+            // while reading recent messages but still gets auto-scroll for new messages
+            lastVisible >= (layout.totalItemsCount - 5).coerceAtLeast(0)
         }
     }
     val context = LocalContext.current
@@ -426,8 +428,10 @@ fun SmsThreadScreen(
         }
     }
 
-    LaunchedEffect(messages.size) {
+    LaunchedEffect(messages) {
         if (messages.isEmpty()) return@LaunchedEffect
+        // Auto-scroll to newest message if this is the initial load or if user is near the bottom
+        // This prevents disrupting users who have scrolled up to read old messages
         if (!initialScrollDone || isNearBottom) {
             listState.animateScrollToItem(0)
             initialScrollDone = true

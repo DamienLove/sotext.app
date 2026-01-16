@@ -122,6 +122,7 @@ class MainViewModel @Inject constructor(
     private var remoteSettingsListener: ListenerRegistration? = null
     private var remoteSettingsUserId: String? = null
     private var pushedThemeFromDevice = false
+    private var lastSettingsPushTimestamp: Long = 0L
 
     private val _uiState = MutableStateFlow(PulseLinkUiState())
     val uiState: StateFlow<PulseLinkUiState> = _uiState
@@ -821,6 +822,11 @@ class MainViewModel @Inject constructor(
                 if (error != null || snapshot == null || !snapshot.exists()) {
                     return@addSnapshotListener
                 }
+                // Ignore updates that happen within 2 seconds of pushing settings to avoid ping-pong effect
+                val timeSinceLastPush = System.currentTimeMillis() - lastSettingsPushTimestamp
+                if (timeSinceLastPush < 2000) {
+                    return@addSnapshotListener
+                }
                 val themeMap = snapshot.get("themePreferences") as? Map<*, *>
                 val remoteWebAccess = snapshot.getBoolean("remoteWebAccessEnabled")
                 val autoUpdate = snapshot.getBoolean("autoUpdateContactInfo")
@@ -966,6 +972,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun pushSettingsToCloud(user: FirebaseUser, payload: Map<String, Any>) {
         runCatching {
+            lastSettingsPushTimestamp = System.currentTimeMillis()
             firestore.collection(COLLECTION_USERS).document(user.uid)
                 .set(payload + mapOf("settingsUpdatedAt" to FieldValue.serverTimestamp()), SetOptions.merge())
                 .await()
