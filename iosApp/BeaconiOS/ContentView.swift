@@ -123,12 +123,20 @@ private struct BeaconTab: View {
         NavigationStack {
             VStack {
                 if filter != .private {
-                    Picker("Filter", selection: $subFilter) {
-                        ForEach(InboxSubFilter.allCases, id: \.self) { f in
-                            Text(f.rawValue).tag(f)
+                    VStack(spacing: 8) {
+                        Picker("Filter", selection: $subFilter) {
+                            ForEach(InboxSubFilter.allCases, id: \.self) { f in
+                                Text(f.rawValue).tag(f)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+
+                        if let date = viewModel.lastUpdated {
+                            Text("Synced \(date, style: .time)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
                     }
-                    .pickerStyle(.segmented)
                     .padding(.horizontal)
                     .padding(.top, 10)
                 }
