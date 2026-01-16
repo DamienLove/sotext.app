@@ -13,3 +13,7 @@
 ## 2025-02-24 - Search Index Pre-computation
 **Learning:** Filtering large arrays (like `deviceContacts`) on every keystroke using complex inline string manipulation (multiple `.toString().toLowerCase()` calls per item) causes significant main thread work.
 **Action:** Pre-compute a "search index" (e.g., a normalized string) in a separate `useMemo` that only updates when the source data changes. The filter step then becomes a simple `includes()` check, keeping the UI responsive during typing.
+
+## 2025-02-25 - Sidebar Search Isolation
+**Learning:** The `Sidebar` search state was lifted to `App.jsx`, causing the entire application (including heavy Map and Message lists) to re-render on every keystroke of the thread search input.
+**Action:** Moved the search state and filtering logic *inside* the `Sidebar` component. This isolates the high-frequency re-renders to the Sidebar itself, preventing the global app re-render, while still accepting the raw data from the parent.
