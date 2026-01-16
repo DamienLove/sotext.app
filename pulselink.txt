@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2026-01-16: Web - reduced card and login sizing across modules (smaller home cards, settings cards, login form) and capped login card height for smaller viewports; deployed Firebase Hosting (pulselink-24899.web.app).
 - 2026-01-16: v141 - unblock web SMS sync: web now shows sync diagnostics and can request a phone sync (also forces remoteWebAccessEnabled on the user doc); Android honors cloud remote-web flag when handling sync requests so a web request triggers sync even if the local toggle was off. Bumped versionCode/Name to 141; ran .\gradlew testFreeDebugUnitTest; built free/pro release AABs (disposable_aabs/androidApp-*-release-v141.aab) and uploaded to Play internal/beta/production via upload_play.py; web rebuilt and Firebase Hosting deployed (pulselink-24899.web.app).
 - 2026-01-16: v139 - hotfix for web sync: SmsSyncWorker now only requires READ_SMS/default SMS for sync; web now loads Beacon threads/messages without premium gate if data exists (listeners always attach) and device contacts load for any signed-in user; bumped versionCode/Name to 139; ran .\gradlew testFreeDebugUnitTest; built free/pro release AABs (disposable_aabs/androidApp-*-release-v139.aab) and uploaded to Play internal/beta/production via upload_play.py; web rebuilt and deployed (pulselink-24899.web.app).
 - 2026-01-16: Web - fixed sidebar placeholder so it no longer blocks nav (removed 100% height, pinned to bottom, non-interactive); rebuilt web and deployed Firebase Hosting (pulselink-24899.web.app).
