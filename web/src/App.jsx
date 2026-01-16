@@ -709,6 +709,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
           onClick={handleSendMessage}
           disabled={isSending || isLoggingIn}
           className="primary-btn"
+          title="Send (Ctrl+Enter)"
         >
           {isSending ? "Sending..." : "Send"}
         </button>
@@ -3714,6 +3715,7 @@ function App() {
                       className="secondary-btn"
                       onClick={() => setContactSearch('')}
                       aria-label="Clear search"
+                      title="Clear search"
                     >
                       Clear
                     </button>
