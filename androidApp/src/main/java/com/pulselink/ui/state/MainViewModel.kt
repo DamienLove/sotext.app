@@ -822,9 +822,8 @@ class MainViewModel @Inject constructor(
                 if (error != null || snapshot == null || !snapshot.exists()) {
                     return@addSnapshotListener
                 }
-                // Ignore updates that happen within 2 seconds of pushing settings to avoid ping-pong effect
-                val timeSinceLastPush = System.currentTimeMillis() - lastSettingsPushTimestamp
-                if (timeSinceLastPush < 2000) {
+                // Ignore updates within 2 seconds of pushing to avoid ping-pong
+                if (System.currentTimeMillis() - lastSettingsPushTimestamp < 2000) {
                     return@addSnapshotListener
                 }
                 val themeMap = snapshot.get("themePreferences") as? Map<*, *>
@@ -1277,7 +1276,7 @@ class MainViewModel @Inject constructor(
             fontScale = (map["fontScale"] as? Number)?.toFloat() ?: defaults.fontScale,
             useGlassEffect = map["useGlassEffect"] as? Boolean ?: defaults.useGlassEffect,
             useHolographicGlow = map["useHolographicGlow"] as? Boolean ?: defaults.useHolographicGlow,
-            uiDensity = (map["uiDensity"] as? Number)?.toFloat() ?: defaults.uiDensity
+            uiDensity = map["uiDensity"] as? String ?: defaults.uiDensity
         )
     }
 
