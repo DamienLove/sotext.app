@@ -88,6 +88,11 @@ fun SettingsScreen(
     onToggleAutoUpdateContactInfo: (Boolean) -> Unit,
     onToggleFirebaseMessaging: (Boolean) -> Unit,
     onToggleEmailFallback: (Boolean) -> Unit,
+    onSetOtpCleanupDays: (Int) -> Unit,
+    onChangePrivatePin: () -> Unit,
+    onToggleSmartReplies: (Boolean) -> Unit,
+    onToggleAiCompose: (Boolean) -> Unit,
+    onToggleAiUrgency: (Boolean) -> Unit,
     onRequestDefaultSms: () -> Unit,
     onToggleBeaconLauncher: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
@@ -210,18 +215,22 @@ fun SettingsScreen(
                         leadingIcon = Icons.Filled.Schedule
                     )
                 }
-                SettingsToggleRow(
-                    title = "Firebase Messaging (Faster)",
-                    subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
-                    checked = settings.firebaseMessagingEnabled,
-                    onCheckedChange = onToggleFirebaseMessaging
-                )
-                SettingsToggleRow(
-                    title = "Email Fallback",
-                    subtitle = "Send email if other channels fail.",
-                    checked = settings.emailFallbackEnabled,
-                    onCheckedChange = onToggleEmailFallback
-                )
+                if (settings.firebaseMessagingEnabled) {
+                    SettingsToggleRow(
+                        title = stringResource(R.string.extension_relay_title),
+                        subtitle = "Uses internet for instant delivery. Requires both devices to be online.",
+                        checked = settings.firebaseMessagingEnabled,
+                        onCheckedChange = onToggleFirebaseMessaging
+                    )
+                }
+                if (settings.emailFallbackEnabled) {
+                    SettingsToggleRow(
+                        title = stringResource(R.string.extension_email_backup_title),
+                        subtitle = "Send email if other channels fail.",
+                        checked = settings.emailFallbackEnabled,
+                        onCheckedChange = onToggleEmailFallback
+                    )
+                }
                 SettingsToggleRow(
                     title = "Auto-allow remote sound change",
                     subtitle = null,
@@ -241,17 +250,19 @@ fun SettingsScreen(
                     checked = settings.includeLocation,
                     onCheckedChange = onToggleIncludeLocation
                 )
-                SettingsToggleRow(
-                    title = "Crash Detection",
-                    subtitle = if (BuildConfig.CRASH_DETECTION_ENABLED) {
-                        "Alert trusted contacts if a vehicle crash is detected."
-                    } else {
-                        "Temporarily disabled while we finish review materials."
-                    },
-                    checked = settings.crashDetectionEnabled && BuildConfig.CRASH_DETECTION_ENABLED,
-                    enabled = BuildConfig.CRASH_DETECTION_ENABLED,
-                    onCheckedChange = onToggleCrashDetection
-                )
+                if (settings.crashDetectionEnabled) {
+                    SettingsToggleRow(
+                        title = "Crash Detection",
+                        subtitle = if (BuildConfig.CRASH_DETECTION_ENABLED) {
+                            "Alert trusted contacts if a vehicle crash is detected."
+                        } else {
+                            "Temporarily disabled while we finish review materials."
+                        },
+                        checked = settings.crashDetectionEnabled && BuildConfig.CRASH_DETECTION_ENABLED,
+                        enabled = BuildConfig.CRASH_DETECTION_ENABLED,
+                        onCheckedChange = onToggleCrashDetection
+                    )
+                }
                 SettingsActionRow(
                     title = stringResource(R.string.permission_battery_opt_title),
                     subtitle = null,
@@ -329,6 +340,67 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
+                }
+            }
+
+            // Smart Features & Extensions
+            if (settings.otpCleanupEnabled || settings.aiSummariesEnabled || settings.smartRepliesEnabled || settings.privateSafeEnabled) {
+                CollapsibleSettingsSection(
+                    title = "Smart Features",
+                    initiallyExpanded = false
+                ) {
+                    if (settings.otpCleanupEnabled) {
+                        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            Text(
+                                text = "OTP Cleanup",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Delete one-time passwords older than ${settings.otpCleanupDays} day${if (settings.otpCleanupDays > 1) "s" else ""}.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            androidx.compose.material3.Slider(
+                                value = settings.otpCleanupDays.toFloat(),
+                                onValueChange = { onSetOtpCleanupDays(it.toInt()) },
+                                valueRange = 1f..30f,
+                                steps = 29
+                            )
+                        }
+                    }
+                    if (settings.smartRepliesEnabled) {
+                         SettingsToggleRow(
+                            title = "Smart Replies",
+                            subtitle = "Suggest quick replies in conversations.",
+                            checked = settings.smartRepliesEnabled,
+                            onCheckedChange = onToggleSmartReplies
+                        )
+                    }
+                    if (settings.aiSummariesEnabled) {
+                         SettingsToggleRow(
+                            title = "AI Compose",
+                            subtitle = "Draft responses using AI assistance.",
+                            checked = settings.aiComposeEnabled,
+                            onCheckedChange = onToggleAiCompose
+                        )
+                        SettingsToggleRow(
+                            title = "Urgency Detection",
+                            subtitle = "Analyze incoming messages for urgency.",
+                            checked = settings.aiUrgencyEnabled,
+                            onCheckedChange = onToggleAiUrgency
+                        )
+                    }
+                    if (settings.privateSafeEnabled) {
+                        SettingsActionRow(
+                            title = "Private Safe PIN",
+                            subtitle = if (settings.privatePinHash != null) "Change your PIN" else "Set a PIN to protect private chats",
+                            actionLabel = if (settings.privatePinHash != null) "Change" else "Set",
+                            onAction = onChangePrivatePin,
+                            leadingIcon = Icons.Filled.Lock
+                        )
+                    }
                 }
             }
 
