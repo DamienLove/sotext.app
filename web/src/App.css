@@ -1495,7 +1495,10 @@ textarea:focus-visible,
   text-align: center;
   color: var(--muted);
   gap: 16px;
-  height: 100%;
+  height: auto;
+  flex: 0 0 auto;
+  margin-top: auto;
+  pointer-events: none;
 }
 
 .sidebar-tip {

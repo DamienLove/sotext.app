@@ -1,6 +1,7 @@
 dewBranch: Suite-Beta (based on Beta)
 
 Recent work
+- 2026-01-16: Web - fixed sidebar placeholder so it no longer blocks nav (removed 100% height, pinned to bottom, non-interactive); rebuilt web and deployed Firebase Hosting (pulselink-24899.web.app).
 - 2026-01-16: v138 - verified Beacon theme background updates (#548); reinforced trusted contacts persistence with base Room migrations (1→2, 2→3), defensive contact/alert/contact_messages schema checks, and removal of destructive fallback; bumped versionCode/Name to 138; ran .\gradlew testFreeDebugUnitTest; built free/pro release AABs (disposable_aabs/androidApp-*-release-v138.aab) and uploaded to Play internal/beta/production via upload_play.py; web build succeeded (npm run build); Firebase Hosting deploy failed (firebase login --reauth).
 - 2026-01-15: v136 - fixed ExtensionsStoreScreen wiring in Beacon inbox, built PulseLink free/pro AABs (disposable_aabs/androidApp-*-release-v136.aab) and uploaded to Play internal/beta/production via upload_play.py; web build + Firebase Hosting deploy succeeded (pulselink-24899.web.app).
 - 2026-01-15: v135 — built PulseLink free/pro AABs (disposable_aabs/androidApp-*-release-v135.aab) and uploaded to Play internal/beta/production via upload_play.py; web build + Firebase Hosting deploy succeeded (pulselink-24899.web.app).
