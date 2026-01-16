@@ -1733,6 +1733,7 @@ const getToastClass = (msg) => {
 };
 
 function App() {
+  const webHintStorageKey = 'pulselink.hideWebHint';
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -1786,6 +1787,10 @@ function App() {
   });
   const [themePublishStatus, setThemePublishStatus] = useState('');
   const [isPublishingTheme, setIsPublishingTheme] = useState(false);
+  const [showWebHint, setShowWebHint] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem(webHintStorageKey) !== 'true';
+  });
   const [remoteSettings, setRemoteSettings] = useState({
     remoteWebAccessEnabled: false,
     autoUpdateContactInfo: true,
@@ -3382,12 +3387,25 @@ function App() {
               {/* QA TEST: Visit web app home screen after login */}
               {/* EXPECTED: Blue info banner should be visible explaining web access */}
               {/* EXPECTED: Banner should display icon, bold heading, and feature description */}
-              <div className="web-app-hint">
-                <div className="hint-icon">ℹ️</div>
-                <div className="hint-content">
-                  <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
+              {showWebHint && (
+                <div className="web-app-hint">
+                  <button
+                    className="hint-dismiss"
+                    type="button"
+                    aria-label="Dismiss web access notice"
+                    onClick={() => {
+                      setShowWebHint(false);
+                      localStorage.setItem(webHintStorageKey, 'true');
+                    }}
+                  >
+                    x
+                  </button>
+                  <div className="hint-icon">??</div>
+                  <div className="hint-content">
+                    <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="home-grid">
                 <button className="home-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
@@ -4546,3 +4564,4 @@ function App() {
 }
 
 export default App;
+
