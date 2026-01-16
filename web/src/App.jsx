@@ -1849,6 +1849,8 @@ function App() {
   const [settingsStatus, setSettingsStatus] = useState('');
   const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [syncDiagnostics, setSyncDiagnostics] = useState(null);
+  const [syncRequestStatus, setSyncRequestStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -2209,6 +2211,18 @@ function App() {
       });
     }
   }, [user, userData, isPremiumUser]);
+
+  useEffect(() => {
+    if (!user) {
+      setSyncDiagnostics(null);
+      return;
+    }
+    const diagRef = doc(db, "users", user.uid, "syncDiagnostics", "latest");
+    const unsubscribe = onSnapshot(diagRef, (snapshot) => {
+      setSyncDiagnostics(snapshot.exists() ? snapshot.data() : null);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -2973,6 +2987,27 @@ function App() {
       setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const requestPhoneSync = async () => {
+    if (!user) return;
+    setSyncRequestStatus("Requesting sync...");
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          syncRequestedAt: serverTimestamp(),
+          syncRequestedBy: "web",
+          remoteWebAccessEnabled: true,
+          settingsUpdatedAt: serverTimestamp()
+        },
+        { merge: true }
+      );
+      setSyncRequestStatus("Sync requested. Open PulseLink on your phone and keep it online.");
+    } catch (error) {
+      console.error("Sync request failed", error);
+      setSyncRequestStatus(error?.message ?? "Unable to request sync.");
     }
   };
 
@@ -4363,9 +4398,30 @@ function App() {
                                 <Spinner />
                                 Saving...
                               </>
-                            ) : 'Save PulseLink settings'}
+                          ) : 'Save PulseLink settings'}
+                          </button>
+                          <div className="settings-row">
+                            <span className="settings-label">Web sync</span>
+                            <span className="settings-value">
+                              {syncDiagnostics
+                                ? `${new Date(toMillis(syncDiagnostics.timestamp)).toLocaleString()} • ${syncDiagnostics.status}`
+                                : 'No sync data yet'}
+                            </span>
+                          </div>
+                          {syncDiagnostics && (
+                            <p className="settings-note">
+                              Threads: {syncDiagnostics.threadCount ?? 0} · Messages: {syncDiagnostics.messageCount ?? 0} · READ_SMS: {syncDiagnostics.hasReadSms ? 'yes' : 'no'} · App: {syncDiagnostics.appVersion ?? 'unknown'}
+                            </p>
+                          )}
+                          <button
+                            className="secondary-btn"
+                            type="button"
+                            onClick={requestPhoneSync}
+                          >
+                            Request phone sync
                           </button>
                           {remoteSettingsStatus && <div className={getToastClass(remoteSettingsStatus)} role="status" aria-live="polite">{remoteSettingsStatus}</div>}
+                          {syncRequestStatus && <div className={getToastClass(syncRequestStatus)} role="status" aria-live="polite">{syncRequestStatus}</div>}
                         </div>
                       )}
 

@@ -123,6 +123,7 @@ class MainViewModel @Inject constructor(
     private var remoteSettingsUserId: String? = null
     private var pushedThemeFromDevice = false
     private var lastSettingsPushTimestamp: Long = 0L
+    private var lastSyncRequestAt: Long = 0L
 
     private val _uiState = MutableStateFlow(PulseLinkUiState())
     val uiState: StateFlow<PulseLinkUiState> = _uiState
@@ -830,6 +831,7 @@ class MainViewModel @Inject constructor(
                 val remoteWebAccess = snapshot.getBoolean("remoteWebAccessEnabled")
                 val autoUpdate = snapshot.getBoolean("autoUpdateContactInfo")
                 val timeFormatRaw = snapshot.getString("timeFormat")
+                val syncRequestedAt = snapshot.getTimestamp("syncRequestedAt")?.toDate()?.time ?: 0L
 
                 // Extensions
                 val beaconLauncher = snapshot.getBoolean("beaconLauncherEnabled")
@@ -845,6 +847,7 @@ class MainViewModel @Inject constructor(
 
                 viewModelScope.launch {
                     val current = settingsRepository.settings.first()
+                    val desiredRemoteWebAccess = remoteWebAccess ?: current.remoteWebAccessEnabled
                     if (themeMap != null) {
                         val remoteTheme = themeFromMap(themeMap)
                         if (remoteTheme != current.themePreferences) {
@@ -891,6 +894,13 @@ class MainViewModel @Inject constructor(
                     mergedExperience?.let { if (it != current.mergedExperienceEnabled) settingsRepository.setMergedExperienceEnabled(it) }
                     privateSafe?.let { if (it != current.privateSafeEnabled) settingsRepository.update { s -> s.copy(privateSafeEnabled = it) } }
                     smartReplies?.let { if (it != current.smartRepliesEnabled) settingsRepository.update { s -> s.copy(smartRepliesEnabled = it) } }
+
+                    if (syncRequestedAt > lastSyncRequestAt) {
+                        lastSyncRequestAt = syncRequestedAt
+                        if (desiredRemoteWebAccess) {
+                            triggerWebSync("RemoteRequest")
+                        }
+                    }
                 }
             }
     }
