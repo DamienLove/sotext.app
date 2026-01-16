@@ -649,8 +649,8 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun sendLinkRequest(contactId: Long) {
-        viewModelScope.launch { linkManager.sendLinkRequest(contactId) }
+    suspend fun sendLinkRequest(contactId: Long): Boolean {
+        return linkManager.sendLinkRequest(contactId)
     }
 
     fun approveLink(contactId: Long) {
