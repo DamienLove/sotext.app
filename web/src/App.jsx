@@ -4206,6 +4206,8 @@ function App() {
                             <button
                               className={isEnabled ? "secondary-btn" : "primary-btn"}
                               style={{width: '100%'}}
+                              aria-label={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
+                              title={`${isEnabled ? "Remove" : "Install"} ${ext.name}`}
                               onClick={() => {
                                 setRemoteSettings(prev => ({ ...prev, [ext.id]: !prev[ext.id] }));
                                 const next = { ...remoteSettings, [ext.id]: !isEnabled };
