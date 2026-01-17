@@ -135,7 +135,10 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideSmsStore(@ApplicationContext context: Context): SmsStore = SmsStore(context)
+    fun provideSmsStore(
+        @ApplicationContext context: Context,
+        smsSyncTrigger: com.pulselink.data.sms.SmsSyncTrigger
+    ): SmsStore = SmsStore(context, smsSyncTrigger)
 
     @Provides
     @Singleton
