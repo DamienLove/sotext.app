@@ -600,6 +600,12 @@ private fun SettingsToggleRow(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val borderColor = if (checked) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -611,7 +617,8 @@ private fun SettingsToggleRow(
             ),
         shape = RoundedCornerShape(18.dp),
         tonalElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (enabled) 0.6f else 0.38f)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (enabled) 0.4f else 0.2f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
     ) {
         Row(
             modifier = Modifier
@@ -661,7 +668,11 @@ private fun SettingsActionRow(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
         tonalElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        )
     ) {
         Row(
             modifier = Modifier
