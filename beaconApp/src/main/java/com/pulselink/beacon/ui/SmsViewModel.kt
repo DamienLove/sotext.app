@@ -76,6 +76,12 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     private var threadsWithStars: Set<Long> = emptySet()
 
     private var blockedNumbers: Set<String> = emptySet()
+    var blockedNumbersList by mutableStateOf<List<BlockedNumber>>(emptyList())
+        private set
+
+    var scheduledMessages by mutableStateOf<List<ScheduledMessage>>(emptyList())
+        private set
+
     var draftsMap by mutableStateOf<Map<Long, String>>(emptyMap())
         private set
 
@@ -128,6 +134,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     val autoReplyEnabled: Boolean get() = inboxState.autoReplyEnabled
     val autoReplyMessage: String get() = inboxState.autoReplyMessage
     val quickReplies: List<String> get() = inboxState.quickReplies
+    val autoDeleteOtps: Boolean get() = inboxState.autoDeleteOtps
 
     // Filtered state
     var filteredThreads by mutableStateOf<List<SmsThreadItem>>(emptyList())
@@ -167,8 +174,15 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch {
             blockedDao.getAllBlocked().collectLatest { blocked ->
+                blockedNumbersList = blocked
                 blockedNumbers = blocked.map { it.normalizedNumber }.toSet()
                 mergeThreads() // Re-filter blocked threads
+            }
+        }
+
+        viewModelScope.launch {
+            scheduledDao.getAllPending().collectLatest { scheduled ->
+                scheduledMessages = scheduled
             }
         }
 
@@ -495,6 +509,25 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun setAutoDeleteOtps(enabled: Boolean) {
+        viewModelScope.launch {
+            inboxPrefs.setAutoDeleteOtps(enabled)
+            if (enabled) {
+                // Enqueue periodic worker
+                val request = androidx.work.PeriodicWorkRequestBuilder<com.pulselink.beacon.worker.OtpCleanupWorker>(
+                    24, java.util.concurrent.TimeUnit.HOURS
+                ).build()
+                workManager.enqueueUniquePeriodicWork(
+                    "OtpCleanup",
+                    androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+                    request
+                )
+            } else {
+                workManager.cancelUniqueWork("OtpCleanup")
+            }
+        }
+    }
+
     fun sendDelayedMessage(body: String) {
         val delaySeconds = delayedSendTimeout
         if (delaySeconds <= 0) {
@@ -626,6 +659,13 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     .build()
                 workManager.enqueue(request)
             }
+        }
+    }
+
+    fun cancelScheduledMessage(message: ScheduledMessage) {
+        viewModelScope.launch(Dispatchers.IO) {
+            scheduledDao.delete(message)
+            // Cancel worker if needed (usually handled by worker check)
         }
     }
 

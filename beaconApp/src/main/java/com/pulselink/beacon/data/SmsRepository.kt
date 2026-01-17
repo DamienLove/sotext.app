@@ -699,6 +699,16 @@ class SmsRepository(private val context: Context) {
         observerFlow.tryEmit(Unit)
     }
 
+    fun deleteMessage(messageId: Long) {
+        if (!hasWritePerms()) return
+        context.contentResolver.delete(
+            Telephony.Sms.CONTENT_URI,
+            "${Telephony.Sms._ID}=?",
+            arrayOf(messageId.toString())
+        )
+        observerFlow.tryEmit(Unit)
+    }
+
     private fun resolveAddress(raw: String?): String {
         if (!hasReadPerms()) return raw.orEmpty()
         val number = raw?.trim().orEmpty()

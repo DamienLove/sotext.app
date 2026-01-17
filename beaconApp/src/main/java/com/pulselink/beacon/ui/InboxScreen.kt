@@ -125,6 +125,8 @@ fun InboxScreen(
     onClearSearch: () -> Unit,
     onCustomize: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenScheduled: () -> Unit,
+    onOpenSpamAndBlocked: () -> Unit,
     notificationsEnabled: Boolean,
     notificationsSilent: Boolean,
     onOpenNotificationSettings: () -> Unit,
@@ -152,7 +154,9 @@ fun InboxScreen(
     quickReplies: List<String> = emptyList(),
     onSetAutoReplyEnabled: (Boolean) -> Unit = {},
     onSetAutoReplyMessage: (String) -> Unit = {},
-    onUpdateQuickReplies: (List<String>) -> Unit = {}
+    onUpdateQuickReplies: (List<String>) -> Unit = {},
+    autoDeleteOtps: Boolean = false,
+    onSetAutoDeleteOtps: (Boolean) -> Unit = {}
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -274,6 +278,24 @@ fun InboxScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Auto-delete OTPs", fontWeight = FontWeight.Bold)
+                            Text("Delete one-time codes after 24 hours", style = MaterialTheme.typography.bodySmall, color = theme.frameColor.copy(alpha = 0.6f))
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = autoDeleteOtps,
+                            onCheckedChange = onSetAutoDeleteOtps,
+                            colors = androidx.compose.material3.SwitchDefaults.colors(
+                                checkedThumbColor = theme.accentColor,
+                                checkedTrackColor = theme.accentColor.copy(alpha = 0.3f)
+                            )
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                     OutlinedButton(
                         onClick = {
                             showSettingsDialog = false
@@ -282,6 +304,28 @@ fun InboxScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Customize Quick Replies", color = theme.frameColor)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            showSettingsDialog = false
+                            onOpenScheduled()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Scheduled Messages", color = theme.frameColor)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            showSettingsDialog = false
+                            onOpenSpamAndBlocked()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Spam & Blocked", color = theme.frameColor)
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))

@@ -44,5 +44,6 @@ data class InboxState(
     val delayedSendTimeout: Int = 5,
     val autoReplyEnabled: Boolean = false,
     val autoReplyMessage: String = "",
-    val quickReplies: List<String> = listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?")
+    val quickReplies: List<String> = listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?"),
+    val autoDeleteOtps: Boolean = false
 )
