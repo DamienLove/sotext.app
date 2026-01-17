@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DatePicker
@@ -78,6 +79,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.zIndex
@@ -91,6 +93,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.pulselink.beacon.data.SmsMessageItem
+import com.pulselink.beacon.data.MessageStatus
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.data.scheduled.MessageReaction
 import com.pulselink.beacon.ui.ads.NativeAdCard
@@ -610,6 +613,8 @@ private fun LazyItemScope.MessageBubble(
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
     val alignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart
     val frameColor = theme.frameColor
+    val status = message.status
+    val bubbleAlpha = if (status == MessageStatus.SENDING) 0.6f else 1f
 
     // Bubble Styling
     val cornerRadius = theme.bubbleRadius.dp
@@ -650,6 +655,7 @@ private fun LazyItemScope.MessageBubble(
             modifier = Modifier
                 .width(if (message.body.length > 40) 300.dp else Box.Unspecified) // Limit width for long text
                 .padding(horizontal = 0.dp)
+                .alpha(bubbleAlpha)
                 .clip(bubbleShape)
                 .combinedClickable(
                     onClick = { /* Toggle timestamp expansion? */ },
@@ -769,6 +775,14 @@ private fun LazyItemScope.MessageBubble(
                     modifier = Modifier.padding(top = 4.dp).align(Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (status == MessageStatus.FAILED) {
+                        Icon(
+                            Icons.Default.Error,
+                            contentDescription = "Failed",
+                            modifier = Modifier.size(12.dp).padding(end = 4.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                     if (isStarred) {
                         Icon(
                             Icons.Default.Star,
@@ -778,7 +792,7 @@ private fun LazyItemScope.MessageBubble(
                         )
                     }
                     Text(
-                        text = formatMessageTime(message.timestamp),
+                        text = if (status == MessageStatus.SENDING) "Sending..." else formatMessageTime(message.timestamp),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         fontWeight = FontWeight.Medium,
                         color = (if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming).copy(alpha = 0.7f)

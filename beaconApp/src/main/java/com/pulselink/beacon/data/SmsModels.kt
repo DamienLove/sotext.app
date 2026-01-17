@@ -4,6 +4,10 @@ enum class ThreadCategory {
     PERSONAL, TRANSACTIONS, PROMOTIONS
 }
 
+enum class MessageStatus {
+    NONE, SENDING, SENT, FAILED
+}
+
 data class SmsThreadItem(
     val threadId: Long,
     val address: String,
@@ -24,7 +28,8 @@ data class SmsMessageItem(
     val timestamp: Long,
     val outgoing: Boolean,
     val isMms: Boolean = false,
-    val mediaParts: List<MmsPart> = emptyList()
+    val mediaParts: List<MmsPart> = emptyList(),
+    val status: MessageStatus = MessageStatus.NONE
 )
 
 data class MmsPart(
