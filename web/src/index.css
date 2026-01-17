@@ -52,30 +52,30 @@
 }
 
 :root {
-  /* Core Palette: "Future Deep v5" - The Definitive Edition */
-  --bg: #03050a; /* Deepest Black/Blue */
-  --bg-accent: #080b14;
-  --surface: #0b101b;
-  --surface-alt: #131826;
-  --surface-hover: #1c2235;
+  /* Core Palette: "Future Deep v7" - Sheer Perfection */
+  --bg: #030508; /* v7 Deepest Black */
+  --bg-accent: #05080f;
+  --surface: #080b14;
+  --surface-alt: #0d121f;
+  --surface-hover: #151b2e;
 
   /* Text & Ink */
-  --ink: #f0f6fc;
-  --ink-dim: #c9d1d9;
-  --muted: #8b949e;
-  --ink-muted: #8b949e;
+  --ink: #e0f7fa;
+  --ink-dim: #b2ebf2;
+  --muted: #64748b;
+  --ink-muted: #64748b;
 
-  /* Accents - Neon Cyan & Electric Purple */
-  --accent: #22d3ee;        /* Primary Cyan */
-  --accent-glow: rgba(34, 211, 238, 0.6);
-  --accent-strong: #0ea5e9;
-  --accent-dim: rgba(34, 211, 238, 0.1);
+  /* Accents - Future Cyan & Deep Magenta */
+  --accent: #00f0ff;        /* v7 Cyan */
+  --accent-glow: rgba(0, 240, 255, 0.6);
+  --accent-strong: #00bcd4;
+  --accent-dim: rgba(0, 240, 255, 0.1);
 
-  --secondary: #00f3ff;     /* Neon Cyan Alt */
-  --secondary-glow: rgba(0, 243, 255, 0.5);
+  --secondary: #d946ef;     /* v7 Magenta */
+  --secondary-glow: rgba(217, 70, 239, 0.5);
 
-  --tertiary: #bc13fe;      /* Neon Purple */
-  --tertiary-glow: rgba(188, 19, 254, 0.5);
+  --tertiary: #a855f7;      /* Neon Purple */
+  --tertiary-glow: rgba(168, 85, 247, 0.5);
 
   --danger: #ff4757;
   --success: #2ed573;
@@ -120,9 +120,15 @@
 }
 
 ::selection {
-  background: rgba(34, 211, 238, 0.3);
+  background: rgba(0, 240, 255, 0.3);
   color: #fff;
   text-shadow: 0 0 12px var(--accent);
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
 }
 
 html, body {
@@ -216,7 +222,7 @@ select {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(34, 211, 238, 0.2);
+  background: rgba(0, 240, 255, 0.2);
   border-radius: 3px;
   transition: all 0.3s ease;
   border: 1px solid transparent;
