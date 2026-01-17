@@ -41,5 +41,8 @@ data class MmsPart(
 data class InboxState(
     val pinnedThreadIds: Set<Long> = emptySet(),
     val archivedThreadIds: Set<Long> = emptySet(),
-    val delayedSendTimeout: Int = 5
+    val delayedSendTimeout: Int = 5,
+    val autoReplyEnabled: Boolean = false,
+    val autoReplyMessage: String = "",
+    val quickReplies: List<String> = listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?")
 )
