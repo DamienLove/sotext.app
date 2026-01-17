@@ -269,6 +269,8 @@
     <string name="link_invite_email_chooser">Send invite with</string>
     <string name="link_invite_no_email_app">No email app found to send invite.</string>
     <string name="link_invite_missing_contact_info">Add a phone or email to send an invite.</string>
+    <string name="link_request_failed_sms">Failed to send SMS invite. Check permissions.</string>
+    <string name="link_request_failed_email">Failed to send email invite.</string>
     <string name="voice_command_trigger_reason">Assistant command: %1$s</string>
     <string name="voice_command_emergency_sent">Emergency alert dispatched.</string>
     <string name="voice_command_contact_missing">I couldn\'t find that contact.</string>

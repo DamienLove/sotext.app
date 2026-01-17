@@ -2352,17 +2352,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendLinkOrInvite(contact: Contact) {
-        if (contact.phoneNumber.isNotBlank()) {
-            viewModel.sendLinkRequest(contact.id)
-            Toast.makeText(this, getString(R.string.link_request_sent_sms), Toast.LENGTH_SHORT).show()
-            return
+        androidx.lifecycle.lifecycleScope.launch {
+            if (contact.phoneNumber.isNotBlank()) {
+                val success = viewModel.sendLinkRequest(contact.id)
+                val msg = if (success) getString(R.string.link_request_sent_sms) else getString(R.string.link_request_failed_sms)
+                Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            if (!contact.email.isNullOrBlank()) {
+                val success = viewModel.sendLinkRequest(contact.id)
+                val msg = if (success) getString(R.string.link_request_sent_cloud) else getString(R.string.link_request_failed_email)
+                Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            Toast.makeText(this@MainActivity, getString(R.string.link_invite_missing_contact_info), Toast.LENGTH_SHORT).show()
         }
-        if (!contact.email.isNullOrBlank()) {
-            viewModel.sendLinkRequest(contact.id)
-            Toast.makeText(this, getString(R.string.link_request_sent_cloud), Toast.LENGTH_SHORT).show()
-            return
-        }
-        Toast.makeText(this, getString(R.string.link_invite_missing_contact_info), Toast.LENGTH_SHORT).show()
     }
 
     override fun onResume() {
