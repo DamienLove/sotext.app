@@ -1511,6 +1511,25 @@ const Sidebar = memo(({
   showPreviews
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    if (activePanel !== 'beacon') return;
+
+    const handleKeyDown = (e) => {
+      // Focus search on "/" or "Ctrl+K" / "Cmd+K"
+      if (
+        (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) ||
+        ((e.ctrlKey || e.metaKey) && e.key === 'k')
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activePanel]);
 
   // Bolt: Pre-compute search strings for threads locally to prevent App re-renders
   const searchIndex = useMemo(() => {
@@ -1653,11 +1672,23 @@ const Sidebar = memo(({
                 <SearchIcon />
               </div>
               <input
+                ref={searchInputRef}
                 className="sidebar-search-input-field"
-                placeholder="Search messages..."
+                placeholder="Search (Ctrl+K)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Search messages"
+                aria-label="Search messages (Ctrl+K)"
+                title="Search messages (Ctrl+K or /)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    if (searchQuery) {
+                      setSearchQuery('');
+                    } else {
+                      e.currentTarget.blur();
+                    }
+                  }
+                }}
               />
               {searchQuery && (
                 <button
@@ -4216,7 +4247,6 @@ function App() {
                                   settingsUpdatedAt: serverTimestamp()
                                 }, { merge: true });
                               }}
-                              aria-label={isEnabled ? `Remove ${ext.name}` : `Install ${ext.name}`}
                             >
                               {isEnabled ? "Remove" : "Install"}
                             </button>
