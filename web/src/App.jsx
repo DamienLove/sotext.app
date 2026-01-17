@@ -1501,225 +1501,255 @@ const Sidebar = memo(({
   setActiveLineId,
   lineInboxMode,
   isLoadingThreads,
-  threadCount,
-  threadListElements,
   isPremium,
   navLogo,
   brandTitle,
-  threadSearch,
-  setThreadSearch
-}) => (
-  <div className="sidebar">
-    <div className="sidebar-header">
-      <div className="sidebar-brand">
-        <img src={navLogo || logo} alt="PulseLink Suite" className="brand-logo small" />
-        <div>
-          <div className="brand-title">{brandTitle || "PulseLink Suite"}</div>
-          <div className="brand-subtitle">{tierLabel} Web Access</div>
-        </div>
-      </div>
-      <div className="sidebar-actions">
-        {activePanel === 'beacon' && (
-          <button
-            onClick={handleNewThread}
-            className="secondary-btn"
-            aria-label="Start new conversation"
-          >
-            New
-          </button>
-        )}
-        <button onClick={handleLogout} className="ghost-btn">Logout</button>
-      </div>
-    </div>
-    <div className="sidebar-nav">
-      <button
-        className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
-        onClick={() => setActivePanel('home')}
-        title="Home"
-        aria-label="Home"
-        aria-current={activePanel === 'home' ? 'page' : undefined}
-      >
-        <HomeIcon />
-        <span>Home</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
-        onClick={() => setActivePanel('pulselink')}
-        title="PulseLink"
-        aria-label="PulseLink"
-        aria-current={activePanel === 'pulselink' ? 'page' : undefined}
-      >
-        <img src={logo} alt="PulseLink" />
-        <span>PulseLink</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-        onClick={() => setActivePanel('beacon')}
-        title="Beacon"
-        aria-label="Beacon"
-        aria-current={activePanel === 'beacon' ? 'page' : undefined}
-      >
-        <img src={beaconLogo} alt="Beacon" />
-        <span>Beacon</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
-        onClick={() => setActivePanel('ringersong')}
-        title="RingerSong"
-        aria-label="RingerSong"
-        aria-current={activePanel === 'ringersong' ? 'page' : undefined}
-      >
-        <img src={ringersongLogo} alt="RingerSong" />
-        <span>RingerSong</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
-        onClick={() => setActivePanel('map')}
-        title="Map"
-        aria-label="Map"
-        aria-current={activePanel === 'map' ? 'page' : undefined}
-      >
-        <MapIcon />
-        <span>Map</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
-        onClick={() => setActivePanel('contacts')}
-        title="Contacts"
-        aria-label="Contacts"
-        aria-current={activePanel === 'contacts' ? 'page' : undefined}
-      >
-        <ContactIcon />
-        <span>Contacts</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
-        onClick={() => setActivePanel('themes')}
-        title="Themes"
-        aria-label="Themes"
-        aria-current={activePanel === 'themes' ? 'page' : undefined}
-      >
-        <ThemeIcon />
-        <span>Themes</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
-        onClick={() => setActivePanel('extensions')}
-        title="Extensions"
-        aria-label="Extensions"
-        aria-current={activePanel === 'extensions' ? 'page' : undefined}
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-        <span>Extensions</span>
-        <span className="badge-new">NEW</span>
-      </button>
-      <button
-        className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
-        onClick={() => setActivePanel('settings')}
-        title="Settings"
-        aria-label="Settings"
-        aria-current={activePanel === 'settings' ? 'page' : undefined}
-      >
-        <SettingsIcon />
-        <span>Settings</span>
-      </button>
-    </div>
-    {activePanel === 'beacon' ? (
-      <>
-        <div className="sidebar-search-container">
-          <div className="sidebar-search-wrapper">
-            <div className="search-icon-wrapper">
-              <SearchIcon />
-            </div>
-            <input
-              className="sidebar-search-input-field"
-              placeholder="Search messages..."
-              value={threadSearch}
-              onChange={(e) => setThreadSearch(e.target.value)}
-              aria-label="Search messages"
-            />
-            {threadSearch && (
-              <button
-                className="ghost-btn icon-only sidebar-search-clear-btn"
-                onClick={() => setThreadSearch('')}
-                aria-label="Clear search"
-                title="Clear search"
-              >
-                <CloseIcon />
-              </button>
-            )}
+  threads,
+  selectedThreadId,
+  onSelect,
+  showPreviews
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Bolt: Pre-compute search strings for threads locally to prevent App re-renders
+  const searchIndex = useMemo(() => {
+    return threads.map(t => {
+      const display = (t.display_name || t.address || '').toLowerCase();
+      const snippet = (t.snippet || '').toLowerCase();
+      return { thread: t, searchString: `${display} ${snippet}` };
+    });
+  }, [threads]);
+
+  const filteredThreads = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return threads;
+    return searchIndex
+      .filter(({ searchString }) => searchString.includes(term))
+      .map(({ thread }) => thread);
+  }, [searchIndex, searchQuery, threads]);
+
+  return (
+    <div className="sidebar">
+      <div className="sidebar-header">
+        <div className="sidebar-brand">
+          <img src={navLogo || logo} alt="PulseLink Suite" className="brand-logo small" />
+          <div>
+            <div className="brand-title">{brandTitle || "PulseLink Suite"}</div>
+            <div className="brand-subtitle">{tierLabel} Web Access</div>
           </div>
         </div>
-        <div className="thread-list">
-          {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
-            <div className="line-tabs" aria-label="Device lines">
-              <button
-                className={`chip ${!activeLineId ? 'active' : ''}`}
-                onClick={() => setActiveLineId(null)}
-              >
-                All
-              </button>
-              {lines.map((line) => (
-                <button
-                  key={line.id}
-                  className={`chip ${activeLineId === line.id ? 'active' : ''}`}
-                  onClick={() => setActiveLineId(line.id)}
-                  title={line.phoneNumber || 'Line'}
-                >
-                  {line.label || line.phoneNumber || line.id.slice(0, 6)}
-                </button>
-              ))}
-            </div>
+        <div className="sidebar-actions">
+          {activePanel === 'beacon' && (
+            <button
+              onClick={handleNewThread}
+              className="secondary-btn"
+              aria-label="Start new conversation"
+            >
+              New
+            </button>
           )}
-          {isLoadingThreads ? (
-             Array.from({ length: 5 }).map((_, i) => <ThreadSkeleton key={i} />)
-          ) : threadCount === 0 ? (
-            <div className="sidebar-placeholder">
-              <div className="sidebar-tip">
-                <strong>{threadSearch ? "No matches found" : "No conversations found"}</strong>
+          <button onClick={handleLogout} className="ghost-btn">Logout</button>
+        </div>
+      </div>
+      <div className="sidebar-nav">
+        <button
+          className={`nav-item ${activePanel === 'home' ? 'active' : ''}`}
+          onClick={() => setActivePanel('home')}
+          title="Home"
+          aria-label="Home"
+          aria-current={activePanel === 'home' ? 'page' : undefined}
+        >
+          <HomeIcon />
+          <span>Home</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
+          onClick={() => setActivePanel('pulselink')}
+          title="PulseLink"
+          aria-label="PulseLink"
+          aria-current={activePanel === 'pulselink' ? 'page' : undefined}
+        >
+          <img src={logo} alt="PulseLink" />
+          <span>PulseLink</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+          onClick={() => setActivePanel('beacon')}
+          title="Beacon"
+          aria-label="Beacon"
+          aria-current={activePanel === 'beacon' ? 'page' : undefined}
+        >
+          <img src={beaconLogo} alt="Beacon" />
+          <span>Beacon</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
+          onClick={() => setActivePanel('ringersong')}
+          title="RingerSong"
+          aria-label="RingerSong"
+          aria-current={activePanel === 'ringersong' ? 'page' : undefined}
+        >
+          <img src={ringersongLogo} alt="RingerSong" />
+          <span>RingerSong</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+          onClick={() => setActivePanel('map')}
+          title="Map"
+          aria-label="Map"
+          aria-current={activePanel === 'map' ? 'page' : undefined}
+        >
+          <MapIcon />
+          <span>Map</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
+          onClick={() => setActivePanel('contacts')}
+          title="Contacts"
+          aria-label="Contacts"
+          aria-current={activePanel === 'contacts' ? 'page' : undefined}
+        >
+          <ContactIcon />
+          <span>Contacts</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+          onClick={() => setActivePanel('themes')}
+          title="Themes"
+          aria-label="Themes"
+          aria-current={activePanel === 'themes' ? 'page' : undefined}
+        >
+          <ThemeIcon />
+          <span>Themes</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
+          onClick={() => setActivePanel('extensions')}
+          title="Extensions"
+          aria-label="Extensions"
+          aria-current={activePanel === 'extensions' ? 'page' : undefined}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          <span>Extensions</span>
+          <span className="badge-new">NEW</span>
+        </button>
+        <button
+          className={`nav-item ${activePanel === 'settings' ? 'active' : ''}`}
+          onClick={() => setActivePanel('settings')}
+          title="Settings"
+          aria-label="Settings"
+          aria-current={activePanel === 'settings' ? 'page' : undefined}
+        >
+          <SettingsIcon />
+          <span>Settings</span>
+        </button>
+      </div>
+      {activePanel === 'beacon' ? (
+        <>
+          <div className="sidebar-search-container">
+            <div className="sidebar-search-wrapper">
+              <div className="search-icon-wrapper">
+                <SearchIcon />
               </div>
-              {!threadSearch && (
-                <div className="sidebar-tip muted">
-                  To see your messages here:
-                  <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
-                    <li>Open PulseLink on your phone</li>
-                    <li>Go to Extensions Store</li>
-                    <li>Enable &quot;Remote Web Access&quot;</li>
-                  </ol>
-                  {!isPremium && (
-                    <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
-                      Premium Required
-                    </div>
-                  )}
-                </div>
+              <input
+                className="sidebar-search-input-field"
+                placeholder="Search messages..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Search messages"
+              />
+              {searchQuery && (
+                <button
+                  className="ghost-btn icon-only sidebar-search-clear-btn"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search"
+                  title="Clear search"
+                >
+                  <CloseIcon />
+                </button>
               )}
             </div>
-          ) : (
-            threadListElements
-          )}
+          </div>
+          <div className="thread-list">
+            {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
+              <div className="line-tabs" aria-label="Device lines">
+                <button
+                  className={`chip ${!activeLineId ? 'active' : ''}`}
+                  onClick={() => setActiveLineId(null)}
+                >
+                  All
+                </button>
+                {lines.map((line) => (
+                  <button
+                    key={line.id}
+                    className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                    onClick={() => setActiveLineId(line.id)}
+                    title={line.phoneNumber || 'Line'}
+                  >
+                    {line.label || line.phoneNumber || line.id.slice(0, 6)}
+                  </button>
+                ))}
+              </div>
+            )}
+            {isLoadingThreads ? (
+               Array.from({ length: 5 }).map((_, i) => <ThreadSkeleton key={i} />)
+            ) : filteredThreads.length === 0 ? (
+              <div className="sidebar-placeholder">
+                <div className="sidebar-tip">
+                  <strong>{searchQuery ? "No matches found" : "No conversations found"}</strong>
+                </div>
+                {!searchQuery && (
+                  <div className="sidebar-tip muted">
+                    To see your messages here:
+                    <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
+                      <li>Open PulseLink on your phone</li>
+                      <li>Go to Extensions Store</li>
+                      <li>Enable &quot;Remote Web Access&quot;</li>
+                    </ol>
+                    {!isPremium && (
+                      <div className="badge badge-premium" style={{ display: 'inline-block', marginTop: '8px', padding: '2px 8px', borderRadius: '4px', background: 'var(--accent)', color: '#fff', fontSize: '0.8em' }}>
+                        Premium Required
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              filteredThreads.map(thread => (
+                <ThreadItem
+                  key={`${thread.lineId || 'legacy'}_${thread.id}`}
+                  thread={thread}
+                  isActive={selectedThreadId === thread.id}
+                  onSelect={onSelect}
+                  showPreviews={showPreviews}
+                />
+              ))
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="sidebar-placeholder">
+          <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
+          <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
         </div>
-      </>
-    ) : (
-      <div className="sidebar-placeholder">
-        <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
-        <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
-      </div>
-    )}
-  </div>
-), (prev, next) => {
+      )}
+    </div>
+  );
+}, (prev, next) => {
   // Bolt: Ensure strict equality checks for all props to prevent unnecessary re-renders
   return prev.activePanel === next.activePanel &&
          prev.tierLabel === next.tierLabel &&
          prev.isLoadingThreads === next.isLoadingThreads &&
-         prev.threadCount === next.threadCount &&
+         prev.threads === next.threads &&
          prev.lines === next.lines &&
          prev.activeLineId === next.activeLineId &&
          prev.lineInboxMode === next.lineInboxMode &&
          prev.isPremium === next.isPremium &&
-         prev.threadListElements === next.threadListElements &&
+         prev.selectedThreadId === next.selectedThreadId &&
+         prev.onSelect === next.onSelect &&
+         prev.showPreviews === next.showPreviews &&
          prev.navLogo === next.navLogo &&
-         prev.brandTitle === next.brandTitle &&
-         prev.threadSearch === next.threadSearch;
+         prev.brandTitle === next.brandTitle;
 });
 
 Sidebar.displayName = 'Sidebar';
@@ -1869,7 +1899,6 @@ function App() {
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
-  const [threadSearch, setThreadSearch] = useState('');
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const isPremiumUser = useMemo(() => {
@@ -3210,37 +3239,6 @@ function App() {
     return [...current].sort((a, b) => (b.date ?? 0) - (a.date ?? 0));
   }, [lineInboxMode, activeLineId, lines, lineThreads, combinedThreads]);
 
-  // Bolt: Pre-compute search strings for threads to avoid expensive string operations on every keystroke
-  const threadSearchIndex = useMemo(() => {
-    return activeLineThreads.map(t => {
-      const display = (t.display_name || t.address || '').toLowerCase();
-      const snippet = (t.snippet || '').toLowerCase();
-      return { thread: t, searchString: `${display} ${snippet}` };
-    });
-  }, [activeLineThreads]);
-
-  const filteredThreads = useMemo(() => {
-    const term = threadSearch.trim().toLowerCase();
-    if (!term) return activeLineThreads;
-    return threadSearchIndex
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ thread }) => thread);
-  }, [threadSearchIndex, threadSearch, activeLineThreads]);
-
-  // Bolt: Memoize thread list elements to prevent re-rendering on every compose keystroke.
-  // Note: handleThreadSelect is stable (useCallback) but included for exhaustive-deps correctness.
-  // Note: selectedThread?.id is used to avoid re-rendering the whole list when non-visual props of selectedThread change.
-  const threadListElements = useMemo(() => (
-    filteredThreads.map(thread => (
-      <ThreadItem
-        key={`${thread.lineId || 'legacy'}_${thread.id}`}
-        thread={thread}
-        isActive={selectedThread?.id === thread.id}
-        onSelect={handleThreadSelect}
-        showPreviews={showPreviews}
-      />
-    ))
-  ), [filteredThreads, selectedThread?.id, handleThreadSelect, showPreviews]);
 
   const isPremium = isPremiumUser;
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
@@ -3367,14 +3365,14 @@ function App() {
           setActiveLineId={setActiveLineId}
           lineInboxMode={lineInboxMode}
           isLoadingThreads={isLoadingThreads}
-          threadCount={filteredThreads.length}
-          threadListElements={threadListElements}
           isPremium={isPremium}
           remoteSettings={remoteSettings}
           navLogo={navLogo}
           brandTitle={remoteSettings.mergedExperienceEnabled ? "PulseLink Unified" : "PulseLink Suite"}
-          threadSearch={threadSearch}
-          setThreadSearch={setThreadSearch}
+          threads={activeLineThreads}
+          selectedThreadId={selectedThread?.id}
+          onSelect={handleThreadSelect}
+          showPreviews={showPreviews}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
