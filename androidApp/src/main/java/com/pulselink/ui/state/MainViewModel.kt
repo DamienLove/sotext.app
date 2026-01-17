@@ -1053,27 +1053,44 @@ class MainViewModel @Inject constructor(
 
     private suspend fun fetchLegacyTrustedContacts(user: FirebaseUser): List<Contact> {
         return runCatching {
-            // Pull any legacy/alternate trusted contact storage in case the main subcollection is empty
+            val results = mutableListOf<Contact>()
+
+            // 1. Check 'contacts' subcollection (possible old location)
+            runCatching {
+                val oldContacts = firestore.collection(COLLECTION_USERS).document(user.uid)
+                    .collection("contacts")
+                    .get()
+                    .await()
+                    .documents
+                    .mapNotNull { it.toContact() }
+                results.addAll(oldContacts)
+            }
+
+            // 2. Check collectionGroup for orphaned or misplaced docs
             val ownerScoped = firestore.collectionGroup(COLLECTION_TRUSTED_CONTACTS)
                 .whereEqualTo("ownerUid", user.uid)
                 .get()
                 .await()
                 .documents
                 .mapNotNull { it.toContact() }
+            results.addAll(ownerScoped)
 
-            if (ownerScoped.isNotEmpty()) return@runCatching ownerScoped
-
-            val groupSnapshot = firestore.collectionGroup(COLLECTION_TRUSTED_CONTACTS)
-                .get()
-                .await()
-            groupSnapshot.documents
-                .filter { snap ->
-                    val path = snap.reference.path
-                    path.contains("/${user.uid}/") ||
-                        snap.getString("ownerUid") == user.uid ||
-                        snap.getString("userId") == user.uid
-                }
-                .mapNotNull { it.toContact() }
+            if (results.isEmpty()) {
+                // Fallback scan if indexes are missing or paths are weird
+                val groupSnapshot = firestore.collectionGroup(COLLECTION_TRUSTED_CONTACTS)
+                    .get()
+                    .await()
+                val scanned = groupSnapshot.documents
+                    .filter { snap ->
+                        val path = snap.reference.path
+                        path.contains("/${user.uid}/") ||
+                            snap.getString("ownerUid") == user.uid ||
+                            snap.getString("userId") == user.uid
+                    }
+                    .mapNotNull { it.toContact() }
+                results.addAll(scanned)
+            }
+            results.distinctBy { contactSyncKey(it) }
         }.getOrElse {
             Log.w(TAG, "Legacy trusted contacts lookup failed", it)
             emptyList()

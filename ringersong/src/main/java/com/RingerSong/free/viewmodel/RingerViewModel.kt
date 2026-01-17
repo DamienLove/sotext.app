@@ -62,8 +62,20 @@ class RingerViewModel @Inject constructor(
 ) : AndroidViewModel(application) {
     private val store = AppStateStore(application)
     private val resolver: ContentResolver = application.contentResolver
-    private val auth = FirebaseAuth.getInstance()
-    private val db = FirebaseFirestore.getInstance()
+    private val auth: FirebaseAuth? by lazy {
+        try {
+            FirebaseAuth.getInstance()
+        } catch (e: Exception) {
+            null
+        }
+    }
+    private val db: FirebaseFirestore? by lazy {
+        try {
+            FirebaseFirestore.getInstance()
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     val state = store.stateFlow.stateIn(
         viewModelScope,
@@ -74,7 +86,7 @@ class RingerViewModel @Inject constructor(
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
-    private val _currentUser = MutableStateFlow(auth.currentUser)
+    private val _currentUser = MutableStateFlow(auth?.currentUser)
     val currentUser: StateFlow<com.google.firebase.auth.FirebaseUser?> = _currentUser.asStateFlow()
 
     private val _userCapabilities = MutableStateFlow("Unknown")
@@ -100,7 +112,7 @@ class RingerViewModel @Inject constructor(
     val youtubeSearchState: StateFlow<SpotifySearchState> = _youtubeSearchState.asStateFlow()
 
     init {
-        auth.addAuthStateListener { firebaseAuth ->
+        auth?.addAuthStateListener { firebaseAuth ->
             _currentUser.value = firebaseAuth.currentUser
             if (firebaseAuth.currentUser != null) {
                 startFirestoreSync(firebaseAuth.currentUser!!.uid)
@@ -113,8 +125,12 @@ class RingerViewModel @Inject constructor(
             _authState.update { it.copy(errorMessage = "Email and password required") }
             return
         }
+        val safeAuth = auth ?: run {
+            _authState.update { it.copy(errorMessage = "Authentication service unavailable") }
+            return
+        }
         _authState.update { it.copy(isLoading = true, errorMessage = null) }
-        auth.signInWithEmailAndPassword(email, pass)
+        safeAuth.signInWithEmailAndPassword(email, pass)
             .addOnSuccessListener {
                 _authState.update { it.copy(isLoading = false) }
                 onSuccess()
@@ -129,8 +145,14 @@ class RingerViewModel @Inject constructor(
             _authState.update { it.copy(errorMessage = "Email and password required") }
             return
         }
+        val safeAuth = auth
+        val safeDb = db
+        if (safeAuth == null || safeDb == null) {
+            _authState.update { it.copy(errorMessage = "Service unavailable") }
+            return
+        }
         _authState.update { it.copy(isLoading = true, errorMessage = null) }
-        auth.createUserWithEmailAndPassword(email, pass)
+        safeAuth.createUserWithEmailAndPassword(email, pass)
             .addOnSuccessListener {
                 // Create user doc
                 val user = it.user
@@ -139,7 +161,7 @@ class RingerViewModel @Inject constructor(
                         "email" to user.email,
                         "createdAt" to com.google.firebase.Timestamp.now()
                     )
-                    db.collection("users").document(user.uid).set(userMap)
+                    safeDb.collection("users").document(user.uid).set(userMap)
                 }
                 _authState.update { it.copy(isLoading = false) }
                 onSuccess()
@@ -151,9 +173,10 @@ class RingerViewModel @Inject constructor(
 
     private fun startFirestoreSync(uid: String?) {
         if (uid == null) return
+        val safeDb = db ?: return
 
         // Listen for Theme Preferences
-        db.collection("users").document(uid).addSnapshotListener { snapshot, e ->
+        safeDb.collection("users").document(uid).addSnapshotListener { snapshot, e ->
             if (e != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
 
             val prefs = snapshot.get("themePreferences") as? Map<*, *>
@@ -163,7 +186,7 @@ class RingerViewModel @Inject constructor(
             }
         }
 
-        db.collection("users").document(uid).collection("ringer_playlist")
+        safeDb.collection("users").document(uid).collection("ringer_playlist")
             .orderBy("addedAt", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, e ->
                 if (e != null || snapshot == null) return@addSnapshotListener
@@ -335,8 +358,12 @@ class RingerViewModel @Inject constructor(
     }
 
     fun addSpotifyTrack(track: SpotifyTrack, onResult: (String) -> Unit) {
-        val uid = auth.currentUser?.uid ?: run {
+        val uid = auth?.currentUser?.uid ?: run {
             onResult("Error: Please sign in to add songs")
+            return
+        }
+        val safeDb = db ?: run {
+            onResult("Error: Database unavailable")
             return
         }
 
@@ -407,7 +434,7 @@ class RingerViewModel @Inject constructor(
                     "downloaded" to true
                 )
 
-                db.collection("users").document(uid).collection("ringer_playlist")
+                safeDb.collection("users").document(uid).collection("ringer_playlist")
                     .add(trackData)
                     .addOnSuccessListener {
                         onResult("Added ${track.name} (Downloaded from YouTube Music)")
@@ -486,7 +513,7 @@ class RingerViewModel @Inject constructor(
                 "downloaded" to true
             )
 
-            db.collection("users").document(uid).collection("ringer_playlist")
+            safeDb.collection("users").document(uid).collection("ringer_playlist")
                 .add(trackData)
                 .addOnSuccessListener {
                     onResult("Added ${track.name} (Downloaded from Spotify)")
@@ -548,12 +575,13 @@ class RingerViewModel @Inject constructor(
     }
 
     fun removeSong(songId: String) {
-        val uid = auth.currentUser?.uid
+        val uid = auth?.currentUser?.uid
         viewModelScope.launch {
             val current = state.value
             val song = current.songs.find { it.id == songId }
+            val safeDb = db
 
-            if (song != null && song.uri.startsWith("spotify:") && uid != null) {
+            if (song != null && song.uri.startsWith("spotify:") && uid != null && safeDb != null) {
                 // If it's a Spotify song, remove from Firestore (listener will update local)
                 // Need to find the doc ID. Wait, songId IS the docId if coming from Firestore logic above?
                 // Let's check startFirestoreSync.
@@ -572,7 +600,7 @@ class RingerViewModel @Inject constructor(
                 // If it was added via Firestore add(), we don't know the ID immediately unless we store it.
                 // But for now, let's assume songId is valid.
                 // A better approach is to delete by field 'uri' if we aren't sure of ID.
-                 val query = db.collection("users").document(uid).collection("ringer_playlist")
+                 val query = safeDb.collection("users").document(uid).collection("ringer_playlist")
                      .whereEqualTo("uri", song.uri)
                      .get()
                      .addOnSuccessListener { snapshot ->
