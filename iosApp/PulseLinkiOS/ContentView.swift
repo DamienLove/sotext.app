@@ -70,6 +70,17 @@ private struct HomeTab: View {
             ScrollView {
                 VStack(spacing: 20) {
                     emergencyCard
+
+                    if viewModel.statusText != "Idle" {
+                        Text(viewModel.statusText)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
+                    }
+
                     if isPro {
                         relayCard
                         overrideCard
@@ -178,9 +189,7 @@ private struct HomeTab: View {
                 Image(systemName: "waveform.path.ecg.rectangle")
                     .foregroundStyle(RelayColors.accent)
             }
-            Text(viewModel.statusText)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            // Status text moved to main view for visibility
 
             Button {
                 Task { await viewModel.sendTestAlert() }
