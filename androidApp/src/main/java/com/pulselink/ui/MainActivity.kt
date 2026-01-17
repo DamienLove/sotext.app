@@ -1701,6 +1701,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleAiSummaries = viewModel::setAiSummariesEnabled,
                             onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                             onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
+                            onToggleTruecaller = viewModel::setTruecallerEnabled,
                             onTogglePrivateSafe = viewModel::setPrivateSafeEnabled,
                             onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
                             onOpenThemes = { navController.navigate("visual_settings") },

@@ -1835,7 +1835,8 @@ function App() {
     firebaseMessagingEnabled: true,
     mergedExperienceEnabled: false,
     privateSafeEnabled: false,
-    smartRepliesEnabled: true
+    smartRepliesEnabled: true,
+    truecallerEnabled: false
   });
   const [devExtensions, setDevExtensions] = useState(() => {
     const saved = localStorage.getItem('pulselink.devExtensions');
@@ -3075,6 +3076,7 @@ function App() {
       newSettings.thirdPartyExtensionsEnabled = true;
       newSettings.privateSafeEnabled = true;
       newSettings.smartRepliesEnabled = true;
+      newSettings.truecallerEnabled = true;
     }
 
     setRemoteSettings(newSettings);
@@ -4175,7 +4177,8 @@ function App() {
                   items: [
                     { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
                     { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon navigation into a single simplified experience.', icon: <HomeIcon />, premium: true },
-                    { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true }
+                    { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true },
+                    { id: 'truecallerEnabled', name: 'Truecaller Caller ID', desc: 'Identify unknown callers and block spam using Truecaller directory.', icon: <SearchIcon /> }
                   ]
                 }
               ].map((category) => (
