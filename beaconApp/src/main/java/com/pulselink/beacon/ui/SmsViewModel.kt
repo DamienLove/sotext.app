@@ -158,8 +158,18 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch {
             repo.changes().collectLatest {
-                refreshThreads(initial = false)
-                currentThreadId?.let { refreshThread(it, refreshRead = false) }
+                // Use suspend functions to ensure cancellation if new updates arrive
+                // This prevents stacking parallel DB queries during rapid updates
+                isRefreshing = true
+                val newThreads = fetchThreadsSuspend()
+                rawThreads = newThreads
+                mergeThreads()
+                isRefreshing = false
+
+                val threadId = currentThreadId
+                if (threadId != null) {
+                    refreshThreadSuspend(threadId, refreshRead = false)
+                }
             }
         }
 
@@ -226,11 +236,15 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     fun refreshThreads(initial: Boolean = false) {
         viewModelScope.launch {
             if (initial) isLoading = true else isRefreshing = true
-            // Run on IO
-            rawThreads = runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
+            val newThreads = fetchThreadsSuspend()
+            rawThreads = newThreads
             mergeThreads()
             if (initial) isLoading = false else isRefreshing = false
         }
+    }
+
+    private suspend fun fetchThreadsSuspend(): List<SmsThreadItem> {
+        return runCatching { repo.listThreads(limit = THREAD_LIMIT) }.getOrElse { emptyList() }
     }
 
     private fun mergeThreads() {
@@ -435,42 +449,46 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun refreshThread(threadId: Long, refreshRead: Boolean) {
         viewModelScope.launch {
-            val dbMessages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
-                .getOrElse { emptyList() }
-
-            // Deduplicate pending messages: remove if found in DB
-            pendingOutgoingMessages.removeAll { pending ->
-                // Check if any DB message matches (body + similar timestamp)
-                dbMessages.any { db ->
-                    db.outgoing && db.body == pending.body && abs(db.timestamp - pending.timestamp) < 10000
-                }
-            }
-
-            // Merge pending messages for this thread
-            val pendingForThread = pendingOutgoingMessages.filter {
-                if (threadId == 0L) it.address == currentAddress else it.threadId == threadId
-            }
-
-            rawMessages = (pendingForThread + dbMessages).sortedByDescending { it.timestamp }
-
-            // Transform for UI (Group by Date)
-            uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages)
-
-            // Load reactions
-            reactionJob?.cancel()
-            val ids = rawMessages.map { it.id }
-            if (ids.isNotEmpty()) {
-                reactionJob = launch {
-                    reactionDao.getReactionsForMessages(ids).collectLatest { list ->
-                        reactions = list.groupBy { it.messageId }
-                    }
-                }
-            } else {
-                reactions = emptyMap()
-            }
-
-            if (refreshRead) runCatching { repo.markThreadRead(threadId) }
+            refreshThreadSuspend(threadId, refreshRead)
         }
+    }
+
+    private suspend fun refreshThreadSuspend(threadId: Long, refreshRead: Boolean) {
+        val dbMessages = runCatching { repo.messagesForThread(threadId, limit = MESSAGE_LIMIT) }
+            .getOrElse { emptyList() }
+
+        // Deduplicate pending messages: remove if found in DB
+        pendingOutgoingMessages.removeAll { pending ->
+            // Check if any DB message matches (body + similar timestamp)
+            dbMessages.any { db ->
+                db.outgoing && db.body == pending.body && abs(db.timestamp - pending.timestamp) < 10000
+            }
+        }
+
+        // Merge pending messages for this thread
+        val pendingForThread = pendingOutgoingMessages.filter {
+            if (threadId == 0L) it.address == currentAddress else it.threadId == threadId
+        }
+
+        rawMessages = (pendingForThread + dbMessages).sortedByDescending { it.timestamp }
+
+        // Transform for UI (Group by Date)
+        uiMessages = ThreadDateUtils.mapMessagesToUi(rawMessages)
+
+        // Load reactions
+        reactionJob?.cancel()
+        val ids = rawMessages.map { it.id }
+        if (ids.isNotEmpty()) {
+            reactionJob = viewModelScope.launch {
+                reactionDao.getReactionsForMessages(ids).collectLatest { list ->
+                    reactions = list.groupBy { it.messageId }
+                }
+            }
+        } else {
+            reactions = emptyMap()
+        }
+
+        if (refreshRead) runCatching { repo.markThreadRead(threadId) }
     }
 
     fun addReaction(messageId: Long, emoji: String) {

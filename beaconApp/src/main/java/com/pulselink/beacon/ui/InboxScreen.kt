@@ -104,7 +104,7 @@ import com.pulselink.beacon.R
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun InboxScreen(
     threads: List<SmsThreadItem>,
@@ -363,8 +363,27 @@ fun InboxScreen(
 
     // Grouping for Date Headers
     val groupedThreads = remember(filtered) {
+        val now = System.currentTimeMillis()
+        val calendar = Calendar.getInstance()
+        calendar.timeInMillis = now
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startOfToday = calendar.timeInMillis
+
+        calendar.add(Calendar.DAY_OF_YEAR, -1)
+        val startOfYesterday = calendar.timeInMillis
+
         filtered.groupBy { item ->
-            getHeaderForTimestamp(item.timestamp)
+            val t = item.timestamp
+            when {
+                t >= startOfToday -> "Today"
+                t >= startOfYesterday -> "Yesterday"
+                now - t < 7 * DateUtils.DAY_IN_MILLIS -> "This Week"
+                now - t < 30 * DateUtils.DAY_IN_MILLIS -> "This Month"
+                else -> "Older"
+            }
         }
     }
 
@@ -673,27 +692,6 @@ fun InboxScreen(
             )
         }
     }
-}
-
-private fun getHeaderForTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-    return when {
-        DateUtils.isToday(timestamp) -> "Today"
-        diff < 2 * DateUtils.DAY_IN_MILLIS && isYesterday(timestamp) -> "Yesterday"
-        diff < 7 * DateUtils.DAY_IN_MILLIS -> "This Week"
-        diff < 30 * DateUtils.DAY_IN_MILLIS -> "This Month"
-        else -> "Older"
-    }
-}
-
-private fun isYesterday(timestamp: Long): Boolean {
-    // Simple check
-    val c1 = Calendar.getInstance()
-    c1.add(Calendar.DAY_OF_YEAR, -1)
-    val c2 = Calendar.getInstance()
-    c2.timeInMillis = timestamp
-    return c1.get(Calendar.YEAR) == c2.get(Calendar.YEAR) && c1.get(Calendar.DAY_OF_YEAR) == c2.get(Calendar.DAY_OF_YEAR)
 }
 
 @Composable
