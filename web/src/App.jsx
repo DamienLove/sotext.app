@@ -1365,26 +1365,46 @@ const iconOverrideKeys = [
   { key: "icon.notifications", label: "Notifications" }
 ];
 
-const normalizeTheme = (input = {}) => ({
-  ...defaultTheme,
-  ...input,
-  iconSizeFactor: Number(input.iconSizeFactor ?? defaultTheme.iconSizeFactor),
-  bubbleCornerRadius: Number(input.bubbleCornerRadius ?? defaultTheme.bubbleCornerRadius),
-  fontScale: Number(input.fontScale ?? defaultTheme.fontScale),
-  bubbleCornerRadiusTopStart: input.bubbleCornerRadiusTopStart ?? defaultTheme.bubbleCornerRadiusTopStart,
-  bubbleCornerRadiusTopEnd: input.bubbleCornerRadiusTopEnd ?? defaultTheme.bubbleCornerRadiusTopEnd,
-  bubbleCornerRadiusBottomStart: input.bubbleCornerRadiusBottomStart ?? defaultTheme.bubbleCornerRadiusBottomStart,
-  bubbleCornerRadiusBottomEnd: input.bubbleCornerRadiusBottomEnd ?? defaultTheme.bubbleCornerRadiusBottomEnd,
-  timestampColor: input.timestampColor ?? defaultTheme.timestampColor,
-  dividerColor: input.dividerColor ?? defaultTheme.dividerColor,
-  appBackgroundGradientStart: input.appBackgroundGradientStart ?? defaultTheme.appBackgroundGradientStart,
-  appBackgroundGradientEnd: input.appBackgroundGradientEnd ?? defaultTheme.appBackgroundGradientEnd,
-  backgroundImageUrl: input.backgroundImageUrl ?? defaultTheme.backgroundImageUrl,
-  iconOverrides: input.iconOverrides ?? defaultTheme.iconOverrides,
-  useGlassEffect: input.useGlassEffect ?? defaultTheme.useGlassEffect,
-  useHolographicGlow: input.useHolographicGlow ?? defaultTheme.useHolographicGlow,
-  uiDensity: input.uiDensity ?? defaultTheme.uiDensity
-});
+// Sentinel: Validate URL scheme to prevent XSS (javascript: links)
+const isValidImageUrl = (url) => {
+  if (!url) return true; // Allow empty/null as valid (it just means no image)
+  const lower = url.toString().toLowerCase().trim();
+  return lower.startsWith('http://') || lower.startsWith('https://') || lower.startsWith('data:image/') || lower.startsWith('/');
+};
+
+const normalizeTheme = (input = {}) => {
+  const bgUrl = input.backgroundImageUrl ?? defaultTheme.backgroundImageUrl;
+  const safeBgUrl = isValidImageUrl(bgUrl) ? bgUrl : null;
+
+  const rawIcons = input.iconOverrides ?? defaultTheme.iconOverrides;
+  const safeIcons = {};
+  if (rawIcons) {
+    Object.entries(rawIcons).forEach(([k, v]) => {
+      if (isValidImageUrl(v)) safeIcons[k] = v;
+    });
+  }
+
+  return {
+    ...defaultTheme,
+    ...input,
+    iconSizeFactor: Number(input.iconSizeFactor ?? defaultTheme.iconSizeFactor),
+    bubbleCornerRadius: Number(input.bubbleCornerRadius ?? defaultTheme.bubbleCornerRadius),
+    fontScale: Number(input.fontScale ?? defaultTheme.fontScale),
+    bubbleCornerRadiusTopStart: input.bubbleCornerRadiusTopStart ?? defaultTheme.bubbleCornerRadiusTopStart,
+    bubbleCornerRadiusTopEnd: input.bubbleCornerRadiusTopEnd ?? defaultTheme.bubbleCornerRadiusTopEnd,
+    bubbleCornerRadiusBottomStart: input.bubbleCornerRadiusBottomStart ?? defaultTheme.bubbleCornerRadiusBottomStart,
+    bubbleCornerRadiusBottomEnd: input.bubbleCornerRadiusBottomEnd ?? defaultTheme.bubbleCornerRadiusBottomEnd,
+    timestampColor: input.timestampColor ?? defaultTheme.timestampColor,
+    dividerColor: input.dividerColor ?? defaultTheme.dividerColor,
+    appBackgroundGradientStart: input.appBackgroundGradientStart ?? defaultTheme.appBackgroundGradientStart,
+    appBackgroundGradientEnd: input.appBackgroundGradientEnd ?? defaultTheme.appBackgroundGradientEnd,
+    backgroundImageUrl: safeBgUrl,
+    iconOverrides: safeIcons,
+    useGlassEffect: input.useGlassEffect ?? defaultTheme.useGlassEffect,
+    useHolographicGlow: input.useHolographicGlow ?? defaultTheme.useHolographicGlow,
+    uiDensity: input.uiDensity ?? defaultTheme.uiDensity
+  };
+};
 
 const buildThemeVars = (theme) => {
   const active = normalizeTheme(theme);
@@ -3119,6 +3139,14 @@ function App() {
     setIsPublishingTheme(true);
     setThemePublishStatus("Publishing theme...");
     const backgroundImageUrl = themePublishForm.backgroundImageUrl.trim();
+
+    // Sentinel: Validate URL
+    if (backgroundImageUrl && !isValidImageUrl(backgroundImageUrl)) {
+      setThemePublishStatus("Invalid background URL. Must be http/https or data URI.");
+      setIsPublishingTheme(false);
+      return;
+    }
+
     const normalized = normalizeTheme({
       ...themePrefs,
       backgroundImageUrl: backgroundImageUrl || themePrefs.backgroundImageUrl || null
