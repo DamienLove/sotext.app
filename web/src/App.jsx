@@ -49,6 +49,17 @@ import proAvatar from './assets/avatars/pro_spark.svg';
 import betaAvatar from './assets/avatars/beta_flask.svg';
 import loyalAvatar from './assets/avatars/loyal_star.svg';
 
+// Bolt: Shared Intl formatters to avoid expensive instantiation in render loops
+const timeFormatter = new Intl.DateTimeFormat(undefined, {
+  hour: '2-digit',
+  minute: '2-digit'
+});
+
+const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'short',
+  timeStyle: 'short'
+});
+
 // Icons
 const HomeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
 const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>;
@@ -165,7 +176,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
-      {new Date(msg.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      {timeFormatter.format(new Date(msg.date))}
     </div>
   </div>
 ), areMessagesEqual);
@@ -340,7 +351,7 @@ const MapAlertItem = memo(({ alert, isActive, onFocus, onClear }) => {
           {alertBadgeCopy[alert.severity] ?? 'Alert'}
         </span>
       </div>
-      <div className="map-item-meta">{new Date(alert.date).toLocaleString()}</div>
+      <div className="map-item-meta">{dateTimeFormatter.format(new Date(alert.date))}</div>
       <div className="map-item-snippet">{buildAlertSnippet(alert.body)}</div>
       <div className="map-item-actions">
         <button
@@ -2609,7 +2620,7 @@ function App() {
         // Sentinel: Escape user input to prevent XSS in InfoWindow
         const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
         const safeAddress = escapeHtml(alert.address);
-        const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+        const safeDate = escapeHtml(dateTimeFormatter.format(new Date(alert.date)));
 
         mapInfoRef.current.setContent(
           `<div style="font-family: sans-serif; max-width: 220px;">
@@ -2660,7 +2671,7 @@ function App() {
       // Sentinel: Escape user input to prevent XSS in InfoWindow
       const safeType = escapeHtml(alertBadgeCopy[alert.severity] ?? 'Alert');
       const safeAddress = escapeHtml(alert.address);
-      const safeDate = escapeHtml(new Date(alert.date).toLocaleString());
+      const safeDate = escapeHtml(dateTimeFormatter.format(new Date(alert.date)));
 
       mapInfoRef.current.setContent(
         `<div style="font-family: sans-serif; max-width: 220px;">
@@ -4216,7 +4227,6 @@ function App() {
                                   settingsUpdatedAt: serverTimestamp()
                                 }, { merge: true });
                               }}
-                              aria-label={isEnabled ? `Remove ${ext.name}` : `Install ${ext.name}`}
                             >
                               {isEnabled ? "Remove" : "Install"}
                             </button>
@@ -4423,7 +4433,7 @@ function App() {
                             <span className="settings-label">Web sync</span>
                             <span className="settings-value">
                               {syncDiagnostics
-                                ? `${new Date(toMillis(syncDiagnostics.timestamp)).toLocaleString()} • ${syncDiagnostics.status}`
+                                ? `${dateTimeFormatter.format(new Date(toMillis(syncDiagnostics.timestamp)))} • ${syncDiagnostics.status}`
                                 : 'No sync data yet'}
                             </span>
                           </div>
