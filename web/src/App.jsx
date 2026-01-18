@@ -1451,8 +1451,8 @@ const buildThemeVars = (theme) => {
   return vars;
 };
 
-const buildThemePreviewStyle = (theme) => {
-  const active = normalizeTheme(theme);
+// Expects an already normalized theme to avoid redundant normalization
+const buildThemePreviewStyle = (active) => {
   const style = {
     backgroundColor: active.backgroundColor
   };
