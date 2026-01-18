@@ -1512,6 +1512,25 @@ const Sidebar = memo(({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (activePanel !== 'beacon') return;
+
+      const isTyping = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) ||
+                       document.activeElement.isContentEditable;
+
+      if (e.key === '/' && !isTyping) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activePanel]);
+
   // Bolt: Pre-compute search strings for threads locally to prevent App re-renders
   const searchIndex = useMemo(() => {
     return threads.map(t => {
@@ -1653,12 +1672,14 @@ const Sidebar = memo(({
                 <SearchIcon />
               </div>
               <input
+                ref={searchInputRef}
                 className="sidebar-search-input-field"
                 placeholder="Search messages..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search messages"
               />
+              {!searchQuery && <span className="shortcut-hint">/</span>}
               {searchQuery && (
                 <button
                   className="ghost-btn icon-only sidebar-search-clear-btn"
@@ -4369,7 +4390,6 @@ function App() {
                                   settingsUpdatedAt: serverTimestamp()
                                 }, { merge: true });
                               }}
-                              aria-label={isEnabled ? `Remove ${ext.name}` : `Install ${ext.name}`}
                             >
                               {isEnabled ? "Remove" : "Install"}
                             </button>
