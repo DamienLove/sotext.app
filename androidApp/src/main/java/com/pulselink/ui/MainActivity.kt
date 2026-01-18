@@ -72,10 +72,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
 import com.pulselink.auth.AuthState
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.data.sms.MessageNotificationManager
 import com.pulselink.data.contacts.DeviceContact
@@ -1019,47 +1021,59 @@ class MainActivity : AppCompatActivity() {
                     composable("login") {
                         val loginViewModel: LoginViewModel = hiltViewModel()
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
-                        val activity = LocalContext.current as? MainActivity
-                        val googleClient = remember {
-                                GoogleSignIn.getClient(
-                                    activity!!,
-                                    GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                                        .requestIdToken(getString(R.string.default_web_client_id))
-                                        .requestEmail()
+                        val context = LocalContext.current
+                        val credentialManager = remember { CredentialManager.create(context) }
+                        val clientId = stringResource(R.string.default_web_client_id)
+
+                        val onGoogleSignIn: () -> Unit = {
+                            scope.launch {
+                                try {
+                                    val googleIdOption = GetGoogleIdOption.Builder()
+                                        .setFilterByAuthorizedAccounts(false)
+                                        .setServerClientId(clientId)
+                                        .setAutoSelectEnabled(false)
                                         .build()
-                                )
-                        }
-                        val googleLauncher = rememberLauncherForActivityResult(
-                            contract = ActivityResultContracts.StartActivityForResult()
-                        ) { result ->
-                            if (result.resultCode != RESULT_OK) {
-                                loginViewModel.reportExternalError()
-                                return@rememberLauncherForActivityResult
-                            }
-                            try {
-                                val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-                                val account = task.getResult(ApiException::class.java)
-                                val idToken = account?.idToken
-                                if (idToken != null) {
-                                    loginViewModel.handleGoogleIdToken(idToken)
-                                } else {
+
+                                    val request = GetCredentialRequest.Builder()
+                                        .addCredentialOption(googleIdOption)
+                                        .build()
+
+                                    val result = credentialManager.getCredential(
+                                        request = request,
+                                        context = context,
+                                    )
+                                    val credential = result.credential
+                                    if (credential is androidx.credentials.CustomCredential &&
+                                        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                                        loginViewModel.handleGoogleIdToken(googleIdTokenCredential.idToken)
+                                    } else {
+                                        Log.e("MainActivity", "Unexpected credential type: ${credential.type}")
+                                        loginViewModel.reportExternalError()
+                                    }
+                                } catch (e: GetCredentialException) {
+                                    Log.e("MainActivity", "CredentialManager error", e)
+                                    // If cancellation, just ignore. If other error, report.
+                                    if (e.type != androidx.credentials.exceptions.GetCredentialException.TYPE_USER_CANCELED) {
+                                        loginViewModel.reportExternalError()
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("MainActivity", "Google Sign-In error", e)
                                     loginViewModel.reportExternalError()
                                 }
-                            } catch (e: Exception) {
-                                loginViewModel.reportExternalError()
                             }
                         }
 
                         LoginScreen(
                             state = loginUiState,
-                            onEmailChange = loginViewModel::updateEmail,        
-                            onPasswordChange = loginViewModel::updatePassword,  
+                            onEmailChange = loginViewModel::updateEmail,
+                            onPasswordChange = loginViewModel::updatePassword,
                             onConfirmPasswordChange = loginViewModel::updateConfirmPassword,
                             onSubmit = loginViewModel::submit,
                             onToggleMode = loginViewModel::toggleMode,
                             onForgotPassword = loginViewModel::sendPasswordReset,
-                            onSmsOnlyClick = loginViewModel::signInSmsOnly,     
-                            onGoogleClick = { googleLauncher.launch(googleClient.signInIntent) },
+                            onSmsOnlyClick = loginViewModel::signInSmsOnly,
+                            onGoogleClick = onGoogleSignIn,
                             onMessageConsumed = loginViewModel::clearTransientMessages,
                             useProBranding = false
                         )
