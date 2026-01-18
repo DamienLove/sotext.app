@@ -1548,6 +1548,25 @@ const Sidebar = memo(({
   showPreviews
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    if (activePanel !== 'beacon') return;
+
+    const handleKeyDown = (e) => {
+      // Focus search on "/" or "Ctrl+K" / "Cmd+K"
+      if (
+        (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) ||
+        ((e.ctrlKey || e.metaKey) && e.key === 'k')
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activePanel]);
 
   const searchInputRef = useRef(null);
 
@@ -1714,7 +1733,18 @@ const Sidebar = memo(({
                 placeholder="Search (Ctrl+K)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Search messages"
+                aria-label="Search messages (Ctrl+K)"
+                title="Search messages (Ctrl+K or /)"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    if (searchQuery) {
+                      setSearchQuery('');
+                    } else {
+                      e.currentTarget.blur();
+                    }
+                  }
+                }}
               />
               {!searchQuery && <span className="shortcut-hint">/</span>}
               {searchQuery && (
