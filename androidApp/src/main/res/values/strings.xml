@@ -524,6 +524,9 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="extension_smart_replies_title">Smart Replies</string>
     <string name="extension_smart_replies_desc">Show quick response chips (e.g., "Yes", "No", "Thanks") above the message input.</string>
 
+    <string name="extension_truecaller_title">Truecaller Caller ID</string>
+    <string name="extension_truecaller_desc">Identify unknown callers and detect spam using Truecaller\'s extensive directory.</string>
+
     <string-array name="smart_replies_defaults">
         <item>Yes</item>
         <item>No</item>

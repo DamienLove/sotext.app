@@ -854,6 +854,7 @@ class MainViewModel @Inject constructor(
                 val mergedExperience = snapshot.getBoolean("mergedExperienceEnabled")
                 val privateSafe = snapshot.getBoolean("privateSafeEnabled")
                 val smartReplies = snapshot.getBoolean("smartRepliesEnabled")
+                val truecaller = snapshot.getBoolean("truecallerEnabled")
 
                 viewModelScope.launch {
                     val current = settingsRepository.settings.first()
@@ -904,6 +905,7 @@ class MainViewModel @Inject constructor(
                     mergedExperience?.let { if (it != current.mergedExperienceEnabled) settingsRepository.setMergedExperienceEnabled(it) }
                     privateSafe?.let { if (it != current.privateSafeEnabled) settingsRepository.update { s -> s.copy(privateSafeEnabled = it) } }
                     smartReplies?.let { if (it != current.smartRepliesEnabled) settingsRepository.update { s -> s.copy(smartRepliesEnabled = it) } }
+                    truecaller?.let { if (it != current.truecallerEnabled) settingsRepository.setTruecallerEnabled(it) }
 
                     if (syncRequestedAt > lastSyncRequestAt) {
                         lastSyncRequestAt = syncRequestedAt
@@ -1704,6 +1706,15 @@ class MainViewModel @Inject constructor(
             settingsRepository.setThirdPartyExtensionsEnabled(enabled)
             (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
                 pushSettingsToCloud(user, mapOf("thirdPartyExtensionsEnabled" to enabled))
+            }
+        }
+    }
+
+    fun setTruecallerEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setTruecallerEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("truecallerEnabled" to enabled))
             }
         }
     }
