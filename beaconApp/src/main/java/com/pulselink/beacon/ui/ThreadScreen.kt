@@ -84,6 +84,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.ContentScale
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -121,6 +124,7 @@ fun ThreadScreen(
     onSaveDraft: (String) -> Unit = {},
     onBack: () -> Unit,
     onSend: (String) -> Unit,
+    onSendAttachment: (Uri) -> Unit = {},
     onCancelPending: () -> Unit = {},
     onSendNow: () -> Unit = {},
     onScheduleMessage: (String, Long) -> Unit = { _, _ -> },
@@ -156,6 +160,13 @@ fun ThreadScreen(
     var showTimePicker by remember { mutableStateOf(false) }
     var selectedDateMillis by remember { mutableStateOf<Long?>(null) }
     val context = LocalContext.current
+
+    val attachmentLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) onSendAttachment(uri)
+    }
+
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
 
@@ -497,6 +508,9 @@ fun ThreadScreen(
                             .fillMaxWidth()
                             .padding(start = 8.dp, end = 8.dp, bottom = 8.dp, top = 4.dp)
                     ) {
+                        IconButton(onClick = { attachmentLauncher.launch("image/*") }) {
+                            Icon(Icons.Default.AttachFile, contentDescription = "Attach", tint = iconTint)
+                        }
                         IconButton(onClick = {
                             if (draft.isNotBlank()) showDatePicker = true
                         }) {

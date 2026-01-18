@@ -190,6 +190,7 @@ private fun BeaconNav(
             composable("inbox") {
                     InboxScreen(
                         threads = vm.filteredThreads,
+                        contacts = vm.filteredContacts,
                         filter = vm.currentFilter,
                         onFilterChange = { vm.updateFilter(it) },
                         searchText = vm.currentSearchText,
@@ -275,6 +276,16 @@ private fun BeaconNav(
                         onSaveDraft = { vm.saveDraft(threadId, it) },
                         onBack = { navController.popBackStack() },
                         onSend = { vm.sendDelayedMessage(it) },
+                        onSendAttachment = { uri ->
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "image/*"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                putExtra("address", address)
+                                putExtra(Intent.EXTRA_PHONE_NUMBER, address)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Send MMS"))
+                        },
                         onCancelPending = { vm.cancelDelayedMessage() },
                         onSendNow = { vm.sendNow() },
                         onScheduleMessage = { body, time ->
@@ -448,7 +459,8 @@ private fun requiredPermissions(context: android.content.Context): List<String> 
         android.Manifest.permission.RECEIVE_SMS,
         android.Manifest.permission.SEND_SMS,
         android.Manifest.permission.RECEIVE_MMS,
-        android.Manifest.permission.RECEIVE_WAP_PUSH
+        android.Manifest.permission.RECEIVE_WAP_PUSH,
+        android.Manifest.permission.READ_CONTACTS
     )
     val notif =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) listOf(android.Manifest.permission.POST_NOTIFICATIONS) else emptyList()
@@ -459,7 +471,10 @@ private fun requiredPermissions(context: android.content.Context): List<String> 
 }
 
 private fun requiredReadPermissions(context: android.content.Context): List<String> {
-    val readPerms = listOf(android.Manifest.permission.READ_SMS)
+    val readPerms = listOf(
+        android.Manifest.permission.READ_SMS,
+        android.Manifest.permission.READ_CONTACTS
+    )
     return readPerms.filter {
         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
     }

@@ -27,6 +27,7 @@ import com.pulselink.beacon.data.scheduled.ThreadDraft
 import com.pulselink.beacon.worker.ScheduledMessageWorker
 import com.pulselink.beacon.util.ThreadDateUtils
 import com.pulselink.beacon.BuildConfig
+import com.pulselink.beacon.data.BeaconContact
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -62,6 +63,12 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     var threads by mutableStateOf<List<SmsThreadItem>>(emptyList())
         private set
+
+    var contacts by mutableStateOf<List<BeaconContact>>(emptyList())
+        private set
+    var filteredContacts by mutableStateOf<List<BeaconContact>>(emptyList())
+        private set
+
     // Changed to hold UiItems for display
     var uiMessages by mutableStateOf<List<ThreadUiItem>>(emptyList())
         private set
@@ -183,7 +190,17 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateFilter(filter: InboxFilter) {
         currentFilter = filter
+        if (filter == InboxFilter.CONTACTS && contacts.isEmpty()) {
+            loadContacts()
+        }
         updateFilteredList()
+    }
+
+    fun loadContacts() {
+        viewModelScope.launch {
+            contacts = repo.getContacts()
+            updateFilteredList()
+        }
     }
 
     fun updateSearchText(text: String) {
@@ -254,10 +271,22 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     InboxFilter.TRANSACTIONS -> list.filter { it.category == ThreadCategory.TRANSACTIONS && !it.isArchived }
                     InboxFilter.PROMOTIONS -> list.filter { it.category == ThreadCategory.PROMOTIONS && !it.isArchived }
                     InboxFilter.ARCHIVED -> list.filter { it.isArchived }
+                    InboxFilter.CONTACTS -> emptyList()
                 }
             }
+
+            val currentContacts = contacts
+            val fContacts = if (search.isNotBlank()) {
+                currentContacts.filter {
+                    it.displayName.contains(search, true) || it.phoneNumber.contains(search)
+                }
+            } else {
+                currentContacts
+            }
+
             withContext(Dispatchers.Main) {
                 filteredThreads = result
+                filteredContacts = fContacts
             }
         }
     }

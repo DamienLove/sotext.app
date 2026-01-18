@@ -97,6 +97,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsThreadItem
+import com.pulselink.beacon.data.BeaconContact
 import com.pulselink.beacon.data.ThemePalette
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.R
@@ -107,6 +108,7 @@ import java.util.Calendar
 @Composable
 fun InboxScreen(
     threads: List<SmsThreadItem>,
+    contacts: List<BeaconContact> = emptyList(),
     theme: ThemePalette,
     searchState: SearchResultState,
     isDefaultSms: Boolean,
@@ -499,7 +501,9 @@ fun InboxScreen(
 
             // Search Results or List
             Box(modifier = Modifier.weight(1f)) {
-                if (searchText.isNotBlank()) {
+                if (filter == InboxFilter.CONTACTS && searchText.isBlank()) {
+                    ContactsList(contacts, theme, onOpenThread)
+                } else if (searchText.isNotBlank()) {
                      when (searchState) {
                         is SearchResultState.Messages -> SearchResults(
                             hits = searchState.hits,
@@ -1212,7 +1216,66 @@ private fun TabsRow(
         TabChip("Promotions", filter == InboxFilter.PROMOTIONS, theme) { onFilterChange(InboxFilter.PROMOTIONS) }
         TabChip("Unread${if(unreadCount > 0) " ($unreadCount)" else ""}", filter == InboxFilter.UNREAD, theme) { onFilterChange(InboxFilter.UNREAD) }
         TabChip("Starred", filter == InboxFilter.STARRED, theme) { onFilterChange(InboxFilter.STARRED) }
+        TabChip("Contacts", filter == InboxFilter.CONTACTS, theme) { onFilterChange(InboxFilter.CONTACTS) }
         TabChip("Archived", filter == InboxFilter.ARCHIVED, theme) { onFilterChange(InboxFilter.ARCHIVED) }
+    }
+}
+
+@Composable
+private fun ContactsList(
+    contacts: List<BeaconContact>,
+    theme: ThemePalette,
+    onContactClick: (Long, String) -> Unit
+) {
+    if (contacts.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+             Text("No contacts found", color = theme.frameColor.copy(alpha=0.6f))
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(contacts, key = { it.id }) { contact ->
+                ContactRow(contact, theme, onContactClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContactRow(
+    contact: BeaconContact,
+    theme: ThemePalette,
+    onClick: (Long, String) -> Unit
+) {
+     Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick(0L, contact.phoneNumber) },
+        color = Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LetterAvatar(name = contact.displayName, theme = theme, size = 48.dp)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(
+                    text = contact.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = theme.frameColor,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = contact.phoneNumber,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = theme.frameColor.copy(alpha = 0.7f)
+                )
+            }
+        }
     }
 }
 
@@ -1234,4 +1297,4 @@ private fun TabChip(label: String, selected: Boolean, theme: ThemePalette, onCli
     }
 }
 
-enum class InboxFilter { ALL, READ, UNREAD, STARRED, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS }
+enum class InboxFilter { ALL, READ, UNREAD, STARRED, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS, CONTACTS }
