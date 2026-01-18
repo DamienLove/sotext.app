@@ -710,8 +710,14 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
           disabled={isSending || isLoggingIn}
           className="primary-btn"
           title="Send (Ctrl+Enter)"
+          aria-busy={isSending}
         >
-          {isSending ? "Sending..." : "Send"}
+          {isSending ? (
+            <>
+              <Spinner />
+              Sending...
+            </>
+          ) : "Send"}
         </button>
       </div>
       {status && <div className="compose-status" role="status" aria-live="polite">{status}</div>}
@@ -3313,7 +3319,12 @@ function App() {
                   aria-busy={isLoggingIn}
                   className="primary-btn"
                 >
-                  {isLoggingIn ? 'Signing in...' : 'Sign in'}
+                  {isLoggingIn ? (
+                    <>
+                      <Spinner />
+                      Signing in...
+                    </>
+                  ) : 'Sign in'}
                 </button>
                 <button
                   onClick={() => handleEmailAuth('signup')}
@@ -3338,7 +3349,12 @@ function App() {
                 aria-busy={isLoggingIn}
                 className="primary-btn"
               >
-                {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
+                {isLoggingIn ? (
+                  <>
+                    <Spinner />
+                    Signing in...
+                  </>
+                ) : 'Sign in with Google'}
               </button>
             </div>
           </div>
@@ -4216,7 +4232,6 @@ function App() {
                                   settingsUpdatedAt: serverTimestamp()
                                 }, { merge: true });
                               }}
-                              aria-label={isEnabled ? `Remove ${ext.name}` : `Install ${ext.name}`}
                             >
                               {isEnabled ? "Remove" : "Install"}
                             </button>
