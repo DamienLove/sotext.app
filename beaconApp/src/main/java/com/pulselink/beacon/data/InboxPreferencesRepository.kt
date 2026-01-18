@@ -17,6 +17,7 @@ class InboxPreferencesRepository(private val context: Context) {
     private val autoReplyEnabledKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_reply_enabled")
     private val autoReplyMessageKey = stringPreferencesKey("auto_reply_message")
     private val quickRepliesKey = stringPreferencesKey("quick_replies")
+    private val autoDeleteOtpsKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_delete_otps")
 
     val flow: Flow<InboxState> = context.inboxDataStore.data.map { prefs ->
         val pinned = decodeSet(prefs[pinnedKey])
@@ -24,6 +25,7 @@ class InboxPreferencesRepository(private val context: Context) {
         val delayedSend = prefs[delayedSendKey] ?: 5
         val autoReplyEnabled = prefs[autoReplyEnabledKey] ?: false
         val autoReplyMessage = prefs[autoReplyMessageKey] ?: "I'm currently driving/busy. Will reply later."
+        val autoDeleteOtps = prefs[autoDeleteOtpsKey] ?: false
         val quickRepliesRaw = prefs[quickRepliesKey]
         val quickReplies = if (!quickRepliesRaw.isNullOrBlank()) {
              quickRepliesRaw.split("|")
@@ -37,8 +39,15 @@ class InboxPreferencesRepository(private val context: Context) {
             delayedSendTimeout = delayedSend,
             autoReplyEnabled = autoReplyEnabled,
             autoReplyMessage = autoReplyMessage,
-            quickReplies = quickReplies
+            quickReplies = quickReplies,
+            autoDeleteOtps = autoDeleteOtps
         )
+    }
+
+    suspend fun setAutoDeleteOtps(enabled: Boolean) {
+        context.inboxDataStore.edit { prefs ->
+            prefs[autoDeleteOtpsKey] = enabled
+        }
     }
 
     suspend fun setDelayedSendTimeout(seconds: Int) {

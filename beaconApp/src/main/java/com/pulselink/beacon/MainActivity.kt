@@ -23,6 +23,8 @@ import com.google.android.gms.ads.MobileAds
 import com.pulselink.beacon.ui.ads.BannerAd
 import com.pulselink.beacon.ui.InboxScreen
 import com.pulselink.beacon.ui.NewMessageScreen
+import com.pulselink.beacon.ui.ScheduledMessagesScreen
+import com.pulselink.beacon.ui.SpamAndBlockedScreen
 import com.pulselink.beacon.ui.SmsViewModel
 import com.pulselink.beacon.ui.ThreadScreen
 import com.pulselink.beacon.ui.ThemeViewModel
@@ -228,6 +230,8 @@ private fun BeaconNav(
                     onCustomize = { navController.navigate("customize?address=") },
                     onCompose = { navController.navigate("newMessage") },
                     onOpenNotifications = { navController.navigate("notifications") },
+                    onOpenScheduled = { navController.navigate("scheduled") },
+                    onOpenSpamAndBlocked = { navController.navigate("spam") },
                     selectionMode = vm.selectionMode,
                     selectedThreadIds = vm.selectedThreadIds,
                     onToggleSelection = { vm.toggleSelection(it) },
@@ -247,7 +251,9 @@ private fun BeaconNav(
                     quickReplies = vm.quickReplies,
                     onSetAutoReplyEnabled = { vm.setAutoReplyEnabled(it) },
                     onSetAutoReplyMessage = { vm.setAutoReplyMessage(it) },
-                    onUpdateQuickReplies = { vm.updateQuickReplies(it) }
+                    onUpdateQuickReplies = { vm.updateQuickReplies(it) },
+                    autoDeleteOtps = vm.autoDeleteOtps,
+                    onSetAutoDeleteOtps = { vm.setAutoDeleteOtps(it) }
                 )
             }
             composable(
@@ -370,6 +376,22 @@ private fun BeaconNav(
                             popUpTo("inbox")
                         }
                     }
+                )
+            }
+            composable("scheduled") {
+                ScheduledMessagesScreen(
+                    messages = vm.scheduledMessages,
+                    theme = themeState.global,
+                    onBack = { navController.popBackStack() },
+                    onDelete = { vm.cancelScheduledMessage(it) }
+                )
+            }
+            composable("spam") {
+                SpamAndBlockedScreen(
+                    blockedNumbers = vm.blockedNumbersList,
+                    theme = themeState.global,
+                    onBack = { navController.popBackStack() },
+                    onUnblock = { vm.unblockNumber(it) }
                 )
             }
             composable(
