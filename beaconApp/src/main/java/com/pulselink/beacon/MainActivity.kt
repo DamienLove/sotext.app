@@ -192,6 +192,7 @@ private fun BeaconNav(
             composable("inbox") {
                     InboxScreen(
                         threads = vm.filteredThreads,
+                        groupedThreads = vm.filteredGroupedThreads,
                         contacts = vm.filteredContacts,
                         filter = vm.currentFilter,
                         onFilterChange = { vm.updateFilter(it) },
@@ -242,6 +243,7 @@ private fun BeaconNav(
                     onMarkSelectedUnread = { vm.markSelectedUnread() },
                     onPinSelected = { vm.pinSelected() },
                     onMarkAsUnread = { vm.markAsUnread(it) },
+                    onMarkAllRead = { vm.markAllRead() },
                     userMessage = vm.userMessage,
                     onClearUserMessage = { vm.clearUserMessage() },
                     delayedSendTimeout = vm.delayedSendTimeout,

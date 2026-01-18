@@ -69,6 +69,10 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var filteredContacts by mutableStateOf<List<BeaconContact>>(emptyList())
         private set
 
+    // Grouped threads for UI (Map<Header, List<Thread>>)
+    var filteredGroupedThreads by mutableStateOf<Map<String, List<SmsThreadItem>>>(emptyMap())
+        private set
+
     // Changed to hold UiItems for display
     var uiMessages by mutableStateOf<List<ThreadUiItem>>(emptyList())
         private set
@@ -89,7 +93,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     var scheduledMessages by mutableStateOf<List<ScheduledMessage>>(emptyList())
         private set
 
-    var draftsMap by mutableStateOf<Map<Long, String>>(emptyMap())
+    var draftsMap by mutableStateOf<Map<Long, ThreadDraft>>(emptyMap())
         private set
 
     var isDraftsLoaded by mutableStateOf(false)
@@ -205,7 +209,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch {
             draftDao.getAllDrafts().collectLatest { drafts ->
-                draftsMap = drafts.associate { it.threadId to it.body }
+                draftsMap = drafts.associateBy { it.threadId }
                 isDraftsLoaded = true
                 mergeThreads()
             }
@@ -248,33 +252,50 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun mergeThreads() {
-        // Optimized sorting and filtering blocked
-        val merged = rawThreads.asSequence()
-            .filter { !blockedNumbers.contains(it.address) } // Naive normalization check, ideally normalize 'it.address' too
-            .map { thread ->
-                val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
-                val isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
-                val draft = draftsMap[thread.threadId]
+        viewModelScope.launch(Dispatchers.Default) {
+            // Optimized sorting and filtering blocked
+            val merged = rawThreads.asSequence()
+                .filter { !blockedNumbers.contains(it.address) }
+                .map { thread ->
+                    val isPinned = inboxState.pinnedThreadIds.contains(thread.threadId)
+                    val isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
+                    val draft = draftsMap[thread.threadId]
 
-                // Always create copy if draft exists or other state changed
-                if (isPinned != thread.isPinned || isArchived != thread.isArchived || draft != thread.draftSnippet) {
-                    thread.copy(
-                        isPinned = isPinned,
-                        isArchived = isArchived,
-                        draftSnippet = draft
-                    )
-                } else {
-                    thread
+                    // Calculate effective timestamp (max of thread or draft)
+                    // If we have a draft that is newer than the thread timestamp, use it.
+                    val effectiveTimestamp = if (draft != null && draft.timestamp > thread.timestamp) {
+                        draft.timestamp
+                    } else {
+                        thread.timestamp
+                    }
+
+                    // Always create copy if draft exists or other state changed
+                    if (isPinned != thread.isPinned ||
+                        isArchived != thread.isArchived ||
+                        draft?.body != thread.draftSnippet ||
+                        effectiveTimestamp != thread.timestamp
+                    ) {
+                        thread.copy(
+                            isPinned = isPinned,
+                            isArchived = isArchived,
+                            draftSnippet = draft?.body,
+                            timestamp = effectiveTimestamp
+                        )
+                    } else {
+                        thread
+                    }
                 }
+                .sortedWith(
+                    compareByDescending<SmsThreadItem> { it.isPinned }
+                        .thenByDescending { it.timestamp }
+                )
+                .toList()
+
+            withContext(Dispatchers.Main) {
+                threads = merged
             }
-            .sortedWith(
-                compareByDescending<SmsThreadItem> { it.isPinned }
-                    .thenByDescending { it.draftSnippet != null } // Drafts bump to top? Maybe not, keep timestamp
-                    .thenByDescending { it.timestamp }
-            )
-            .toList()
-        threads = merged
-        updateFilteredList()
+            updateFilteredList()
+        }
     }
 
     private fun updateFilteredList() {
@@ -285,7 +306,6 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
             val result = if (search.isNotBlank()) {
                 // If searching, show all non-archived matching items in the main list
-                // (Though SearchResults UI might handle this, keeping list consistent is good)
                 list.filter {
                     !it.isArchived && (it.address.contains(search, true) || it.snippet.contains(search, true))
                 }
@@ -303,6 +323,30 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
 
+            // Calculate groups
+            val now = System.currentTimeMillis()
+            val calendar = java.util.Calendar.getInstance()
+            calendar.timeInMillis = now
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+            calendar.set(java.util.Calendar.MINUTE, 0)
+            calendar.set(java.util.Calendar.SECOND, 0)
+            calendar.set(java.util.Calendar.MILLISECOND, 0)
+            val startOfToday = calendar.timeInMillis
+
+            calendar.add(java.util.Calendar.DAY_OF_YEAR, -1)
+            val startOfYesterday = calendar.timeInMillis
+
+            val groups = result.groupBy { item ->
+                val t = item.timestamp
+                when {
+                    t >= startOfToday -> "Today"
+                    t >= startOfYesterday -> "Yesterday"
+                    now - t < 7 * android.text.format.DateUtils.DAY_IN_MILLIS -> "This Week"
+                    now - t < 30 * android.text.format.DateUtils.DAY_IN_MILLIS -> "This Month"
+                    else -> "Older"
+                }
+            }
+
             val currentContacts = contacts
             val fContacts = if (search.isNotBlank()) {
                 currentContacts.filter {
@@ -314,6 +358,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
             withContext(Dispatchers.Main) {
                 filteredThreads = result
+                filteredGroupedThreads = groups
                 filteredContacts = fContacts
             }
         }
@@ -386,6 +431,16 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
             userMessage = "${toArchive.size} threads archived"
             clearSelection()
+        }
+    }
+
+    fun markAllRead() {
+        viewModelScope.launch {
+            val unreadIds = threads.filter { it.unread }.map { it.threadId }
+            if (unreadIds.isNotEmpty()) {
+                repo.markThreadsRead(unreadIds)
+                userMessage = "Marked ${unreadIds.size} threads as read"
+            }
         }
     }
 

@@ -108,6 +108,7 @@ import java.util.Calendar
 @Composable
 fun InboxScreen(
     threads: List<SmsThreadItem>,
+    groupedThreads: Map<String, List<SmsThreadItem>>,
     contacts: List<BeaconContact> = emptyList(),
     theme: ThemePalette,
     searchState: SearchResultState,
@@ -147,6 +148,7 @@ fun InboxScreen(
     onMarkSelectedUnread: () -> Unit = {},
     onPinSelected: () -> Unit = {},
     onMarkAsUnread: (Long) -> Unit = {},
+    onMarkAllRead: () -> Unit = {},
     userMessage: String? = null,
     onClearUserMessage: () -> Unit = {},
     delayedSendTimeout: Int = 5,
@@ -361,31 +363,7 @@ fun InboxScreen(
         }
     }
 
-    // Grouping for Date Headers
-    val groupedThreads = remember(filtered) {
-        val now = System.currentTimeMillis()
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = now
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        val startOfToday = calendar.timeInMillis
-
-        calendar.add(Calendar.DAY_OF_YEAR, -1)
-        val startOfYesterday = calendar.timeInMillis
-
-        filtered.groupBy { item ->
-            val t = item.timestamp
-            when {
-                t >= startOfToday -> "Today"
-                t >= startOfYesterday -> "Yesterday"
-                now - t < 7 * DateUtils.DAY_IN_MILLIS -> "This Week"
-                now - t < 30 * DateUtils.DAY_IN_MILLIS -> "This Month"
-                else -> "Older"
-            }
-        }
-    }
+    // Grouping is now passed from ViewModel
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -486,6 +464,12 @@ fun InboxScreen(
                         }
                         IconButton(onClick = { showSettingsDialog = true }) {
                             Icon(Icons.Default.Settings, contentDescription = "Settings", tint = iconTint)
+                        }
+                        // Mark all read action if there are unread messages
+                        if (unreadCount > 0) {
+                            IconButton(onClick = onMarkAllRead) {
+                                Icon(Icons.Default.MarkChatUnread, contentDescription = "Mark all read", tint = iconTint)
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.largeTopAppBarColors(
