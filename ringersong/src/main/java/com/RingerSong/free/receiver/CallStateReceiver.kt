@@ -40,6 +40,10 @@ class CallStateReceiver : BroadcastReceiver() {
                 val number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
                 Log.d(TAG, "RINGING from: $number - Starting RingerPlaybackService")
 
+                // Attempt to silence ringer immediately to reduce latency, but capture volume first!
+                val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+                var originalVolume = -1
+
                 // Start the playback service immediately to silence default ringer and play stream
                 val serviceIntent = Intent(context, RingerPlaybackService::class.java).apply {
                     action = RingerPlaybackService.ACTION_PLAY_SEGMENT
@@ -47,8 +51,22 @@ class CallStateReceiver : BroadcastReceiver() {
                 }
 
                 try {
+                    // Capture and silence BEFORE starting service to reduce latency
+                    if (audioManager != null) {
+                        originalVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_RING)
+                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_RING, 0, 0)
+                    }
+
+                    if (originalVolume != -1) {
+                        serviceIntent.putExtra(RingerPlaybackService.EXTRA_ORIGINAL_VOLUME, originalVolume)
+                    }
+
                     if (!canStartServiceFromBackground(context)) {
                         Log.w(TAG, "Skipping playback service start; app not in foreground and missing overlay permission.")
+                        // Restore volume if we can't start!
+                        if (originalVolume != -1) {
+                             audioManager?.setStreamVolume(android.media.AudioManager.STREAM_RING, originalVolume, 0)
+                        }
                         return
                     }
 
@@ -59,6 +77,14 @@ class CallStateReceiver : BroadcastReceiver() {
                     }
                 } catch (e: Throwable) {
                     Log.e(TAG, "Failed to start service", e)
+                    // Failsafe: Restore volume if service start failed
+                    if (originalVolume != -1) {
+                        try {
+                            audioManager?.setStreamVolume(android.media.AudioManager.STREAM_RING, originalVolume, 0)
+                        } catch (restoreEx: Exception) {
+                            Log.e(TAG, "Failed to restore volume in failsafe", restoreEx)
+                        }
+                    }
                 }
             }
 
