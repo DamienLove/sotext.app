@@ -1711,7 +1711,7 @@ const Sidebar = memo(({
               <input
                 ref={searchInputRef}
                 className="sidebar-search-input-field"
-                placeholder="Search messages..."
+                placeholder="Search (Ctrl+K)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search messages"
@@ -1728,6 +1728,18 @@ const Sidebar = memo(({
                 </button>
               )}
             </div>
+            <button
+              className="ghost-btn icon-only"
+              title="Command Palette (Ctrl+K)"
+              style={{ marginLeft: 8 }}
+              onClick={() => {
+                 const sidebarSearch = document.querySelector('.sidebar-search-input-field');
+                 if (sidebarSearch) sidebarSearch.focus();
+                 else setActivePanel('settings'); // Fallback to settings if not in beacon
+              }}
+            >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3-3 3 3 0 0 0-3-3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path></svg>
+            </button>
           </div>
           <div className="thread-list">
             {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
@@ -2053,11 +2065,25 @@ function App() {
 =======
 >>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
 
-  // Toggle DevTools with Ctrl+Shift+D
+  // Toggle DevTools with Ctrl+Shift+D or Command Palette with Ctrl+K
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         setShowDevTools(prev => !prev);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        // Focus sidebar search if in beacon, else maybe focus settings search
+        // For now, let's just focus the main search if available
+        const sidebarSearch = document.querySelector('.sidebar-search-input-field');
+        if (sidebarSearch) sidebarSearch.focus();
+        else {
+           const settingsSearch = document.querySelector('.settings-search-input');
+           if (settingsSearch) {
+               setActivePanel('settings');
+               setTimeout(() => settingsSearch.focus(), 100);
+           }
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -3142,6 +3168,10 @@ function App() {
 
   const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
+    // Optimistic UI update
+    const normalized = normalizeTheme(themeDoc.theme);
+    setThemePrefs(normalized);
+
     await handleApplyPreset(themeDoc.theme);
     setThemeGalleryStatus(`Imported "${themeDoc.name}".`);
   }, [handleApplyPreset]);
@@ -3633,6 +3663,13 @@ function App() {
                 </div>
               )}
               <div className="home-grid">
+                <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
+                  <div className="home-icon beacon">
+                    <img src={beaconLogo} alt="Beacon" />
+                  </div>
+                  <h3>Beacon Inbox</h3>
+                  <p>View SMS synced from your phone.</p>
+                </button>
                 <button className="home-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
@@ -3646,13 +3683,6 @@ function App() {
                   </div>
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
-                </button>
-                <button className="home-card" onClick={() => setActivePanel('beacon')}>
-                  <div className="home-icon beacon">
-                    <img src={beaconLogo} alt="Beacon" />
-                  </div>
-                  <h3>Beacon Inbox</h3>
-                  <p>View SMS synced from your phone.</p>
                 </button>
                 <button className="home-card" onClick={() => setActivePanel('ringersong')}>
                   <div className="home-icon ringersong">
