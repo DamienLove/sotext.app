@@ -53,6 +53,14 @@ import androidx.core.content.PackageManagerCompat
 import androidx.core.content.UnusedAppRestrictionsConstants
 import androidx.compose.material3.FloatingActionButton
 import androidx.hilt.navigation.compose.hiltViewModel
+<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
+<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
+=======
+import androidx.lifecycle.lifecycleScope
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
+=======
+import androidx.lifecycle.lifecycleScope
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -2357,7 +2365,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendLinkOrInvite(contact: Contact) {
+<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
+<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
         androidx.lifecycle.lifecycleScope.launch {
+=======
+        lifecycleScope.launch {
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
+=======
+        lifecycleScope.launch {
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
             if (contact.phoneNumber.isNotBlank()) {
                 val success = viewModel.sendLinkRequest(contact.id)
                 val msg = if (success) getString(R.string.link_request_sent_sms) else getString(R.string.link_request_failed_sms)

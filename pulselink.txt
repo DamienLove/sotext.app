@@ -113,7 +113,15 @@ Outstanding (carry-over for next session)
  - Beacon MMS: current CarrierMessagingService is a stub (immediate OK); implement real carrier-grade MMS download/send pipeline and verify with device/carrier.
 - SMS: Add MMS send/receive UI + compliance tests; enhance inbox with unread badges, delete/archive, and better date formatting; consider content observer cleanup.
  - Beacon visual customization: gradients, icon sizing, and presets polishing; add tests for theme persistence and per-contact overrides.
+<<<<<<< C:\Projects\pulselink\pulselink.txt
+<<<<<<< C:\Projects\pulselink\pulselink.txt
 - Caller ID: ✅ Truecaller lookup implemented (priority 2 provider). Outstanding: in-call overlay UI, permission flow refinement, additional provider integrations if needed.
+=======
+- Caller ID: Truecaller lookup implemented (priority 2 provider). Outstanding: in-call overlay UI, permission flow refinement, additional provider integrations if needed.
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\pulselink.txt
+=======
+- Caller ID: Truecaller lookup implemented (priority 2 provider). Outstanding: in-call overlay UI, permission flow refinement, additional provider integrations if needed.
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\pulselink.txt
 - Private contacts/chats: enforce PIN when opening private threads, store messages securely/encrypted, filter UI lists, add "make private" toggles.
 - Trusted contacts/emergency controls: ensure emergency actions (ringer/volume/siren override) are exposed in SMS app for trusted contacts.
 - Premium web access: design secure relay (likely Firebase Functions + Firestore) for remote message access, add device opt-in, auth, and audit logging.

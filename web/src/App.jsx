@@ -1900,6 +1900,9 @@ function App() {
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const isPremiumUser = useMemo(() => {
@@ -1917,6 +1920,80 @@ function App() {
       userData?.proUnlocked === true ||
       userData?.hasProHistory === true;
   }, [isPremiumUser, subscriptionStatus, userData?.proUnlocked, userData?.hasProHistory]);
+=======
+  const [premiumClaimActive, setPremiumClaimActive] = useState(false);
+=======
+  const [premiumClaimActive, setPremiumClaimActive] = useState(false);
+  const [proClaimActive, setProClaimActive] = useState(false);
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+  const [premiumClaimActive, setPremiumClaimActive] = useState(false);
+  const [proClaimActive, setProClaimActive] = useState(false);
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+
+  const premiumSubscriptionStatus = userData?.premiumSubscriptionStatus;
+  const isPremiumUser = useMemo(() => {
+    return premiumClaimActive ||
+      premiumSubscriptionStatus === "SUBSCRIPTION_STATE_ACTIVE" ||
+      premiumSubscriptionStatus === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+  }, [premiumClaimActive, premiumSubscriptionStatus]);
+
+  const isProUser = useMemo(() => {
+    return isPremiumUser ||
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+      userData?.proUnlocked === true ||
+      userData?.hasProHistory === true ||
+      userData?.subscriptionStatus === "pro";
+  }, [isPremiumUser, userData?.proUnlocked, userData?.hasProHistory, userData?.subscriptionStatus]);
+=======
+      proClaimActive === true;
+  }, [isPremiumUser, proClaimActive]);
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+      proClaimActive === true;
+  }, [isPremiumUser, proClaimActive]);
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+
+  useEffect(() => {
+    if (!user) {
+      setPremiumClaimActive(false);
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+      return;
+    }
+    const callable = httpsCallable(functions, "getPremiumStatus");
+    callable().then((result) => {
+      const data = result.data || {};
+      setPremiumClaimActive(data.hasClaim === true);
+    }).catch(() => {
+      setPremiumClaimActive(false);
+    });
+  }, [user]);
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+=======
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+      setProClaimActive(false);
+      return;
+    }
+    const callable = httpsCallable(functions, "getPremiumStatus");
+    Promise.all([
+      callable(),
+      user.getIdTokenResult()
+    ]).then(([result, tokenResult]) => {
+      const data = result?.data || {};
+      setPremiumClaimActive(data.hasClaim === true);
+      setProClaimActive(tokenResult?.claims?.pro === true || tokenResult?.claims?.premium === true);
+    }).catch(() => {
+      setPremiumClaimActive(false);
+      setProClaimActive(false);
+    });
+  }, [user]);
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
 
   // Toggle DevTools with Ctrl+Shift+D
   useEffect(() => {
@@ -2145,8 +2222,26 @@ function App() {
     const unsubscribe = onSnapshot(userRef, (snapshot) => {
       const data = snapshot.data() || {};
       setUserData(data);
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
       const isPremium = data.subscriptionStatus === 'premium' || data.premiumUnlocked === true || data.hasPremiumHistory;
       const isPro = isPremium || data.subscriptionStatus === 'pro' || data.proUnlocked === true || data.hasProHistory;
+=======
+      const isPremium = data.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_ACTIVE" ||
+        data.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+      const isPro = isPremium;
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+      const isPremium = data.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_ACTIVE" ||
+        data.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+      const isPro = isPremium;
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+      const isPremium = data.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_ACTIVE" ||
+        data.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+      const isPro = isPremium;
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
       const isBeta = data.isBetaTester === true;
       const tenureDays = data.createdAt ? (Date.now() - toMillis(data.createdAt)) / (1000 * 60 * 60 * 24) : 0;
       setProfile({
@@ -2162,7 +2257,19 @@ function App() {
         setThemePrefs(defaultTheme);
       }
       setRemoteSettings({
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
         remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? isPremium,
+=======
+        remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? false,
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+        remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? false,
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+        remoteWebAccessEnabled: data.remoteWebAccessEnabled ?? false,
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
         thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true,
@@ -2235,6 +2342,9 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
     if (!user || !isPremiumUser || !userData) return;
     if (userData.remoteWebAccessEnabled === undefined) {
       setDoc(doc(db, "users", user.uid), {
@@ -2243,6 +2353,15 @@ function App() {
         console.error("Failed to auto-enable remote web access", err);
       });
     }
+=======
+    return;
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+    return;
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+    return;
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
   }, [user, userData, isPremiumUser]);
 
   useEffect(() => {
@@ -2300,6 +2419,28 @@ function App() {
       setIsLoadingThreads(false);
       return;
     }
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+=======
+=======
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+    if (!isPremiumUser || userData?.remoteWebAccessEnabled !== true) {
+      setLegacyThreads([]);
+      setLines([]);
+      setLineThreads({});
+      setIsLoadingThreads(false);
+      return;
+    }
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
     setIsLoadingThreads(true);
     // Legacy single-line threads (synced_threads)
     const legacyRef = collection(db, "users", user.uid, "synced_threads");
@@ -2370,7 +2511,19 @@ function App() {
       unsubscribeLines();
       detachAll();
     };
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
+<<<<<<< C:\Projects\pulselink\web\src\App.jsx
   }, [user]);
+=======
+  }, [user, isPremiumUser, userData?.remoteWebAccessEnabled]);
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+  }, [user, isPremiumUser, userData?.remoteWebAccessEnabled]);
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
+=======
+  }, [user, isPremiumUser, userData?.remoteWebAccessEnabled]);
+>>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\web\src\App.jsx
 
   useEffect(() => {
     const themesRef = collection(db, "themes_public");
