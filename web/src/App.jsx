@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
+import CommandPalette from './CommandPalette';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -1545,7 +1546,8 @@ const Sidebar = memo(({
   threads,
   selectedThreadId,
   onSelect,
-  showPreviews
+  showPreviews,
+  openCommandPalette
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef(null);
@@ -1585,8 +1587,10 @@ const Sidebar = memo(({
       .map(({ thread }) => thread);
   }, [searchIndex, searchQuery, threads]);
 
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-brand">
           <img src={navLogo || logo} alt="PulseLink Suite" className="brand-logo small" />
@@ -1596,7 +1600,7 @@ const Sidebar = memo(({
           </div>
         </div>
         <div className="sidebar-actions">
-          {activePanel === 'beacon' && (
+          {!collapsed && activePanel === 'beacon' && (
             <button
               onClick={handleNewThread}
               className="secondary-btn"
@@ -1605,7 +1609,6 @@ const Sidebar = memo(({
               New
             </button>
           )}
-          <button onClick={handleLogout} className="ghost-btn">Logout</button>
         </div>
       </div>
       <div className="sidebar-nav">
@@ -1701,7 +1704,17 @@ const Sidebar = memo(({
           <span>Settings</span>
         </button>
       </div>
-      {activePanel === 'beacon' ? (
+      <div className="sidebar-footer">
+        {!collapsed && <button onClick={handleLogout} className="ghost-btn">Logout</button>}
+        <button onClick={() => setCollapsed(prev => !prev)} className="ghost-btn icon-only" title={collapsed ? "Expand" : "Collapse"}>
+          {collapsed ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+          )}
+        </button>
+      </div>
+      {activePanel === 'beacon' && !collapsed ? (
         <>
           <div className="sidebar-search-container">
             <div className="sidebar-search-wrapper">
@@ -1743,11 +1756,7 @@ const Sidebar = memo(({
               className="ghost-btn icon-only"
               title="Command Palette (Ctrl+K)"
               style={{ marginLeft: 8 }}
-              onClick={() => {
-                 const sidebarSearch = document.querySelector('.sidebar-search-input-field');
-                 if (sidebarSearch) sidebarSearch.focus();
-                 else setActivePanel('settings'); // Fallback to settings if not in beacon
-              }}
+              onClick={openCommandPalette}
             >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3-3 3 3 0 0 0-3-3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3z"></path></svg>
             </button>
@@ -1981,6 +1990,7 @@ function App() {
   const [ringerPlaylist, setRingerPlaylist] = useState([]);
   const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
@@ -2037,17 +2047,7 @@ function App() {
       }
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        // Focus sidebar search if in beacon, else maybe focus settings search
-        // For now, let's just focus the main search if available
-        const sidebarSearch = document.querySelector('.sidebar-search-input-field');
-        if (sidebarSearch) sidebarSearch.focus();
-        else {
-           const settingsSearch = document.querySelector('.settings-search-input');
-           if (settingsSearch) {
-               setActivePanel('settings');
-               setTimeout(() => settingsSearch.focus(), 100);
-           }
-        }
+        setShowCommandPalette(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -3511,6 +3511,15 @@ function App() {
     <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
       <div className="noise-overlay" />
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        setActivePanel={setActivePanel}
+        actions={{
+          logout: handleLogout,
+          newThread: handleNewThread
+        }}
+      />
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
         <Sidebar
@@ -3532,6 +3541,7 @@ function App() {
           selectedThreadId={selectedThread?.id}
           onSelect={handleThreadSelect}
           showPreviews={showPreviews}
+          openCommandPalette={() => setShowCommandPalette(true)}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (

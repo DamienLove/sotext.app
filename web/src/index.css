@@ -52,12 +52,12 @@
 }
 
 :root {
-  /* Core Palette: "Future Deep v8" - Neon Noir */
-  --bg: #020202; /* v8 Deepest Black */
-  --bg-accent: #050810;
-  --surface: #080b14;
-  --surface-alt: #0f1521;
-  --surface-hover: #161e2e;
+  /* Core Palette: "Future Deep v9" - Neon Noir */
+  --bg: #000000; /* v9 Pitch Black */
+  --bg-accent: #020408;
+  --surface: #05080E;
+  --surface-alt: #0A0F1C;
+  --surface-hover: #0F1521;
 
   /* Text & Ink */
   --ink: #e0f7fa;
@@ -65,11 +65,11 @@
   --muted: #64748b;
   --ink-muted: #64748b;
 
-  /* Accents - v8 Neon Cyan & Electric Magenta */
-  --accent: #00ffff;        /* v8 Super Neon Cyan */
-  --accent-glow: rgba(0, 255, 255, 0.6);
+  /* Accents - v9 Electric Cyan & Neon Magenta */
+  --accent: #00F0FF;        /* v9 Electric Cyan */
+  --accent-glow: rgba(0, 240, 255, 0.6);
   --accent-strong: #00b8d4;
-  --accent-dim: rgba(0, 255, 255, 0.15);
+  --accent-dim: rgba(0, 240, 255, 0.15);
 
   --secondary: #e000ff;     /* v8 Electric Magenta */
   --secondary-glow: rgba(224, 0, 255, 0.5);
