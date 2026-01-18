@@ -252,7 +252,7 @@ class RingerPlaybackService : Service() {
     private suspend fun playSpotifySong(song: SongEntry, startMs: Long, durationMs: Long) {
         Log.d(TAG, "Attempting to stream Spotify track: ${song.title} (${song.uri})")
 
-        // Try streaming first (user requested priority)
+        // Try streaming using Spotify App Remote
         val streamSuccess = spotifyPlayer.playUri(song.uri, startMs)
 
         if (streamSuccess) {
@@ -271,16 +271,7 @@ class RingerPlaybackService : Service() {
             return
         }
 
-        Log.w(TAG, "Spotify streaming failed, checking for local file...")
-
-        val localPath = SpotifyDownloaderRepository(this).getLocalFilePathFromUri(song.uri)
-        if (localPath != null) {
-            Log.d(TAG, "Playing downloaded Spotify track: ${song.title} ($localPath)")
-            playLocalSong(song.copy(uri = localPath), startMs, durationMs)
-            return
-        }
-
-        Log.e(TAG, "Spotify track not downloaded: ${song.title} (${song.uri})")
+        Log.e(TAG, "Spotify streaming failed: ${song.title} (${song.uri})")
         stopPlayback()
         restoreSystemRinger()
         stopForeground(true)
@@ -335,33 +326,26 @@ class RingerPlaybackService : Service() {
     }
 
     private suspend fun playYouTubeSong(song: SongEntry, startMs: Long, durationMs: Long) {
-        // YouTube Music songs are downloaded as local files
         // Extract the video ID from the URI (format: "youtube:video:VIDEO_ID")
         val videoId = song.uri.removePrefix("youtube:video:")
         val youtubeMusicRepo = com.RingerSong.free.data.YouTubeMusicRepository(this)
-        val localPath = youtubeMusicRepo.getLocalFilePath(videoId)
 
-        if (localPath != null) {
-            // Play the downloaded file using the same logic as local songs
-            val localSong = song.copy(uri = localPath)
-            playLocalSong(localSong, startMs, durationMs)
-            return
-        }
+        Log.d(TAG, "Attempting to stream YouTube track: $videoId")
 
-        Log.d(TAG, "YouTube track not downloaded, attempting to stream: $videoId")
-
-        // Try to fetch stream URL
+        // Fetch stream URL via Repository (RapidAPI)
+        // This keeps it "streaming" (no local file import) but allows us to use MediaPlayer
+        // which gives us start/stop control, unlike launching the external app.
         val details = youtubeMusicRepo.getSongDetails(videoId)
         val streamUrl = details?.downloadUrl
 
         if (!streamUrl.isNullOrBlank()) {
             Log.d(TAG, "Streaming YouTube URL: $streamUrl")
-            // Stream the URL using the same logic as local songs (MediaPlayer handles URLs)
+            // Stream the URL using MediaPlayer
             playLocalSong(song.copy(uri = streamUrl), startMs, durationMs)
             return
         }
 
-        Log.e(TAG, "YouTube track not available (not downloaded and no stream URL): $videoId")
+        Log.e(TAG, "YouTube track stream unavailable: $videoId")
         stopSelf()
     }
 
