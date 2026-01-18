@@ -1540,6 +1540,7 @@ const Sidebar = memo(({
   lineInboxMode,
   isLoadingThreads,
   isPremium,
+  remoteSettings,
   navLogo,
   brandTitle,
   threads,
@@ -1639,46 +1640,54 @@ const Sidebar = memo(({
           <img src={beaconLogo} alt="Beacon" />
           <span>Beacon</span>
         </button>
-        <button
-          className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
-          onClick={() => setActivePanel('ringersong')}
-          title="RingerSong"
-          aria-label="RingerSong"
-          aria-current={activePanel === 'ringersong' ? 'page' : undefined}
-        >
-          <img src={ringersongLogo} alt="RingerSong" />
-          <span>RingerSong</span>
-        </button>
-        <button
-          className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
-          onClick={() => setActivePanel('map')}
-          title="Map"
-          aria-label="Map"
-          aria-current={activePanel === 'map' ? 'page' : undefined}
-        >
-          <MapIcon />
-          <span>Map</span>
-        </button>
-        <button
-          className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
-          onClick={() => setActivePanel('contacts')}
-          title="Contacts"
-          aria-label="Contacts"
-          aria-current={activePanel === 'contacts' ? 'page' : undefined}
-        >
-          <ContactIcon />
-          <span>Contacts</span>
-        </button>
-        <button
-          className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
-          onClick={() => setActivePanel('themes')}
-          title="Themes"
-          aria-label="Themes"
-          aria-current={activePanel === 'themes' ? 'page' : undefined}
-        >
-          <ThemeIcon />
-          <span>Themes</span>
-        </button>
+        {remoteSettings.ringerSongEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
+            onClick={() => setActivePanel('ringersong')}
+            title="RingerSong"
+            aria-label="RingerSong"
+            aria-current={activePanel === 'ringersong' ? 'page' : undefined}
+          >
+            <img src={ringersongLogo} alt="RingerSong" />
+            <span>RingerSong</span>
+          </button>
+        )}
+        {remoteSettings.mapEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
+            onClick={() => setActivePanel('map')}
+            title="Map"
+            aria-label="Map"
+            aria-current={activePanel === 'map' ? 'page' : undefined}
+          >
+            <MapIcon />
+            <span>Map</span>
+          </button>
+        )}
+        {remoteSettings.contactsEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'contacts' ? 'active' : ''}`}
+            onClick={() => setActivePanel('contacts')}
+            title="Contacts"
+            aria-label="Contacts"
+            aria-current={activePanel === 'contacts' ? 'page' : undefined}
+          >
+            <ContactIcon />
+            <span>Contacts</span>
+          </button>
+        )}
+        {remoteSettings.themesEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'themes' ? 'active' : ''}`}
+            onClick={() => setActivePanel('themes')}
+            title="Themes"
+            aria-label="Themes"
+            aria-current={activePanel === 'themes' ? 'page' : undefined}
+          >
+            <ThemeIcon />
+            <span>Themes</span>
+          </button>
+        )}
         <button
           className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
           onClick={() => setActivePanel('extensions')}
@@ -1827,6 +1836,7 @@ const Sidebar = memo(({
          prev.activeLineId === next.activeLineId &&
          prev.lineInboxMode === next.lineInboxMode &&
          prev.isPremium === next.isPremium &&
+         prev.remoteSettings === next.remoteSettings &&
          prev.selectedThreadId === next.selectedThreadId &&
          prev.onSelect === next.onSelect &&
          prev.showPreviews === next.showPreviews &&
@@ -1917,7 +1927,11 @@ function App() {
     mergedExperienceEnabled: false,
     privateSafeEnabled: false,
     smartRepliesEnabled: true,
-    truecallerEnabled: false
+    truecallerEnabled: false,
+    ringerSongEnabled: true,
+    mapEnabled: true,
+    contactsEnabled: true,
+    themesEnabled: true
   });
   const [devExtensions, setDevExtensions] = useState(() => {
     const saved = localStorage.getItem('pulselink.devExtensions');
@@ -2304,7 +2318,12 @@ function App() {
         firebaseMessagingEnabled: data.firebaseMessagingEnabled ?? true,
         mergedExperienceEnabled: data.mergedExperienceEnabled ?? false,
         privateSafeEnabled: data.privateSafeEnabled ?? false,
-        smartRepliesEnabled: data.smartRepliesEnabled ?? true
+        smartRepliesEnabled: data.smartRepliesEnabled ?? true,
+        truecallerEnabled: data.truecallerEnabled ?? false,
+        ringerSongEnabled: data.ringerSongEnabled ?? true,
+        mapEnabled: data.mapEnabled ?? true,
+        contactsEnabled: data.contactsEnabled ?? true,
+        themesEnabled: data.themesEnabled ?? true
       });
       if (data.lineInboxMode) setLineInboxMode(data.lineInboxMode);
       if (data.activeLineId) setActiveLineId(data.activeLineId);
@@ -3161,6 +3180,11 @@ function App() {
         mergedExperienceEnabled: remoteSettings.mergedExperienceEnabled,
         privateSafeEnabled: remoteSettings.privateSafeEnabled,
         smartRepliesEnabled: remoteSettings.smartRepliesEnabled,
+        truecallerEnabled: remoteSettings.truecallerEnabled,
+        ringerSongEnabled: remoteSettings.ringerSongEnabled,
+        mapEnabled: remoteSettings.mapEnabled,
+        contactsEnabled: remoteSettings.contactsEnabled,
+        themesEnabled: remoteSettings.themesEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -3212,6 +3236,10 @@ function App() {
       newSettings.mergedExperienceEnabled = false;
       newSettings.privateSafeEnabled = false;
       newSettings.smartRepliesEnabled = true;
+      newSettings.ringerSongEnabled = false;
+      newSettings.mapEnabled = true; // Safety core
+      newSettings.contactsEnabled = true;
+      newSettings.themesEnabled = false;
     } else if (isPower) {
       newSettings.beaconLauncherEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
@@ -3225,6 +3253,10 @@ function App() {
       newSettings.privateSafeEnabled = true;
       newSettings.smartRepliesEnabled = true;
       newSettings.truecallerEnabled = true;
+      newSettings.ringerSongEnabled = true;
+      newSettings.mapEnabled = true;
+      newSettings.contactsEnabled = true;
+      newSettings.themesEnabled = true;
     }
 
     setRemoteSettings(newSettings);
@@ -4312,6 +4344,15 @@ function App() {
                   items: [
                     { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
                     { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> }
+                  ]
+                },
+                {
+                  title: "PulseLink Apps",
+                  items: [
+                    { id: 'ringerSongEnabled', name: 'RingerSong', desc: 'Progressive ringtone streaming & playlist manager.', icon: ringersongLogo, isImg: true },
+                    { id: 'mapEnabled', name: 'Emergency Map', desc: 'Track shared locations from PulseLink alerts.', icon: <MapIcon /> },
+                    { id: 'contactsEnabled', name: 'Contacts Manager', desc: 'Browse and manage synced device contacts.', icon: <ContactIcon /> },
+                    { id: 'themesEnabled', name: 'Theme Gallery', desc: 'Browse, import, and publish custom themes.', icon: <ThemeIcon /> }
                   ]
                 },
                 {
