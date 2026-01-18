@@ -125,15 +125,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val proUnlocked = prefs[PRO_UNLOCKED] ?: defaults.proUnlocked
         val remoteWebAccessEnabled = when {
             prefs.contains(REMOTE_WEB_ACCESS) -> prefs[REMOTE_WEB_ACCESS] ?: false
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\settings\SettingsRepositoryImpl.kt
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\settings\SettingsRepositoryImpl.kt
             premiumUnlocked || BuildConfig.PREMIUM_FEATURES || proUnlocked || BuildConfig.PRO_FEATURES -> true
-=======
-            premiumUnlocked || BuildConfig.PREMIUM_FEATURES -> true
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\settings\SettingsRepositoryImpl.kt
-=======
-            premiumUnlocked || BuildConfig.PREMIUM_FEATURES -> true
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\settings\SettingsRepositoryImpl.kt
             else -> defaults.remoteWebAccessEnabled
         }
 

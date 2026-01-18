@@ -150,25 +150,16 @@ class MainViewModel @Inject constructor(
             settingsRepository.settings.collect { settings ->
                 val user = firebaseAuthManager.currentUser()
                 if (user != null && !user.isAnonymous) {
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\state\MainViewModel.kt
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\state\MainViewModel.kt
                     val subscriptionStatus = when {
                         settings.premiumUnlocked || BuildConfig.PREMIUM_FEATURES -> "premium"
-                        settings.proUnlocked -> "pro"
+                        settings.proUnlocked || BuildConfig.PRO_FEATURES -> "pro"
                         else -> "free"
                     }
                     val payload = mapOf(
                         "premiumUnlocked" to settings.premiumUnlocked,
                         "proUnlocked" to settings.proUnlocked,
-                        "subscriptionStatus" to subscriptionStatus
-=======
-                    val payload = mapOf(
+                        "subscriptionStatus" to subscriptionStatus,
                         "remoteWebAccessEnabled" to settings.remoteWebAccessEnabled
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\state\MainViewModel.kt
-=======
-                    val payload = mapOf(
-                        "remoteWebAccessEnabled" to settings.remoteWebAccessEnabled
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\state\MainViewModel.kt
                     )
                     pushSettingsToCloud(user, payload)
                     if (settings.remoteWebAccessEnabled && (!lastRemoteWebEnabled || settings.premiumUnlocked != lastPremium)) {

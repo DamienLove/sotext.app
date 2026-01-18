@@ -33,18 +33,13 @@ class SmsSyncWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val settings = settingsRepository.settings.first()
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-        val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked || BuildConfig.PRO_FEATURES || settings.proUnlocked
-        val isPro = settings.proUnlocked
-=======
         val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
-        val subscriptionTier = if (isPremium) "premium" else "free"
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-=======
-        val isPremium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
-        val subscriptionTier = if (isPremium) "premium" else "free"
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
+        val isPro = BuildConfig.PRO_FEATURES || settings.proUnlocked
+        val subscriptionTier = when {
+            isPremium -> "premium"
+            isPro -> "pro"
+            else -> "free"
+        }
         val hasReadSms = hasSmsPermission()
 
         val user = auth.currentUser ?: run {
@@ -57,25 +52,9 @@ class SmsSyncWorker @AssistedInject constructor(
             val userRef = firestore.collection("users").document(user.uid)
             val deviceId = settingsRepository.ensureDeviceId()
 
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-            // Sync subscription status to allow Web client to unlock features
-            val status = when {
-                isPremium -> "premium"
-                isPro -> "pro"
-                else -> "free"
-            }
             userRef.set(
                 mapOf(
-                    "subscriptionStatus" to status,
-=======
-            userRef.set(
-                mapOf(
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-=======
-            userRef.set(
-                mapOf(
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
+                    "subscriptionStatus" to subscriptionTier,
                     "remoteWebAccessEnabled" to settings.remoteWebAccessEnabled
                 ),
                 SetOptions.merge()
@@ -83,25 +62,11 @@ class SmsSyncWorker @AssistedInject constructor(
 
             // If the user hasn't enabled remote web access, there's nothing to sync.
             if (!settings.remoteWebAccessEnabled) {
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-                writeDiagnostics(user.uid, deviceId, status, 0, 0, hasReadSms, "remoteWebAccess off")
-                return Result.success()
-            }
-            if (!hasReadSms) {
-                writeDiagnostics(user.uid, deviceId, status, 0, 0, hasReadSms, "READ_SMS missing")
-=======
-=======
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
                 writeDiagnostics(user.uid, deviceId, subscriptionTier, 0, 0, hasReadSms, "remoteWebAccess off")
                 return Result.success()
             }
             if (!hasReadSms) {
                 writeDiagnostics(user.uid, deviceId, subscriptionTier, 0, 0, hasReadSms, "READ_SMS missing")
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-=======
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
                 return Result.success()
             }
 
@@ -128,7 +93,7 @@ class SmsSyncWorker @AssistedInject constructor(
 
             var syncedThreads = 0
             var syncedMessages = 0
-            val threadLimit = if (isPremium) 200 else 50
+            val threadLimit = if (isPremium || isPro) 200 else 50
             val threads = smsRepository.listThreads(limit = threadLimit)
             val lineThreadsRef = lineRef.collection("threads")
 
@@ -221,15 +186,7 @@ class SmsSyncWorker @AssistedInject constructor(
             writeDiagnostics(
                 user.uid,
                 deviceId,
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-                status,
-=======
                 subscriptionTier,
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
-=======
-                subscriptionTier,
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\data\sms\SmsSyncWorker.kt
                 syncedThreads,
                 syncedMessages,
                 hasReadSms,

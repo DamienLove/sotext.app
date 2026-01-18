@@ -53,14 +53,7 @@ import androidx.core.content.PackageManagerCompat
 import androidx.core.content.UnusedAppRestrictionsConstants
 import androidx.compose.material3.FloatingActionButton
 import androidx.hilt.navigation.compose.hiltViewModel
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
-=======
 import androidx.lifecycle.lifecycleScope
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
-=======
-import androidx.lifecycle.lifecycleScope
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,6 +68,7 @@ import androidx.navigation.navArgument
 import com.pulselink.auth.AuthState
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -1051,12 +1045,12 @@ class MainActivity : AppCompatActivity() {
                                         Log.e("MainActivity", "Unexpected credential type: ${credential.type}")
                                         loginViewModel.reportExternalError()
                                     }
+                                } catch (e: GetCredentialCancellationException) {
+                                    Log.d("MainActivity", "CredentialManager cancelled", e)
                                 } catch (e: GetCredentialException) {
                                     Log.e("MainActivity", "CredentialManager error", e)
                                     // If cancellation, just ignore. If other error, report.
-                                    if (e.type != androidx.credentials.exceptions.GetCredentialException.TYPE_USER_CANCELED) {
-                                        loginViewModel.reportExternalError()
-                                    }
+                                    loginViewModel.reportExternalError()
                                 } catch (e: Exception) {
                                     Log.e("MainActivity", "Google Sign-In error", e)
                                     loginViewModel.reportExternalError()
@@ -2383,15 +2377,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendLinkOrInvite(contact: Contact) {
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
-        androidx.lifecycle.lifecycleScope.launch {
-=======
         lifecycleScope.launch {
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
-=======
-        lifecycleScope.launch {
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\MainActivity.kt
             if (contact.phoneNumber.isNotBlank()) {
                 val success = viewModel.sendLinkRequest(contact.id)
                 val msg = if (success) getString(R.string.link_request_sent_sms) else getString(R.string.link_request_failed_sms)

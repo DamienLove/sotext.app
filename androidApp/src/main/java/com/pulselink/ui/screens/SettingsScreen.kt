@@ -27,14 +27,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Help
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\screens\SettingsScreen.kt
-<<<<<<< C:\Projects\pulselink\androidApp\src\main\java\com\pulselink\ui\screens\SettingsScreen.kt
-=======
 import androidx.compose.material.icons.filled.Lock
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\screens\SettingsScreen.kt
-=======
-import androidx.compose.material.icons.filled.Lock
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\androidApp\src\main\java\com\pulselink\ui\screens\SettingsScreen.kt
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette

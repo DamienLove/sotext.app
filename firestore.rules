@@ -1,12 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-<<<<<<< C:\Projects\pulselink\firestore.rules
-<<<<<<< C:\Projects\pulselink\firestore.rules
-=======
-=======
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
     function hasPremiumClaim() {
       return request.auth != null && request.auth.token.premium == true;
     }
@@ -18,11 +12,6 @@ service cloud.firestore {
     function canUseSmsWebSync(userId) {
       return request.auth != null && request.auth.uid == userId && hasPremiumClaim() && remoteWebAccessEnabled(userId);
     }
-
-<<<<<<< C:\Projects\pulselink\firestore.rules
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
-=======
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
     function isDeviceOwner(deviceId) {
       return get(/databases/$(database)/documents/devices/$(deviceId)).data.uid == request.auth.uid;
     }
@@ -50,36 +39,15 @@ service cloud.firestore {
       }
 
       match /synced_threads/{threadId} {
-<<<<<<< C:\Projects\pulselink\firestore.rules
-<<<<<<< C:\Projects\pulselink\firestore.rules
         allow read, write: if request.auth != null && request.auth.uid == userId;
 
         match /messages/{messageId} {
           allow read, write: if request.auth != null && request.auth.uid == userId;
-=======
-=======
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
-        allow read, write: if canUseSmsWebSync(userId);
-
-        match /messages/{messageId} {
-          allow read, write: if canUseSmsWebSync(userId);
-<<<<<<< C:\Projects\pulselink\firestore.rules
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
-=======
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
         }
       }
 
       match /outbox/{messageId} {
-<<<<<<< C:\Projects\pulselink\firestore.rules
-<<<<<<< C:\Projects\pulselink\firestore.rules
         allow read, write: if request.auth != null && request.auth.uid == userId;
-=======
-      allow read, write: if canUseSmsWebSync(userId);
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
-=======
-      allow read, write: if canUseSmsWebSync(userId);
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
       }
 
       match /trustedContacts/{contactId} {
@@ -100,8 +68,6 @@ service cloud.firestore {
 
       // Allow syncing lines data which contains thread backups as well (Supports both legacy and new sync architectures)
       match /lines/{lineId} {
-<<<<<<< C:\Projects\pulselink\firestore.rules
-<<<<<<< C:\Projects\pulselink\firestore.rules
         allow read, write: if request.auth != null && request.auth.uid == userId;
 
         match /threads/{threadId} {
@@ -109,20 +75,6 @@ service cloud.firestore {
 
            match /messages/{messageId} {
              allow read, write: if request.auth != null && request.auth.uid == userId;
-=======
-=======
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
-        allow read, write: if canUseSmsWebSync(userId);
-
-        match /threads/{threadId} {
-           allow read, write: if canUseSmsWebSync(userId);
-
-           match /messages/{messageId} {
-             allow read, write: if canUseSmsWebSync(userId);
-<<<<<<< C:\Projects\pulselink\firestore.rules
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
-=======
->>>>>>> c:\Users\me\.windsurf\worktrees\pulselink\pulselink-6addc510\firestore.rules
            }
         }
       }
