@@ -4,19 +4,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// Future Deep v8 Design System Tokens
+// Future Deep v9 Design System Tokens
 // The ultimate unified design language for PulseLink Suite.
-// V8: "Neon Noir" - deeper blacks, brighter neons, holographic finishes.
+// V9: "Neon Noir Refined" - Sharper contrast, deeper blacks, more glassmorphism.
 
 // Colors
-val DeepBackground = Color(0xFF020202) // V8 Deepest Black
-val DeepSurface = Color(0xFF080B14) // V8 Surface (Darker)
-val DeepSurfaceAlt = Color(0xFF0F1521) // V8 Surface Alt
-val DeepAccent = Color(0xFF00FFFF) // V8 Neon Cyan
+val DeepBackground = Color(0xFF000000) // V9 Pitch Black
+val DeepSurface = Color(0xFF05080E) // V9 Surface (Very Deep Blue)
+val DeepSurfaceAlt = Color(0xFF0A0F1C) // V9 Surface Alt
+val DeepAccent = Color(0xFF00F0FF) // V9 Electric Cyan
 val DeepAccentStrong = Color(0xFF00B8D4) // Cyan 700
-val DeepTertiary = Color(0xFFE000FF) // V8 Neon Magenta
-val DeepError = Color(0xFFFF2E4D) // V8 Error (Brighter)
-val DeepOnSurface = Color(0xFFE0F7FA) // V8 Ink
+val DeepTertiary = Color(0xFFE000FF) // V9 Neon Magenta
+val DeepError = Color(0xFFFF2E4D) // V9 Error
+val DeepOnSurface = Color(0xFFE0F7FA) // V9 Ink
 val DeepMuted = Color(0xFF64748B) // Slate 500
 
 object Spacing {
@@ -37,9 +37,9 @@ object Layout {
 }
 
 object Gradients {
-    // V8 "Alive" Background
+    // V9 "Void" Background
     val PrimaryBackground = Brush.verticalGradient(
-        colors = listOf(Color(0xFF050810), DeepBackground)
+        colors = listOf(Color(0xFF020408), DeepBackground)
     )
     
     // Vibrant accent gradient for buttons/FABs
@@ -69,7 +69,7 @@ object Gradients {
         )
     )
 
-    // V8 Neon Border - sharper
+    // V9 Neon Border - sharper
     val NeonBorder = Brush.linearGradient(
         colors = listOf(
             DeepAccent.copy(alpha = 0.6f),
@@ -78,13 +78,13 @@ object Gradients {
         )
     )
 
-    // V8 Holographic Border (New)
+    // V9 Holographic Border
     val HolographicBorder = Brush.sweepGradient(
         colors = listOf(
-            DeepAccent.copy(alpha = 0.3f),
-            DeepTertiary.copy(alpha = 0.3f),
-            Color.White.copy(alpha = 0.5f), // Shine
-            DeepAccent.copy(alpha = 0.3f)
+            DeepAccent.copy(alpha = 0.4f),
+            DeepTertiary.copy(alpha = 0.4f),
+            Color.White.copy(alpha = 0.6f), // Brighter Shine
+            DeepAccent.copy(alpha = 0.4f)
         )
     )
 
@@ -92,19 +92,27 @@ object Gradients {
         colors = listOf(DeepError, Color(0xFF991B1B))
     )
 
-    // Refined V8 Glass Border
+    // Refined V9 Glass Border
     val GlassBorder = Brush.verticalGradient(
         colors = listOf(
-            Color.White.copy(alpha = 0.12f),
-            Color.White.copy(alpha = 0.02f)
+            Color.White.copy(alpha = 0.15f),
+            Color.White.copy(alpha = 0.03f)
         )
     )
 
     val SurfaceShine = Brush.linearGradient(
         colors = listOf(
             Color.White.copy(alpha = 0.0f),
-            Color.White.copy(alpha = 0.05f),
+            Color.White.copy(alpha = 0.07f),
             Color.White.copy(alpha = 0.0f)
+        )
+    )
+
+    // V9 New: Holographic Surface for cards
+    val HolographicSurface = Brush.linearGradient(
+        colors = listOf(
+            Color(0xFF0A0F1C).copy(alpha = 0.9f),
+            Color(0xFF05080E).copy(alpha = 0.95f)
         )
     )
 }
