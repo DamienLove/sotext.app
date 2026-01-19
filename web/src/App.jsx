@@ -1505,6 +1505,54 @@ const escapeHtml = (unsafe) => {
     .replace(/'/g, "&#039;");
 };
 
+// Bolt: Lazy search index hook to prevent expensive O(N) string operations when search is not active
+const useLazySearchIndex = (items, mapFn) => {
+  const indexRef = useRef(null);
+  const prevItemsRef = useRef(items);
+
+  if (prevItemsRef.current !== items) {
+    indexRef.current = null;
+    prevItemsRef.current = items;
+  }
+
+  return useCallback(() => {
+    if (!indexRef.current) {
+      indexRef.current = items.map(mapFn);
+    }
+    return indexRef.current;
+  }, [items, mapFn]);
+};
+
+const threadMapper = (t) => {
+  const display = (t.display_name || t.address || '').toLowerCase();
+  const snippet = (t.snippet || '').toLowerCase();
+  return { thread: t, searchString: `${display} ${snippet}` };
+};
+
+const contactMapper = (contact) => {
+  const parts = [
+    contact.displayName,
+    contact.phoneNumber,
+    contact.email,
+    ...(Array.isArray(contact.additionalPhones) ? contact.additionalPhones : []),
+    ...(Array.isArray(contact.additionalEmails) ? contact.additionalEmails : [])
+  ];
+
+  const searchString = parts
+    .filter(part => part !== null && part !== undefined)
+    .map(part => String(part).toLowerCase())
+    .join(' ');
+
+  return { contact, searchString };
+};
+
+const themeMapper = (theme) => {
+  const name = (theme.name ?? '').toString().toLowerCase();
+  const author = (theme.authorName ?? '').toString().toLowerCase();
+  const handle = (theme.authorHandle ?? '').toString().toLowerCase();
+  return { theme, searchString: `${name} ${author} ${handle}` };
+};
+
 const loadGoogleMaps = (() => {
   let loaderPromise;
   return (apiKey) => {
@@ -1576,21 +1624,16 @@ const Sidebar = memo(({
   }, [activePanel]);
 
   // Bolt: Pre-compute search strings for threads locally to prevent App re-renders
-  const searchIndex = useMemo(() => {
-    return threads.map(t => {
-      const display = (t.display_name || t.address || '').toLowerCase();
-      const snippet = (t.snippet || '').toLowerCase();
-      return { thread: t, searchString: `${display} ${snippet}` };
-    });
-  }, [threads]);
+  // using lazy evaluation to skip computation when not searching
+  const getSearchIndex = useLazySearchIndex(threads, threadMapper);
 
   const filteredThreads = useMemo(() => {
     const term = searchQuery.trim().toLowerCase();
     if (!term) return threads;
-    return searchIndex
+    return getSearchIndex()
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ thread }) => thread);
-  }, [searchIndex, searchQuery, threads]);
+  }, [getSearchIndex, searchQuery, threads]);
 
   const [collapsed, setCollapsed] = useState(false);
 
@@ -2198,51 +2241,27 @@ function App() {
     });
   }, [alertLocations, incomingOnly, severityFilter]);
   // Bolt: Pre-compute search strings for themes to avoid redundant lowercasing during typing
-  const themeSearchIndex = useMemo(() => {
-    return publicThemes.map(theme => {
-      const name = (theme.name ?? '').toString().toLowerCase();
-      const author = (theme.authorName ?? '').toString().toLowerCase();
-      const handle = (theme.authorHandle ?? '').toString().toLowerCase();
-      return { theme, searchString: `${name} ${author} ${handle}` };
-    });
-  }, [publicThemes]);
+  const getThemeSearchIndex = useLazySearchIndex(publicThemes, themeMapper);
 
   const filteredThemes = useMemo(() => {
     const term = themeSearch.trim().toLowerCase();
     if (!term) return publicThemes;
-    return themeSearchIndex
+    return getThemeSearchIndex()
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ theme }) => theme);
-  }, [themeSearchIndex, themeSearch, publicThemes]);
+  }, [getThemeSearchIndex, themeSearch, publicThemes]);
   // Bolt: Pre-compute search strings for contacts to avoid expensive string operations on every keystroke
-  const contactSearchIndex = useMemo(() => {
-    return deviceContacts.map(contact => {
-      const parts = [
-        contact.displayName,
-        contact.phoneNumber,
-        contact.email,
-        ...(Array.isArray(contact.additionalPhones) ? contact.additionalPhones : []),
-        ...(Array.isArray(contact.additionalEmails) ? contact.additionalEmails : [])
-      ];
-
-      const searchString = parts
-        .filter(part => part !== null && part !== undefined)
-        .map(part => String(part).toLowerCase())
-        .join(' ');
-
-      return { contact, searchString };
-    });
-  }, [deviceContacts]);
+  const getContactSearchIndex = useLazySearchIndex(deviceContacts, contactMapper);
 
   const filteredDeviceContacts = useMemo(() => {
     const term = contactSearch.trim().toLowerCase();
     if (!term) return deviceContacts;
 
     // Bolt: Use the pre-computed index for O(N) simple string inclusion check
-    return contactSearchIndex
+    return getContactSearchIndex()
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ contact }) => contact);
-  }, [contactSearchIndex, contactSearch, deviceContacts]);
+  }, [getContactSearchIndex, contactSearch, deviceContacts]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const messageListElements = useMemo(() => (
