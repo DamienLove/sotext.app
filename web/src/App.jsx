@@ -3920,26 +3920,27 @@ function App() {
                 <p>Browse all device contacts synced from your phone.</p>
               </div>
               <div className="contacts-toolbar">
-                <div className="contact-count">
+                <div className="contact-count" style={{ marginBottom: 12, fontSize: '0.9em', color: 'var(--muted)' }}>
                   {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
                 </div>
-                <div className="sidebar-actions" style={{ flex: 1 }}>
+                <div className="settings-search-container" style={{ flex: 1, marginBottom: 0 }}>
+                  <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
                   <input
-                    className="login-input contact-search"
+                    className="settings-search-input"
                     placeholder="Search by name, phone, or email"
                     aria-label="Search contacts"
                     value={contactSearch}
                     onChange={(e) => setContactSearch(e.target.value)}
-                    style={{ flex: 1 }}
                   />
                   {contactSearch && (
                     <button
-                      className="secondary-btn"
+                      className="ghost-btn icon-only"
                       onClick={() => setContactSearch('')}
                       aria-label="Clear search"
                       title="Clear search"
+                      style={{ width: '28px', height: '28px' }}
                     >
-                      Clear
+                      <CloseIcon />
                     </button>
                   )}
                 </div>
@@ -3957,9 +3958,18 @@ function App() {
                 )}
                 {filteredDeviceContacts.length === 0 && (
                   <div className="settings-note">
-                    {contactSearch.trim()
-                      ? 'No contacts match that search.'
-                      : 'No device contacts synced yet.'}
+                    {contactSearch.trim() ? (
+                      <>
+                        No contacts match that search.
+                        <button
+                          className="link-button"
+                          onClick={() => setContactSearch('')}
+                          style={{ marginLeft: 4, padding: 0, textDecoration: 'underline' }}
+                        >
+                          Clear search
+                        </button>
+                      </>
+                    ) : 'No device contacts synced yet.'}
                   </div>
                 )}
               </div>
