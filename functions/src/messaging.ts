@@ -113,7 +113,7 @@ export const onOutboxCreated = functions.firestore
       try {
         const response = await admin.messaging().sendMulticast(payload);
         console.log(
-          `Sent outbox notification to ${response.successCount} devices`
+            `Sent outbox notification to ${response.successCount} devices`,
         );
       } catch (error) {
         console.error("Error sending outbox notification", error);

@@ -20,31 +20,12 @@ interface RelayRequest {
   metadata?: Record<string, string>;
 }
 
-export const alertRelay = functions.https.onCall(async (data: RelayRequest, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Auth required");
-  }
-
-  if (!data || typeof data.message !== "string" || !Array.isArray(data.recipients)) {
-    throw new functions.https.HttpsError("invalid-argument", "Invalid payload");
-  }
-
-  const cleanRecipients = data.recipients
-      .filter((r) => !!(r.phoneNumber || r.pushToken || r.email))
-      .map((r) => ({
-        phoneNumber: r.phoneNumber,
-        pushToken: r.pushToken,
-        email: r.email,
-      }));
-
-  if (cleanRecipients.length === 0) {
-    throw new functions.https.HttpsError("invalid-argument", "No recipients provided");
-  }
-
-  // Rate Limiting: Check if user has sent too many alerts recently (max 50 per 24h)
+// Sentinel: Shared rate limit check to prevent abuse from
+// both Callable and HTTP endpoints
+async function checkAlertRateLimit(uid: string): Promise<void> {
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   const recentAlertsSnapshot = await db.collection("relayAlerts")
-      .where("senderId", "==", context.auth.uid)
+      .where("senderId", "==", uid)
       .where(
           "createdAt",
           ">",
@@ -59,34 +40,73 @@ export const alertRelay = functions.https.onCall(async (data: RelayRequest, cont
         "Daily alert limit reached.",
     );
   }
+}
 
-  const relayDoc = {
-    message: data.message,
-    severity: data.severity ?? "non_urgent",
-    recipients: cleanRecipients,
-    senderId: context.auth.uid,
-    location: data.location ?? null,
-    metadata: data.metadata ?? {},
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    status: "queued",
-    platform: "kmp",
-  };
+export const alertRelay = functions.https.onCall(
+    async (data: RelayRequest, context) => {
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+            "unauthenticated",
+            "Auth required",
+        );
+      }
 
-  const docRef = await db.collection("relayAlerts").add(relayDoc);
+      if (!data || typeof data.message !== "string" ||
+      !Array.isArray(data.recipients)) {
+        throw new functions.https.HttpsError(
+            "invalid-argument",
+            "Invalid payload",
+        );
+      }
 
-  // Fan-out implementation (SMS/push/voice) will run from a separate worker/queue.
-  return {
-    status: "queued",
-    relayId: docRef.id,
-    estimatedFanOut: cleanRecipients.length,
-  };
-});
+      const cleanRecipients = data.recipients
+          .filter((r) => !!(r.phoneNumber || r.pushToken || r.email))
+          .map((r) => ({
+            phoneNumber: r.phoneNumber,
+            pushToken: r.pushToken,
+            email: r.email,
+          }));
+
+      if (cleanRecipients.length === 0) {
+        throw new functions.https.HttpsError(
+            "invalid-argument",
+            "No recipients provided",
+        );
+      }
+
+      // Sentinel: Enforce rate limit
+      await checkAlertRateLimit(context.auth.uid);
+
+      const relayDoc = {
+        message: data.message,
+        severity: data.severity ?? "non_urgent",
+        recipients: cleanRecipients,
+        senderId: context.auth.uid,
+        location: data.location ?? null,
+        metadata: data.metadata ?? {},
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        status: "queued",
+        platform: "kmp",
+      };
+
+      const docRef = await db.collection("relayAlerts").add(relayDoc);
+
+      // Fan-out implementation (SMS/push/voice) will run from a
+      // separate worker.
+      return {
+        status: "queued",
+        relayId: docRef.id,
+        estimatedFanOut: cleanRecipients.length,
+      };
+    });
 
 // Lightweight HTTP wrapper so clients without the Firebase Functions SDK
 // (e.g., KMP/Swift via Ktor) can hit the same functionality.
 export const alertRelayHttp = functions.https.onRequest(async (req, res) => {
   if (req.method !== "POST") {
-    res.status(405).send({error: "method_not_allowed"});
+    res.status(405).send({
+      error: "method_not_allowed",
+    });
     return;
   }
 
@@ -116,8 +136,12 @@ export const alertRelayHttp = functions.https.onRequest(async (req, res) => {
   }
 
   const data = req.body as RelayRequest | undefined;
-  if (!data || typeof data.message !== "string" || !Array.isArray(data.recipients)) {
-    res.status(400).send({error: "invalid-argument", message: "Invalid payload"});
+  if (!data || typeof data.message !== "string" ||
+      !Array.isArray(data.recipients)) {
+    res.status(400).send({
+      error: "invalid-argument",
+      message: "Invalid payload",
+    });
     return;
   }
 
@@ -130,7 +154,24 @@ export const alertRelayHttp = functions.https.onRequest(async (req, res) => {
       }));
 
   if (cleanRecipients.length === 0) {
-    res.status(400).send({error: "invalid-argument", message: "No recipients provided"});
+    res.status(400).send({
+      error: "invalid-argument",
+      message: "No recipients provided",
+    });
+    return;
+  }
+
+  // Sentinel: Enforce rate limit
+  try {
+    await checkAlertRateLimit(authUid);
+  } catch (e: unknown) {
+    // Map HttpsError to HTTP status codes
+    const httpsError = e as functions.https.HttpsError;
+    const status = httpsError.code === "resource-exhausted" ? 429 : 500;
+    res.status(status).send({
+      error: httpsError.code || "internal",
+      message: httpsError.message || "Rate limit check failed",
+    });
     return;
   }
 
