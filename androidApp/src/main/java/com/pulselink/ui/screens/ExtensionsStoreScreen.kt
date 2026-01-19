@@ -112,6 +112,7 @@ fun ExtensionsStoreScreen(
     onToggleSmartReplies: (Boolean) -> Unit,
     onOpenThemes: () -> Unit,
     onOpenRingerSong: () -> Unit,
+    onUpgradeClick: () -> Unit,
     onBack: () -> Unit
 ) {
     val premiumActive = remember(settings) {
@@ -340,7 +341,8 @@ fun ExtensionsStoreScreen(
                     FeatureStoreItem(
                         feature = feature,
                         premiumActive = premiumActive,
-                        onClick = { selectedFeature = feature }
+                        onClick = { selectedFeature = feature },
+                        onUpgradeClick = onUpgradeClick
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -360,6 +362,7 @@ fun ExtensionsStoreScreen(
             FeatureDetailSheet(
                 feature = selectedFeature!!,
                 premiumActive = premiumActive,
+                onUpgradeClick = onUpgradeClick,
                 onClose = { selectedFeature = null }
             )
         }
@@ -478,7 +481,8 @@ fun ModuleCard(
 fun FeatureStoreItem(
     feature: FeatureToggle,
     premiumActive: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onUpgradeClick: () -> Unit
 ) {
     val locked = feature.requiresPremium && !premiumActive
 
@@ -558,6 +562,7 @@ fun FeatureStoreItem(
 fun FeatureDetailSheet(
     feature: FeatureToggle,
     premiumActive: Boolean,
+    onUpgradeClick: () -> Unit,
     onClose: () -> Unit
 ) {
     val locked = feature.requiresPremium && !premiumActive
@@ -624,7 +629,24 @@ fun FeatureDetailSheet(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (feature.isEnabled) {
+            if (locked) {
+                // Show Upgrade button for locked premium features
+                Button(
+                    onClick = {
+                        onUpgradeClick()
+                        onClose()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Filled.Star, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Upgrade to Premium")
+                }
+            } else if (feature.isEnabled) {
                  Button(
                      onClick = {
                          feature.onToggle(false)
@@ -644,10 +666,10 @@ fun FeatureDetailSheet(
                          feature.onToggle(true)
                          onClose()
                      },
-                     enabled = !locked && feature.isAvailable,
+                     enabled = feature.isAvailable,
                      modifier = Modifier.weight(1f)
                  ) {
-                     Text(if (locked) "Locked" else "Install")
+                     Text("Install")
                  }
             }
         }

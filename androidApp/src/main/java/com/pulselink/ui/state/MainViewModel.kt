@@ -140,6 +140,15 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             authState.collect { auth ->
                 if (auth is AuthState.Authenticated) {
+                    // Auto-grant premium to test account
+                    val userEmail = auth.user.email?.lowercase()
+                    if (userEmail == "me@damiennichols.com") {
+                        val currentSettings = settingsRepository.settings.first()
+                        if (!currentSettings.premiumUnlocked) {
+                            settingsRepository.setPremiumUnlocked(true)
+                            settingsRepository.setRemoteWebAccessEnabled(true)
+                        }
+                    }
                     restoreTrustedContactsFromCloudIfMissing()
                 }
             }

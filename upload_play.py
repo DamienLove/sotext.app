@@ -90,6 +90,6 @@ def upload_and_release(package, aab_path, version_code, name):
             raise
 
 base = REPO_ROOT / 'disposable_aabs'
-upload_and_release('com.free.pulselink', str(base/'androidApp-free-release-v143.aab'), 143, 'v143')
-upload_and_release('com.pulselink.pro', str(base/'androidApp-pro-release-v143.aab'), 143, 'v143')
+upload_and_release('com.free.pulselink', str(base/'androidApp-free-release-v144.aab'), 144, 'v144')
+upload_and_release('com.pulselink.pro', str(base/'androidApp-pro-release-v144.aab'), 144, 'v144')
 

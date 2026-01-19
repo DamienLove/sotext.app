@@ -896,13 +896,17 @@ class MainActivity : AppCompatActivity() {
                             badgeText = badgeText,
                             isUnifiedMode = unifiedModeActive
                         )
-                        LaunchedEffect(authState, state.onboardingComplete) {   
+                        LaunchedEffect(authState, state.onboardingComplete) {
                             if (authState is AuthState.Loading) return@LaunchedEffect
                             delay(1200)
-                            val destination = when (authState) {
+                            val destination = when (val auth = authState) {
                                 is AuthState.Authenticated -> {
+                                    val user = auth.user
                                     if (state.onboardingComplete) {
                                         if (unifiedModeActive) "unified_inbox" else "home"
+                                    } else if (user.isAnonymous) {
+                                        // Anonymous users should see login screen to upgrade their account
+                                        "login"
                                     } else {
                                         "onboarding_intro"
                                     }
@@ -1022,6 +1026,7 @@ class MainActivity : AppCompatActivity() {
                         val onGoogleSignIn: () -> Unit = {
                             scope.launch {
                                 try {
+                                    Log.d("MainActivity", "Starting Google Sign-In with clientId: $clientId")
                                     val googleIdOption = GetGoogleIdOption.Builder()
                                         .setFilterByAuthorizedAccounts(false)
                                         .setServerClientId(clientId)
@@ -1032,27 +1037,31 @@ class MainActivity : AppCompatActivity() {
                                         .addCredentialOption(googleIdOption)
                                         .build()
 
+                                    Log.d("MainActivity", "Requesting credential from CredentialManager")
                                     val result = credentialManager.getCredential(
                                         request = request,
                                         context = context,
                                     )
+                                    Log.d("MainActivity", "Credential received: type=${result.credential.type}")
                                     val credential = result.credential
                                     if (credential is androidx.credentials.CustomCredential &&
                                         credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
                                         val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                                        Log.d("MainActivity", "Google ID token extracted, sending to Firebase")
                                         loginViewModel.handleGoogleIdToken(googleIdTokenCredential.idToken)
                                     } else {
                                         Log.e("MainActivity", "Unexpected credential type: ${credential.type}")
                                         loginViewModel.reportExternalError()
                                     }
                                 } catch (e: GetCredentialCancellationException) {
-                                    Log.d("MainActivity", "CredentialManager cancelled", e)
+                                    Log.d("MainActivity", "User cancelled Google Sign-In")
+                                    // User cancelled, don't show error
                                 } catch (e: GetCredentialException) {
-                                    Log.e("MainActivity", "CredentialManager error", e)
-                                    // If cancellation, just ignore. If other error, report.
+                                    Log.e("MainActivity", "CredentialManager error: ${e.message}", e)
+                                    Log.e("MainActivity", "Error type: ${e.type}")
                                     loginViewModel.reportExternalError()
                                 } catch (e: Exception) {
-                                    Log.e("MainActivity", "Google Sign-In error", e)
+                                    Log.e("MainActivity", "Unexpected Google Sign-In error: ${e.message}", e)
                                     loginViewModel.reportExternalError()
                                 }
                             }
@@ -1725,6 +1734,20 @@ class MainActivity : AppCompatActivity() {
                             onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
                             onOpenThemes = { navController.navigate("visual_settings") },
                             onOpenRingerSong = { navController.navigate("notifications/message_sound") },
+                            onUpgradeClick = {
+                                val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
+                                    data = Uri.parse("market://details?id=com.pulselink.pro")
+                                    setPackage("com.android.vending")
+                                }
+                                try {
+                                    startActivity(playStoreIntent)
+                                } catch (e: ActivityNotFoundException) {
+                                    val webIntent = Intent(Intent.ACTION_VIEW).apply {
+                                        data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                                    }
+                                    startActivity(webIntent)
+                                }
+                            },
                             onBack = { navController.popBackStack() }
                         )
                     }

@@ -1,6 +1,7 @@
 package com.pulselink.ui
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -1029,6 +1030,20 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
                                         onOpenThemes = { navController.navigate("visual_settings") },
                                         onOpenRingerSong = { navController.navigate("notifications/message_sound") },
+                                        onUpgradeClick = {
+                                            val playStoreIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                data = Uri.parse("market://details?id=com.pulselink.pro")
+                                                setPackage("com.android.vending")
+                                            }
+                                            try {
+                                                startActivity(playStoreIntent)
+                                            } catch (e: ActivityNotFoundException) {
+                                                val webIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                    data = Uri.parse("https://play.google.com/store/apps/details?id=com.pulselink.pro")
+                                                }
+                                                startActivity(webIntent)
+                                            }
+                                        },
                                         onBack = { navController.popBackStack() }
                                     )
                                 }
