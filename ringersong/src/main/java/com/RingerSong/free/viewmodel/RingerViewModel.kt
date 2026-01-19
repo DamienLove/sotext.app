@@ -384,31 +384,18 @@ class RingerViewModel @Inject constructor(
                 return@launch
             }
 
-            // Check if it's a YouTube track, which still needs download
+            // Check if it's a YouTube track
             if (track.uri!!.startsWith("youtube:")) {
-                onResult("Downloading ${track.name} from YouTube...")
-                val videoId = track.uri!!.substringAfterLast(":")
-                val downloadResult = youtubeMusicRepo.downloadTrack(videoId)
+                onResult("Adding ${track.name} from YouTube Music...")
 
-                when (downloadResult) {
-                    is DownloadResult.Success -> {
-                        clearDownloadError()
-                    }
-                    is DownloadResult.Failure -> {
-                        val message = mapDownloadError(downloadResult.error)
-                        setDownloadError(message)
-                        return@launch
-                    }
-                }
+                // No download needed.
 
-                // Keep the YouTube URI format so RingerPlaybackService knows it's a YouTube song
-                // The service will look up the downloaded file path when needed
                 val songId = UUID.randomUUID().toString()
                 val songEntry = SongEntry(
                     id = songId,
                     title = "${track.name ?: "Unknown Track"} - ${track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"}",
-                    uri = track.uri!!,  // Keep "youtube:video:VIDEO_ID" format
-                    source = SongSource.YOUTUBE_MUSIC,  // Mark as YouTube Music, not LOCAL
+                    uri = track.uri!!,
+                    source = SongSource.YOUTUBE_MUSIC,
                     durationMs = track.duration_ms,
                     addedAt = System.currentTimeMillis()
                 )
@@ -431,13 +418,13 @@ class RingerViewModel @Inject constructor(
                     "artist" to (track.artists?.mapNotNull { it.name }?.joinToString(", ") ?: "Unknown Artist"),
                     "durationMs" to (track.duration_ms ?: 0L),
                     "addedAt" to com.google.firebase.Timestamp.now(),
-                    "downloaded" to true
+                    "downloaded" to false
                 )
 
                 safeDb.collection("users").document(uid).collection("ringer_playlist")
                     .add(trackData)
                     .addOnSuccessListener {
-                        onResult("Added ${track.name} (Downloaded from YouTube Music)")
+                        onResult("Added ${track.name} (Streaming)")
                     }
                     .addOnFailureListener { e ->
                          // Revert local state if sync fails
@@ -465,20 +452,10 @@ class RingerViewModel @Inject constructor(
                 return@launch
             }
 
-            val spotifyUrl = "https://open.spotify.com/track/$spotifyId"
-            onResult("Downloading ${track.name} from Spotify...")
+            onResult("Adding ${track.name} from Spotify...")
 
-            val localPath = when (val downloadResult = spotifyDownloader.downloadTrack(spotifyUrl)) {
-                is DownloadResult.Success -> {
-                    clearDownloadError()
-                    downloadResult.filePath
-                }
-                is DownloadResult.Failure -> {
-                    val message = mapDownloadError(downloadResult.error)
-                    setDownloadError(message)
-                    return@launch
-                }
-            }
+            // No download needed for Spotify either.
+            val localPath = null // No local path
 
             val songId = UUID.randomUUID().toString()
             val songEntry = SongEntry(
@@ -510,13 +487,13 @@ class RingerViewModel @Inject constructor(
                 "durationMs" to (track.duration_ms ?: 0L),
                 "addedAt" to com.google.firebase.Timestamp.now(),
                 "localPath" to localPath,
-                "downloaded" to true
+                "downloaded" to false
             )
 
             safeDb.collection("users").document(uid).collection("ringer_playlist")
                 .add(trackData)
                 .addOnSuccessListener {
-                    onResult("Added ${track.name} (Downloaded from Spotify)")
+                    onResult("Added ${track.name} (Streaming)")
                 }
                 .addOnFailureListener { e ->
                     // Revert local state if sync fails
