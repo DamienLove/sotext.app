@@ -694,6 +694,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
             style={{ width: '100%', paddingBottom: '24px' }}
             placeholder="Type a message... (Ctrl+Enter to send)"
             aria-label="Message body"
+            aria-describedby="message-char-count"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={(e) => {
@@ -704,15 +705,18 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
             }}
           />
           {body.length > 0 && (
-            <div style={{
-              position: 'absolute',
-              bottom: '8px',
-              right: '12px',
-              fontSize: '0.75em',
-              color: 'var(--muted)',
-              pointerEvents: 'none',
-              fontWeight: 500
-            }}>
+            <div
+              id="message-char-count"
+              style={{
+                position: 'absolute',
+                bottom: '8px',
+                right: '12px',
+                fontSize: '0.75em',
+                color: 'var(--muted)',
+                pointerEvents: 'none',
+                fontWeight: 500
+              }}
+            >
               {body.length}
             </div>
           )}
@@ -1715,7 +1719,7 @@ const Sidebar = memo(({
       </div>
       <div className="sidebar-footer">
         {!collapsed && <button onClick={handleLogout} className="ghost-btn">Logout</button>}
-        <button onClick={() => setCollapsed(prev => !prev)} className="ghost-btn icon-only" title={collapsed ? "Expand" : "Collapse"}>
+        <button onClick={() => setCollapsed(prev => !prev)} className="ghost-btn icon-only" title={collapsed ? "Expand" : "Collapse"} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
           {collapsed ? (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
           ) : (
@@ -1764,6 +1768,7 @@ const Sidebar = memo(({
             <button
               className="ghost-btn icon-only"
               title="Command Palette (Ctrl+K)"
+              aria-label="Open command palette (Ctrl+K)"
               style={{ marginLeft: 8 }}
               onClick={openCommandPalette}
             >
