@@ -3,15 +3,19 @@ package com.pulselink.data.sms
 import android.content.Context
 import android.os.Build
 import android.provider.Telephony
+import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.pulselink.BuildConfig
+import com.pulselink.R
+import com.pulselink.data.alert.NotificationRegistrar
 import com.pulselink.data.contacts.DeviceContactsRepository
 import com.pulselink.domain.repository.SettingsRepository
 import com.pulselink.util.splitSmsDisplayAddress
@@ -28,8 +32,20 @@ class SmsSyncWorker @AssistedInject constructor(
     private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore,
     private val settingsRepository: SettingsRepository,
-    private val deviceContactsRepository: DeviceContactsRepository
+    private val deviceContactsRepository: DeviceContactsRepository,
+    private val notificationRegistrar: NotificationRegistrar
 ) : CoroutineWorker(appContext, workerParams) {
+
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        notificationRegistrar.ensureChannels()
+        val notification = NotificationCompat.Builder(applicationContext, NotificationRegistrar.CHANNEL_BACKGROUND)
+            .setContentTitle(applicationContext.getString(R.string.app_name))
+            .setContentText("Syncing messages...")
+            .setSmallIcon(R.drawable.ic_logo)
+            .setOngoing(true)
+            .build()
+        return ForegroundInfo(1001, notification)
+    }
 
     override suspend fun doWork(): Result {
         val settings = settingsRepository.settings.first()
