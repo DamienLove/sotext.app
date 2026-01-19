@@ -277,9 +277,11 @@ private fun LinkStatusSection(
                                     val rawSubject = "Override Instructions"
                                     val rawBody = "You have been set as a trusted contact. Even without the PulseLink app, you can trigger an emergency alert on my phone by texting exactly:\n\n'pulselink ${contact.remotePin} emergency'\n\nto my number."
                                     // Use ACTION_SENDTO with encoded mailto URI to ensure subject/body are populated in all clients
-                                    val uriString = EmailUtils.createMailtoUriString(contact.email, rawSubject, rawBody)
+                                    // Also put extras directly for clients that ignore URI params (e.g. Gmail)
                                     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                                        data = Uri.parse(uriString)
+                                        data = Uri.parse("mailto:${contact.email ?: ""}")
+                                        putExtra(Intent.EXTRA_SUBJECT, rawSubject)
+                                        putExtra(Intent.EXTRA_TEXT, rawBody)
                                     }
                                     try {
                                         context.startActivity(emailIntent)
