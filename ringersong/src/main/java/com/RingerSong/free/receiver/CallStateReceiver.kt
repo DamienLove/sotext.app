@@ -165,8 +165,12 @@ class CallStateReceiver : BroadcastReceiver() {
 
         // If targeting Android 12+ (S) and no overlay permission, we must be in foreground
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return ProcessLifecycleOwner.get().lifecycle.currentState
+            val isInForeground = ProcessLifecycleOwner.get().lifecycle.currentState
                 .isAtLeast(Lifecycle.State.STARTED)
+            if (!isInForeground) {
+                 Log.e(TAG, "Cannot start RingerPlaybackService: App is in background and missing SYSTEM_ALERT_WINDOW (Overlay) permission.")
+            }
+            return isInForeground
         }
 
         return true
