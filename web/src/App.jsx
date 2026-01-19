@@ -2021,7 +2021,7 @@ function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [activePanel, setActivePanel] = useState('home');
+  const [activePanel, setActivePanel] = useState('beacon');
 
   // Bolt: Reset contact list limit when search or panel changes
   useEffect(() => {
@@ -4790,7 +4790,7 @@ function App() {
                   Premium Feature
                 </div>
                 <p style={{ maxWidth: '400px', textAlign: 'center', lineHeight: '1.6', color: 'var(--muted)' }}>
-                  Upgrade to PulseLink Premium to access your SMS messages directly from the web.
+                  Upgrade to PulseLink Pro or Premium to access your SMS messages directly from the web.
                   Send and receive texts even when your phone is in the other room.
                 </p>
                 <button
