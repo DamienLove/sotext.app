@@ -1006,8 +1006,8 @@ textarea:focus-visible,
   background: rgba(3, 5, 10, 0.85);
   backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--glass-border);
-  position: sticky;
-  top: 0;
+  /* Bolt: Not sticky anymore, part of the flow above composer */
+  position: relative;
   z-index: 10;
   display: flex;
   justify-content: space-between;
@@ -1027,13 +1027,17 @@ textarea:focus-visible,
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Bolt: Ensure scroll behavior is natural for top-down list */
+  overflow-y: auto;
+  flex: 1;
 }
 
 .message {
   display: flex;
   flex-direction: column;
   max-width: 65%;
-  animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Bolt: New messages appear at top, so slide down feels more natural */
+  animation: slideDownFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .message.sent {
@@ -1080,12 +1084,29 @@ textarea:focus-visible,
 
 .composer {
   padding: 24px 40px;
-  background: rgba(2, 2, 2, 0.9);
-  border-top: 1px solid var(--glass-border);
+  /* Bolt: More translucent background for better glass effect */
+  background: rgba(2, 2, 2, 0.75);
+  /* Bolt: Border bottom since it's now at the top */
+  border-bottom: 1px solid var(--glass-border);
+  border-top: none;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  backdrop-filter: blur(24px);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  /* Bolt: Stick to top */
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: -32px -40px 16px -40px; /* Offset parent padding */
+  box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+  transition: all 0.3s ease;
+}
+
+.composer:focus-within {
+  background: rgba(2, 2, 2, 0.9);
+  border-bottom-color: var(--accent);
+  box-shadow: 0 10px 40px -5px rgba(0, 0, 0, 0.6), 0 1px 0 var(--accent-glow);
 }
 
 .composer-row {
