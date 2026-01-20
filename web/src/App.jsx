@@ -3456,6 +3456,25 @@ function App() {
      return logo;
   }, [remoteSettings.mergedExperienceEnabled]);
 
+  // Bolt: Debug hooks for verification
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      window.debugSetUser = setUser;
+      window.debugSetUserData = setUserData;
+      window.debugSetRemoteSettings = setRemoteSettings;
+      window.debugSetMessages = setMessages;
+      window.debugSetDeviceContacts = setDeviceContacts;
+      window.debugSetTrustedContacts = setTrustedContacts;
+      window.debugSetAlertLocations = setAlertLocations;
+      window.debugSetPublicThemes = setPublicThemes;
+      window.debugSetActivePanel = setActivePanel;
+      window.debugSetSelectedThread = setSelectedThread;
+      window.debugSetLines = setLines;
+      window.debugSetLegacyThreads = setLegacyThreads;
+      window.debugSetIsLoadingThreads = setIsLoadingThreads;
+    }
+  }, []);
+
   if (!user) {
     return (
       <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
