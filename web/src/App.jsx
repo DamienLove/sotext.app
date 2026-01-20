@@ -1523,6 +1523,21 @@ const useLazySearchIndex = (items, mapFn) => {
   }, [items, mapFn]);
 };
 
+// Palette: Reusable hook for keyboard shortcuts to focus inputs
+const useKeyboardShortcut = (ref, isActive, key = '/') => {
+  useEffect(() => {
+    if (!isActive) return;
+    const handleKeyDown = (e) => {
+      if (e.key === key && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) {
+        e.preventDefault();
+        ref.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isActive, ref, key]);
+};
+
 const threadMapper = (t) => {
   const display = (t.display_name || t.address || '').toLowerCase();
   const snippet = (t.snippet || '').toLowerCase();
@@ -2054,6 +2069,9 @@ function App() {
   const [showDevTools, setShowDevTools] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
+  const settingsSearchRef = useRef(null);
+  const contactSearchRef = useRef(null);
+  const themeSearchRef = useRef(null);
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
 
@@ -2072,6 +2090,10 @@ function App() {
       userData?.hasPremiumHistory === true ||
       userData?.hasProHistory === true;
   }, [premiumClaimActive, proClaimActive, premiumSubscriptionStatus, subscriptionStatus, userData?.premiumUnlocked, userData?.proUnlocked, userData?.hasPremiumHistory, userData?.hasProHistory]);
+
+  useKeyboardShortcut(settingsSearchRef, activePanel === 'settings');
+  useKeyboardShortcut(contactSearchRef, activePanel === 'contacts');
+  useKeyboardShortcut(themeSearchRef, activePanel === 'themes');
 
   const isProUser = useMemo(() => {
     return isPremiumUser ||
@@ -3926,9 +3948,10 @@ function App() {
                 <div className="settings-search-container" style={{ flex: 1, marginBottom: 0 }}>
                   <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
                   <input
+                    ref={contactSearchRef}
                     className="settings-search-input"
-                    placeholder="Search by name, phone, or email"
-                    aria-label="Search contacts"
+                    placeholder="Search by name, phone, or email (/)"
+                    aria-label="Search contacts (/)"
                     value={contactSearch}
                     onChange={(e) => setContactSearch(e.target.value)}
                   />
@@ -4162,11 +4185,12 @@ function App() {
                     <label className="login-field">
                       Search themes
                       <input
+                        ref={themeSearchRef}
                         className="login-input"
                         value={themeSearch}
                         onChange={(e) => setThemeSearch(e.target.value)}
-                        placeholder="Search by name or creator"
-                        aria-label="Search themes"
+                        placeholder="Search by name or creator (/)"
+                        aria-label="Search themes (/)"
                       />
                     </label>
                     <button className="secondary-btn" type="button" onClick={() => setThemeSearch('')}>
@@ -4533,9 +4557,10 @@ function App() {
                   <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
                 <input
+                  ref={settingsSearchRef}
                   className="settings-search-input"
-                  placeholder="Search settings..."
-                  aria-label="Search settings"
+                  placeholder="Search settings (/)"
+                  aria-label="Search settings (/)"
                   value={settingsSearch}
                   onChange={(e) => setSettingsSearch(e.target.value)}
                 />
