@@ -90,8 +90,14 @@ class LoginViewModel @Inject constructor(
             val sanitizedEmail = state.email.trim()
             val sanitizedPassword = state.password.trim()
             val result = withTimeoutOrNull(LOGIN_TIMEOUT_MS) {
-                if (state.mode == LoginMode.CREATE_ACCOUNT && authManager.currentUser()?.isAnonymous == true) {
-                    authManager.linkEmailAccount(sanitizedEmail, sanitizedPassword)
+                // If user is anonymous AND mode is CREATE_ACCOUNT, they are trying to link.
+                if (state.isAnonymousUser && state.mode == LoginMode.CREATE_ACCOUNT) {
+                    val currentUser = authManager.currentUser()
+                    if (currentUser != null && currentUser.isAnonymous) {
+                        authManager.linkEmailAccount(sanitizedEmail, sanitizedPassword)
+                    } else {
+                        Result.failure(IllegalStateException("Cannot link account: User context invalid"))
+                    }
                 } else if (state.mode == LoginMode.SIGN_IN) {
                     authManager.signIn(sanitizedEmail, sanitizedPassword)
                 } else {
