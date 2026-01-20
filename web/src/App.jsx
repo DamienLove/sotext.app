@@ -638,15 +638,32 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     setIsSending(true);
     setStatus('');
     try {
-      await addDoc(collection(db, "users", user.uid, "outbox"), {
+      const docRef = await addDoc(collection(db, "users", user.uid, "outbox"), {
         address: cleanAddress,
         body: cleanBody,
         createdAt: serverTimestamp(),
         source: "web",
-        lineId: effectiveLineId
+        lineId: effectiveLineId,
+        status: "pending"
       });
       setBody('');
-      setStatus("Queued for sending from your device.");
+      setStatus("Queued for sending...");
+
+      // Monitor status
+      let unsubscribe;
+      unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (!docSnap.exists()) {
+          setStatus("Sent");
+          setTimeout(() => setStatus(''), 3000);
+          if (unsubscribe) unsubscribe();
+        } else {
+          const data = docSnap.data();
+          if (data.status === 'failed') {
+            setStatus(`Send failed: ${data.error || 'Unknown error'}`);
+            if (unsubscribe) unsubscribe();
+          }
+        }
+      });
     } catch (error) {
       console.error("Send failed", error);
       setStatus("Send failed. Try again.");
@@ -1838,6 +1855,28 @@ const Sidebar = memo(({
                   </button>
                 ))}
               </div>
+            )}
+            {lines.length > 0 && (
+                 <div className="sidebar-sync-status" style={{ fontSize: '0.7em', color: 'var(--muted)', padding: '0 12px 8px', textAlign: 'right' }}>
+                    {(() => {
+                        const targetLine = activeLineId ? lines.find(l => l.id === activeLineId) : lines.find(l => l.primaryDeviceId);
+                        const lastSync = targetLine?.lastSyncAt;
+                        if (!lastSync) return null;
+
+                        // Simple relative time formatter
+                        const getRelativeTime = (timestamp) => {
+                             if (!timestamp) return '';
+                             const date = new Date(timestamp.seconds * 1000);
+                             const diff = (new Date() - date) / 1000;
+                             if (diff < 60) return 'Synced just now';
+                             if (diff < 3600) return `Synced ${Math.floor(diff / 60)}m ago`;
+                             if (diff < 86400) return `Synced ${Math.floor(diff / 3600)}h ago`;
+                             return `Synced ${date.toLocaleDateString()}`;
+                        };
+
+                        return getRelativeTime(lastSync);
+                    })()}
+                 </div>
             )}
             {isLoadingThreads ? (
                Array.from({ length: 5 }).map((_, i) => <ThreadSkeleton key={i} />)

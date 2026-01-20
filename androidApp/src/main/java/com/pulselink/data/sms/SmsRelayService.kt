@@ -57,6 +57,10 @@ class SmsRelayService @Inject constructor(
                         val address = data["address"] as? String
                         val body = data["body"] as? String
                         val lineId = data["lineId"] as? String
+                        val status = data["status"] as? String
+
+                        // Skip messages that have already been processed or failed
+                        if (status == "failed" || status == "sent") continue
 
                         if (address != null && body != null) {
                             processMessage(doc.id, address, body, uid, lineId)
@@ -123,11 +127,10 @@ class SmsRelayService @Inject constructor(
                         .collection("outbox").document(docId).delete()
                 } else {
                     Log.w(TAG, "Failed to send SMS via relay to $address")
-                    // Mark as failed and delete from outbox to prevent infinite loops.
-                    // Ideally, we would update status to 'failed', but for now, we remove it
-                    // to keep the queue clear.
+                    // Mark as failed. The web client should listen for this status and handle cleanup or retry.
                     firestore.collection("users").document(uid)
-                        .collection("outbox").document(docId).delete()
+                        .collection("outbox").document(docId)
+                        .update("status", "failed", "error", "SMS dispatch failed")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Exception during SMS relay", e)
