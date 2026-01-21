@@ -2289,7 +2289,8 @@ class MainActivity : AppCompatActivity() {
                         var bugData by rememberSaveable(stateSaver = BugReportDataSaver) {
                             mutableStateOf(
                                 BugReportData(
-                                    userEmail = (authState as? AuthState.Authenticated)?.user?.email.orEmpty()
+                                    userEmail = (authState as? AuthState.Authenticated)?.user?.email.orEmpty(),
+                                    deviceInfo = viewModel.getDeviceInfo(context)
                                 )
                             )
                         }

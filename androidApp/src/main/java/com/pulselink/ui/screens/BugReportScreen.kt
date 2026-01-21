@@ -51,7 +51,8 @@ data class BugReportData(
     val actualBehavior: String = "",
     val frequency: String = FREQUENCY_OPTIONS.first(),
     val severity: String = SEVERITY_OPTIONS[1],
-    val userEmail: String = ""
+    val userEmail: String = "",
+    val deviceInfo: String = ""
 )
 
 val BugReportDataSaver: Saver<BugReportData, List<String>> = Saver(
@@ -63,7 +64,8 @@ val BugReportDataSaver: Saver<BugReportData, List<String>> = Saver(
             it.actualBehavior,
             it.frequency,
             it.severity,
-            it.userEmail
+            it.userEmail,
+            it.deviceInfo
         )
     },
     restore = {
@@ -74,7 +76,8 @@ val BugReportDataSaver: Saver<BugReportData, List<String>> = Saver(
             actualBehavior = it.getOrElse(3) { "" },
             frequency = it.getOrElse(4) { FREQUENCY_OPTIONS.first() },
             severity = it.getOrElse(5) { SEVERITY_OPTIONS[1] },
-            userEmail = it.getOrElse(6) { "" }
+            userEmail = it.getOrElse(6) { "" },
+            deviceInfo = it.getOrElse(7) { "" }
         )
     }
 )
@@ -171,6 +174,16 @@ fun BugReportScreen(
                         onValueChange = { onDataChange(data.copy(userEmail = it)) },
                         placeholder = stringResource(R.string.bug_report_contact_hint)
                     )
+                    if (data.deviceInfo.isNotBlank()) {
+                        BugReportTextField(
+                            label = stringResource(R.string.bug_report_device_info_label),
+                            value = data.deviceInfo,
+                            onValueChange = {},
+                            placeholder = "",
+                            readOnly = true,
+                            minLines = 4
+                        )
+                    }
                     ExposedDropdownMenuBox(
                         expanded = frequencyExpanded,
                         onExpandedChange = { frequencyExpanded = !frequencyExpanded }
@@ -266,7 +279,8 @@ private fun BugReportTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
-    minLines: Int = 1
+    minLines: Int = 1,
+    readOnly: Boolean = false
 ) {
     OutlinedTextField(
         modifier = Modifier.fillMaxWidth(),
@@ -274,7 +288,8 @@ private fun BugReportTextField(
         onValueChange = onValueChange,
         label = { Text(label) },
         placeholder = { Text(placeholder) },
-        minLines = minLines
+        minLines = minLines,
+        readOnly = readOnly
     )
 }
 
