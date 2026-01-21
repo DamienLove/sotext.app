@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import com.pulselink.domain.model.PulseLinkSettings
 import javax.inject.Inject
 import javax.inject.Singleton
 import java.util.concurrent.atomic.AtomicBoolean
@@ -45,17 +46,38 @@ class SmsSyncManager @Inject constructor(
             .launchIn(scope)
 
         // 2. Observe Settings changes to immediately sync when Premium/Web Access changes
-        settingsRepository.settings
-            .distinctUntilChanged { old, new ->
-                old.remoteWebAccessEnabled == new.remoteWebAccessEnabled &&
-                    old.premiumUnlocked == new.premiumUnlocked &&
-                    old.proUnlocked == new.proUnlocked
+        scope.launch {
+            var previousSettings: PulseLinkSettings? = null
+            settingsRepository.settings.collect { currentSettings ->
+                val prev = previousSettings
+                previousSettings = currentSettings
+
+                if (prev == null) {
+                    // Initial load: trigger sync if enabled to ensure consistency
+                    if (currentSettings.remoteWebAccessEnabled) {
+                        smsSyncTrigger.triggerSync()
+                    }
+                    return@collect
+                }
+
+                // Automatically enable Remote Web Access when upgrading to Premium
+                if (!prev.premiumUnlocked && currentSettings.premiumUnlocked && !currentSettings.remoteWebAccessEnabled) {
+                    Log.i(TAG, "Premium upgraded, enabling remote web access")
+                    settingsRepository.setRemoteWebAccessEnabled(true)
+                    // The update will trigger a new emission, so we don't need to sync here
+                    return@collect
+                }
+
+                val shouldSync = (prev.remoteWebAccessEnabled != currentSettings.remoteWebAccessEnabled) ||
+                    (prev.premiumUnlocked != currentSettings.premiumUnlocked) ||
+                    (prev.proUnlocked != currentSettings.proUnlocked)
+
+                if (shouldSync) {
+                    Log.d(TAG, "Settings changed (premium/web), triggering sync worker")
+                    smsSyncTrigger.triggerSync()
+                }
             }
-            .onEach {
-                Log.d(TAG, "Settings changed (premium/web), triggering sync worker")
-                smsSyncTrigger.triggerSync()
-            }
-            .launchIn(scope)
+        }
     }
 
     companion object {
