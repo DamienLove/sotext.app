@@ -97,6 +97,48 @@ class SmsRepository @Inject constructor(
         return listThreadsFromSms(limit, archivedIds, includeArchived, onlyArchived)
     }
 
+    suspend fun getThread(threadId: Long): SmsThreadItem? {
+        if (!hasReadPerms()) return null
+        ensureObserversRegistered()
+        // 1. Get latest message
+        val messages = messagesForThread(threadId, limit = 1)
+        if (messages.isEmpty()) return null
+        val latest = messages.first()
+
+        // 2. Get unread count
+        val unreadCounts = loadUnreadCounts(listOf(threadId))
+        val unreadCount = unreadCounts[threadId] ?: 0
+        val isUnread = unreadCount > 0
+
+        // 3. Resolve contact
+        val phone = stripSmsDisplayName(latest.address)
+        val normalized = normalizePhone(phone)
+        val contact = contactDao.getByPhone(phone) ?: contactDao.getByPhone(normalized)
+
+        // 4. Build item
+        val trustedUrgency = contact?.let {
+            when {
+                OtpHelper.isUrgentBody(latest.body) -> MessageUrgency.URGENT
+                it.escalationTier == EscalationTier.EMERGENCY -> MessageUrgency.EMERGENCY
+                else -> MessageUrgency.STANDARD
+            }
+        }
+
+        return SmsThreadItem(
+            threadId = threadId,
+            address = latest.address,
+            snippet = latest.body,
+            timestamp = latest.timestamp,
+            unread = isUnread,
+            unreadCount = unreadCount,
+            isPrivate = contact?.isPrivate == true,
+            isFavorite = contact?.isFavorite == true,
+            isTrusted = contact != null,
+            trustedUrgency = trustedUrgency,
+            isOtp = OtpHelper.isOtpMessage(phone, latest.body)
+        )
+    }
+
     suspend fun listArchivedThreads(limit: Int = 50): List<SmsThreadItem> =
         listThreads(limit = limit, includeArchived = true, onlyArchived = true)
 
