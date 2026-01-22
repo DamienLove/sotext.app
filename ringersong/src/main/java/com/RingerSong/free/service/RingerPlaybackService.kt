@@ -34,6 +34,7 @@ class RingerPlaybackService : Service() {
     @Inject lateinit var appStateStore: AppStateStore
     @Inject lateinit var spotifyPlayer: SpotifyPlayerManager
     @Inject lateinit var appleMusicPlayer: AppleMusicPlayerManager
+    @Inject lateinit var youtubeMusicPlayer: YouTubeMusicPlayerManager
 
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var mediaPlayer: MediaPlayer? = null
@@ -326,27 +327,28 @@ class RingerPlaybackService : Service() {
     }
 
     private suspend fun playYouTubeSong(song: SongEntry, startMs: Long, durationMs: Long) {
-        // Extract the video ID from the URI (format: "youtube:video:VIDEO_ID")
-        val videoId = song.uri.removePrefix("youtube:video:")
-        val youtubeMusicRepo = com.RingerSong.free.data.YouTubeMusicRepository(this)
+        Log.d(TAG, "Attempting to play YouTube Music track via App: ${song.title}")
 
-        Log.d(TAG, "Attempting to stream YouTube track: $videoId")
+        // Use the new PlayerManager to launch the app instead of "importing" the stream via RapidAPI
+        val success = youtubeMusicPlayer.playTrack(song)
 
-        // Fetch stream URL via Repository (RapidAPI)
-        // This keeps it "streaming" (no local file import) but allows us to use MediaPlayer
-        // which gives us start/stop control, unlike launching the external app.
-        val details = youtubeMusicRepo.getSongDetails(videoId)
-        val streamUrl = details?.downloadUrl
-
-        if (!streamUrl.isNullOrBlank()) {
-            Log.d(TAG, "Streaming YouTube URL: $streamUrl")
-            // Stream the URL using MediaPlayer
-            playLocalSong(song.copy(uri = streamUrl), startMs, durationMs)
-            return
+        if (success) {
+            isPlaying = true
+            playbackJob = scope.launch {
+                delay(durationMs)
+                Log.d(TAG, "YouTube Music segment duration passed")
+                stopPlayback()
+                restoreSystemRinger()
+                stopForeground(true)
+                stopSelf()
+            }
+        } else {
+            Log.e(TAG, "Failed to launch YouTube Music")
+            // Fallback to old method? Or just stop?
+            // User requested to fix "importing" issues by using apps, so we stick to this.
+            // If app fails, we could try RapidAPI as last resort, but if keys are dead it won't work anyway.
+            stopSelf()
         }
-
-        Log.e(TAG, "YouTube track stream unavailable: $videoId")
-        stopSelf()
     }
 
     private suspend fun playAppleMusicSong(song: SongEntry, startMs: Long, durationMs: Long) {
