@@ -2,14 +2,17 @@ package com.pulselink.data.sms
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.SetOptions
 import com.pulselink.domain.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 import java.util.concurrent.atomic.AtomicBoolean
@@ -118,6 +121,7 @@ class SmsRelayService @Inject constructor(
                 // However, since this runs in the context of the app which (usually) has permission if it's the default SMS app
                 // or requested it, we attempt it. SmsSender handles errors gracefully.
                 val success = smsSender.sendSms(address, body)
+
                 if (success) {
                     firestore.collection("users").document(uid)
                         .collection("outbox").document(docId).delete()
@@ -129,9 +133,35 @@ class SmsRelayService @Inject constructor(
                     firestore.collection("users").document(uid)
                         .collection("outbox").document(docId).delete()
                 }
+
+                val status = if (success) "sent" else "failed"
+                writeDiagnostics(uid, deviceId, address, status)
             } catch (e: Exception) {
                 Log.e(TAG, "Exception during SMS relay", e)
             }
+        }
+    }
+
+    private suspend fun writeDiagnostics(
+        uid: String,
+        deviceId: String,
+        address: String,
+        status: String
+    ) {
+        try {
+            val doc = firestore.collection("users").document(uid)
+                .collection("relayDiagnostics")
+                .document("latest")
+
+            val payload = mapOf(
+                "deviceId" to deviceId,
+                "recipient" to address,
+                "status" to status,
+                "timestamp" to FieldValue.serverTimestamp()
+            )
+            doc.set(payload, SetOptions.merge()).await()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to write relay diagnostics", e)
         }
     }
 
