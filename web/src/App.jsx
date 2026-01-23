@@ -2122,6 +2122,7 @@ function App() {
   const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [syncDiagnostics, setSyncDiagnostics] = useState(null);
+  const [relayDiagnostics, setRelayDiagnostics] = useState(null);
   const [syncRequestStatus, setSyncRequestStatus] = useState('');
   const [deleteStatus, setDeleteStatus] = useState('');
   const [deleteAction, setDeleteAction] = useState(null);
@@ -2509,6 +2510,18 @@ function App() {
     const diagRef = doc(db, "users", user.uid, "syncDiagnostics", "latest");
     const unsubscribe = onSnapshot(diagRef, (snapshot) => {
       setSyncDiagnostics(snapshot.exists() ? snapshot.data() : null);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setRelayDiagnostics(null);
+      return;
+    }
+    const diagRef = doc(db, "users", user.uid, "relayDiagnostics", "latest");
+    const unsubscribe = onSnapshot(diagRef, (snapshot) => {
+      setRelayDiagnostics(snapshot.exists() ? snapshot.data() : null);
     });
     return () => unsubscribe();
   }, [user]);
@@ -3266,6 +3279,30 @@ function App() {
       setRemoteSettingsStatus(error?.message ?? "Settings update failed.");
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleTestRelay = async () => {
+    if (!user) return;
+    setRemoteSettingsStatus("Queueing test message...");
+    try {
+      const phone = profile.phoneNumber || user.phoneNumber;
+      if (!phone) {
+        setRemoteSettingsStatus("Add a phone number to your profile to test relay.");
+        return;
+      }
+
+      await addDoc(collection(db, "users", user.uid, "outbox"), {
+        address: phone,
+        body: "PulseLink Web Relay Test: " + new Date().toLocaleTimeString(),
+        createdAt: serverTimestamp(),
+        source: "web_test",
+        lineId: activeLineId || lines[0]?.id || null
+      });
+      setRemoteSettingsStatus("Test message queued.");
+    } catch (e) {
+      console.error("Test relay failed", e);
+      setRemoteSettingsStatus("Test failed: " + e.message);
     }
   };
 
@@ -4789,13 +4826,32 @@ function App() {
                               Threads: {syncDiagnostics.threadCount ?? 0} · Messages: {syncDiagnostics.messageCount ?? 0} · READ_SMS: {syncDiagnostics.hasReadSms ? 'yes' : 'no'} · App: {syncDiagnostics.appVersion ?? 'unknown'}
                             </p>
                           )}
-                          <button
-                            className="secondary-btn"
-                            type="button"
-                            onClick={requestPhoneSync}
-                          >
-                            Request phone sync
-                          </button>
+                          <div className="settings-row">
+                            <span className="settings-label">Relay status</span>
+                            <span className="settings-value">
+                              {relayDiagnostics
+                                ? `${dateTimeFormatter.format(new Date(toMillis(relayDiagnostics.timestamp)))} • ${relayDiagnostics.status}`
+                                : 'No relay data yet'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              className="secondary-btn"
+                              type="button"
+                              onClick={requestPhoneSync}
+                              style={{ flex: 1 }}
+                            >
+                              Request phone sync
+                            </button>
+                            <button
+                              className="secondary-btn"
+                              type="button"
+                              onClick={handleTestRelay}
+                              style={{ flex: 1 }}
+                            >
+                              Test relay
+                            </button>
+                          </div>
                           {remoteSettingsStatus && <div className={getToastClass(remoteSettingsStatus)} role="status" aria-live="polite">{remoteSettingsStatus}</div>}
                           {syncRequestStatus && <div className={getToastClass(syncRequestStatus)} role="status" aria-live="polite">{syncRequestStatus}</div>}
                         </div>
