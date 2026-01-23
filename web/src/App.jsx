@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, memo, useCallback, useLayoutEffect } from 'react';
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
@@ -611,6 +611,14 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
   const [lineId, setLineId] = useState('');
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const textareaRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight + 2}px`;
+  }, [body]);
 
   useEffect(() => {
     if (selectedThread) {
@@ -690,8 +698,9 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
       <div className="composer-row composer-actions">
         <div style={{ flex: 1, position: 'relative' }}>
           <textarea
+            ref={textareaRef}
             className="composer-textarea"
-            style={{ width: '100%', paddingBottom: '24px' }}
+            style={{ width: '100%', paddingBottom: '24px', maxHeight: '200px', overflowY: 'auto' }}
             placeholder="Type a message... (Ctrl+Enter to send)"
             aria-label="Message body"
             aria-describedby="message-char-count"
