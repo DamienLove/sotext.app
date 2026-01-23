@@ -10,3 +10,7 @@
 ## 2024-05-25 - Accessible Icon Buttons & Input Helpers
 **Learning:** Icon-only buttons (like Sidebar toggle) are invisible to screen readers without `aria-label`. Visual cues like character counts are missed unless linked via `aria-describedby`.
 **Action:** Audit all icon buttons for `aria-label` and programmatically link input helper text using `aria-describedby`.
+
+## 2024-05-26 - Auto-expanding Text Inputs
+**Learning:** Fixed-height textareas in chat interfaces force users to scroll unnecessarily while composing long messages, breaking their train of thought and hiding context.
+**Action:** Implemented an auto-resize mechanism using `scrollHeight` to dynamically adjust the textarea height as the user types, improving the composition experience significantly.
