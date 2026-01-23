@@ -207,22 +207,6 @@ fun SettingsScreen(
                     onAction = onRequestDndAccess,
                     leadingIcon = Icons.Filled.NotificationsActive
                 )
-                SettingsActionRow(
-                    title = "Battery optimizations",
-                    subtitle = "Disable optimizations so alerts can always send.",
-                    actionLabel = "Open",
-                    onAction = onRequestBatteryOpt,
-                    leadingIcon = Icons.Filled.BugReport
-                )
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    SettingsActionRow(
-                        title = "Unused app reminders",
-                        subtitle = "Make sure PulseLink isn’t auto-disabled by Android.",
-                        actionLabel = "Open",
-                        onAction = onRequestUnusedApps,
-                        leadingIcon = Icons.Filled.Schedule
-                    )
-                }
                 if (settings.firebaseMessagingEnabled) {
                     SettingsToggleRow(
                         title = stringResource(R.string.extension_relay_title),
@@ -418,25 +402,6 @@ fun SettingsScreen(
                     title = "Beacon Feature",
                     initiallyExpanded = false
                 ) {
-                val smsStatusIcon = if (isDefaultSmsApp) Icons.Filled.CheckCircle else Icons.Filled.Error
-                val smsStatusColor = if (isDefaultSmsApp) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                if (isDefaultSmsApp) {
-                    Text(
-                        text = "PulseLink is your default SMS app",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = smsStatusColor,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                } else {
-                    SettingsActionRow(
-                        title = "Default SMS",
-                        subtitle = "PulseLink is NOT set as default",
-                        actionLabel = "Make default",
-                        onAction = onRequestDefaultSms,
-                        leadingIcon = smsStatusIcon,
-                        iconTint = smsStatusColor
-                    )
-                }
 
                 SettingsToggleRow(
                     title = stringResource(id = R.string.settings_beacon_icon_title),
