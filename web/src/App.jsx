@@ -1573,19 +1573,48 @@ const threadMapper = (t) => {
   return { thread: t, searchString: `${display} ${snippet}` };
 };
 
+// Bolt: Optimized contactMapper to use imperative string concatenation
+// avoiding array allocations (filter/map/join) for better performance.
 const contactMapper = (contact) => {
-  const parts = [
-    contact.displayName,
-    contact.phoneNumber,
-    contact.email,
-    ...(Array.isArray(contact.additionalPhones) ? contact.additionalPhones : []),
-    ...(Array.isArray(contact.additionalEmails) ? contact.additionalEmails : [])
-  ];
+  let searchString = '';
+  const dName = contact.displayName;
+  if (dName !== null && dName !== undefined) {
+    searchString = String(dName).toLowerCase();
+  }
 
-  const searchString = parts
-    .filter(part => part !== null && part !== undefined)
-    .map(part => String(part).toLowerCase())
-    .join(' ');
+  const phone = contact.phoneNumber;
+  if (phone !== null && phone !== undefined) {
+    if (searchString.length > 0) searchString += ' ';
+    searchString += String(phone).toLowerCase();
+  }
+
+  const email = contact.email;
+  if (email !== null && email !== undefined) {
+    if (searchString.length > 0) searchString += ' ';
+    searchString += String(email).toLowerCase();
+  }
+
+  const addPhones = contact.additionalPhones;
+  if (Array.isArray(addPhones)) {
+    for (let i = 0; i < addPhones.length; i++) {
+      const p = addPhones[i];
+      if (p !== null && p !== undefined) {
+        if (searchString.length > 0) searchString += ' ';
+        searchString += String(p).toLowerCase();
+      }
+    }
+  }
+
+  const addEmails = contact.additionalEmails;
+  if (Array.isArray(addEmails)) {
+    for (let i = 0; i < addEmails.length; i++) {
+      const e = addEmails[i];
+      if (e !== null && e !== undefined) {
+        if (searchString.length > 0) searchString += ' ';
+        searchString += String(e).toLowerCase();
+      }
+    }
+  }
 
   return { contact, searchString };
 };
