@@ -924,7 +924,11 @@ textarea:focus-visible,
 }
 
 .thread-item {
-  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
   border-radius: 16px;
   background: transparent;
   border: 1px solid transparent;
@@ -933,6 +937,7 @@ textarea:focus-visible,
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
+  width: 100%;
 }
 
 .thread-item:hover {
@@ -950,11 +955,32 @@ textarea:focus-visible,
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
+.thread-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.thread-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
 .thread-name {
   font-weight: 600;
-  margin-bottom: 4px;
   color: var(--ink);
   font-size: 0.95em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pin-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 5px var(--accent-glow));
 }
 
 .thread-snippet {
@@ -968,6 +994,38 @@ textarea:focus-visible,
 
 .thread-item.active .thread-name {
   color: var(--accent);
+}
+
+/* Thread Actions (Hover) */
+.thread-actions {
+  display: flex;
+  opacity: 0;
+  transition: opacity 0.2s;
+  gap: 4px;
+}
+
+.thread-item:hover .thread-actions,
+.thread-item:focus-within .thread-actions {
+  opacity: 1;
+}
+
+.thread-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.thread-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
 }
 
 /* Skeleton Loading */
