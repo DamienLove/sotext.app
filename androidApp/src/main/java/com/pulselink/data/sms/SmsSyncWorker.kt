@@ -109,42 +109,55 @@ class SmsSyncWorker @AssistedInject constructor(
 
             var syncedThreads = 0
             var syncedMessages = 0
-            val threadLimit = if (isPremium || isPro) 200 else 50
-            val threads = smsRepository.listThreads(limit = threadLimit)
+            val targetedThreadId = inputData.getLong("threadId", -1L)
+
+            val threads: List<SmsThreadItem>
+            if (targetedThreadId > 0) {
+                val item = smsRepository.getThread(targetedThreadId)
+                threads = if (item != null) listOf(item) else emptyList()
+            } else {
+                val threadLimit = if (isPremium || isPro) 200 else 50
+                threads = smsRepository.listThreads(limit = threadLimit)
+            }
+
             val lineThreadsRef = lineRef.collection("threads")
 
-            // Identify existing threads in Firestore to delete those that are no longer present (or dropped out of top 50)
-            // This prevents "ghost threads" that were deleted on the device from persisting on the web.
-            // Note: This fetches all thread IDs for the line. For heavy users, this might be costly, but necessary for accurate cleanup.
-            val existingThreadDocs = runCatching {
-                lineThreadsRef.get().await()
-            }.getOrElse { e ->
-                // Log the error using standard Android Log or a wrapper if available, here just printStack for safety
-                e.printStackTrace()
-                null
-            }
-            val existingThreadIds = existingThreadDocs?.documents?.map { it.id }?.toSet() ?: emptySet()
-            val currentThreadIds = threads.map { it.threadId.toString() }.toSet()
-
-            // Delete threads that are in Firestore but not in the current sync list
-            // NOTE: This intentionally removes any threads not in the local "Top 50" list.
-            // Older threads are thus automatically pruned from the cloud to save space and match the sync window.
-            val threadsToDelete = existingThreadIds - currentThreadIds
-            if (threadsToDelete.isNotEmpty()) {
-                var batch = firestore.batch()
-                var batchCount = 0
-                threadsToDelete.forEach { threadId ->
-                    batch.delete(lineThreadsRef.document(threadId))
-                    batchCount++
-                    // Batch limit is 500
-                    if (batchCount >= 450) {
-                        batch.commit().await()
-                        batch = firestore.batch()
-                        batchCount = 0
-                    }
+            // Only perform cleanup logic if this is a FULL sync.
+            // Targeted syncs only update the specific thread and leave others alone.
+            if (targetedThreadId <= 0) {
+                // Identify existing threads in Firestore to delete those that are no longer present (or dropped out of top 50)
+                // This prevents "ghost threads" that were deleted on the device from persisting on the web.
+                // Note: This fetches all thread IDs for the line. For heavy users, this might be costly, but necessary for accurate cleanup.
+                val existingThreadDocs = runCatching {
+                    lineThreadsRef.get().await()
+                }.getOrElse { e ->
+                    // Log the error using standard Android Log or a wrapper if available, here just printStack for safety
+                    e.printStackTrace()
+                    null
                 }
-                if (batchCount > 0) {
-                    batch.commit().await()
+                val existingThreadIds = existingThreadDocs?.documents?.map { it.id }?.toSet() ?: emptySet()
+                val currentThreadIds = threads.map { it.threadId.toString() }.toSet()
+
+                // Delete threads that are in Firestore but not in the current sync list
+                // NOTE: This intentionally removes any threads not in the local "Top 50" list.
+                // Older threads are thus automatically pruned from the cloud to save space and match the sync window.
+                val threadsToDelete = existingThreadIds - currentThreadIds
+                if (threadsToDelete.isNotEmpty()) {
+                    var batch = firestore.batch()
+                    var batchCount = 0
+                    threadsToDelete.forEach { threadId ->
+                        batch.delete(lineThreadsRef.document(threadId))
+                        batchCount++
+                        // Batch limit is 500
+                        if (batchCount >= 450) {
+                            batch.commit().await()
+                            batch = firestore.batch()
+                            batchCount = 0
+                        }
+                    }
+                    if (batchCount > 0) {
+                        batch.commit().await()
+                    }
                 }
             }
 
@@ -209,7 +222,7 @@ class SmsSyncWorker @AssistedInject constructor(
                 "ok"
             )
 
-            if (deviceContactsRepository.hasContactsPermission() && settings.remoteWebAccessEnabled) {
+            if (targetedThreadId <= 0 && deviceContactsRepository.hasContactsPermission() && settings.remoteWebAccessEnabled) {
                 syncDeviceContacts(user.uid)
             }
             Result.success()

@@ -2,6 +2,7 @@ package com.pulselink.data.sms
 
 import android.content.Context
 import androidx.work.Constraints
+import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
@@ -16,15 +17,23 @@ class SmsSyncTrigger @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
-    fun triggerSync() {
+    fun triggerSync(threadId: Long? = null) {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val syncRequest = OneTimeWorkRequestBuilder<SmsSyncWorker>()
+        val builder = OneTimeWorkRequestBuilder<SmsSyncWorker>()
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setConstraints(constraints)
-            .build()
+
+        if (threadId != null) {
+            val data = Data.Builder()
+                .putLong("threadId", threadId)
+                .build()
+            builder.setInputData(data)
+        }
+
+        val syncRequest = builder.build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             "SmsSyncOnDemand",
