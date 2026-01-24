@@ -377,6 +377,26 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:156950194350:android:placeholder_ringersong",
+        "android_client_info": {
+          "package_name": "com.RingerSong.free"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlcYRjNJAksE4hZ-zIgRB4Ch5-vvbCy9s"
+        }
+      ],
+      "services": {}
     }
   ],
   "configuration_version": "1"

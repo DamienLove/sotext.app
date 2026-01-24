@@ -1597,12 +1597,12 @@ private fun HowToAddMusicHelper() {
             fontWeight = FontWeight.SemiBold
         )
         Text(
-            text = "Download First: Spotify and YouTube Music tracks are downloaded before use.",
+            text = "Streaming Preferred: We stream from Spotify/YouTube if possible, using downloads as backup.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "We automatically silence your default ringer and play your downloaded track instead.",
+            text = "We automatically silence your default ringer (and vibration if permitted) to play your music.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

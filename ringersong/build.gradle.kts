@@ -36,6 +36,10 @@ tasks.matching { it.name == "preBuild" }.configureEach {
     dependsOn("syncGoogleServices")
 }
 
+tasks.matching { it.name.contains("process") && it.name.contains("GoogleServices") }.configureEach {
+    dependsOn("syncGoogleServices")
+}
+
 android {
     namespace = "com.RingerSong.free"
     compileSdk = 35
