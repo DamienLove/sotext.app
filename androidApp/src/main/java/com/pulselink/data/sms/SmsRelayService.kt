@@ -80,6 +80,21 @@ class SmsRelayService @Inject constructor(
 
                 if (snapshot != null && snapshot.exists()) {
                     val syncRequestedAt = snapshot.getTimestamp("syncRequestedAt")
+                    val remoteWebAccess = snapshot.getBoolean("remoteWebAccessEnabled")
+
+                    if (remoteWebAccess != null) {
+                        scope.launch {
+                            try {
+                                val currentSettings = settingsRepository.settings.first()
+                                if (currentSettings.remoteWebAccessEnabled != remoteWebAccess) {
+                                    Log.d(TAG, "Syncing remoteWebAccessEnabled from cloud: $remoteWebAccess")
+                                    settingsRepository.setRemoteWebAccessEnabled(remoteWebAccess)
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to sync remote settings", e)
+                            }
+                        }
+                    }
 
                     if (isFirstSnapshot) {
                         isFirstSnapshot = false
