@@ -40,27 +40,43 @@ class CallStateReceiver : BroadcastReceiver() {
                 val number = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
                 Log.d(TAG, "RINGING from: $number - Starting RingerPlaybackService")
 
-                // Attempt to silence ringer immediately to reduce latency, but capture volume first!
                 val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
                 var originalVolume = -1
 
-                // Start the playback service immediately to silence default ringer and play stream
+                // Retry logic for silencing ringer
+                // Sometimes the system resets volume immediately after ringing starts, so we need to be persistent
+                if (audioManager != null) {
+                    try {
+                        originalVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_RING)
+
+                        // Loop a few times to ensure silence sticks
+                        CoroutineScope(Dispatchers.Main).launch {
+                            repeat(3) {
+                                try {
+                                    audioManager.setStreamVolume(android.media.AudioManager.STREAM_RING, 0, 0)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Error silencing ringer attempt $it", e)
+                                }
+                                kotlinx.coroutines.delay(100)
+                            }
+                        }
+                        // Initial silence
+                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_RING, 0, 0)
+
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to capture/silence ringer", e)
+                    }
+                }
+
                 val serviceIntent = Intent(context, RingerPlaybackService::class.java).apply {
                     action = RingerPlaybackService.ACTION_PLAY_SEGMENT
                     putExtra(RingerPlaybackService.EXTRA_PHONE_NUMBER, number)
+                    if (originalVolume != -1) {
+                        putExtra(RingerPlaybackService.EXTRA_ORIGINAL_VOLUME, originalVolume)
+                    }
                 }
 
                 try {
-                    // Capture and silence BEFORE starting service to reduce latency
-                    if (audioManager != null) {
-                        originalVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_RING)
-                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_RING, 0, 0)
-                    }
-
-                    if (originalVolume != -1) {
-                        serviceIntent.putExtra(RingerPlaybackService.EXTRA_ORIGINAL_VOLUME, originalVolume)
-                    }
-
                     if (!canStartServiceFromBackground(context)) {
                         Log.w(TAG, "Skipping playback service start; app not in foreground and missing overlay permission.")
                         // Restore volume if we can't start!
