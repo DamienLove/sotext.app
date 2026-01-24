@@ -132,9 +132,14 @@ const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
          prev.onSelect === next.onSelect &&
+         prev.onPin === next.onPin &&
+         prev.onArchive === next.onArchive &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
-         prev.thread.snippet === next.thread.snippet;
+         prev.thread.snippet === next.thread.snippet &&
+         prev.thread.display_name === next.thread.display_name &&
+         prev.thread.pinned === next.thread.pinned &&
+         prev.thread.archived === next.thread.archived;
 };
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
@@ -2571,10 +2576,14 @@ function App() {
     // Sort by date descending
     const q = query(threadsRef, orderBy("date", "desc"), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const items = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          date: toMillis(data.date)
+        };
+      });
       setLegacyThreads(items);
       setIsLoadingThreads(false);
     });
@@ -2600,11 +2609,15 @@ function App() {
         const lineThreadsRef = collection(db, "users", user.uid, "lines", line.id, "threads");
         const q = query(lineThreadsRef, orderBy("date", "desc"), limit(50));
         return onSnapshot(q, (threadSnap) => {
-          const threads = threadSnap.docs.map(d => ({
-            id: d.id,
-            lineId: line.id,
-            ...d.data()
-          }));
+          const threads = threadSnap.docs.map(d => {
+            const data = d.data();
+            return {
+              id: d.id,
+              lineId: line.id,
+              ...data,
+              date: toMillis(data.date)
+            };
+          });
           setLineThreads(prev => ({ ...prev, [line.id]: threads }));
         });
       });
@@ -2643,10 +2656,14 @@ function App() {
       const messagesRef = collection(db, ...basePath);
       const q = query(messagesRef, orderBy("date", "asc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const messagesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const messagesData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            date: toMillis(data.date)
+          };
+        });
         setMessages(messagesData);
       });
       return () => unsubscribe();
