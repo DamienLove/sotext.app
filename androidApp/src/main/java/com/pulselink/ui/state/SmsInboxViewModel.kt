@@ -112,6 +112,7 @@ class SmsInboxViewModel @Inject constructor(
     }
 
     fun loadMoreThreads() {
+        if (refreshJob?.isActive == true) return
         currentThreadLimit += THREAD_PAGE_SIZE
         refresh(force = true)
     }
@@ -273,7 +274,7 @@ class SmsInboxViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         smsRepository.changes()
-            .debounce(400)
+            .debounce(100)
             .onEach { refresh(force = true) }
             .launchIn(viewModelScope)
 
