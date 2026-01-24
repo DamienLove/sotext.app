@@ -1744,11 +1744,8 @@ const Sidebar = memo(({
     if (activePanel !== 'beacon') return;
 
     const handleKeyDown = (e) => {
-      // Focus search on "/" or "Ctrl+K" / "Cmd+K"
-      if (
-        (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) ||
-        ((e.ctrlKey || e.metaKey) && e.key === 'k')
-      ) {
+      // Focus search on "/"
+      if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
@@ -1925,11 +1922,11 @@ const Sidebar = memo(({
               <input
                 ref={searchInputRef}
                 className="sidebar-search-input-field"
-                placeholder="Search (Ctrl+K)"
+                placeholder="Search (/)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Search messages (Ctrl+K)"
-                title="Search messages (Ctrl+K or /)"
+                aria-label="Search messages (/)"
+                title="Search messages (/)"
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') {
                     e.preventDefault();
