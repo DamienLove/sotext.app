@@ -2201,6 +2201,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user) {
       setRingerPlaylist([]);
       return;
@@ -2362,6 +2363,67 @@ function App() {
   ), [filteredDeviceContacts, contactListLimit]);
 
   useEffect(() => {
+    // Bolt: Mock user support for Playwright testing
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('mock_user') === 'true') {
+      const mockUser = {
+        uid: 'mock_user_123',
+        email: 'test@example.com',
+        displayName: 'Test User',
+        phoneNumber: '+15550101010',
+        getIdTokenResult: async () => ({
+          claims: { premium: true, pro: true }
+        })
+      };
+
+      setUser(mockUser);
+      setIsLoggingIn(false);
+      setActivePanel('home');
+
+      // Inject mock data to ensure UI elements render without Firestore
+      setUserData({
+        subscriptionStatus: 'premium',
+        premiumSubscriptionStatus: 'SUBSCRIPTION_STATE_ACTIVE',
+        remoteWebAccessEnabled: true,
+        premiumUnlocked: true,
+        proUnlocked: true
+      });
+
+      setRemoteSettings({
+        remoteWebAccessEnabled: true,
+        autoUpdateContactInfo: true,
+        timeFormat: 'AUTO',
+        thirdPartyExtensionsEnabled: true,
+        beaconLauncherEnabled: true,
+        otpCleanupEnabled: true,
+        emailFallbackEnabled: true,
+        crashDetectionEnabled: true,
+        aiSummariesEnabled: true,
+        firebaseMessagingEnabled: true,
+        mergedExperienceEnabled: true,
+        privateSafeEnabled: true,
+        smartRepliesEnabled: true,
+        truecallerEnabled: true,
+        ringerSongEnabled: true,
+        mapEnabled: true,
+        contactsEnabled: true,
+        themesEnabled: true
+      });
+
+      setLines([{ id: 'line_1', label: 'My Pixel', phoneNumber: '+15551234567', primaryDeviceId: 'device_1' }]);
+      setLegacyThreads([{ id: 'thread_1', address: '+15559998888', display_name: 'Test Contact', date: Date.now(), snippet: 'Hello World', pinned: false, archived: false }]);
+      setTrustedContacts([{ id: 'contact_1', displayName: 'Mom', phoneNumber: '+15551112222', contactOrder: 0 }]);
+      setDeviceContacts([{ id: 'dev_1', displayName: 'Alice', phoneNumber: '+15553334444' }]);
+
+      setProfile({
+        ownerName: 'Test User',
+        avatarUrl: '',
+        email: 'test@example.com',
+        phoneNumber: '+15550101010'
+      });
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsLoggingIn(false);
@@ -2373,6 +2435,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user) {
       setProfile({ ownerName: '', avatarUrl: '', email: '', phoneNumber: '' });
       setThemePrefs(defaultTheme);
@@ -2503,6 +2566,7 @@ function App() {
   }, [user, userData, isPremiumUser]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user) {
       setSyncDiagnostics(null);
       return;
@@ -2515,6 +2579,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user) {
       setRelayDiagnostics(null);
       return;
@@ -2527,6 +2592,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user) {
       setTrustedContacts([]);
       setDeviceContacts([]);
@@ -2545,6 +2611,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user) {
       setDeviceContacts([]);
       return;
@@ -2562,6 +2629,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user || !userData?.remoteWebAccessEnabled) {
       setLegacyThreads([]);
       return;
@@ -2582,6 +2650,7 @@ function App() {
   }, [user, userData?.remoteWebAccessEnabled]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user || !userData?.remoteWebAccessEnabled) {
       setLineThreads({});
       setLines([]);
@@ -2664,6 +2733,7 @@ function App() {
   }, [messages, autoScroll]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user) {
       setAlertLocations([]);
       setAlertStatus('');
