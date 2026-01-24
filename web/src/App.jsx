@@ -248,18 +248,27 @@ const areDeviceContactsEqual = (prev, next) => {
   if (p.email !== n.email) return false;
 
   // Deep check for array props (assuming arrays of strings)
-  const pPhones = p.additionalPhones || [];
-  const nPhones = n.additionalPhones || [];
-  if (pPhones.length !== nPhones.length) return false;
-  for (let i = 0; i < pPhones.length; i++) {
-    if (pPhones[i] !== nPhones[i]) return false;
+  // Bolt: Optimized to avoid creating empty arrays for length checks
+  const pPhones = p.additionalPhones;
+  const nPhones = n.additionalPhones;
+  const pPhonesLen = pPhones ? pPhones.length : 0;
+  const nPhonesLen = nPhones ? nPhones.length : 0;
+  if (pPhonesLen !== nPhonesLen) return false;
+  if (pPhonesLen > 0) {
+    for (let i = 0; i < pPhonesLen; i++) {
+      if (pPhones[i] !== nPhones[i]) return false;
+    }
   }
 
-  const pEmails = p.additionalEmails || [];
-  const nEmails = n.additionalEmails || [];
-  if (pEmails.length !== nEmails.length) return false;
-  for (let i = 0; i < pEmails.length; i++) {
-    if (pEmails[i] !== nEmails[i]) return false;
+  const pEmails = p.additionalEmails;
+  const nEmails = n.additionalEmails;
+  const pEmailsLen = pEmails ? pEmails.length : 0;
+  const nEmailsLen = nEmails ? nEmails.length : 0;
+  if (pEmailsLen !== nEmailsLen) return false;
+  if (pEmailsLen > 0) {
+    for (let i = 0; i < pEmailsLen; i++) {
+      if (pEmails[i] !== nEmails[i]) return false;
+    }
   }
 
   return true;
