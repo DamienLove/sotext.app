@@ -2350,7 +2350,7 @@ function App() {
       }
   }, [user]);
 
-  const messagesEndRef = useRef(null);
+  // const messagesEndRef = useRef(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const mapMarkersRef = useRef(new Map());
@@ -2764,7 +2764,8 @@ function App() {
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
         : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
       const messagesRef = collection(db, ...basePath);
-      const q = query(messagesRef, orderBy("date", "asc"));
+      // Bolt: User requested "Newest First" (Top), so we use 'desc' order.
+      const q = query(messagesRef, orderBy("date", "desc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const messagesData = snapshot.docs.map(doc => {
           const data = doc.data();
@@ -2783,12 +2784,9 @@ function App() {
   }, [user, selectedThread]);
 
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (autoScroll) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, autoScroll]);
+  // Bolt: With "Newest First" (Top), we don't need auto-scroll to bottom.
+  // Instead, the list naturally starts at the top.
+  // We can optionally scroll to top if needed, but default behavior handles it.
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
@@ -5073,25 +5071,34 @@ function App() {
                       </div>
                     </div>
                     <div className="messages-list">
+                      {/* Bolt: Newest First layout */}
+                      <MessageComposer
+                        user={user}
+                        db={db}
+                        selectedThread={selectedThread}
+                        lineInboxMode={lineInboxMode}
+                        activeLineId={activeLineId}
+                        lines={lines}
+                        isLoggingIn={isLoggingIn}
+                      />
                       {messageListElements}
-                      <div ref={messagesEndRef} />
                     </div>
                   </>
                 ) : (
                   <div className="empty-state">
                     <img src={beaconLogo} alt="Beacon" className="empty-logo" />
                     <div>Select a thread or start a new message</div>
+                    <MessageComposer
+                        user={user}
+                        db={db}
+                        selectedThread={selectedThread}
+                        lineInboxMode={lineInboxMode}
+                        activeLineId={activeLineId}
+                        lines={lines}
+                        isLoggingIn={isLoggingIn}
+                    />
                   </div>
                 )}
-                <MessageComposer
-                  user={user}
-                  db={db}
-                  selectedThread={selectedThread}
-                  lineInboxMode={lineInboxMode}
-                  activeLineId={activeLineId}
-                  lines={lines}
-                  isLoggingIn={isLoggingIn}
-                />
               </>
             ) : (
               <div className="empty-state">
