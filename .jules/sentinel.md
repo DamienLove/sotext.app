@@ -16,3 +16,8 @@
 **Vulnerability:** The `callerIdCache` collection in `firestore.rules` used `allow read`, which implicitly grants `list` permission. This allowed any authenticated user to download the entire dataset of cached phone numbers and names, a potential privacy leak.
 **Learning:** `allow read` is a shorthand for `get` and `list`. For collections containing user data or PII that are accessed via key-value lookups (like caches or user profiles), `allow get` is safer than `allow read`.
 **Prevention:** Always verify if `list` permission is actually required. If the app only looks up documents by ID, restrict the rule to `allow get`.
+
+## 2024-05-25 - AI Prompt Injection in Natural Language Interface
+**Vulnerability:** The `naturalLanguageQueryFlow` Cloud Function embedded raw user input directly into the prompt template without sanitization, allowing potential instruction hijacking via newline injection.
+**Learning:** Even simple query inputs can be vectors for prompt injection if they can alter the structure of the prompt (e.g., by simulating new system instructions).
+**Prevention:** Always use `sanitizeScalar` (or equivalent) to strip control characters and newlines from user input before embedding it into LLM prompts.
