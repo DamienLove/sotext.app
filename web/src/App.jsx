@@ -3700,7 +3700,13 @@ function App() {
             <img src={logo} alt="PulseLink Pro" className="brand-logo" />
             <h1>PulseLink Web</h1>
             <p>Login to access your messages</p>
-            <div className="login-form">
+            <form
+              className="login-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleEmailAuth('signin');
+              }}
+            >
               <label className="login-field">
                 Email
                 <input
@@ -3747,7 +3753,7 @@ function App() {
               {authError && <div className="auth-error" role="alert">{authError}</div>}
               <div className="login-actions">
                 <button
-                  onClick={() => handleEmailAuth('signin')}
+                  type="submit"
                   disabled={isLoggingIn}
                   aria-busy={isLoggingIn}
                   className="primary-btn"
@@ -3760,6 +3766,7 @@ function App() {
                   ) : 'Sign in'}
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleEmailAuth('signup')}
                   disabled={isLoggingIn}
                   className="secondary-btn"
@@ -3777,6 +3784,7 @@ function App() {
               </button>
               <div className="login-divider">or</div>
               <button
+                type="button"
                 onClick={handleLogin}
                 disabled={isLoggingIn}
                 aria-busy={isLoggingIn}
@@ -3789,7 +3797,7 @@ function App() {
                   </>
                 ) : 'Sign in with Google'}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </div>
