@@ -160,7 +160,8 @@ fun InboxScreen(
     onSetAutoReplyMessage: (String) -> Unit = {},
     onUpdateQuickReplies: (List<String>) -> Unit = {},
     autoDeleteOtps: Boolean = false,
-    onSetAutoDeleteOtps: (Boolean) -> Unit = {}
+    onSetAutoDeleteOtps: (Boolean) -> Unit = {},
+    onAvatarClick: (String) -> Unit = {}
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -638,7 +639,8 @@ fun InboxScreen(
                                         onDelete = { onDeleteThread(item.threadId) },
                                         onTogglePin = { onTogglePin(item.threadId) },
                                         onToggleArchive = { onToggleArchive(item.threadId) },
-                                        onMarkAsUnread = { onMarkAsUnread(item.threadId) }
+                                        onMarkAsUnread = { onMarkAsUnread(item.threadId) },
+                                        onAvatarClick = { onToggleSelection(item.threadId) }
                                     )
                                 } else {
                                     SwipeableThreadRow(
@@ -651,6 +653,7 @@ fun InboxScreen(
                                         onToggleArchive = { onToggleArchive(item.threadId) },
                                         onMarkAsUnread = { onMarkAsUnread(item.threadId) },
                                         onLongClick = { onToggleSelection(item.threadId) },
+                                        onAvatarClick = { onAvatarClick(item.address) },
                                         modifier = Modifier.animateItemPlacement()
                                     )
                                 }
@@ -810,7 +813,6 @@ private fun TabChip(label: String, selected: Boolean, theme: ThemePalette, onCli
 // Helper needed as I used it in EmptyState
 // Brush is already imported
 
-enum class InboxFilter { ALL, READ, UNREAD, ARCHIVED, PERSONAL, TRANSACTIONS, PROMOTIONS }
 
 // Missing composables need to be re-added or the file will be incomplete.
 // I will just copy the rest of the file content I saw earlier to ensure it's valid.
@@ -1012,6 +1014,7 @@ private fun SwipeableThreadRow(
     onToggleArchive: () -> Unit,
     onMarkAsUnread: () -> Unit,
     onLongClick: () -> Unit,
+    onAvatarClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SwipeToDismissBox(
@@ -1048,7 +1051,8 @@ private fun SwipeableThreadRow(
                 onTogglePin = onTogglePin,
                 onToggleArchive = onToggleArchive,
                 onMarkAsUnread = onMarkAsUnread,
-                onLongClick = onLongClick
+                onLongClick = onLongClick,
+                onAvatarClick = onAvatarClick
             )
         },
         enableDismissFromStartToEnd = true,
@@ -1068,7 +1072,8 @@ private fun ThreadRow(
     onTogglePin: () -> Unit = {},
     onToggleArchive: () -> Unit = {},
     onMarkAsUnread: () -> Unit = {},
-    onLongClick: () -> Unit = {}
+    onLongClick: () -> Unit = {},
+    onAvatarClick: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -1094,7 +1099,9 @@ private fun ThreadRow(
         ) {
             // Avatar / Selection State
             Box(
-                modifier = Modifier.padding(end = 16.dp),
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .clickable { onAvatarClick() },
                 contentAlignment = Alignment.BottomEnd
             ) {
                 if (isSelected) {

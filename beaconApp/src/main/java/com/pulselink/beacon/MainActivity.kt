@@ -44,6 +44,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Telephony
+import android.provider.ContactsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -255,7 +256,8 @@ private fun BeaconNav(
                     onSetAutoReplyMessage = { vm.setAutoReplyMessage(it) },
                     onUpdateQuickReplies = { vm.updateQuickReplies(it) },
                     autoDeleteOtps = vm.autoDeleteOtps,
-                    onSetAutoDeleteOtps = { vm.setAutoDeleteOtps(it) }
+                    onSetAutoDeleteOtps = { vm.setAutoDeleteOtps(it) },
+                    onAvatarClick = { address -> openContact(context, address) }
                 )
             }
             composable(
@@ -491,6 +493,43 @@ private fun requiredPermissions(context: android.content.Context): List<String> 
     val all = basePerms + notif
     return all.filter {
         ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+    }
+}
+
+private fun openContact(context: android.content.Context, address: String) {
+    try {
+        val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(address))
+        val projection = arrayOf(ContactsContract.PhoneLookup._ID, ContactsContract.PhoneLookup.LOOKUP_KEY)
+        val cursor = context.contentResolver.query(uri, projection, null, null, null)
+
+        var launched = false
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                val lookupKeyIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup.LOOKUP_KEY)
+                val idIndex = cursor.getColumnIndex(ContactsContract.PhoneLookup._ID)
+                if (lookupKeyIndex >= 0 && idIndex >= 0) {
+                    val lookupKey = cursor.getString(lookupKeyIndex)
+                    val id = cursor.getLong(idIndex)
+                    val contactUri = ContactsContract.Contacts.getLookupUri(id, lookupKey)
+                    val intent = Intent(Intent.ACTION_VIEW, contactUri)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(intent)
+                    launched = true
+                }
+            }
+            cursor.close()
+        }
+
+        if (!launched) {
+            val intent = Intent(Intent.ACTION_INSERT_OR_EDIT).apply {
+                type = ContactsContract.Contacts.CONTENT_ITEM_TYPE
+                putExtra(ContactsContract.Intents.Insert.PHONE, address)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
     }
 }
 

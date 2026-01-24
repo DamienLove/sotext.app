@@ -840,7 +840,6 @@ private fun LazyItemScope.MessageBubble(
             }
         }
     }
-  }
 }
 
 private fun formatMessageTime(timestamp: Long): String {
