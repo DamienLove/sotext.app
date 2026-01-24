@@ -4,19 +4,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-// Future Deep v9 Design System Tokens
+// Future Deep v11 Design System Tokens
 // The ultimate unified design language for PulseLink Suite.
-// V9: "Neon Noir Refined" - Sharper contrast, deeper blacks, more glassmorphism.
+// V11: "Absolute Zero" - Pitch black, Laser Blue, and Holographic scanlines.
 
 // Colors
-val DeepBackground = Color(0xFF000000) // V9 Pitch Black
-val DeepSurface = Color(0xFF05080E) // V9 Surface (Very Deep Blue)
-val DeepSurfaceAlt = Color(0xFF0A0F1C) // V9 Surface Alt
-val DeepAccent = Color(0xFF00F0FF) // V9 Electric Cyan
+val DeepBackground = Color(0xFF000000) // V11 Pitch Black
+val DeepSurface = Color(0xFF05080E) // V11 Surface (Very Deep Blue)
+val DeepSurfaceAlt = Color(0xFF0A0F1C) // V11 Surface Alt
+val DeepAccent = Color(0xFF00F3FF) // V11 Laser Blue
 val DeepAccentStrong = Color(0xFF00B8D4) // Cyan 700
-val DeepTertiary = Color(0xFFE000FF) // V9 Neon Magenta
-val DeepError = Color(0xFFFF2E4D) // V9 Error
-val DeepOnSurface = Color(0xFFE0F7FA) // V9 Ink
+val DeepTertiary = Color(0xFFE000FF) // V11 Neon Purple
+val DeepError = Color(0xFFFF2E4D) // V11 Error
+val DeepOnSurface = Color(0xFFE0F7FA) // V11 Ink
 val DeepMuted = Color(0xFF64748B) // Slate 500
 
 object Spacing {
