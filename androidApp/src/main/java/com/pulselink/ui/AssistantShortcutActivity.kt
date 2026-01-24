@@ -14,12 +14,7 @@ import com.pulselink.R
 import com.pulselink.data.assistant.NaturalLanguageCommandProcessor
 import com.pulselink.data.assistant.VoiceCommandResult
 import com.pulselink.data.link.ContactLinkManager
-import com.pulselink.data.link.RemoteAlertStatus
 import com.pulselink.domain.model.EscalationTier
-import com.pulselink.domain.model.ManualMessageResult
-import com.pulselink.domain.model.MessageUrgency
-import com.pulselink.domain.model.VolumeHint
-import com.pulselink.domain.repository.ContactRepository
 import com.pulselink.service.AlertRouter
 import dagger.hilt.android.AndroidEntryPoint
 import java.util.Locale
@@ -33,7 +28,6 @@ class AssistantShortcutActivity : FragmentActivity() {
     @Inject lateinit var alertRouter: AlertRouter
     @Inject lateinit var naturalLanguageCommandProcessor: NaturalLanguageCommandProcessor
     @Inject lateinit var contactLinkManager: ContactLinkManager
-    @Inject lateinit var contactRepository: ContactRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,17 +47,14 @@ class AssistantShortcutActivity : FragmentActivity() {
             return
         }
 
+        // Sentinel: Removed insecure message/call handlers. Only explicit feature commands are allowed.
         if (intent.action == Intent.ACTION_VIEW) {
             val data = intent.data ?: run {
                 finishSilently()
                 return
             }
-            when (data.path) {
-                "/assistant/message" -> handleCreateMessageIntent(data).also { return }
-                "/assistant/urgent" -> handleUrgentMessageIntent(data).also { return }
-                "/assistant/nonurgent" -> handleNonUrgentMessageIntent(data).also { return }
-                "/assistant/call" -> handleEmergencyCallIntent(data).also { return }
-            }
+            // Fall-through to feature extraction.
+            // Undocumented paths like /assistant/message are no longer supported.
         }
 
         val feature = extractDeepLinkFeature(intent)
@@ -90,114 +81,6 @@ class AssistantShortcutActivity : FragmentActivity() {
         }
     }
 
-    private fun handleCreateMessageIntent(data: Uri) {
-        val contactName = data.getQueryParameter("contact")
-        val messageText = data.getQueryParameter("text")
-        val volumeHint = parseVolumeHint(data.getQueryParameter("volume"))
-
-        if (contactName.isNullOrBlank() || messageText.isNullOrBlank()) {
-            Toast.makeText(this, "Contact or message text is missing.", Toast.LENGTH_SHORT).show()
-            finish()
-            return
-        }
-        
-        lifecycleScope.launch {
-            val targetContact = findContact(contactName)
-            if (targetContact == null) {
-                toast(getString(R.string.assistant_contact_not_found, contactName))
-            } else {
-                val result = contactLinkManager.sendManualMessage(
-                    targetContact.id,
-                    messageText,
-                    MessageUrgency.STANDARD,
-                    volumeHint
-                )
-                val toastMessage = if (result is ManualMessageResult.Success) {
-                    getString(R.string.assistant_message_sent, targetContact.displayName)
-                } else {
-                    getString(R.string.assistant_message_failed, targetContact.displayName)
-                }
-                toast(toastMessage)
-            }
-            finish()
-        }
-    }
-
-    private fun handleUrgentMessageIntent(data: Uri) {
-        val contactName = data.getQueryParameter("contact")
-        val messageText = data.getQueryParameter("text")
-        val volumeHint = parseVolumeHint(data.getQueryParameter("volume")) ?: VolumeHint.HIGH
-
-        if (contactName.isNullOrBlank()) {
-            toast("Contact name is missing for urgent message.")
-            finish()
-            return
-        }
-
-        lifecycleScope.launch {
-            val targetContact = findContact(contactName)
-            if (targetContact == null) {
-                toast(getString(R.string.assistant_contact_not_found, contactName))
-            } else {
-                val alertResult = contactLinkManager.triggerRemoteAlert(targetContact, EscalationTier.EMERGENCY)
-                if (!messageText.isNullOrBlank()) {
-                    contactLinkManager.sendManualMessage(
-                        targetContact.id,
-                        messageText,
-                        MessageUrgency.URGENT,
-                        volumeHint
-                    )
-                }
-                val toastMessage = if (alertResult.status == RemoteAlertStatus.SUCCESS) {
-                    getString(R.string.assistant_urgent_message_sent, targetContact.displayName)
-                } else {
-                    getString(R.string.assistant_urgent_message_failed, targetContact.displayName)
-                }
-                toast(toastMessage)
-            }
-            finish()
-        }
-    }
-    
-    private fun handleNonUrgentMessageIntent(data: Uri) {
-        val contactName = data.getQueryParameter("contact")
-        val messageText = data.getQueryParameter("text")
-        val volumeQuery = data.getQueryParameter("volume")
-
-        if (contactName.isNullOrBlank() || messageText.isNullOrBlank()) {
-            toast("Contact or message text is missing.")
-            finish()
-            return
-        }
-
-        lifecycleScope.launch {
-            val targetContact = findContact(contactName)
-            if (targetContact == null) {
-                toast(getString(R.string.assistant_contact_not_found, contactName))
-            } else {
-                val volumeHint = parseVolumeHint(volumeQuery) ?: VolumeHint.MEDIUM
-                val result = contactLinkManager.sendManualMessage(
-                    targetContact.id,
-                    messageText,
-                    MessageUrgency.STANDARD,
-                    volumeHint
-                )
-                val toastMessage = if (result is ManualMessageResult.Success) {
-                    getString(R.string.assistant_non_urgent_sent, targetContact.displayName, volumeHint.name.lowercase())
-                } else {
-                    getString(R.string.assistant_message_failed, targetContact.displayName)
-                }
-                toast(toastMessage)
-            }
-            finish()
-        }
-    }
-
-    private suspend fun findContact(contactName: String) =
-        contactRepository.observeContacts().first()
-            .firstOrNull { it.displayName.equals(contactName, ignoreCase = true) || it.displayName.contains(contactName, ignoreCase = true) }
-
-
     private suspend fun handleVoiceCommand(query: String) {
         val result = naturalLanguageCommandProcessor.handleCommand(query)
         val message = when (result) {
@@ -207,55 +90,6 @@ class AssistantShortcutActivity : FragmentActivity() {
         }
         toast(message)
         finish()
-    }
-
-    private fun parseVolumeHint(raw: String?): VolumeHint? {
-        val lower = raw?.lowercase(Locale.US)?.trim().orEmpty()
-        return when {
-            lower.isBlank() -> null
-            lower.contains("low") || lower.contains("quiet") || lower.contains("half") -> VolumeHint.LOW
-            lower.contains("high") || lower.contains("loud") || lower.contains("max") || lower.contains("full") -> VolumeHint.HIGH
-            else -> VolumeHint.MEDIUM
-        }
-    }
-
-    private fun handleEmergencyCallIntent(data: Uri) {
-        val contactName = data.getQueryParameter("contact")
-        if (contactName.isNullOrBlank()) {
-            toast("Contact name is missing for emergency call.")
-            finish()
-            return
-        }
-        lifecycleScope.launch {
-            val targetContact = findContact(contactName)
-            if (targetContact == null) {
-                toast(getString(R.string.assistant_contact_not_found, contactName))
-                finish()
-                return@launch
-            }
-            val phone = (listOf(targetContact.phoneNumber) + targetContact.additionalPhones)
-                .firstOrNull { it.isNotBlank() }
-            if (phone.isNullOrBlank()) {
-                toast(getString(R.string.assistant_contact_not_found, contactName))
-                finish()
-                return@launch
-            }
-            val callIntent = Intent(Intent.ACTION_CALL, Uri.parse("tel:$phone"))
-            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))
-            val launched = runCatching {
-                startActivity(callIntent)
-                true
-            }.getOrElse {
-                runCatching {
-                    startActivity(dialIntent)
-                    true
-                }.getOrElse { false }
-            }
-            if (!launched) {
-                toast(getString(R.string.assistant_message_failed, contactName))
-            }
-            finish()
-        }
     }
 
     private suspend fun handleShortcutFeature(feature: String) {

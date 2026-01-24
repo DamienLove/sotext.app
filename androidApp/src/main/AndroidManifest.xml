@@ -52,7 +52,7 @@
         android:supportsPictureInPicture="true">
             <intent-filter>
                 <action android:name="android.intent.action.SENDTO" />
-                <category android:name="android.intent.category.DEFAULT" />     
+                <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="sms" />
                 <data android:scheme="smsto" />
@@ -448,7 +448,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Sentinel: Removed BROWSABLE to prevent web-based attacks on deep links -->
                 <data
                     android:host="assistant"
                     android:scheme="pulselink" />
