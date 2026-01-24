@@ -3595,6 +3595,9 @@ function App() {
     setActivePanel('home');
   }, []);
 
+  // Bolt: Stable handler for Command Palette to prevent Sidebar re-renders
+  const handleOpenCommandPalette = useCallback(() => setShowCommandPalette(true), []);
+
   // Bolt: Stable handler for new thread button
   const handleNewThread = useCallback(() => {
     setActivePanel('beacon');
@@ -3851,7 +3854,7 @@ function App() {
           selectedThreadId={selectedThread?.id}
           onSelect={handleThreadSelect}
           showPreviews={showPreviews}
-          openCommandPalette={() => setShowCommandPalette(true)}
+          openCommandPalette={handleOpenCommandPalette}
           showArchived={showArchived}
           setShowArchived={setShowArchived}
           onPinThread={handlePinThread}
