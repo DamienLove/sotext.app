@@ -14,3 +14,7 @@
 ## 2024-05-26 - Auto-expanding Text Inputs
 **Learning:** Fixed-height textareas in chat interfaces force users to scroll unnecessarily while composing long messages, breaking their train of thought and hiding context.
 **Action:** Implemented an auto-resize mechanism using `scrollHeight` to dynamically adjust the textarea height as the user types, improving the composition experience significantly.
+
+## 2024-05-27 - Visual Required Field Indicators
+**Learning:** HTML `required` attribute provides validation but lacks immediate visual feedback for users scanning a form. Screen readers announce "required", but sighted users might miss it until submission fails.
+**Action:** Created a reusable `<RequiredIndicator />` component (red asterisk with `aria-hidden="true"`) to pair with `required` inputs, ensuring visual clarity without redundant screen reader announcements.

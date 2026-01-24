@@ -87,6 +87,16 @@ const PinIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none
 const ArchiveIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>;
 const InboxIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>;
 
+const RequiredIndicator = () => (
+  <span
+    aria-hidden="true"
+    style={{ color: 'var(--danger)', marginLeft: '4px' }}
+    title="Required field"
+  >
+    *
+  </span>
+);
+
 const Spinner = ({ className = '', style = {} }) => (
   <svg className={`spinner ${className}`} style={style} viewBox="0 0 50 50" aria-hidden="true">
     <defs>
@@ -706,7 +716,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
   return (
     <div className="composer">
       <div className="composer-row">
-        <label className="composer-label" htmlFor="compose-address">To</label>
+        <label className="composer-label" htmlFor="compose-address">To<RequiredIndicator /></label>
         <input
           id="compose-address"
           className="composer-input"
@@ -714,6 +724,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
           placeholder="Phone number"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
+          required
         />
       </div>
       {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
@@ -746,6 +757,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
             aria-describedby="message-char-count"
             value={body}
             onChange={(e) => setBody(e.target.value)}
+            required
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -4053,11 +4065,12 @@ function App() {
                 <div className="settings-card">
                   <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
                   <label className="login-field">
-                    Name
+                    Name<RequiredIndicator />
                     <input
                       className="login-input"
                       value={contactForm.displayName}
                       onChange={(e) => setContactForm((prev) => ({ ...prev, displayName: e.target.value }))}
+                      required
                     />
                   </label>
                   <label className="login-field">
@@ -4438,12 +4451,13 @@ function App() {
                 <div className="settings-card themes-card">
                   <h4>Publish your theme</h4>
                   <label className="login-field">
-                    Theme name
+                    Theme name<RequiredIndicator />
                     <input
                       className="login-input"
                       value={themePublishForm.name}
                       onChange={(e) => setThemePublishForm((prev) => ({ ...prev, name: e.target.value }))}
                       placeholder="e.g., Aurora Drift"
+                      required
                     />
                   </label>
                   <label className="login-field">
@@ -4741,8 +4755,8 @@ function App() {
                 </div>
                 <form className="login-form" style={{marginTop: 12}} onSubmit={handleAddExtension}>
                   <label className="login-field">
-                    Name
-                    <input className="login-input" value={extensionForm.name} onChange={(e) => setExtensionForm((prev) => ({ ...prev, name: e.target.value }))} />
+                    Name<RequiredIndicator />
+                    <input className="login-input" value={extensionForm.name} onChange={(e) => setExtensionForm((prev) => ({ ...prev, name: e.target.value }))} required />
                   </label>
                   <label className="login-field">
                     Webhook URL (https://…)
