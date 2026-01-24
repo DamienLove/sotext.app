@@ -1458,7 +1458,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun buildBugReportUri(context: Context, bugReportData: BugReportData): Uri {
+    fun getDeviceInfo(context: Context): String {
         val packageManager = context.packageManager
         val packageInfo = runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -1485,6 +1485,16 @@ class MainViewModel @Inject constructor(
         val osVersion = Build.VERSION.RELEASE ?: "unknown"
         val apiLevel = Build.VERSION.SDK_INT
 
+        return buildString {
+            appendLine("App Version: $versionName ($versionCode)")
+            appendLine("Build Flavor: ${if (BuildConfig.PREMIUM_FEATURES) "Premium" else if (BuildConfig.PRO_FEATURES) "Pro" else "Free"}")
+            appendLine("Device: $manufacturer $model")
+            appendLine("OS: Android $osVersion (API $apiLevel)")
+        }
+    }
+
+    fun buildBugReportUri(context: Context, bugReportData: BugReportData): Uri {
+        val deviceInfo = bugReportData.deviceInfo.ifBlank { getDeviceInfo(context) }
         val formattedBody = buildString {
             appendLine("Summary: ${bugReportData.summary}")
             appendLine()
@@ -1503,10 +1513,7 @@ class MainViewModel @Inject constructor(
                 appendLine("Reporter Email: ${bugReportData.userEmail}")
             }
             appendLine()
-            appendLine("App Version: $versionName ($versionCode)")
-            appendLine("Build Flavor: ${if (BuildConfig.PREMIUM_FEATURES) "Premium" else if (BuildConfig.PRO_FEATURES) "Pro" else "Free"}")
-            appendLine("Device: $manufacturer $model")
-            appendLine("OS: Android $osVersion (API $apiLevel)")
+            append(deviceInfo)
         }
 
         val subjectSuffix = bugReportData.summary.ifBlank { "General issue" }

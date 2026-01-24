@@ -117,6 +117,7 @@
     <string name="bug_report_severity_label">Severity</string>
     <string name="bug_report_contact_label">Your Email (Optional)</string>
     <string name="bug_report_contact_hint">For follow-up questions</string>
+    <string name="bug_report_device_info_label">Device Info</string>
     <string name="bug_report_submit">Send Bug Report</string>
     <string name="bug_report_success">Bug report portal opened. Finish submission on GitHub.</string>
     <string name="bug_report_portal_unavailable">Unable to open the bug portal. Install or enable a browser and try again.</string>
