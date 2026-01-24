@@ -791,11 +791,11 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
 MessageComposer.displayName = 'MessageComposer';
 
 const defaultTheme = {
-  primaryColor: "#00F0FF",
-  secondaryColor: "#D946EF",
-  bubbleOutgoing: "#00F0FF",
-  bubbleIncoming: "#161B2E",
-  backgroundColor: "#030508",
+  primaryColor: "#00F3FF",
+  secondaryColor: "#E000FF",
+  bubbleOutgoing: "#00F3FF",
+  bubbleIncoming: "#0A0F1C",
+  backgroundColor: "#000000",
   iconSizeFactor: 1.0,
   fontStyle: "Default",
   bubbleCornerRadius: 22,
@@ -823,21 +823,21 @@ const defaultTheme = {
 
 const themePresets = [
   {
-    name: "Future Hologram",
+    name: "Future Deep V11",
     theme: {
       fontStyle: "Default",
       bubbleCornerRadius: 24,
-      appBackgroundGradientStart: "#030508",
-      appBackgroundGradientEnd: "#1a1033",
+      appBackgroundGradientStart: "#000000",
+      appBackgroundGradientEnd: "#05080E",
       onBackground: "#E0F7FA",
-      topBarColor: "#030508",
-      onTopBarColor: "#00F0FF",
-      bubbleOutgoing: "#00F0FF",
+      topBarColor: "#000000",
+      onTopBarColor: "#00F3FF",
+      bubbleOutgoing: "#00F3FF",
       onBubbleOutgoing: "#000000",
-      bubbleIncoming: "#1a1033",
+      bubbleIncoming: "#0A0F1C",
       onBubbleIncoming: "#E0F7FA",
-      primaryColor: "#00F0FF",
-      secondaryColor: "#D946EF",
+      primaryColor: "#00F3FF",
+      secondaryColor: "#E000FF",
       dividerColor: "#1E293B",
       inboxIconVariant: "neon_noir",
       useGlassEffect: true,
@@ -1799,12 +1799,12 @@ const Sidebar = memo(({
         <button
           className={`nav-item ${activePanel === 'extensions' ? 'active' : ''}`}
           onClick={() => setActivePanel('extensions')}
-          title="Extensions"
-          aria-label="Extensions"
+          title="Features"
+          aria-label="Features"
           aria-current={activePanel === 'extensions' ? 'page' : undefined}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-          <span>Extensions</span>
+          <span>Features</span>
           <span className="badge-new">NEW</span>
         </button>
         <button
@@ -3605,6 +3605,7 @@ function App() {
     return (
       <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
         <div className="noise-overlay" />
+        <div className="scanline-overlay" />
         {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <div className="container login-container" id="main-content">
@@ -3711,6 +3712,7 @@ function App() {
   return (
     <div className={`app-shell ${themePrefs.useGlassEffect ? 'glass-mode' : ''} ${themePrefs.useHolographicGlow ? 'holographic-mode' : ''}`} style={themeVars}>
       <div className="noise-overlay" />
+      <div className="scanline-overlay" />
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
       <CommandPalette
         isOpen={showCommandPalette}
@@ -3786,35 +3788,35 @@ function App() {
                   <h3>Beacon Inbox</h3>
                   <p>View SMS synced from your phone.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('pulselink')}>
+                <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
                   </div>
                   <h3>PulseLink</h3>
                   <p>Update your profile and trusted contacts.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('contacts')}>
+                <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('ringersong')}>
+                <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
                   <div className="home-icon ringersong">
                     <img src={ringersongLogo} alt="RingerSong" />
                   </div>
                   <h3>RingerSong</h3>
                   <p>Manage ringtone progressions and streaming.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('map')}>
+                <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink map" />
                   </div>
                   <h3>Emergency Map</h3>
                   <p>Track shared locations from PulseLink alerts.</p>
                 </button>
-                <button className="home-card" onClick={() => setActivePanel('themes')}>
+                <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink themes" />
                   </div>
@@ -3822,16 +3824,16 @@ function App() {
                   <p>Browse, import, and publish custom themes.</p>
                 </button>
                 <button
-                  className="home-card"
+                  className="home-card holographic-card"
                   onClick={() => setActivePanel('extensions')}
                   disabled={!remoteSettings.thirdPartyExtensionsEnabled}
-                  title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage extensions" : "Enable 3rd-party extensions in Settings"}
+                  title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage features" : "Enable features in Settings"}
                 >
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="Extensions" />
+                    <img src={logo} alt="Features" />
                   </div>
-                  <h3>Extensions</h3>
-                  <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Attach 3rd-party add-ons (coming soon)" : "Enable 3rd-party extensions to start."}</p>
+                  <h3>Features</h3>
+                  <p>{remoteSettings.thirdPartyExtensionsEnabled ? "Enhance your experience with powerful add-ons." : "Enable features to start."}</p>
                 </button>
               </div>
             </div>
@@ -4507,7 +4509,7 @@ function App() {
           {activePanel === 'extensions' && (
             <div className="pulselink-panel">
               <div className="panel-header">
-                <h3>Extensions</h3>
+                <h3>Features</h3>
                 <p>Enhance your PulseLink experience with powerful add-ons.</p>
               </div>
 

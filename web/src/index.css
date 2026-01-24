@@ -52,8 +52,8 @@
 }
 
 :root {
-  /* Core Palette: "Future Deep v9" - Neon Noir */
-  --bg: #000000; /* v9 Pitch Black */
+  /* Core Palette: "Future Deep v11" - Absolute Zero */
+  --bg: #000000; /* Pitch Black */
   --bg-accent: #020408;
   --surface: #05080E;
   --surface-alt: #0A0F1C;
@@ -65,16 +65,16 @@
   --muted: #64748b;
   --ink-muted: #64748b;
 
-  /* Accents - v9 Electric Cyan & Neon Magenta */
-  --accent: #00F0FF;        /* v9 Electric Cyan */
-  --accent-glow: rgba(0, 240, 255, 0.6);
-  --accent-strong: #00b8d4;
-  --accent-dim: rgba(0, 240, 255, 0.15);
+  /* Accents - v11 Laser Blue & Neon Purple */
+  --accent: #00F3FF;        /* Laser Blue */
+  --accent-glow: rgba(0, 243, 255, 0.6);
+  --accent-strong: #00B8D4;
+  --accent-dim: rgba(0, 243, 255, 0.15);
 
-  --secondary: #e000ff;     /* v8 Electric Magenta */
+  --secondary: #E000FF;     /* Neon Purple */
   --secondary-glow: rgba(224, 0, 255, 0.5);
 
-  --tertiary: #a855f7;      /* Neon Purple */
+  --tertiary: #a855f7;      /* Vivid Purple */
   --tertiary-glow: rgba(168, 85, 247, 0.5);
 
   --danger: #ff2e4d;        /* v8 Warning Red */
@@ -83,14 +83,14 @@
 
   --border: rgba(255, 255, 255, 0.1);
   --border-light: rgba(255, 255, 255, 0.18);
-  --border-neon: rgba(0, 255, 255, 0.4);
+  --border-neon: rgba(0, 243, 255, 0.4);
   --bg-radial-start: #0a0f1c;
 
-  /* Glassmorphism Refined v8 */
-  --glass-bg: rgba(2, 2, 2, 0.75);
+  /* Glassmorphism Refined v11 */
+  --glass-bg: rgba(0, 0, 0, 0.85);
   --glass-border: rgba(255, 255, 255, 0.12);
   --glass-highlight: rgba(255, 255, 255, 0.15);
-  --glass-blur: 40px; /* Increased blur for premium feel */
+  --glass-blur: 50px; /* Increased blur */
 
   /* Shadows */
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
@@ -120,7 +120,7 @@
 }
 
 ::selection {
-  background: rgba(0, 255, 255, 0.3);
+  background: rgba(0, 243, 255, 0.3);
   color: #fff;
   text-shadow: 0 0 15px var(--accent);
 }
@@ -145,21 +145,21 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /*
-   "Alive" Background v8:
-   - Deepest abyss feel
-   - More subtle movement
+   "Alive" Background v11:
+   - Pitch Black abyss
+   - Subtle movement
 */
 body {
   background-color: var(--bg);
   background-image:
       radial-gradient(circle at 50% 0%, var(--bg-radial-start) 0%, transparent 70%),
       radial-gradient(circle at 90% 90%, rgba(224, 0, 255, 0.04) 0%, transparent 50%),
-      radial-gradient(circle at 10% 80%, rgba(0, 255, 255, 0.04) 0%, transparent 40%),
-      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 100% 100%, 80px 80px, 80px 80px;
+      radial-gradient(circle at 10% 80%, rgba(0, 243, 255, 0.04) 0%, transparent 40%),
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100px 100px, 100px 100px;
   background-attachment: fixed;
-  animation: breathe 50s ease-in-out infinite alternate;
+  animation: breathe-v11 60s ease-in-out infinite alternate;
 }
 
 /* Subtle Vignette Overlay */
@@ -167,12 +167,30 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.8) 100%);
+  background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.85) 100%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Film Grain / Noise Overlay - Reduced opacity for v8 crystal clarity */
+/* Scanline Overlay v11 */
+.scanline-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9998;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0) 2px,
+    rgba(0, 0, 0, 0.1) 2px,
+    rgba(0, 0, 0, 0.1) 4px
+  );
+  opacity: 0.1;
+}
+
+/* Film Grain / Noise Overlay - Reduced opacity for crystal clarity */
 .noise-overlay {
   position: fixed;
   inset: 0;
@@ -180,16 +198,16 @@ body::after {
   height: 100%;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.03;
+  opacity: 0.02;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
 }
 
-@keyframes breathe {
+@keyframes breathe-v11 {
   0% {
     background-position: 50% 0%, 90% 90%, 10% 80%, 0 0, 0 0;
   }
   100% {
-    background-position: 50% 15%, 85% 95%, 15% 85%, 0 0, 0 0;
+    background-position: 50% 10%, 85% 95%, 15% 85%, 20px 20px, 20px 20px;
   }
 }
 
@@ -213,25 +231,23 @@ select {
   outline: none;
 }
 
-/* V8 Neon Scrollbar */
+/* V11 Neon Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 255, 0.2);
-  border-radius: 3px;
+  background: rgba(0, 243, 255, 0.3);
+  border-radius: 2px;
   transition: all 0.3s ease;
-  border: 1px solid transparent;
-  background-clip: content-box;
+  border: none;
 }
 ::-webkit-scrollbar-thumb:hover {
   background-color: var(--accent);
-  box-shadow: 0 0 20px var(--accent-glow);
-  border: 0px solid transparent;
+  box-shadow: 0 0 15px var(--accent-glow);
 }
 ::-webkit-scrollbar-corner {
   background: transparent;
@@ -260,7 +276,7 @@ select {
 
 @keyframes pulseGlow {
   0% { box-shadow: 0 0 0 0 var(--accent-glow); }
-  70% { box-shadow: 0 0 30px 10px rgba(0, 255, 255, 0); }
+  70% { box-shadow: 0 0 30px 10px rgba(0, 243, 255, 0); }
   100% { box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
 }
 
@@ -314,4 +330,33 @@ select {
 }
 .neon-border:hover::before {
     opacity: 1;
+}
+
+/* V11 Holographic Border */
+.holographic-border {
+  position: relative;
+  overflow: hidden;
+}
+.holographic-border::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.2), transparent);
+  transition: 0.5s;
+  pointer-events: none;
+}
+.holographic-border:hover::after {
+  left: 100%;
+}
+.holographic-card {
+  border: 1px solid rgba(0, 243, 255, 0.1);
+  box-shadow: 0 0 10px rgba(0, 243, 255, 0.05);
+  transition: all 0.3s ease;
+}
+.holographic-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
 }
