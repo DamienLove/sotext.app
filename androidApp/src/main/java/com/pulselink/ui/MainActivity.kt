@@ -1473,7 +1473,7 @@ class MainActivity : AppCompatActivity() {
                         val nameArg = entry.arguments?.getString("name").orEmpty()
                         var publicProfile by remember { mutableStateOf<PublicProfile?>(null) }
                         var profileLoading by remember { mutableStateOf(false) }
-                        var pendingNavigatePhone by remember { mutableStateOf<String?>(null) }
+                        var pendingNavigateIdentifier by remember { mutableStateOf<String?>(null) }
 
                         LaunchedEffect(phoneArg) {
                             if (phoneArg.isBlank()) return@LaunchedEffect
@@ -1482,14 +1482,17 @@ class MainActivity : AppCompatActivity() {
                             profileLoading = false
                         }
 
-                        LaunchedEffect(state.contacts, pendingNavigatePhone) {
-                            val pending = pendingNavigatePhone ?: return@LaunchedEffect
+                        LaunchedEffect(state.contacts, pendingNavigateIdentifier) {
+                            val pending = pendingNavigateIdentifier ?: return@LaunchedEffect
                             val resolved = state.contacts.firstOrNull { contact ->
-                                normalizeSmsAddress(contact.phoneNumber) == pending ||
-                                    contact.additionalPhones.any { normalizeSmsAddress(it) == pending }
+                                val normPhone = normalizeSmsAddress(contact.phoneNumber)
+                                val matchesPhone = normPhone.isNotEmpty() && normPhone == pending
+                                val matchesAlt = contact.additionalPhones.any { normalizeSmsAddress(it) == pending && pending.isNotEmpty() }
+                                val matchesEmail = contact.email?.trim() == pending
+                                matchesPhone || matchesAlt || matchesEmail
                             }
                             if (resolved != null) {
-                                pendingNavigatePhone = null
+                                pendingNavigateIdentifier = null
                                 navController.navigate("contact/${resolved.id}/settings") {
                                     popUpTo("contact/new?phone={phone}&name={name}") { inclusive = true }
                                 }
@@ -1512,7 +1515,11 @@ class MainActivity : AppCompatActivity() {
                                     remoteDisplayName = publicProfile?.displayName
                                 )
                                 viewModel.saveContact(contact)
-                                pendingNavigatePhone = normalizeSmsAddress(newPhone)
+                                pendingNavigateIdentifier = if (newPhone.isNotBlank()) {
+                                    normalizeSmsAddress(newPhone)
+                                } else {
+                                    newEmail?.trim() ?: ""
+                                }
                             },
                             onBack = { navController.popBackStack() }
                         )

@@ -87,7 +87,7 @@ fun ContactCreateScreen(
         }
     }
 
-    val canSave = name.isNotBlank() && phone.isNotBlank()
+    val canSave = name.isNotBlank() && (phone.isNotBlank() || email.isNotBlank())
 
     Scaffold(
         topBar = {
