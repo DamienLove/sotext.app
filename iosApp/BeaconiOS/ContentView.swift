@@ -54,7 +54,7 @@ struct ContentView: View {
 }
 
 enum BeaconTabFilter {
-    case inbox, trusted, favorites, `private`
+    case inbox, trusted, favorites, `private`, archived
 
     var title: String {
         switch self {
@@ -62,6 +62,7 @@ enum BeaconTabFilter {
         case .trusted: return "Trusted"
         case .favorites: return "Favorites"
         case .private: return "Private Safe"
+        case .archived: return "Archived"
         }
     }
 }
@@ -99,10 +100,11 @@ private struct BeaconTab: View {
         case .trusted: base = viewModel.trustedContacts
         case .favorites: base = viewModel.favoriteContacts
         case .private: base = viewModel.privateContacts
+        case .archived: base = viewModel.archivedContacts
         }
 
         let subFiltered: [BeaconContactCard]
-        if filter != .private {
+        if filter != .private && filter != .archived {
             switch subFilter {
             case .all: subFiltered = base
             case .read: subFiltered = base.filter { $0.unread == 0 }
@@ -173,6 +175,14 @@ private struct BeaconTab: View {
                                             .clipShape(Capsule())
                                     }
                                 }
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button {
+                                    viewModel.toggleArchive(for: contact)
+                                } label: {
+                                    Label(contact.isArchived ? "Unarchive" : "Archive", systemImage: "archivebox")
+                                }
+                                .tint(.indigo)
                             }
                         }
                         .scrollContentBackground(.hidden)
@@ -336,6 +346,11 @@ private struct SettingsTab: View {
                          Text("Upgrade to Pro to customize themes.")
                              .foregroundStyle(.secondary)
                      }
+                }
+                Section("Messages") {
+                    NavigationLink("Archived Messages") {
+                        BeaconTab(viewModel: viewModel, filter: .archived)
+                    }
                 }
                 Section("Account") {
                     Button("Sign Out", role: .destructive) {

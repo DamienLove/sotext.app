@@ -11,6 +11,7 @@ protocol BeaconConversationProvider {
     func listenToConversations(onChange: @escaping ([BeaconContactCard]) -> Void) -> ListenerRegistration?
     func listenToMessages(for contact: BeaconContactCard, onChange: @escaping ([BeaconConversationMessage]) -> Void) -> ListenerRegistration?
     func send(message: BeaconConversationMessage, to contact: BeaconContactCard) async throws
+    func setArchived(_ archived: Bool, for contact: BeaconContactCard) async throws
     func requestSync() async throws
 }
 
@@ -55,8 +56,8 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
     private var store: [BeaconContactCard: [BeaconConversationMessage]] = [:]
 
     init() {
-        let c1 = BeaconContactCard(threadId: "1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false)
-        let c2 = BeaconContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
+        let c1 = BeaconContactCard(threadId: "1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false, isArchived: false)
+        let c2 = BeaconContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true, isArchived: false)
 
         store[c1] = [
             BeaconConversationMessage(sender: "Alex", text: "Hey, how are you?", timestamp: Date().addingTimeInterval(-3600), isIncoming: true, isUrgent: false),
@@ -83,6 +84,19 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
         var arr = store[contact] ?? []
         arr.append(message)
         store[contact] = arr
+    }
+
+    func setArchived(_ archived: Bool, for contact: BeaconContactCard) async throws {
+        // Mock implementation: Since store keys are ContactCards (structs), we need to replace the key.
+        // This is tricky with a dictionary keyed by struct.
+        // For mock purposes, we can't easily update the key in place without rebuilding the map or using a class.
+        // Given this is a mock, we might skip logic or try to remove and re-insert.
+        if let (key, messages) = store.first(where: { $0.key.id == contact.id }) {
+            var newKey = key
+            newKey.isArchived = archived
+            store.removeValue(forKey: key)
+            store[newKey] = messages
+        }
     }
 
     func requestSync() async throws {}
@@ -182,7 +196,8 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
                 unread: data["unread"] as? Int ?? 0,
                 isFavorite: data["isFavorite"] as? Bool ?? false,
                 isPrivate: data["isPrivate"] as? Bool ?? false,
-                isTrusted: data["isTrusted"] as? Bool ?? false
+                isTrusted: data["isTrusted"] as? Bool ?? false,
+                isArchived: data["archived"] as? Bool ?? false
             )
         }
     }
@@ -259,6 +274,16 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
             .collection("outbox").addDocument(data: docData)
     }
 
+    func setArchived(_ archived: Bool, for contact: BeaconContactCard) async throws {
+        let collectionRef: CollectionReference
+        if let lineId = contact.lineId {
+            collectionRef = linesCollection.document(lineId).collection("threads")
+        } else {
+            collectionRef = legacyThreadsCollection
+        }
+        try await collectionRef.document(contact.threadId).updateData(["archived": archived])
+    }
+
     func requestSync() async throws {
         let data: [String: Any] = [
             "syncRequestedAt": Int64(Date().timeIntervalSince1970 * 1000),
@@ -272,6 +297,7 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
     func listenToConversations(onChange: @escaping ([BeaconContactCard]) -> Void) -> ListenerRegistration? { return nil }
     func listenToMessages(for contact: BeaconContactCard, onChange: @escaping ([BeaconConversationMessage]) -> Void) -> ListenerRegistration? { return nil }
     func send(message: BeaconConversationMessage, to contact: BeaconContactCard) async throws {}
+    func setArchived(_ archived: Bool, for contact: BeaconContactCard) async throws {}
     func requestSync() async throws {}
     #endif
 }

@@ -79,19 +79,44 @@ final class BeaconViewModel: ObservableObject {
     // MARK: - Filters
 
     var inboxContacts: [BeaconContactCard] {
-        contacts.filter { !$0.isPrivate }
+        contacts.filter { !$0.isPrivate && !$0.isArchived }
     }
 
     var trustedContacts: [BeaconContactCard] {
-        contacts.filter { $0.isTrusted && !$0.isPrivate }
+        contacts.filter { $0.isTrusted && !$0.isPrivate && !$0.isArchived }
     }
 
     var favoriteContacts: [BeaconContactCard] {
-        contacts.filter { $0.isFavorite && !$0.isPrivate }
+        contacts.filter { $0.isFavorite && !$0.isPrivate && !$0.isArchived }
     }
 
     var privateContacts: [BeaconContactCard] {
-        contacts.filter { $0.isPrivate }
+        contacts.filter { $0.isPrivate && !$0.isArchived }
+    }
+
+    var archivedContacts: [BeaconContactCard] {
+        contacts.filter { $0.isArchived && !$0.isPrivate }
+    }
+
+    func toggleArchive(for contact: BeaconContactCard) {
+        let newValue = !contact.isArchived
+        // Optimistic update
+        if let index = contacts.firstIndex(where: { $0.id == contact.id }) {
+            contacts[index].isArchived = newValue
+        }
+        Task {
+            do {
+                try await provider.setArchived(newValue, for: contact)
+            } catch {
+                await MainActor.run {
+                    statusText = "Error updating archive status: \(error.localizedDescription)"
+                    // Revert
+                    if let index = contacts.firstIndex(where: { $0.id == contact.id }) {
+                        contacts[index].isArchived = !newValue
+                    }
+                }
+            }
+        }
     }
 
     func sendMessage(to contact: BeaconContactCard, text: String) {

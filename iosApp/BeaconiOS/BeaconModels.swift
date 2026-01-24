@@ -24,6 +24,7 @@ struct BeaconContactCard: Identifiable, Hashable {
     var isFavorite: Bool
     var isPrivate: Bool
     var isTrusted: Bool
+    var isArchived: Bool
 }
 
 struct BeaconConversationMessage: Identifiable {
