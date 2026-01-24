@@ -44,14 +44,22 @@ export const verifySubscription = onCall({maxInstances: 10}, async (request) => 
     const status = data?.subscriptionState || "SUBSCRIPTION_STATE_UNSPECIFIED";
     const expiryMillis = Number(data?.lineItems?.[0]?.expiryTime || 0);
 
-    await admin.firestore().collection("users").doc(uid).set({
+    const active = status === "SUBSCRIPTION_STATE_ACTIVE" ||
+                   status === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = {
       premiumSubscriptionStatus: status,
       premiumSubscriptionExpiry: expiryMillis,
       subscriptionPurchaseToken: token,
       tierBeforePremium: admin.firestore.FieldValue.delete(),
-    }, {merge: true});
+    };
+    if (active) {
+      updateData.remoteWebAccessEnabled = true;
+    }
 
-    const active = status === "SUBSCRIPTION_STATE_ACTIVE" || status === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+    await admin.firestore().collection("users").doc(uid)
+      .set(updateData, {merge: true});
     await setPremiumClaim(uid, active);
     return {status, expiryMillis, active};
   } catch (err) {
@@ -117,11 +125,18 @@ export const handlePlayStoreRTDN = functions.https.onRequest(async (req, res) =>
     if (!snapshot.empty) {
       const doc = snapshot.docs[0];
       const uid = doc.id;
-      await doc.ref.set({
+      const active = status === "SUBSCRIPTION_STATE_ACTIVE" ||
+                     status === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateData: any = {
         premiumSubscriptionStatus: status,
         premiumSubscriptionExpiry: expiryMillis,
-      }, {merge: true});
-      const active = status === "SUBSCRIPTION_STATE_ACTIVE" || status === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+      };
+      if (active) {
+        updateData.remoteWebAccessEnabled = true;
+      }
+
+      await doc.ref.set(updateData, {merge: true});
       await setPremiumClaim(uid, active);
     }
 
