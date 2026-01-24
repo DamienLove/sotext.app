@@ -61,6 +61,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -68,6 +69,7 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -703,13 +705,16 @@ fun SmsInboxScreen(
                         }
                         if (hasMoreToLoad && filtered.size >= 20) {
                              item {
+                                 LaunchedEffect(Unit) { onLoadMore() }
                                  Box(
-                                     modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                     modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                                      contentAlignment = Alignment.Center
                                  ) {
-                                     OutlinedButton(onClick = onLoadMore) {
-                                         Text("Load more conversations")
-                                     }
+                                     CircularProgressIndicator(
+                                         modifier = Modifier.size(24.dp),
+                                         strokeWidth = 2.dp,
+                                         color = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+                                     )
                                  }
                              }
                         }
