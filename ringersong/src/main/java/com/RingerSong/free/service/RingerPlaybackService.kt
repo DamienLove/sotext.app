@@ -38,8 +38,10 @@ class RingerPlaybackService : Service() {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var mediaPlayer: MediaPlayer? = null
     private var audioManager: AudioManager? = null
+    private var notificationManager: NotificationManager? = null
     private var originalRingerVolume = -1
     private var originalMusicVolume = -1
+    private var originalRingerMode = -1
     private var isPlaying = false
     private var playbackJob: Job? = null
     private var audioFocusRequest: AudioFocusRequest? = null
@@ -58,6 +60,7 @@ class RingerPlaybackService : Service() {
         super.onCreate()
         createNotificationChannel()
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -108,13 +111,24 @@ class RingerPlaybackService : Service() {
                 // Check if it's already 0 (silenced by Receiver)
                 if (am.getStreamVolume(AudioManager.STREAM_RING) != 0) {
                     am.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
-                    Log.d(TAG, "Silenced system ringer")
+                    Log.d(TAG, "Silenced system ringer (Volume 0)")
                 }
 
-                // Double check
+                // Also try to set Ringer Mode to Silent to prevent vibration if we have permission
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    if (notificationManager?.isNotificationPolicyAccessGranted == true) {
+                        if (originalRingerMode == -1) {
+                            originalRingerMode = am.ringerMode
+                        }
+                        am.ringerMode = AudioManager.RINGER_MODE_SILENT
+                        Log.d(TAG, "Silenced system ringer (RingerMode Silent)")
+                    }
+                }
+
+                // Double check volume
                 val currentVol = am.getStreamVolume(AudioManager.STREAM_RING)
                 if (currentVol != 0) {
-                    Log.w(TAG, "Failed to silence ringer completely. Current vol: $currentVol")
+                    Log.w(TAG, "Failed to silence ringer volume completely. Current vol: $currentVol")
                 }
             } catch (e: SecurityException) {
                 Log.e(TAG, "SecurityException silencing ringer: ${e.message}")
@@ -191,6 +205,12 @@ class RingerPlaybackService : Service() {
 
     private fun restoreSystemRinger() {
         try {
+            if (originalRingerMode != -1) {
+                 audioManager?.ringerMode = originalRingerMode
+                 Log.d(TAG, "Restored ringer mode to $originalRingerMode")
+                 originalRingerMode = -1
+            }
+
             if (originalRingerVolume != -1) {
                 audioManager?.setStreamVolume(AudioManager.STREAM_RING, originalRingerVolume, 0)
                 Log.d(TAG, "Restored system ringer to $originalRingerVolume")
@@ -271,7 +291,18 @@ class RingerPlaybackService : Service() {
             return
         }
 
-        Log.e(TAG, "Spotify streaming failed: ${song.title} (${song.uri})")
+        Log.w(TAG, "Spotify streaming failed. Attempting local fallback for: ${song.title}")
+
+        val spotifyDownloader = SpotifyDownloaderRepository(this)
+        val localPath = spotifyDownloader.getLocalFilePathFromUri(song.uri)
+
+        if (localPath != null) {
+            Log.d(TAG, "Found local backup at $localPath. Playing locally.")
+            playLocalSong(song.copy(uri = localPath), startMs, durationMs)
+            return
+        }
+
+        Log.e(TAG, "No local backup found. Playback failed.")
         stopPlayback()
         restoreSystemRinger()
         stopForeground(true)
