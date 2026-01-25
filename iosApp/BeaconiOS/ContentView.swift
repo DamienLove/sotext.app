@@ -1,4 +1,5 @@
 import SwiftUI
+import LocalAuthentication
 #if canImport(FirebaseAuth)
 import FirebaseAuth
 #endif
@@ -155,6 +156,15 @@ private struct BeaconTab: View {
                                 showPinSheet = true
                             }
                             .buttonStyle(.borderedProminent)
+
+                            if !storedPin.isEmpty {
+                                Button {
+                                    authenticate()
+                                } label: {
+                                    Label("Unlock with Face ID", systemImage: "faceid")
+                                }
+                                .padding(.top, 8)
+                            }
                         }
                     } else {
                         List(filteredContacts) { contact in
@@ -248,6 +258,26 @@ private struct BeaconTab: View {
                     }
                     .padding()
                     .presentationDetents([.height(300)])
+                }
+            }
+            .onAppear {
+                if filter == .private && !storedPin.isEmpty && !isUnlocked {
+                   authenticate()
+                }
+            }
+        }
+    }
+
+    private func authenticate() {
+        let context = LAContext()
+        var error: NSError?
+
+        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Unlock Private Safe") { success, authenticationError in
+                DispatchQueue.main.async {
+                    if success {
+                        isUnlocked = true
+                    }
                 }
             }
         }

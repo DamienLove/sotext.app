@@ -1,4 +1,5 @@
 import SwiftUI
+import LocalAuthentication
 #if canImport(FirebaseAuth)
 import FirebaseAuth
 #endif
@@ -42,12 +43,20 @@ struct ContentView: View {
                     }
             }
             .sheet(isPresented: $showCancelSheet) {
-                CancelEmergencySheet(pinInput: $pinInput) { pin in
-                    if viewModel.cancelEmergency(withPin: pin) {
+                CancelEmergencySheet(
+                    pinInput: $pinInput,
+                    onSubmit: { pin in
+                        if viewModel.cancelEmergency(withPin: pin) {
+                            pinInput = ""
+                            showCancelSheet = false
+                        }
+                    },
+                    onBiometricSuccess: {
+                        viewModel.cancelEmergencyBypassPin()
                         pinInput = ""
                         showCancelSheet = false
                     }
-                }
+                )
             }
         } else {
             LoginView {
@@ -517,6 +526,7 @@ private struct Badge: View {
 private struct CancelEmergencySheet: View {
     @Binding var pinInput: String
     var onSubmit: (String) -> Void
+    var onBiometricSuccess: (() -> Void)? = nil
 
     var body: some View {
         NavigationStack {
@@ -543,9 +553,39 @@ private struct CancelEmergencySheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
+
+                if onBiometricSuccess != nil {
+                    Button {
+                        authenticate()
+                    } label: {
+                        Label("Use Face ID / Touch ID", systemImage: "faceid")
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 8)
+                }
             }
             .padding()
             .presentationDetents([.fraction(0.4)])
+            .onAppear {
+                authenticate()
+            }
+        }
+    }
+
+    private func authenticate() {
+        let context = LAContext()
+        var error: NSError?
+
+        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: "Cancel Emergency Alert") { success, authenticationError in
+                DispatchQueue.main.async {
+                    if success {
+                        onBiometricSuccess?()
+                    } else {
+                        // Fail silently or show error
+                    }
+                }
+            }
         }
     }
 }
