@@ -4534,21 +4534,28 @@ function App() {
               </div>
               <div className="themes-grid">
                 <div className="settings-card themes-card">
-                  <div className="themes-toolbar">
-                    <label className="login-field">
-                      Search themes
-                      <input
-                        ref={themeSearchRef}
-                        className="login-input"
-                        value={themeSearch}
-                        onChange={(e) => setThemeSearch(e.target.value)}
-                        placeholder="Search by name or creator (/)"
-                        aria-label="Search themes (/)"
-                      />
-                    </label>
-                    <button className="secondary-btn" type="button" onClick={() => setThemeSearch('')}>
-                      Clear
-                    </button>
+                  <div className="settings-search-container">
+                    <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
+                    <input
+                      ref={themeSearchRef}
+                      className="settings-search-input"
+                      value={themeSearch}
+                      onChange={(e) => setThemeSearch(e.target.value)}
+                      placeholder="Search by name or creator (/)"
+                      aria-label="Search themes (/)"
+                    />
+                    {themeSearch && (
+                      <button
+                        type="button"
+                        className="ghost-btn icon-only"
+                        onClick={() => setThemeSearch('')}
+                        aria-label="Clear search"
+                        title="Clear search"
+                        style={{ width: '28px', height: '28px' }}
+                      >
+                        <CloseIcon />
+                      </button>
+                    )}
                   </div>
                   <div className="theme-gallery-grid">
                     {filteredThemes.map((themeDoc) => (
