@@ -136,6 +136,28 @@ class SmsInboxViewModel @Inject constructor(
         }
     }
 
+    fun pin(threadId: Long) {
+        viewModelScope.launch {
+            runDatabaseAction {
+                withContext(Dispatchers.IO) {
+                    smsRepository.pinThread(threadId)
+                }
+                refresh(force = true)
+            }
+        }
+    }
+
+    fun unpin(threadId: Long) {
+        viewModelScope.launch {
+            runDatabaseAction {
+                withContext(Dispatchers.IO) {
+                    smsRepository.unpinThread(threadId)
+                }
+                refresh(force = true)
+            }
+        }
+    }
+
     fun search(query: String) {
         if (query.isBlank()) {
             _searchState.value = SearchResultState.Idle
@@ -307,6 +329,8 @@ class SmsThreadViewModel @Inject constructor(
     val contact: StateFlow<Contact?> = _contact
     private val _isArchived = MutableStateFlow(false)
     val isArchived: StateFlow<Boolean> = _isArchived
+    private val _isPinned = MutableStateFlow(false)
+    val isPinned: StateFlow<Boolean> = _isPinned
     private val _summaryState = MutableStateFlow<AiSummaryState>(AiSummaryState.Idle)
     val summaryState: StateFlow<AiSummaryState> = _summaryState
     private val _composeState = MutableStateFlow<AiComposeState>(AiComposeState.Idle)
@@ -368,17 +392,19 @@ class SmsThreadViewModel @Inject constructor(
             }
             val contact = msgs.firstOrNull()?.address?.let { contactRepository.getByPhone(it) }
             val archived = activeThreadId?.let { smsRepository.isThreadArchived(it) } ?: false
-            Triple(msgs, contact, archived)
+            val pinned = activeThreadId?.let { smsRepository.isThreadPinned(it) } ?: false
+            Triple(msgs, contact, Pair(archived, pinned))
         }
         val msgs = result.first
         val contact = result.second
-        val archived = result.third
+        val (archived, pinned) = result.third
         activeThreadId?.let { threadId ->
             withContext(Dispatchers.IO) { smsRepository.markThreadRead(threadId) }
         }
         updateMessages(msgs)
         _contact.value = contact
         _isArchived.value = archived
+        _isPinned.value = pinned
         _hasMoreMessages.value = msgs.size >= currentMessageLimit
     }
 
@@ -398,6 +424,26 @@ class SmsThreadViewModel @Inject constructor(
                     smsRepository.isThreadArchived(threadId)
                 }
                 _isArchived.value = updatedArchived
+            }
+        }
+    }
+
+    fun togglePin() {
+        viewModelScope.launch {
+            runDatabaseAction {
+                if (activeThreadId == null && activeAddress.isNotBlank()) {
+                    activeThreadId = smsRepository.resolveThreadIdForAddress(activeAddress)
+                }
+                val threadId = activeThreadId ?: return@runDatabaseAction
+                val updatedPinned = withContext(Dispatchers.IO) {
+                    if (_isPinned.value) {
+                        smsRepository.unpinThread(threadId)
+                    } else {
+                        smsRepository.pinThread(threadId)
+                    }
+                    smsRepository.isThreadPinned(threadId)
+                }
+                _isPinned.value = updatedPinned
             }
         }
     }

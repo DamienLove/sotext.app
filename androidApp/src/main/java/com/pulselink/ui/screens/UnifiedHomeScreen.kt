@@ -319,6 +319,8 @@ fun SmsInboxPreviewSection(
                         onArchive = { /* No archive action in preview swipe */ },
                         onUnarchive = { },
                         onDelete = { /* No delete action in preview swipe */ },
+                        onPin = { },
+                        onUnpin = { },
                         dateFormatter = dateFormatter,
                         isArchived = false,
                         isPrivate = thread.isPrivate,

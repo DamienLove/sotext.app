@@ -6,7 +6,9 @@ import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import com.pulselink.data.db.ArchivedThreadDao
 import com.pulselink.data.db.ContactDao
+import com.pulselink.data.db.PinnedThreadDao
 import com.pulselink.domain.model.ArchivedThread
+import com.pulselink.domain.model.PinnedThread
 import com.pulselink.domain.model.EscalationTier
 import com.pulselink.domain.model.MessageUrgency
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -33,6 +35,7 @@ import com.pulselink.util.stripSmsDisplayName
 class SmsRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val archivedThreadDao: ArchivedThreadDao,
+    private val pinnedThreadDao: PinnedThreadDao,
     private val contactDao: ContactDao
 ) {
 
@@ -79,11 +82,23 @@ class SmsRepository @Inject constructor(
         if (!hasReadPerms()) return emptyList()
         ensureObserversRegistered()
         val archivedIds = loadArchivedIds().toSet()
-        val fastThreads = listThreadsFromThreads(limit, archivedIds, includeArchived, onlyArchived)
+        val pinnedIds = loadPinnedIds().toSet()
+        val fastThreads = listThreadsFromThreads(limit, archivedIds, pinnedIds, includeArchived, onlyArchived)
         if (fastThreads.isNotEmpty()) {
             return fastThreads
         }
-        return listThreadsFromSms(limit, archivedIds, includeArchived, onlyArchived)
+        return listThreadsFromSms(limit, archivedIds, pinnedIds, includeArchived, onlyArchived)
+    }
+
+    private suspend fun fetchMissingPinned(
+        fetchedItems: List<SmsThreadItem>,
+        pinnedIds: Set<Long>
+    ): List<SmsThreadItem> {
+        val fetchedIds = fetchedItems.map { it.threadId }.toSet()
+        val missingIds = pinnedIds - fetchedIds
+        if (missingIds.isEmpty()) return emptyList()
+
+        return missingIds.mapNotNull { getThread(it) }
     }
 
     suspend fun listThreadsFromSmsOnly(
@@ -94,7 +109,8 @@ class SmsRepository @Inject constructor(
         if (!hasReadPerms()) return emptyList()
         ensureObserversRegistered()
         val archivedIds = loadArchivedIds().toSet()
-        return listThreadsFromSms(limit, archivedIds, includeArchived, onlyArchived)
+        val pinnedIds = loadPinnedIds().toSet()
+        return listThreadsFromSms(limit, archivedIds, pinnedIds, includeArchived, onlyArchived)
     }
 
     suspend fun getThread(threadId: Long): SmsThreadItem? {
@@ -115,7 +131,10 @@ class SmsRepository @Inject constructor(
         val normalized = normalizePhone(phone)
         val contact = contactDao.getByPhone(phone) ?: contactDao.getByPhone(normalized)
 
-        // 4. Build item
+        // 4. Check Pinned
+        val isPinned = isThreadPinned(threadId)
+
+        // 5. Build item
         val trustedUrgency = contact?.let {
             when {
                 OtpHelper.isUrgentBody(latest.body) -> MessageUrgency.URGENT
@@ -135,7 +154,8 @@ class SmsRepository @Inject constructor(
             isFavorite = contact?.isFavorite == true,
             isTrusted = contact != null,
             trustedUrgency = trustedUrgency,
-            isOtp = OtpHelper.isOtpMessage(phone, latest.body)
+            isOtp = OtpHelper.isOtpMessage(phone, latest.body),
+            isPinned = isPinned
         )
     }
 
@@ -159,11 +179,12 @@ class SmsRepository @Inject constructor(
         }
         if (!hasReadPerms()) return emptyList<SmsThreadItem>() to emptyList()
         val archivedIds = loadArchivedIds().toSet()
+        val pinnedIds = loadPinnedIds().toSet()
         val allThreads = if (fromSmsOnly) {
-            listThreadsFromSms(limit, archivedIds, includeArchived = true, onlyArchived = false)
+            listThreadsFromSms(limit, archivedIds, pinnedIds, includeArchived = true, onlyArchived = false)
         } else {
-            val fast = listThreadsFromThreads(limit, archivedIds, includeArchived = true, onlyArchived = false)
-            if (fast.isNotEmpty()) fast else listThreadsFromSms(limit, archivedIds, includeArchived = true, onlyArchived = false)
+            val fast = listThreadsFromThreads(limit, archivedIds, pinnedIds, includeArchived = true, onlyArchived = false)
+            if (fast.isNotEmpty()) fast else listThreadsFromSms(limit, archivedIds, pinnedIds, includeArchived = true, onlyArchived = false)
         }
         val archived = allThreads.filter { archivedIds.contains(it.threadId) }
         val active = allThreads.filterNot { archivedIds.contains(it.threadId) }
@@ -682,6 +703,28 @@ class SmsRepository @Inject constructor(
         return runCatching { archivedThreadDao.isArchived(threadId) }.getOrDefault(false)
     }
 
+    fun pinThread(threadId: Long): Boolean {
+        return runCatching {
+            pinnedThreadDao.insert(PinnedThread(threadId = threadId))
+            invalidateThreadCaches()
+            observerFlow.tryEmit(Unit)
+            true
+        }.getOrDefault(false)
+    }
+
+    fun unpinThread(threadId: Long): Boolean {
+        return runCatching {
+            pinnedThreadDao.deleteByThreadId(threadId)
+            invalidateThreadCaches()
+            observerFlow.tryEmit(Unit)
+            true
+        }.getOrDefault(false)
+    }
+
+    fun isThreadPinned(threadId: Long): Boolean {
+        return runCatching { pinnedThreadDao.isPinned(threadId) }.getOrDefault(false)
+    }
+
     fun deleteThread(threadId: Long): Boolean {
         if (!hasWritePerms()) return false
         return runCatching {
@@ -756,6 +799,10 @@ class SmsRepository @Inject constructor(
         return runCatching { archivedThreadDao.getAllIds() }.getOrDefault(emptyList())
     }
 
+    private fun loadPinnedIds(): List<Long> {
+        return runCatching { pinnedThreadDao.getAllIds() }.getOrDefault(emptyList())
+    }
+
     private fun invalidateThreadCaches() {
         threadsCache = null
         smsOnlyCache = null
@@ -765,6 +812,7 @@ class SmsRepository @Inject constructor(
     private suspend fun listThreadsFromThreads(
         limit: Int,
         archivedIds: Set<Long>,
+        pinnedIds: Set<Long>,
         includeArchived: Boolean,
         onlyArchived: Boolean
     ): List<SmsThreadItem> {
@@ -899,10 +947,18 @@ class SmsRepository @Inject constructor(
                 isFavorite = contact?.isFavorite == true,
                 isTrusted = contact != null,
                 trustedUrgency = trustedUrgency,
-                isOtp = OtpHelper.isOtpMessage(row.primaryPhone, row.snippet)
+                    isOtp = OtpHelper.isOtpMessage(row.primaryPhone, row.snippet),
+                    isPinned = pinnedIds.contains(row.threadId)
             )
         }
-        return items.sortedByDescending { it.timestamp }
+
+        val missingPinned = fetchMissingPinned(items, pinnedIds)
+        val allItems = items + missingPinned
+
+        return allItems.sortedWith(
+            compareByDescending<SmsThreadItem> { it.isPinned }
+                .thenByDescending { it.timestamp }
+        )
     }
 
     private fun loadCanonicalAddresses(recipientIds: Set<Long>): Boolean {
@@ -978,6 +1034,7 @@ class SmsRepository @Inject constructor(
     private suspend fun listThreadsFromSms(
         limit: Int,
         archivedIds: Set<Long>,
+        pinnedIds: Set<Long>,
         includeArchived: Boolean,
         onlyArchived: Boolean
     ): List<SmsThreadItem> {
@@ -1084,11 +1141,18 @@ class SmsRepository @Inject constructor(
                     isFavorite = contact?.isFavorite == true,
                     isTrusted = contact != null,
                     trustedUrgency = trustedUrgency,
-                    isOtp = OtpHelper.isOtpMessage(row.primaryPhone, row.snippet)
+                    isOtp = OtpHelper.isOtpMessage(row.primaryPhone, row.snippet),
+                    isPinned = pinnedIds.contains(row.threadId)
                 )
             }
 
-            return items
+            val missingPinned = fetchMissingPinned(items, pinnedIds)
+            val allItems = items + missingPinned
+
+            return allItems.sortedWith(
+                compareByDescending<SmsThreadItem> { it.isPinned }
+                    .thenByDescending { it.timestamp }
+            )
         }
     }
 }
