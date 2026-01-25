@@ -464,6 +464,14 @@
                     android:scheme="https"
                     android:host="pulselink.app"
                     android:pathPrefix="/assistant" />
+                <data
+                    android:scheme="https"
+                    android:host="app.damiennichols.com"
+                    android:pathPrefix="/assistant" />
+                <data
+                    android:scheme="https"
+                    android:host="pulselink.damiennichols.com"
+                    android:pathPrefix="/assistant" />
             </intent-filter>
             <intent-filter>
                 <action android:name="com.pulselink.intent.ASSISTANT_EMERGENCY" />
