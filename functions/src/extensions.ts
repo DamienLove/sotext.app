@@ -22,9 +22,47 @@ export const submitExtension = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "ID or Name too long.");
   }
 
+  // Sentinel: Helper to validate secure URLs
+  const isValidUrl = (url: string): boolean => {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
+  // Sentinel: Sanitize manifest to prevent pollution and injection
+  // Only allow specific fields to be saved.
+  const cleanManifest = {
+    id: String(manifest.id),
+    name: String(manifest.name),
+    description: manifest.description ?
+        String(manifest.description).slice(0, 500) : "",
+    entry_point: String(manifest.entry_point),
+    iconUrl: manifest.iconUrl ? String(manifest.iconUrl) : null,
+    version: manifest.version ? String(manifest.version) : "1.0.0",
+    author: manifest.author ? String(manifest.author) : null,
+  };
+
+  // Sentinel: Validate URL format to prevent XSS (javascript:)
+  if (!isValidUrl(cleanManifest.entry_point)) {
+    throw new HttpsError(
+        "invalid-argument",
+        "entry_point must be a valid http/https URL.",
+    );
+  }
+
+  if (cleanManifest.iconUrl && !isValidUrl(cleanManifest.iconUrl)) {
+    throw new HttpsError(
+        "invalid-argument",
+        "iconUrl must be a valid http/https URL.",
+    );
+  }
+
   // Store in firestore
   const db = admin.firestore();
-  const extensionRef = db.collection("extensions_store").doc(manifest.id);
+  const extensionRef = db.collection("extensions_store").doc(cleanManifest.id);
 
   // Check if exists and ownership
   const doc = await extensionRef.get();
@@ -39,7 +77,7 @@ export const submitExtension = onCall(async (request) => {
   }
 
   await extensionRef.set({
-    ...manifest,
+    ...cleanManifest,
     ownerUid: request.auth.uid,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     status: "submitted", // Requires review
