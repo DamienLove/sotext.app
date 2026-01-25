@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.Beacon" parent="@android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.Beacon" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/beacon_primary</item>
+        <item name="colorSecondary">@color/beacon_secondary</item>
+        <item name="colorError">@color/beacon_error</item>
+        <item name="android:colorBackground">@color/beacon_background</item>
+        <item name="colorSurface">@color/beacon_surface</item>
+        <item name="colorOnSurface">@color/beacon_on_surface</item>
+        <item name="android:statusBarColor">@color/beacon_background</item>
+        <item name="android:navigationBarColor">@color/beacon_background</item>
     </style>
 </resources>

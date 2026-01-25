@@ -7,5 +7,12 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="ic_launcher_background">#FFFFFFFF</color>
+    <color name="ic_launcher_background">#000000</color>
+
+    <color name="ringer_primary">#00F3FF</color>
+    <color name="ringer_secondary">#E000FF</color>
+    <color name="ringer_background">#000000</color>
+    <color name="ringer_surface">#05080E</color>
+    <color name="ringer_on_surface">#E0F7FA</color>
+    <color name="ringer_error">#FF2E4D</color>
 </resources>

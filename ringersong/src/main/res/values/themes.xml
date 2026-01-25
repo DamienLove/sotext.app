@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.RingerSong" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.RingerSong" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/ringer_primary</item>
+        <item name="colorSecondary">@color/ringer_secondary</item>
+        <item name="colorError">@color/ringer_error</item>
+        <item name="android:colorBackground">@color/ringer_background</item>
+        <item name="colorSurface">@color/ringer_surface</item>
+        <item name="colorOnSurface">@color/ringer_on_surface</item>
+        <item name="android:statusBarColor">@color/ringer_background</item>
+        <item name="android:navigationBarColor">@color/ringer_background</item>
+    </style>
 </resources>

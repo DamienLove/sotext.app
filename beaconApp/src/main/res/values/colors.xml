@@ -4,4 +4,11 @@
     <color name="beacon_icon_bubble_bg">#7C3AED</color>
     <color name="beacon_icon_shield_bg">#10B981</color>
     <color name="beacon_icon_minimal_bg">#111827</color>
+
+    <color name="beacon_primary">#00F3FF</color>
+    <color name="beacon_secondary">#E000FF</color>
+    <color name="beacon_background">#000000</color>
+    <color name="beacon_surface">#05080E</color>
+    <color name="beacon_on_surface">#E0F7FA</color>
+    <color name="beacon_error">#FF2E4D</color>
 </resources>
