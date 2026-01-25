@@ -336,7 +336,11 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             calendar.add(java.util.Calendar.DAY_OF_YEAR, -1)
             val startOfYesterday = calendar.timeInMillis
 
-            val groups = result.groupBy { item ->
+            // Separate Pinned threads
+            val (pinned, unpinned) = result.partition { it.isPinned }
+
+            // Group unpinned by date
+            val timeGroups = unpinned.sortedByDescending { it.timestamp }.groupBy { item ->
                 val t = item.timestamp
                 when {
                     t >= startOfToday -> "Today"
@@ -346,6 +350,13 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     else -> "Older"
                 }
             }
+
+            // Construct Ordered Map
+            val groups = LinkedHashMap<String, List<SmsThreadItem>>()
+            if (pinned.isNotEmpty()) {
+                groups["Pinned"] = pinned.sortedByDescending { it.timestamp }
+            }
+            groups.putAll(timeGroups)
 
             val currentContacts = contacts
             val fContacts = if (search.isNotBlank()) {
