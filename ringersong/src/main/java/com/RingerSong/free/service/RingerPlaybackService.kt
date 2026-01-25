@@ -41,6 +41,7 @@ class RingerPlaybackService : Service() {
     private var audioManager: AudioManager? = null
     private var notificationManager: NotificationManager? = null
     private var originalRingerVolume = -1
+    private var originalNotificationVolume = -1
     private var originalMusicVolume = -1
     private var originalRingerMode = -1
     private var isPlaying = false
@@ -98,7 +99,8 @@ class RingerPlaybackService : Service() {
                     Log.d(TAG, "Using passed original ringer volume: $originalRingerVolume")
                 } else {
                     originalRingerVolume = am.getStreamVolume(AudioManager.STREAM_RING)
-                    Log.d(TAG, "Captured original ringer volume: $originalRingerVolume")
+                    originalNotificationVolume = am.getStreamVolume(AudioManager.STREAM_NOTIFICATION)
+                    Log.d(TAG, "Captured original ringer volume: $originalRingerVolume, notification: $originalNotificationVolume")
                 }
 
                 // Sync Music Volume to Ringer Volume (so user can hear the music even if media is muted)
@@ -107,12 +109,17 @@ class RingerPlaybackService : Service() {
                 Log.d(TAG, "Already captured ringer volume: $originalRingerVolume")
             }
 
-            // We set STREAM_RING to 0 to silence the default ringer.
+            // We set STREAM_RING and STREAM_NOTIFICATION to 0 to silence the default ringer/alerts.
             try {
                 // Check if it's already 0 (silenced by Receiver)
                 if (am.getStreamVolume(AudioManager.STREAM_RING) != 0) {
                     am.setStreamVolume(AudioManager.STREAM_RING, 0, 0)
                     Log.d(TAG, "Silenced system ringer (Volume 0)")
+                }
+
+                if (am.getStreamVolume(AudioManager.STREAM_NOTIFICATION) != 0) {
+                    am.setStreamVolume(AudioManager.STREAM_NOTIFICATION, 0, 0)
+                    Log.d(TAG, "Silenced notification volume")
                 }
 
                 // Also try to set Ringer Mode to Silent to prevent vibration if we have permission
@@ -218,6 +225,12 @@ class RingerPlaybackService : Service() {
                 originalRingerVolume = -1
             }
 
+            if (originalNotificationVolume != -1) {
+                audioManager?.setStreamVolume(AudioManager.STREAM_NOTIFICATION, originalNotificationVolume, 0)
+                Log.d(TAG, "Restored notification volume to $originalNotificationVolume")
+                originalNotificationVolume = -1
+            }
+
             if (originalMusicVolume != -1) {
                 audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, originalMusicVolume, 0)
                 Log.d(TAG, "Restored music volume to $originalMusicVolume")
@@ -289,25 +302,13 @@ class RingerPlaybackService : Service() {
                 stopForeground(true)
                 stopSelf()
             }
-            return
+        } else {
+            Log.e(TAG, "Spotify streaming failed. Please ensure Spotify is installed and you are logged in.")
+            stopPlayback()
+            restoreSystemRinger()
+            stopForeground(true)
+            stopSelf()
         }
-
-        Log.w(TAG, "Spotify streaming failed. Attempting local fallback for: ${song.title}")
-
-        val spotifyDownloader = SpotifyDownloaderRepository(this)
-        val localPath = spotifyDownloader.getLocalFilePathFromUri(song.uri)
-
-        if (localPath != null) {
-            Log.d(TAG, "Found local backup at $localPath. Playing locally.")
-            playLocalSong(song.copy(uri = localPath), startMs, durationMs)
-            return
-        }
-
-        Log.e(TAG, "No local backup found. Playback failed.")
-        stopPlayback()
-        restoreSystemRinger()
-        stopForeground(true)
-        stopSelf()
     }
 
     private fun playLocalSong(song: SongEntry, startMs: Long, durationMs: Long) {
