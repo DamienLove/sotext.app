@@ -276,13 +276,25 @@ const areDeviceContactsEqual = (prev, next) => {
 
 // Bolt: Optimized DeviceContactItem to prevent re-renders of the large contact list
 const DeviceContactItem = memo(({ contact }) => {
-  const extraPhones = Array.isArray(contact.additionalPhones)
-    ? contact.additionalPhones
-    : [];
-  const extraEmails = Array.isArray(contact.additionalEmails)
-    ? contact.additionalEmails
-    : [];
-  const extras = [...extraPhones, ...extraEmails].filter(Boolean).join(' • ');
+  // Bolt: Optimized to avoid array allocation during render
+  let extras = '';
+  if (Array.isArray(contact.additionalPhones)) {
+    for (const phone of contact.additionalPhones) {
+      if (phone) {
+        if (extras) extras += ' • ';
+        extras += phone;
+      }
+    }
+  }
+  if (Array.isArray(contact.additionalEmails)) {
+    for (const email of contact.additionalEmails) {
+      if (email) {
+        if (extras) extras += ' • ';
+        extras += email;
+      }
+    }
+  }
+
   return (
     <div className="contact-row contact-row--stacked">
       <div className="contact-main">

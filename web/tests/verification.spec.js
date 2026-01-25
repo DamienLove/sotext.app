@@ -156,9 +156,9 @@ test('Full Verification Suite', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Account', exact: true })).not.toBeVisible();
   });
 
-  // 7. Extensions
-  await test.step('Extensions Page', async () => {
-      await page.locator('.sidebar-nav button[title="Extensions"]').click();
+  // 7. Features
+  await test.step('Features Page', async () => {
+      await page.locator('.sidebar-nav button[title="Features"]').click();
       await expect(page.getByRole('heading', { name: 'Quick Setup' })).toBeVisible();
       await expect(page.locator('.home-card h3', { hasText: 'Beacon Inbox' })).toBeVisible();
   });
