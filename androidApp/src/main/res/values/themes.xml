@@ -3,8 +3,12 @@
     <style name="Base.Theme.PulseLink" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/pulse_primary</item>
         <item name="colorSecondary">@color/pulse_secondary</item>
-        <item name="android:statusBarColor" tools:targetApi="l">@android:color/transparent</item>
-        <item name="android:navigationBarColor" tools:targetApi="l">@android:color/black</item>
+        <item name="colorError">@color/pulse_error</item>
+        <item name="android:colorBackground">@color/pulse_background</item>
+        <item name="colorSurface">@color/pulse_surface</item>
+        <item name="colorOnSurface">@color/pulse_on_surface</item>
+        <item name="android:statusBarColor" tools:targetApi="l">@color/pulse_background</item>
+        <item name="android:navigationBarColor" tools:targetApi="l">@color/pulse_background</item>
     </style>
 
     <style name="Theme.PulseLink" parent="Base.Theme.PulseLink" />
