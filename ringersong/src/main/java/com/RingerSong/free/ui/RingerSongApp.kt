@@ -146,8 +146,7 @@ private fun AppNavHost(
                          onResult(success)
                      }
                 },
-                snackbarHostState = snackbarHostState,
-                onClearDownloadError = viewModel::clearDownloadError
+                snackbarHostState = snackbarHostState
             )
         }
         composable(Routes.Settings) {
