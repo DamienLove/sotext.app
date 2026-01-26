@@ -1,5 +1,8 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import {onDocumentWritten} from "firebase-functions/v2/firestore";
+import * as logger from "firebase-functions/logger";
+import {isValidUrl} from "./security";
 
 if (admin.apps.length === 0) {
   admin.initializeApp();
@@ -94,3 +97,90 @@ export const approveTheme = functions.https.onCall(async (data, context) => {
     );
   }
 });
+
+/**
+ * Trigger to auto-approve themes that don't contain images.
+ * This restores the "instant publish" functionality securely.
+ */
+export const onThemeSubmitted = onDocumentWritten(
+    "themes_submissions/{themeId}",
+    async (event) => {
+      if (!event.data) return; // Delete
+      const snapshot = event.data.after;
+      if (!snapshot.exists) return; // Deletion
+
+      const data = snapshot.data();
+      if (!data) return;
+
+      // Only process pending themes
+      if (data.status !== "pending") return;
+
+      const themeId = event.params.themeId;
+      const db = admin.firestore();
+
+      // 1. Verify "Safe Content" and Check for Images
+      let hasImages = false;
+      const theme = data.theme || {};
+
+      // Check background image
+      const bgUrl = theme.backgroundImageUrl ?
+        String(theme.backgroundImageUrl).trim() : "";
+      if (bgUrl.length > 0) {
+        if (!isValidUrl(bgUrl)) {
+          logger.warn(`Theme ${themeId} rejected: Invalid background URL.`);
+          // Reject invalid URLs immediately to prevent XSS in admin panel
+          await snapshot.ref.delete();
+          return;
+        }
+        hasImages = true;
+      }
+
+      // Check icon overrides
+      const iconOverrides = theme.iconOverrides || {};
+      for (const key of Object.keys(iconOverrides)) {
+        const val = iconOverrides[key];
+        const iconUrl = val ? String(val).trim() : "";
+        if (iconUrl.length > 0) {
+          if (!isValidUrl(iconUrl)) {
+            logger.warn(`Theme ${themeId} rejected: Invalid icon URL.`);
+            await snapshot.ref.delete();
+            return;
+          }
+          hasImages = true;
+        }
+      }
+
+      if (hasImages) {
+        logger.info(`Theme ${themeId} requires review (contains images).`);
+        return;
+      }
+
+      // 2. Validate Text Content (Sanity Check)
+      if ((data.name?.length || 0) > 50) {
+        logger.warn(`Theme ${themeId} rejected: Name too long.`);
+        await snapshot.ref.delete();
+        return;
+      }
+
+      // 3. Auto-Approve if safe
+      try {
+        const publicRef = db.collection("themes_public").doc(themeId);
+
+        const publicData = {
+          ...data,
+          status: "approved",
+          approvedBy: "system",
+          approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+        };
+
+        await db.runTransaction(async (t) => {
+          t.set(publicRef, publicData);
+          t.delete(snapshot.ref);
+        });
+
+        logger.info(`Auto-approved theme ${themeId} (no images).`);
+      } catch (e) {
+        logger.error(`Failed to auto-approve theme ${themeId}`, e);
+      }
+    },
+);

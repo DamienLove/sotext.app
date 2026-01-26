@@ -26,7 +26,7 @@ export {alertRelay, alertRelayHttp} from "./alertRelay";
 export {onMessageCreated, onOutboxCreated} from "./messaging";
 export {sendEmailNotification} from "./email";
 export {findUser, deleteAccount} from "./users";
-export {approveTheme} from "./themes";
+export {approveTheme, onThemeSubmitted} from "./themes";
 export {
   verifySubscription,
   getPremiumStatus,

@@ -2,6 +2,7 @@ import * as admin from "firebase-admin";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {onDocumentWritten} from "firebase-functions/v2/firestore";
 import * as logger from "firebase-functions/logger";
+import {isValidUrl} from "./security";
 
 // Simple extension submission function
 export const submitExtension = onCall(async (request) => {
@@ -21,16 +22,6 @@ export const submitExtension = onCall(async (request) => {
   if (manifest.id.length > 50 || manifest.name.length > 50) {
     throw new HttpsError("invalid-argument", "ID or Name too long.");
   }
-
-  // Sentinel: Helper to validate secure URLs
-  const isValidUrl = (url: string): boolean => {
-    try {
-      const parsed = new URL(url);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
-    } catch {
-      return false;
-    }
-  };
 
   // Sentinel: Sanitize manifest to prevent pollution and injection
   // Only allow specific fields to be saved.

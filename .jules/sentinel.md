@@ -21,3 +21,8 @@
 **Vulnerability:** The `naturalLanguageQueryFlow` Cloud Function embedded raw user input directly into the prompt template without sanitization, allowing potential instruction hijacking via newline injection.
 **Learning:** Even simple query inputs can be vectors for prompt injection if they can alter the structure of the prompt (e.g., by simulating new system instructions).
 **Prevention:** Always use `sanitizeScalar` (or equivalent) to strip control characters and newlines from user input before embedding it into LLM prompts.
+
+## 2024-05-26 - [Bypassed Moderation via Direct Write]
+**Vulnerability:** The frontend attempted to write "safe" content directly to a public, read-only collection (`themes_public`) to bypass moderation, which failed due to correct Firestore rules but highlighted a flaw in the design where client-side logic determined security posture.
+**Learning:** Never rely on client-side logic ("it has no images") to bypass security queues. If the destination is protected, all writes must go through a privileged backend (Cloud Function) or a submission queue (`themes_submissions`).
+**Prevention:** Implement the "Submission Queue" pattern: Clients always write to a pending collection. A Cloud Function trigger validates the content server-side and promotes it to the public collection if safe, or flags it for review.

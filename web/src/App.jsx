@@ -3480,16 +3480,18 @@ function App() {
       authorName,
       authorHandle,
       hasImages,
-      status: hasImages ? "pending" : "approved",
+      status: "pending",
       theme: normalized,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
     try {
-      const targetCollection = hasImages ? "themes_submissions" : "themes_public";
+      // Sentinel: Always submit to review queue.
+      // The backend will auto-approve if no images are present.
+      const targetCollection = "themes_submissions";
       await addDoc(collection(db, targetCollection), payload);
       setThemePublishStatus(
-        hasImages ? "Submitted for approval (images require review)." : "Theme published."
+        "Theme submitted."
       );
       setThemePublishForm((prev) => ({
         ...prev,
