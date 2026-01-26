@@ -454,17 +454,8 @@ class RingerViewModel @Inject constructor(
 
             onResult("Adding ${track.name} from Spotify...")
 
-            // Trigger download for backup (Streaming is primary, but we want a local file just in case)
-            val spotifyUrl = "https://open.spotify.com/track/$spotifyId"
-            downloadSpotifyTrack(spotifyUrl) { path ->
-                if (path != null) {
-                   android.util.Log.d("RingerViewModel", "Backup download complete for $spotifyId")
-                } else {
-                   android.util.Log.w("RingerViewModel", "Backup download failed for $spotifyId")
-                }
-            }
-
-            val localPath = null // No local path stored in DB, we resolve it dynamically for fallback
+            // We rely on streaming via Spotify App Remote. No background download needed.
+            val localPath = null
 
             val songId = UUID.randomUUID().toString()
             val songEntry = SongEntry(
