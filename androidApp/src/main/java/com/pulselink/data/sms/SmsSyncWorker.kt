@@ -178,7 +178,8 @@ class SmsSyncWorker @AssistedInject constructor(
                     "unreadCount" to thread.unreadCount,
                     "isFavorite" to thread.isFavorite,
                     "isPrivate" to thread.isPrivate,
-                    "isTrusted" to thread.isTrusted
+                    "isTrusted" to thread.isTrusted,
+                    "isPinned" to thread.isPinned
                 )
                 lineThreadDoc.set(threadData, SetOptions.merge()).await()
                 syncedThreads++

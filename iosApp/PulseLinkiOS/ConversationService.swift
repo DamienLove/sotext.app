@@ -51,8 +51,8 @@ final class InMemoryConversationProvider: ConversationProvider {
     init(seed: [ContactCard: [ConversationMessage]] = [:]) {
         // If seed is empty, provide some mock data compatible with new fields
         if seed.isEmpty {
-            let c1 = ContactCard(threadId: "1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false)
-            let c2 = ContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true)
+            let c1 = ContactCard(threadId: "1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false, isPinned: true, timestamp: Date())
+            let c2 = ContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true, isPinned: false, timestamp: Date().addingTimeInterval(-3600))
             store = [
                 c1: [],
                 c2: []
@@ -177,6 +177,8 @@ final class FirestoreConversationProvider: ConversationProvider {
             let address = data["address"] as? String ?? "Unknown"
             // Android SmaSyncWorker populates display_name
             let name = data["display_name"] as? String ?? address
+            let timestamp = data["date"] as? Int64 ?? 0
+            let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
 
             return ContactCard(
                 threadId: doc.documentID,
@@ -185,10 +187,12 @@ final class FirestoreConversationProvider: ConversationProvider {
                 address: address,
                 role: "Contact",
                 presence: .offline,
-                unread: data["unread"] as? Int ?? 0,
+                unread: data["unreadCount"] as? Int ?? (data["unread"] as? Int ?? 0),
                 isFavorite: data["isFavorite"] as? Bool ?? false,
                 isPrivate: data["isPrivate"] as? Bool ?? false,
-                isTrusted: data["isTrusted"] as? Bool ?? false
+                isTrusted: data["isTrusted"] as? Bool ?? false,
+                isPinned: data["isPinned"] as? Bool ?? false,
+                timestamp: date
             )
         }
     }
