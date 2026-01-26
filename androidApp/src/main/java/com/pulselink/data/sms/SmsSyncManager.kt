@@ -50,32 +50,36 @@ class SmsSyncManager @Inject constructor(
         scope.launch {
             var previousSettings: PulseLinkSettings? = null
             settingsRepository.settings.collect { currentSettings ->
-                val prev = previousSettings
-                previousSettings = currentSettings
+                try {
+                    val prev = previousSettings
+                    previousSettings = currentSettings
 
-                if (prev == null) {
-                    // Initial load: trigger sync if enabled to ensure consistency
-                    if (currentSettings.remoteWebAccessEnabled) {
+                    if (prev == null) {
+                        // Initial load: trigger sync if enabled to ensure consistency
+                        if (currentSettings.remoteWebAccessEnabled) {
+                            smsSyncTrigger.triggerSync()
+                        }
+                        return@collect
+                    }
+
+                    // Automatically enable Remote Web Access when upgrading to Premium
+                    if (!prev.premiumUnlocked && currentSettings.premiumUnlocked && !currentSettings.remoteWebAccessEnabled) {
+                        Log.i(TAG, "Premium upgraded, automatically enabling remote web access and initiating sync chain")
+                        settingsRepository.setRemoteWebAccessEnabled(true)
+                        // The update will trigger a new emission, so we don't need to sync here
+                        return@collect
+                    }
+
+                    val shouldSync = (prev.remoteWebAccessEnabled != currentSettings.remoteWebAccessEnabled) ||
+                            (prev.premiumUnlocked != currentSettings.premiumUnlocked) ||
+                            (prev.proUnlocked != currentSettings.proUnlocked)
+
+                    if (shouldSync) {
+                        Log.d(TAG, "Settings changed (premium/web), triggering immediate sync")
                         smsSyncTrigger.triggerSync()
                     }
-                    return@collect
-                }
-
-                // Automatically enable Remote Web Access when upgrading to Premium
-                if (!prev.premiumUnlocked && currentSettings.premiumUnlocked && !currentSettings.remoteWebAccessEnabled) {
-                    Log.i(TAG, "Premium upgraded, enabling remote web access")
-                    settingsRepository.setRemoteWebAccessEnabled(true)
-                    // The update will trigger a new emission, so we don't need to sync here
-                    return@collect
-                }
-
-                val shouldSync = (prev.remoteWebAccessEnabled != currentSettings.remoteWebAccessEnabled) ||
-                    (prev.premiumUnlocked != currentSettings.premiumUnlocked) ||
-                    (prev.proUnlocked != currentSettings.proUnlocked)
-
-                if (shouldSync) {
-                    Log.d(TAG, "Settings changed (premium/web), triggering sync worker")
-                    smsSyncTrigger.triggerSync()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error handling settings change in SmsSyncManager", e)
                 }
             }
         }
