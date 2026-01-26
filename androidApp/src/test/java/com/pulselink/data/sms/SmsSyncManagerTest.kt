@@ -3,6 +3,7 @@ package com.pulselink.data.sms
 import com.pulselink.domain.model.PulseLinkSettings
 import android.util.Log
 import com.pulselink.domain.repository.SettingsRepository
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -103,6 +104,43 @@ class SmsSyncManagerTest {
 
         // Verify that we tried to enable it in settings
         coVerify { settingsRepository.setRemoteWebAccessEnabled(true) }
+    }
+
+    @Test
+    fun `when upgrading to premium, web access is enabled AND sync is triggered`() = testScope.runTest {
+        // 1. Initial State: Free, Web Access Disabled
+        val initialSettings = PulseLinkSettings(
+            premiumUnlocked = false,
+            remoteWebAccessEnabled = false
+        )
+        settingsFlow.value = initialSettings
+
+        // Mock the update call to actually update the flow to simulate "setRemoteWebAccessEnabled" effect
+        coEvery { settingsRepository.setRemoteWebAccessEnabled(true) } answers {
+            // Simulate the repo updating the flow
+            settingsFlow.value = settingsFlow.value.copy(remoteWebAccessEnabled = true)
+        }
+
+        smsSyncManager.start()
+        advanceUntilIdle()
+
+        // Clear initial interactions (e.g. initial sync if any)
+        clearMocks(smsSyncTrigger)
+
+        // 2. Action: User buys Premium
+        // This updates the settings to Premium=true, Web=false (initially)
+        settingsFlow.value = initialSettings.copy(premiumUnlocked = true)
+        advanceUntilIdle()
+
+        // 3. Verification
+        // a) Should have called setRemoteWebAccessEnabled(true)
+        coVerify { settingsRepository.setRemoteWebAccessEnabled(true) }
+
+        // b) SmsSyncManager should have observed the change (Web: false -> true) and triggered sync
+        // Note: The logic handles:
+        // - Emission 1 (Premium=True, Web=False) -> calls setRemoteWebAccessEnabled(true)
+        // - Emission 2 (Premium=True, Web=True) -> triggering sync because web changed from false to true
+        verify { smsSyncTrigger.triggerSync() }
     }
 
     @Test
