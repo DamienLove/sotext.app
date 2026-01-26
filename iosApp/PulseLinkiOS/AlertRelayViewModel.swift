@@ -31,6 +31,8 @@ struct ContactCard: Identifiable, Hashable {
     var isFavorite: Bool
     var isPrivate: Bool
     var isTrusted: Bool
+    var isPinned: Bool
+    var timestamp: Date
 }
 
 struct ConversationMessage: Identifiable {
@@ -281,7 +283,10 @@ final class AlertRelayViewModel: ObservableObject {
         threadsListener?.remove()
         threadsListener = conversationProvider.listenToConversations { [weak self] newContacts in
             DispatchQueue.main.async {
-                self?.contacts = newContacts.sorted(by: { $0.unread > $1.unread })
+                self?.contacts = newContacts.sorted(by: {
+                    if $0.isPinned != $1.isPinned { return $0.isPinned && !$1.isPinned }
+                    return $0.timestamp > $1.timestamp
+                })
                 // We don't clear conversations map here to preserve cached messages if any
             }
         }

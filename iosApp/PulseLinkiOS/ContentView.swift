@@ -280,7 +280,15 @@ private struct ContactsTab: View {
                         NavigationLink(value: contact) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(contact.name).font(.headline)
+                                    HStack(spacing: 4) {
+                                        Text(contact.name).font(.headline)
+                                        if contact.isPinned {
+                                            Image(systemName: "pin.fill")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                                .rotationEffect(.degrees(45))
+                                        }
+                                    }
                                     Text(contact.role).font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()

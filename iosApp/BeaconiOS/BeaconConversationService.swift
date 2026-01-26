@@ -56,8 +56,8 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
     private var store: [BeaconContactCard: [BeaconConversationMessage]] = [:]
 
     init() {
-        let c1 = BeaconContactCard(threadId: "1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false, isArchived: false)
-        let c2 = BeaconContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true, isArchived: false)
+        let c1 = BeaconContactCard(threadId: "1", name: "Alex Rivera", address: "5551234567", role: "Friend", presence: .online, unread: 2, isFavorite: true, isPrivate: false, isTrusted: false, isArchived: false, isPinned: true, timestamp: Date())
+        let c2 = BeaconContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true, isArchived: false, isPinned: false, timestamp: Date().addingTimeInterval(-3600))
 
         store[c1] = [
             BeaconConversationMessage(sender: "Alex", text: "Hey, how are you?", timestamp: Date().addingTimeInterval(-3600), isIncoming: true, isUrgent: false),
@@ -185,6 +185,8 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
             let data = doc.data()
             let address = data["address"] as? String ?? "Unknown"
             let name = data["display_name"] as? String ?? address
+            let timestamp = data["date"] as? Int64 ?? 0
+            let date = Date(timeIntervalSince1970: TimeInterval(timestamp) / 1000.0)
 
             return BeaconContactCard(
                 threadId: doc.documentID,
@@ -193,11 +195,13 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
                 address: address,
                 role: "Contact",
                 presence: .offline,
-                unread: data["unread"] as? Int ?? 0,
+                unread: data["unreadCount"] as? Int ?? (data["unread"] as? Int ?? 0),
                 isFavorite: data["isFavorite"] as? Bool ?? false,
                 isPrivate: data["isPrivate"] as? Bool ?? false,
                 isTrusted: data["isTrusted"] as? Bool ?? false,
-                isArchived: data["archived"] as? Bool ?? false
+                isArchived: data["archived"] as? Bool ?? false,
+                isPinned: data["isPinned"] as? Bool ?? false,
+                timestamp: date
             )
         }
     }

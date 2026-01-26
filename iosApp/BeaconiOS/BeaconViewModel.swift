@@ -66,7 +66,10 @@ final class BeaconViewModel: ObservableObject {
         threadsListener?.remove()
         threadsListener = provider.listenToConversations { [weak self] newContacts in
             DispatchQueue.main.async {
-                self?.contacts = newContacts.sorted(by: { $0.unread > $1.unread })
+                self?.contacts = newContacts.sorted(by: {
+                    if $0.isPinned != $1.isPinned { return $0.isPinned && !$1.isPinned }
+                    return $0.timestamp > $1.timestamp
+                })
                 self?.lastUpdated = Date()
             }
         }
