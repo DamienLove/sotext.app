@@ -5,8 +5,8 @@
  * Escapes HTML special characters to prevent XSS attacks.
  * This function is safe for use in HTML contexts (element content, attributes).
  *
- * @param unsafe - The string to escape. If null/undefined, returns empty string.
- * @return The escaped string with HTML entities replacing special characters
+ * @param {string | null | undefined} unsafe - The string to escape. If null/undefined, returns empty string.
+ * @return {string} The escaped string with HTML entities replacing special characters
  *
  * @example
  * escapeHtml('<script>alert("xss")</script>')
@@ -35,8 +35,8 @@ export function escapeHtml(unsafe: string | null | undefined): string {
  * Sanitizes a scalar string to prevent prompt injection via structure manipulation.
  * Removes newlines and non-printable characters to keep the input on a single line.
  *
- * @param unsafe - The string to sanitize.
- * @return The sanitized string safe for single-line prompt fields.
+ * @param {string | null | undefined} unsafe - The string to sanitize.
+ * @return {string} The sanitized string safe for single-line prompt fields.
  */
 export function sanitizeScalar(unsafe: string | null | undefined): string {
   if (!unsafe) return "";
@@ -45,4 +45,19 @@ export function sanitizeScalar(unsafe: string | null | undefined): string {
   // Replace newlines and control characters with a space
   // eslint-disable-next-line no-control-regex
   return unsafe.replace(/[\r\n\x00-\x1F\x7F]+/g, " ").trim();
+}
+
+/**
+ * Validates that a string is a secure URL (http or https).
+ *
+ * @param {string} url - The string to validate.
+ * @return {boolean} True if the string is a valid http/https URL.
+ */
+export function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
