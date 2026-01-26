@@ -1966,7 +1966,7 @@ const Sidebar = memo(({
               <input
                 ref={searchInputRef}
                 className="sidebar-search-input-field"
-                placeholder="Search (/)"
+                placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Search messages (/)"
@@ -1982,7 +1982,7 @@ const Sidebar = memo(({
                   }
                 }}
               />
-              {!searchQuery && <span className="shortcut-hint">/</span>}
+              {!searchQuery && <span className="shortcut-hint" aria-hidden="true">/</span>}
               {searchQuery && (
                 <button
                   className="ghost-btn icon-only sidebar-search-clear-btn"
@@ -4381,11 +4381,12 @@ function App() {
                   <input
                     ref={contactSearchRef}
                     className="settings-search-input"
-                    placeholder="Search by name, phone, or email (/)"
+                    placeholder="Search by name, phone, or email"
                     aria-label="Search contacts (/)"
                     value={contactSearch}
                     onChange={(e) => setContactSearch(e.target.value)}
                   />
+                  {!contactSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
                   {contactSearch && (
                     <button
                       className="ghost-btn icon-only"
@@ -4625,9 +4626,10 @@ function App() {
                       className="settings-search-input"
                       value={themeSearch}
                       onChange={(e) => setThemeSearch(e.target.value)}
-                      placeholder="Search by name or creator (/)"
+                      placeholder="Search by name or creator"
                       aria-label="Search themes (/)"
                     />
+                    {!themeSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
                     {themeSearch && (
                       <button
                         type="button"
@@ -5007,11 +5009,12 @@ function App() {
                 <input
                   ref={settingsSearchRef}
                   className="settings-search-input"
-                  placeholder="Search settings (/)"
+                  placeholder="Search settings"
                   aria-label="Search settings (/)"
                   value={settingsSearch}
                   onChange={(e) => setSettingsSearch(e.target.value)}
                 />
+                {!settingsSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
                 {settingsSearch && (
                   <button
                     className="ghost-btn icon-only"
