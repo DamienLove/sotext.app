@@ -1986,7 +1986,10 @@ const Sidebar = memo(({
               {searchQuery && (
                 <button
                   className="ghost-btn icon-only sidebar-search-clear-btn"
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => {
+                    setSearchQuery('');
+                    searchInputRef.current?.focus();
+                  }}
                   aria-label="Clear search"
                   title="Clear search"
                 >
@@ -4384,7 +4387,10 @@ function App() {
                   {contactSearch && (
                     <button
                       className="ghost-btn icon-only"
-                      onClick={() => setContactSearch('')}
+                      onClick={() => {
+                        setContactSearch('');
+                        contactSearchRef.current?.focus();
+                      }}
                       aria-label="Clear search"
                       title="Clear search"
                       style={{ width: '28px', height: '28px' }}
@@ -4412,7 +4418,10 @@ function App() {
                         No contacts match that search.
                         <button
                           className="link-button"
-                          onClick={() => setContactSearch('')}
+                          onClick={() => {
+                            setContactSearch('');
+                            contactSearchRef.current?.focus();
+                          }}
                           style={{ marginLeft: 4, padding: 0, textDecoration: 'underline' }}
                         >
                           Clear search
@@ -4621,7 +4630,10 @@ function App() {
                       <button
                         type="button"
                         className="ghost-btn icon-only"
-                        onClick={() => setThemeSearch('')}
+                        onClick={() => {
+                          setThemeSearch('');
+                          themeSearchRef.current?.focus();
+                        }}
                         aria-label="Clear search"
                         title="Clear search"
                         style={{ width: '28px', height: '28px' }}
@@ -5001,7 +5013,10 @@ function App() {
                 {settingsSearch && (
                   <button
                     className="ghost-btn icon-only"
-                    onClick={() => setSettingsSearch('')}
+                    onClick={() => {
+                      setSettingsSearch('');
+                      settingsSearchRef.current?.focus();
+                    }}
                     aria-label="Clear search"
                     title="Clear search"
                     style={{ width: '28px', height: '28px' }}
