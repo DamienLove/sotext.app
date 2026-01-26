@@ -147,14 +147,20 @@ const stringToColor = (str) => {
   return '#' + '00000'.substring(0, 6 - c.length) + c;
 };
 
-const Avatar = memo(({ name, url, size = 40, style }) => {
-  if (url) {
-    return <img src={url} alt={name} className="thread-avatar" style={{ width: size, height: size, ...style }} loading="lazy" />;
+const Avatar = memo(({ name, url, size = 40, style, className = "thread-avatar" }) => {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [url]);
+
+  if (url && !imgError) {
+    return <img src={url} alt={name} className={className} style={{ width: size, height: size, ...style }} loading="lazy" onError={() => setImgError(true)} />;
   }
   const initials = (name || '?').slice(0, 2).toUpperCase();
   const bg = stringToColor(name || '?');
   return (
-    <div className="thread-avatar" style={{ width: size, height: size, background: bg, ...style }}>
+    <div className={className} style={{ width: size, height: size, background: bg, ...style, display: 'grid', placeItems: 'center', color: '#fff', fontWeight: '700' }}>
       {initials}
     </div>
   );
@@ -4151,19 +4157,17 @@ function App() {
                   <h4>Public profile</h4>
                   <div className="profile-header-row">
                     <div className="profile-avatar-preview">
-                      {profile.avatarId ? (
-                        <img
-                          src={avatarPresets.find(p => p.id === profile.avatarId)?.src}
-                          alt="Avatar"
-                          className="profile-avatar-img"
-                        />
-                      ) : (
-                        profile.avatarUrl ? (
-                          <img src={profile.avatarUrl} alt="Avatar" className="profile-avatar-img" />
-                        ) : (
-                          <div className="profile-avatar-placeholder">?</div>
-                        )
-                      )}
+                      <Avatar
+                        name={profile.ownerName}
+                        url={
+                          profile.avatarId
+                            ? avatarPresets.find(p => p.id === profile.avatarId)?.src
+                            : profile.avatarUrl
+                        }
+                        size="100%"
+                        className="profile-avatar-img"
+                        style={{ borderRadius: 0 }}
+                      />
                     </div>
                     {unlockedAvatars.length > 0 && (
                       <div className="avatar-selector">
