@@ -10,7 +10,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.RingerSong.free.data.AppStateStore
 import com.RingerSong.free.service.RingerPlaybackService
-import com.RingerSong.free.service.RingtoneSegmentManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -119,30 +118,6 @@ class CallStateReceiver : BroadcastReceiver() {
                         Log.e(TAG, "Failed to send STOP intent", e)
                     }
 
-                    // We still keep the "Next Ringtone" logic for fallback/LOCAL support if needed,
-                    // but for Streaming, the service handles it.
-                    val pending = goAsync()
-                    // Use IO dispatcher for database/disk operations
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            val ringtoneManager = RingtoneSegmentManager(context, appStateStore)
-
-                            // Check if enabled
-                            val state = appStateStore.stateFlow.first()
-                            if (!state.settings.enabled) {
-                                Log.d(TAG, "RingerSong is disabled, skipping next ringtone setup")
-                                return@launch
-                            }
-
-                            // Set the NEXT ringtone (for the next incoming call) - mostly relevant for LOCAL files
-                            ringtoneManager.setRingtoneForIncomingCall(null)
-
-                            // Cleanup old segments
-                            ringtoneManager.cleanupOldSegments()
-                        } finally {
-                            pending.finish()
-                        }
-                    }
                 }
             }
 

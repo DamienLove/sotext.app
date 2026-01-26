@@ -13,8 +13,6 @@ import com.RingerSong.free.data.SongSource
 import com.RingerSong.free.data.SpotifyRepository
 import com.RingerSong.free.data.SpotifyTrack
 import com.RingerSong.free.data.SpotifyArtist
-import com.RingerSong.free.data.DownloadError
-import com.RingerSong.free.data.DownloadResult
 import com.RingerSong.free.data.resolveSongMetadata
 import com.RingerSong.free.data.ThemeConfig
 import com.RingerSong.free.service.SpotifyPlayerManager
@@ -101,7 +99,6 @@ class RingerViewModel @Inject constructor(
     )
 
     // New API repositories for enhanced features
-    private val spotifyDownloader = com.RingerSong.free.data.SpotifyDownloaderRepository(application)
     private val youtubeMusicRepo = com.RingerSong.free.data.YouTubeMusicRepository(application)
     private val truecallerRepo = com.RingerSong.free.data.TruecallerRepository(application)
 
@@ -714,31 +711,6 @@ class RingerViewModel @Inject constructor(
         }
     }
 
-    // === Spotify Downloader Methods ===
-    fun downloadSpotifyTrack(spotifyUrl: String, onComplete: (String?) -> Unit) {
-        viewModelScope.launch {
-            when (val result = spotifyDownloader.downloadTrack(spotifyUrl)) {
-                is DownloadResult.Success -> {
-                    clearDownloadError()
-                    onComplete(result.filePath)
-                }
-                is DownloadResult.Failure -> {
-                    if (result.error is DownloadError.NoApiKey) {
-                        setDownloadError("Downloads require rapidapi.key in local.properties.")
-                    } else {
-                        val message = mapDownloadError(result.error)
-                        setDownloadError(message)
-                    }
-                    onComplete(null)
-                }
-            }
-        }
-    }
-
-    fun isTrackOffline(spotifyUri: String): Boolean {
-        return spotifyDownloader.getLocalFilePathFromUri(spotifyUri) != null
-    }
-
     // === YouTube Music Methods ===
     fun fetchYouTubePlaylist(playlistId: String, onComplete: (List<com.RingerSong.free.data.YouTubeVideo>?) -> Unit) {
         viewModelScope.launch {
@@ -766,36 +738,6 @@ class RingerViewModel @Inject constructor(
         viewModelScope.launch {
             val info = truecallerRepo.getCallerInfo(phoneNumber, "US")
             onComplete(info)
-        }
-    }
-
-    private fun mapDownloadError(error: DownloadError): String {
-        return when (error) {
-            is DownloadError.NoApiKey -> "Download unavailable - add rapidapi.key in local.properties"
-            DownloadError.NetworkUnavailable -> "No internet connection"
-            is DownloadError.RateLimitExceeded -> "Too many requests - try again in a few minutes"
-            is DownloadError.ApiError -> {
-                when (error.statusCode) {
-                    in 400..499 -> "Unable to find track"
-                    in 500..599 -> "Service temporarily unavailable"
-                    else -> error.message ?: "Download failed"
-                }
-            }
-            is DownloadError.AudioDownloadFailed -> error.message ?: "Audio download failed"
-            is DownloadError.NoDownloadUrl -> "Download link unavailable"
-            is DownloadError.UnknownError -> error.message ?: "Download failed"
-        }
-    }
-
-    private fun setDownloadError(message: String) {
-        viewModelScope.launch {
-            store.update { it.copy(downloadError = message) }
-        }
-    }
-
-    fun clearDownloadError() {
-        viewModelScope.launch {
-            store.update { it.copy(downloadError = null) }
         }
     }
 }

@@ -167,8 +167,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.jsoup)
     implementation(libs.play.services.ads)
-    implementation(libs.youtubedl.android)
-    implementation(libs.youtubedl.android.ffmpeg)
+    implementation("com.google.android.material:material:1.12.0")
 
     // Hilt Dependencies
     implementation(libs.hilt.android)

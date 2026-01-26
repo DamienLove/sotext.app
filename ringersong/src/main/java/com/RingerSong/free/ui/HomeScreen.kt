@@ -130,8 +130,7 @@ fun HomeScreen(
     onAddYouTubeTrack: (SpotifyTrack) -> Unit,
     onConnectSpotify: ( (Boolean) -> Unit ) -> Unit,
     userCapabilities: String,
-    snackbarHostState: SnackbarHostState,
-    onClearDownloadError: () -> Unit
+    snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
     val showContent = remember { mutableStateOf(false) }
@@ -175,13 +174,6 @@ fun HomeScreen(
         activeContactForUrgency = null
     }
 
-    LaunchedEffect(state.downloadError) {
-        state.downloadError?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            onClearDownloadError()
-        }
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -206,6 +198,7 @@ fun HomeScreen(
                         enabled = state.settings.enabled,
                         onToggle = onToggleEnabled
                     )
+                    CallScreeningRoleCard(context = context)
                     PermissionsCard(
                         context = context,
                         onRequest = {
@@ -516,6 +509,45 @@ private fun NotificationsCard(enabled: Boolean, onToggle: (Boolean) -> Unit) {
                 )
             }
             Switch(checked = enabled, onCheckedChange = onToggle)
+        }
+    }
+}
+
+@Composable
+private fun CallScreeningRoleCard(context: Context) {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) return
+
+    val roleManager = context.getSystemService(Context.ROLE_SERVICE) as? android.app.role.RoleManager ?: return
+    val hasRole = roleManager.isRoleHeld(android.app.role.RoleManager.ROLE_CALL_SCREENING)
+
+    if (hasRole) return
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { }
+
+    SectionCard(
+        accent = MaterialTheme.colorScheme.errorContainer.copy(alpha=0.3f),
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "⚠️ Call Screening Access Required",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "To play your music instantly on incoming calls, RingerSong must be set as your Call Screening app.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            OutlinedButton(
+                onClick = {
+                    val intent = roleManager.createRequestRoleIntent(android.app.role.RoleManager.ROLE_CALL_SCREENING)
+                    launcher.launch(intent)
+                }
+            ) {
+                Text("Grant Access")
+            }
         }
     }
 }

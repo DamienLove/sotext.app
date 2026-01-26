@@ -17,7 +17,6 @@ import com.RingerSong.free.R
 import com.RingerSong.free.data.AppStateStore
 import com.RingerSong.free.data.SongEntry
 import com.RingerSong.free.data.SongSource
-import com.RingerSong.free.data.SpotifyDownloaderRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,6 +71,11 @@ class RingerPlaybackService : Service() {
             ACTION_PLAY_SEGMENT -> {
                 val phoneNumber = intent.getStringExtra(EXTRA_PHONE_NUMBER)
                 val passedOriginalVolume = intent.getIntExtra(EXTRA_ORIGINAL_VOLUME, -1)
+
+                if (isPlaying) {
+                    Log.d(TAG, "Playback already active, ignoring start request for $phoneNumber")
+                    return START_NOT_STICKY
+                }
 
                 Log.d(TAG, "Starting playback for $phoneNumber. Passed vol: $passedOriginalVolume")
 
