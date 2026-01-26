@@ -70,3 +70,16 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 }
+
+// Automatically copy google-services.json from secure folders if present.
+val sourceFile = rootProject.file("PRO-CERTS/google-services-premium.json")
+tasks.register("syncGoogleServices", Copy::class) {
+    onlyIf { sourceFile.exists() }
+    from(sourceFile)
+    into(projectDir)
+    rename { "google-services.json" }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn("syncGoogleServices")
+}
