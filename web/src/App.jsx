@@ -138,12 +138,36 @@ const CopyButton = ({ text, label = "Copy" }) => {
   );
 };
 
+const stringToColor = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+  return '#' + '00000'.substring(0, 6 - c.length) + c;
+};
+
+const Avatar = memo(({ name, url, size = 40, style }) => {
+  if (url) {
+    return <img src={url} alt={name} className="thread-avatar" style={{ width: size, height: size, ...style }} loading="lazy" />;
+  }
+  const initials = (name || '?').slice(0, 2).toUpperCase();
+  const bg = stringToColor(name || '?');
+  return (
+    <div className="thread-avatar" style={{ width: size, height: size, background: bg, ...style }}>
+      {initials}
+    </div>
+  );
+});
+Avatar.displayName = 'Avatar';
+
 const areThreadsEqual = (prev, next) => {
   return prev.isActive === next.isActive &&
          prev.showPreviews === next.showPreviews &&
          prev.onSelect === next.onSelect &&
          prev.onPin === next.onPin &&
          prev.onArchive === next.onArchive &&
+         prev.contactLookup === next.contactLookup &&
          prev.thread.id === next.thread.id &&
          prev.thread.address === next.thread.address &&
          prev.thread.snippet === next.thread.snippet &&
@@ -154,48 +178,55 @@ const areThreadsEqual = (prev, next) => {
 
 // Bolt: Optimized ThreadItem with memo to prevent unnecessary re-renders of the entire list
 // when only the selection state changes or when unrelated threads update.
-const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive }) => (
-  <div
-    className={`thread-item ${isActive ? 'active' : ''}`}
-    onClick={() => onSelect(thread)}
-    role="button"
-    tabIndex={0}
-    aria-current={isActive ? 'true' : undefined}
-    aria-label={`Select conversation with ${thread.display_name || thread.address}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
-    onKeyDown={(e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onSelect(thread);
-      }
-    }}
-  >
-    <div className="thread-main">
-      <div className="thread-header">
-        {thread.pinned && <PinIcon className="pin-icon" style={{width: 14, height: 14}} />}
-        <div className="thread-name">{thread.display_name || thread.address}</div>
+const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onArchive, contactLookup }) => {
+  const cleanPhone = (thread.address || '').replace(/\D/g, '');
+  const contact = contactLookup?.[cleanPhone];
+  const name = contact?.displayName || thread.display_name || thread.address;
+
+  return (
+    <div
+      className={`thread-item ${isActive ? 'active' : ''}`}
+      onClick={() => onSelect(thread)}
+      role="button"
+      tabIndex={0}
+      aria-current={isActive ? 'true' : undefined}
+      aria-label={`Select conversation with ${name}${showPreviews && thread.snippet ? `, ${thread.snippet}` : ''}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect(thread);
+        }
+      }}
+    >
+      <Avatar name={name} />
+      <div className="thread-main">
+        <div className="thread-header">
+          {thread.pinned && <PinIcon className="pin-icon" style={{width: 14, height: 14}} />}
+          <div className="thread-name">{name}</div>
+        </div>
+        <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
       </div>
-      <div className="thread-snippet">{showPreviews ? thread.snippet : '••••••'}</div>
+      <div className="thread-actions">
+        <button
+          className="thread-action-btn"
+          onClick={(e) => { e.stopPropagation(); onPin(thread); }}
+          title={thread.pinned ? "Unpin" : "Pin"}
+          aria-label={thread.pinned ? "Unpin conversation" : "Pin conversation"}
+        >
+          <PinIcon style={{ width: 16, height: 16 }} />
+        </button>
+        <button
+          className="thread-action-btn"
+          onClick={(e) => { e.stopPropagation(); onArchive(thread); }}
+          title={thread.archived ? "Unarchive" : "Archive"}
+          aria-label={thread.archived ? "Unarchive conversation" : "Archive conversation"}
+        >
+          {thread.archived ? <InboxIcon style={{ width: 16, height: 16 }} /> : <ArchiveIcon style={{ width: 16, height: 16 }} />}
+        </button>
+      </div>
     </div>
-    <div className="thread-actions">
-      <button
-        className="thread-action-btn"
-        onClick={(e) => { e.stopPropagation(); onPin(thread); }}
-        title={thread.pinned ? "Unpin" : "Pin"}
-        aria-label={thread.pinned ? "Unpin conversation" : "Pin conversation"}
-      >
-        <PinIcon style={{ width: 16, height: 16 }} />
-      </button>
-      <button
-        className="thread-action-btn"
-        onClick={(e) => { e.stopPropagation(); onArchive(thread); }}
-        title={thread.archived ? "Unarchive" : "Archive"}
-        aria-label={thread.archived ? "Unarchive conversation" : "Archive conversation"}
-      >
-        {thread.archived ? <InboxIcon style={{ width: 16, height: 16 }} /> : <ArchiveIcon style={{ width: 16, height: 16 }} />}
-      </button>
-    </div>
-  </div>
-), areThreadsEqual);
+  );
+}, areThreadsEqual);
 
 ThreadItem.displayName = 'ThreadItem';
 
@@ -1735,7 +1766,8 @@ const Sidebar = memo(({
   showArchived,
   setShowArchived,
   onPinThread,
-  onArchiveThread
+  onArchiveThread,
+  contactLookup
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef(null);
@@ -2036,6 +2068,7 @@ const Sidebar = memo(({
                   showPreviews={showPreviews}
                   onPin={onPinThread}
                   onArchive={onArchiveThread}
+                  contactLookup={contactLookup}
                 />
               ))
             )}
@@ -2068,7 +2101,8 @@ const Sidebar = memo(({
          prev.onPinThread === next.onPinThread &&
          prev.onArchiveThread === next.onArchiveThread &&
          prev.navLogo === next.navLogo &&
-         prev.brandTitle === next.brandTitle;
+         prev.brandTitle === next.brandTitle &&
+         prev.contactLookup === next.contactLookup;
 });
 
 Sidebar.displayName = 'Sidebar';
@@ -2247,6 +2281,7 @@ function App() {
   const settingsSearchRef = useRef(null);
   const contactSearchRef = useRef(null);
   const themeSearchRef = useRef(null);
+  const messagesEndRef = useRef(null);
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
 
@@ -2460,6 +2495,22 @@ function App() {
       .filter(({ searchString }) => searchString.includes(term))
       .map(({ contact }) => contact);
   }, [getContactSearchIndex, contactSearch, deviceContacts]);
+
+  // Bolt: Create a unified contact lookup map for avatars
+  const contactLookup = useMemo(() => {
+    const map = {};
+    const add = (c) => {
+      const nums = [c.phoneNumber, ...(c.additionalPhones || [])];
+      nums.forEach(n => {
+        if (!n) return;
+        const clean = n.replace(/\D/g, '');
+        if (clean) map[clean] = c;
+      });
+    };
+    deviceContacts.forEach(add);
+    trustedContacts.forEach(add);
+    return map;
+  }, [deviceContacts, trustedContacts]);
 
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const messageListElements = useMemo(() => (
@@ -2831,8 +2882,8 @@ function App() {
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
         : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
       const messagesRef = collection(db, ...basePath);
-      // Bolt: User requested "Newest First" (Top), so we use 'desc' order.
-      const q = query(messagesRef, orderBy("date", "desc"));
+      // Bolt: Standard chat order (Oldest -> Newest)
+      const q = query(messagesRef, orderBy("date", "asc"));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const messagesData = snapshot.docs.map(doc => {
           const data = doc.data();
@@ -2851,9 +2902,12 @@ function App() {
   }, [user, selectedThread]);
 
 
-  // Bolt: With "Newest First" (Top), we don't need auto-scroll to bottom.
-  // Instead, the list naturally starts at the top.
-  // We can optionally scroll to top if needed, but default behavior handles it.
+  // Bolt: Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (autoScroll && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, autoScroll, selectedThread]);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
@@ -3972,12 +4026,19 @@ function App() {
           setShowArchived={setShowArchived}
           onPinThread={handlePinThread}
           onArchiveThread={handleArchiveThread}
+          contactLookup={contactLookup}
         />
         <div className="main-content" id="main-content">
           {activePanel === 'home' && (
             <div className="home-panel">
               <div className="home-hero">
-                <h2>Welcome back</h2>
+                <h2>
+                  {(() => {
+                    const h = new Date().getHours();
+                    return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+                  })()}
+                  {profile.ownerName ? `, ${profile.ownerName.split(' ')[0]}` : ''}
+                </h2>
                 <p>Choose what you want to manage on PulseLink Web.</p>
               </div>
               {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
@@ -5123,7 +5184,7 @@ function App() {
 
           {activePanel === 'beacon' && (
             hasBeaconData ? (
-              <>
+              <div className="beacon-layout">
       {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
         <div className="line-tabs line-tabs--main">
           <div className="line-tabs-header">
@@ -5160,18 +5221,18 @@ function App() {
                       </div>
                     </div>
                     <div className="messages-list">
-                      {/* Bolt: Newest First layout */}
-                      <MessageComposer
-                        user={user}
-                        db={db}
-                        selectedThread={selectedThread}
-                        lineInboxMode={lineInboxMode}
-                        activeLineId={activeLineId}
-                        lines={lines}
-                        isLoggingIn={isLoggingIn}
-                      />
                       {messageListElements}
+                      <div ref={messagesEndRef} style={{ height: 1 }} />
                     </div>
+                    <MessageComposer
+                      user={user}
+                      db={db}
+                      selectedThread={selectedThread}
+                      lineInboxMode={lineInboxMode}
+                      activeLineId={activeLineId}
+                      lines={lines}
+                      isLoggingIn={isLoggingIn}
+                    />
                   </>
                 ) : (
                   <div className="empty-state">
@@ -5188,7 +5249,7 @@ function App() {
                     />
                   </div>
                 )}
-              </>
+              </div>
             ) : (
               <div className="empty-state">
                 <img src={beaconLogo} alt="Beacon" className="empty-logo" style={{ marginBottom: '24px', opacity: 1, filter: 'none' }} />
