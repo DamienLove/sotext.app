@@ -12,6 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.pulselink.domain.model.AlertEvent
 import com.pulselink.domain.model.BlockedContact
 import com.pulselink.domain.model.ArchivedThread
+import com.pulselink.domain.model.PinnedThread
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.ContactMessage
 import com.pulselink.domain.model.MessageStatus
@@ -146,9 +147,24 @@ interface ArchivedThreadDao {
     fun isArchived(threadId: Long): Boolean
 }
 
+@Dao
+interface PinnedThreadDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insert(entry: PinnedThread)
+
+    @Query("DELETE FROM pinned_threads WHERE threadId = :threadId")
+    fun deleteByThreadId(threadId: Long)
+
+    @Query("SELECT threadId FROM pinned_threads")
+    fun getAllIds(): List<Long>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM pinned_threads WHERE threadId = :threadId)")
+    fun isPinned(threadId: Long): Boolean
+}
+
 @Database(
-    entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class],
-    version = 17,
+    entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class, PinnedThread::class],
+    version = 18,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -158,6 +174,7 @@ abstract class PulseLinkDatabase : RoomDatabase() {
     abstract fun contactMessageDao(): ContactMessageDao
     abstract fun blockedContactDao(): BlockedContactDao
     abstract fun archivedThreadDao(): ArchivedThreadDao
+    abstract fun pinnedThreadDao(): PinnedThreadDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -350,6 +367,18 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS pinned_threads (
+                        threadId INTEGER PRIMARY KEY NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -366,7 +395,8 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             MIGRATION_13_14,
             MIGRATION_14_15,
             MIGRATION_15_16,
-            MIGRATION_16_17
+            MIGRATION_16_17,
+            MIGRATION_17_18
         )
 
         private fun ensureBaseSchema(database: SupportSQLiteDatabase) {

@@ -1991,6 +1991,8 @@ class MainActivity : AppCompatActivity() {
                             onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
                             onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
                             onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
+                            onPinThread = { thread -> smsInboxViewModel.pin(thread.threadId) },
+                            onUnpinThread = { thread -> smsInboxViewModel.unpin(thread.threadId) },
                             onBack = { navController.popBackStack() },
                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
                             onOpenSettings = { navController.navigate("settings") },

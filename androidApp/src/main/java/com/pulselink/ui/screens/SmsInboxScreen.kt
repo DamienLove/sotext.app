@@ -38,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -125,6 +126,8 @@ fun SmsInboxScreen(
     onArchiveThread: (SmsThreadItem) -> Unit = {},
     onUnarchiveThread: (SmsThreadItem) -> Unit = {},
     onDeleteThread: (SmsThreadItem) -> Unit = {},
+    onPinThread: (SmsThreadItem) -> Unit = {},
+    onUnpinThread: (SmsThreadItem) -> Unit = {},
     modifier: Modifier = Modifier,
     dateFormatter: (Long) -> String,
     isBeaconMode: Boolean = false,
@@ -691,6 +694,8 @@ fun SmsInboxScreen(
                                 onArchive = onArchiveThread,
                                 onUnarchive = onUnarchiveThread,
                                 onDelete = onDeleteThread,
+                                onPin = onPinThread,
+                                onUnpin = onUnpinThread,
                                 dateFormatter = dateFormatter,
                                 isArchived = archivedIds.contains(threadKey(thread)),
                                 isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
@@ -742,6 +747,8 @@ internal fun ThreadRow(
     onArchive: (SmsThreadItem) -> Unit,
     onUnarchive: (SmsThreadItem) -> Unit,
     onDelete: (SmsThreadItem) -> Unit,
+    onPin: (SmsThreadItem) -> Unit,
+    onUnpin: (SmsThreadItem) -> Unit,
     dateFormatter: (Long) -> String,
     isArchived: Boolean,
     isPrivate: Boolean,
@@ -794,6 +801,7 @@ internal fun ThreadRow(
     val outlineColor = onBackgroundColor
         .copy(alpha = if (thread.unread) 0.14f else 0.08f)
     val borderColor = if (thread.unread) primary.copy(alpha = 0.22f) else outlineColor
+    var menuExpanded by remember { mutableStateOf(false) }
 
     SwipeToDismissBox(
         state = dismissState,
@@ -838,7 +846,7 @@ internal fun ThreadRow(
                         onClick = { onOpen(thread) },
                         onLongClick = {
                             if (actionsEnabled) {
-                                onTogglePrivate(thread, !isPrivate)
+                                menuExpanded = true
                             }
                         }
                     ),
@@ -847,6 +855,53 @@ internal fun ThreadRow(
                 color = surfaceColor,
                 border = BorderStroke(1.dp, borderColor)
             ) {
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    modifier = Modifier.background(parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor))
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(if (thread.isPinned) "Unpin" else "Pin") },
+                        onClick = {
+                            menuExpanded = false
+                            if (thread.isPinned) onUnpin(thread) else onPin(thread)
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.PushPin, contentDescription = null)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (isPrivate) "Mark as public" else "Mark as private") },
+                        onClick = {
+                            menuExpanded = false
+                            onTogglePrivate(thread, !isPrivate)
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Lock, contentDescription = null)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (isArchived) "Unarchive" else "Archive") },
+                        onClick = {
+                            menuExpanded = false
+                            if (isArchived) onUnarchive(thread) else onArchive(thread)
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Archive, contentDescription = null)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete") },
+                        onClick = {
+                            menuExpanded = false
+                            onDelete(thread)
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Delete, contentDescription = null)
+                        }
+                    )
+                }
+
                 Row(
                     modifier = Modifier.padding(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -875,6 +930,14 @@ internal fun ThreadRow(
                                 color = onBackgroundColor,
                                 fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
                             )
+                            if (thread.isPinned) {
+                                Icon(
+                                    Icons.Filled.PushPin,
+                                    contentDescription = "Pinned",
+                                    tint = primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                             Text(
                                 text = dateFormatter(thread.timestamp),
                                 style = MaterialTheme.typography.labelSmall,

@@ -488,6 +488,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
                                             onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
                                             onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
+                                            onPinThread = { thread -> smsInboxViewModel.pin(thread.threadId) },
+                                            onUnpinThread = { thread -> smsInboxViewModel.unpin(thread.threadId) },
                                             onBack = {
                                                 if (fromPulseLink && isTaskRoot) {
                                                     val backIntent = Intent(context, MainActivity::class.java).apply {

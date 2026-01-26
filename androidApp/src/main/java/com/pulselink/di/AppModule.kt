@@ -22,6 +22,7 @@ import com.pulselink.data.db.AlertEventDao
 import com.pulselink.data.db.AlertRepositoryImpl
 import com.pulselink.data.db.BlockedContactDao
 import com.pulselink.data.db.ArchivedThreadDao
+import com.pulselink.data.db.PinnedThreadDao
 import com.pulselink.data.db.BlockedContactRepositoryImpl
 import com.pulselink.data.db.ContactDao
 import com.pulselink.data.db.ContactRepositoryImpl
@@ -119,6 +120,9 @@ object DatabaseModule {
     fun provideArchivedThreadDao(database: PulseLinkDatabase): ArchivedThreadDao = database.archivedThreadDao()
 
     @Provides
+    fun providePinnedThreadDao(database: PulseLinkDatabase): PinnedThreadDao = database.pinnedThreadDao()
+
+    @Provides
     @Singleton
     fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> =
         provideSettingsDataStore(context)
@@ -160,8 +164,9 @@ object DatabaseModule {
     fun provideSmsRepository(
         @ApplicationContext context: Context,
         archivedThreadDao: ArchivedThreadDao,
+        pinnedThreadDao: PinnedThreadDao,
         contactDao: ContactDao
-    ): SmsRepository = SmsRepository(context, archivedThreadDao, contactDao)
+    ): SmsRepository = SmsRepository(context, archivedThreadDao, pinnedThreadDao, contactDao)
 
     @Provides
     @Singleton
