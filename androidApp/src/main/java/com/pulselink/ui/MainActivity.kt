@@ -904,9 +904,6 @@ class MainActivity : AppCompatActivity() {
                                     val user = auth.user
                                     if (state.onboardingComplete) {
                                         if (unifiedModeActive) "unified_inbox" else "home"
-                                    } else if (user.isAnonymous) {
-                                        // Anonymous users should see login screen to upgrade their account
-                                        "login"
                                     } else {
                                         "onboarding_intro"
                                     }
