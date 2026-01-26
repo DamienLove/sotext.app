@@ -22,7 +22,8 @@ class SmsSyncManager @Inject constructor(
     private val smsSyncTrigger: SmsSyncTrigger,
     private val settingsRepository: SettingsRepository
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @androidx.annotation.VisibleForTesting
+    var scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val isStarted = AtomicBoolean(false)
 
     @OptIn(FlowPreview::class)
