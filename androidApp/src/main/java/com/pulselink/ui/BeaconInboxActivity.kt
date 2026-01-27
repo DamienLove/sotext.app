@@ -458,6 +458,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                             }
                                         } else {
                                             SmsInboxScreen(
+                                            isUnifiedMode = state.settings.mergedExperienceEnabled,
                                             threads = displayedThreads,
                                             archivedThreads = displayedArchived,
                                             onOpenThread = { thread ->
