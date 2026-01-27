@@ -50,7 +50,7 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
-        if (action != Telephony.Sms.Intents.SMS_DELIVER_ACTION) {
+        if (action != Telephony.Sms.Intents.SMS_DELIVER_ACTION && action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
             return
         }
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
@@ -62,12 +62,23 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
-                try {
-                    smsStore.insertIncoming(origin, body, timestamp)
-                    // SmsStore triggers sync internally
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to insert incoming SMS from $origin", e)
+                if (action == Telephony.Sms.Intents.SMS_DELIVER_ACTION) {
+                    try {
+                        smsStore.insertIncoming(origin, body, timestamp)
+                        // SmsStore triggers sync internally
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to insert incoming SMS from $origin", e)
+                    }
+                } else {
+                    // SMS_RECEIVED: Default SMS app handles insert/notify.
+                    // We only need to ensure sync triggers.
+                    // SmsSyncManager observes changes, but we trigger explicitly to be safe/faster.
+                    val threadId = runCatching {
+                        Telephony.Threads.getOrCreateThreadId(context, origin)
+                    }.getOrNull()
+                    smsSyncTrigger.triggerSync(threadId)
                 }
+
                 val settings = settingsRepository.settings.first()
                 val completed = withTimeoutOrNull(8_000L) {
                     val parsed = SmsCodec.parse(body)
@@ -113,17 +124,20 @@ class PulseLinkSmsReceiver : BroadcastReceiver() {
                         }
 
                         handleTrustedSms(origin, body, settings)
-                        val threadId = runCatching {
-                            Telephony.Threads.getOrCreateThreadId(context, origin)
-                        }.getOrNull()
-                        MessageNotificationManager.notifyIncoming(
-                            context = context,
-                            address = origin,
-                            body = body,
-                            timestamp = timestamp,
-                            settings = settings,
-                            threadId = threadId
-                        )
+
+                        if (action == Telephony.Sms.Intents.SMS_DELIVER_ACTION) {
+                            val threadId = runCatching {
+                                Telephony.Threads.getOrCreateThreadId(context, origin)
+                            }.getOrNull()
+                            MessageNotificationManager.notifyIncoming(
+                                context = context,
+                                address = origin,
+                                body = body,
+                                timestamp = timestamp,
+                                settings = settings,
+                                threadId = threadId
+                            )
+                        }
                     }
                 }
                 if (completed == null) {
