@@ -1644,21 +1644,25 @@ class MainActivity : AppCompatActivity() {
                         } else {
                             "Custom audio"
                         }
-                        val messageVibrationLabel = VibrationPatterns
-                            .messageOption(state.settings.messageNotificationVibrationPattern)
-                            .label
                         val customVibration = VibrationPatterns.customOption(
                             state.settings.customVibrationPatternName,
                             state.settings.customVibrationPattern
                         )
-                        val emergencyVibrationLabel = (
-                            customVibration.takeIf { state.settings.emergencyProfile.vibrationPatternKey == VibrationPatterns.CUSTOM_KEY }
-                                ?: VibrationPatterns.alertOption(state.settings.emergencyProfile.vibrationPatternKey)
-                            ).label
-                        val checkInVibrationLabel = (
-                            customVibration.takeIf { state.settings.checkInProfile.vibrationPatternKey == VibrationPatterns.CUSTOM_KEY }
-                                ?: VibrationPatterns.alertOption(state.settings.checkInProfile.vibrationPatternKey)
-                            ).label
+                        val messageVibrationLabel = if (state.settings.messageNotificationVibrationPattern == VibrationPatterns.CUSTOM_KEY) {
+                            customVibration?.label ?: "Custom pattern"
+                        } else {
+                            VibrationPatterns.messageOption(state.settings.messageNotificationVibrationPattern).label
+                        }
+                        val emergencyVibrationLabel = if (state.settings.emergencyProfile.vibrationPatternKey == VibrationPatterns.CUSTOM_KEY) {
+                            customVibration?.label ?: "Custom pattern"
+                        } else {
+                            VibrationPatterns.alertOption(state.settings.emergencyProfile.vibrationPatternKey).label
+                        }
+                        val checkInVibrationLabel = if (state.settings.checkInProfile.vibrationPatternKey == VibrationPatterns.CUSTOM_KEY) {
+                            customVibration?.label ?: "Custom pattern"
+                        } else {
+                            VibrationPatterns.alertOption(state.settings.checkInProfile.vibrationPatternKey).label
+                        }
                         val isSmsOnlyUser = (authState as? AuthState.Authenticated)?.user?.isAnonymous == true
                         SettingsScreen(
                             settings = state.settings,
