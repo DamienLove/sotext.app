@@ -150,6 +150,36 @@ final class AlertRelayViewModel: ObservableObject {
         }
     }
 
+    func sendCheckIn() async {
+        statusText = "Sending check-in..."
+        let location = await emergencyLocationService.getCurrentLocation()
+
+        let recipients = trustedContacts.map { contact in
+            AlertRecipient(phoneNumber: contact.address, pushToken: nil, email: nil)
+        }
+
+        guard !recipients.isEmpty else {
+             statusText = "No trusted contacts to check in with."
+             return
+        }
+
+        let request = AlertRequest(
+            message: "I'm checking in. I am safe.",
+            severity: AlertSeverity.checkIn,
+            recipients: recipients,
+            senderId: nil,
+            location: location,
+            metadata: ["type": "check_in"]
+        )
+
+        do {
+            let response = try await client.sendAlert(request: request)
+            statusText = "Check-in sent: \(response.status)"
+        } catch {
+            statusText = "Check-in failed: \(error.localizedDescription)"
+        }
+    }
+
     // MARK: - Emergency flow
 
     func startEmergencyCountdown(seconds: Int = 5) {

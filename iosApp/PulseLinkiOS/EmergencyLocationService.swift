@@ -1,4 +1,5 @@
 import Foundation
+import Shared
 #if canImport(FirebaseFirestore)
 import FirebaseFirestore
 #endif
@@ -46,4 +47,9 @@ final class EmergencyLocationService {
     #else
     func recordEmergencyLocation(message: String?) async -> Bool { false }
     #endif
+
+    func getCurrentLocation() async -> GeoPoint? {
+        guard let location = await EmergencyLocationProvider.shared.requestLocation() else { return nil }
+        return GeoPoint(latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, accuracyMeters: location.horizontalAccuracy)
+    }
 }

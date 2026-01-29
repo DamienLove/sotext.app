@@ -90,6 +90,7 @@ private struct HomeTab: View {
                             .clipShape(Capsule())
                     }
 
+                    checkInCard
                     relayCard
                     overrideCard
                     activityCard
@@ -186,6 +187,30 @@ private struct HomeTab: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    private var checkInCard: some View {
+        Card {
+            HStack {
+                Text("Check In")
+                    .font(.headline)
+                Spacer()
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            }
+            Button {
+                Task { await viewModel.sendCheckIn() }
+            } label: {
+                Label("I'm OK", systemImage: "checkmark")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+
+            Text("Sends a check-in alert to your trusted contacts.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 

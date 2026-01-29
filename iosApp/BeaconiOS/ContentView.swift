@@ -231,6 +231,18 @@ private struct BeaconTab: View {
                 )
             }
             .navigationTitle(isPro && filter == .inbox ? "\(filter.title) Pro" : filter.title)
+            .toolbar {
+                if isPro && filter == .inbox {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Text("PRO")
+                            .font(.caption2.bold())
+                            .padding(4)
+                            .background(RelayColors.accent)
+                            .foregroundColor(.white)
+                            .cornerRadius(4)
+                    }
+                }
+            }
             .sheet(isPresented: $showPinSheet) {
                 NavigationStack {
                     VStack(spacing: 20) {
