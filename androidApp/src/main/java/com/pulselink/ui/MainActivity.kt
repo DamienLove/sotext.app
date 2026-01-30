@@ -76,6 +76,7 @@ import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.data.sms.MessageNotificationManager
 import com.pulselink.data.contacts.DeviceContact
 import com.pulselink.domain.model.Contact
+import com.pulselink.domain.model.primaryPhone
 import com.pulselink.domain.model.ManualMessageResult
 import com.pulselink.domain.model.LineInboxMode
 import com.pulselink.domain.model.LineSendPreference
@@ -2558,9 +2559,6 @@ private fun rememberCancelEmergencyLauncher(
 
 private const val CANCEL_EMERGENCY_AUTHENTICATORS =
     BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-
-private fun Contact.primaryPhone(): String? =
-    (listOf(phoneNumber) + additionalPhones).firstOrNull { it.isNotBlank() }
 
 private fun placeCall(
     activity: MainActivity,
