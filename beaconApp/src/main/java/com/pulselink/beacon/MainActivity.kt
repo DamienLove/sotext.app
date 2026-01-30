@@ -257,7 +257,8 @@ private fun BeaconNav(
                     onUpdateQuickReplies = { vm.updateQuickReplies(it) },
                     autoDeleteOtps = vm.autoDeleteOtps,
                     onSetAutoDeleteOtps = { vm.setAutoDeleteOtps(it) },
-                    onAvatarClick = { address -> openContact(context, address) }
+                    onAvatarClick = { address -> openContact(context, address) },
+                    onRename = { address, newName -> vm.renameThread(address, newName) }
                 )
             }
             composable(
@@ -275,6 +276,7 @@ private fun BeaconNav(
                 BeaconTheme(theme = contactTheme) {
                     ThreadScreen(
                         address = address.ifBlank { "Unknown" },
+                        displayName = vm.currentDisplayName.ifBlank { address.ifBlank { "Unknown" } },
                         uiItems = vm.uiMessages,
                         reactions = vm.reactions,
                         starredMessageIds = vm.starredMessageIds,
@@ -306,6 +308,7 @@ private fun BeaconNav(
                             navController.popBackStack()
                         },
                         onCustomize = { navController.navigate("customize?address=${Uri.encode(address)}") },
+                        onRename = { newName -> vm.renameThread(address, newName) },
                         onEditNotificationSound = { navController.navigate("notifications?address=${Uri.encode(address)}") },
                         onCall = {
                             val intent = Intent(Intent.ACTION_DIAL).apply {

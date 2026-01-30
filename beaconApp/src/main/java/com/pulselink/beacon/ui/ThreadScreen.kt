@@ -87,6 +87,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -113,6 +114,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun ThreadScreen(
     address: String,
+    displayName: String = address,
     uiItems: List<ThreadUiItem>,
     reactions: Map<Long, List<MessageReaction>> = emptyMap(),
     starredMessageIds: Set<Long> = emptySet(),
@@ -131,6 +133,7 @@ fun ThreadScreen(
     onDeleteThread: () -> Unit,
     onEditNotificationSound: () -> Unit,
     onCustomize: () -> Unit,
+    onRename: (String) -> Unit = {},
     onCall: () -> Unit = {},
     onReact: (Long, String) -> Unit = { _, _ -> },
     onToggleStar: (Long) -> Unit = {},
@@ -138,6 +141,19 @@ fun ThreadScreen(
 ) {
     var draft by remember { mutableStateOf("") }
     var draftLoaded by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+
+    if (showRenameDialog) {
+        RenameDialog(
+            currentName = displayName,
+            theme = theme,
+            onDismiss = { showRenameDialog = false },
+            onConfirm = { newName ->
+                onRename(newName)
+                showRenameDialog = false
+            }
+        )
+    }
 
     LaunchedEffect(isDraftsLoaded, initialDraft) {
         if (!draftLoaded && isDraftsLoaded) {
@@ -270,7 +286,7 @@ fun ThreadScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(address, maxLines = 1, style = MaterialTheme.typography.titleMedium, color = theme.frameColor)
+                        Text(displayName, maxLines = 1, style = MaterialTheme.typography.titleMedium, color = theme.frameColor)
                     }
                 },
                 navigationIcon = {
@@ -299,6 +315,11 @@ fun ThreadScreen(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Rename conversation") },
+                            onClick = { showRenameDialog = true; showMenu = false },
+                            leadingIcon = { Icon(Icons.Default.Edit, null) }
+                        )
                         DropdownMenuItem(
                             text = { Text("Customize theme") },
                             onClick = { onCustomize(); showMenu = false },

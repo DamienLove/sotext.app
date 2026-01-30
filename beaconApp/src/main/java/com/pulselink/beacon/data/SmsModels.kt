@@ -10,7 +10,8 @@ enum class MessageStatus {
 
 data class SmsThreadItem(
     val threadId: Long,
-    val address: String,
+    val address: String, // Raw phone number or address
+    val displayName: String, // Resolved contact name or custom name
     val snippet: String,
     val timestamp: Long,
     val unread: Boolean,
@@ -45,5 +46,6 @@ data class InboxState(
     val autoReplyEnabled: Boolean = false,
     val autoReplyMessage: String = "",
     val quickReplies: List<String> = listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?"),
-    val autoDeleteOtps: Boolean = false
+    val autoDeleteOtps: Boolean = false,
+    val customNames: Map<String, String> = emptyMap() // Map<Address, CustomName>
 )
