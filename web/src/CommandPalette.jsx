@@ -19,14 +19,20 @@ export default function CommandPalette({ isOpen, onClose, setActivePanel, action
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  const restoreFocusRef = useRef(null);
 
   useEffect(() => {
+    let timeoutId;
     if (isOpen) {
+      restoreFocusRef.current = document.activeElement;
       setQuery('');
       setSelectedIndex(0);
       // Small timeout to allow render before focus
-      setTimeout(() => inputRef.current?.focus(), 50);
+      timeoutId = setTimeout(() => inputRef.current?.focus(), 50);
+    } else {
+      restoreFocusRef.current?.focus({ preventScroll: true });
     }
+    return () => clearTimeout(timeoutId);
   }, [isOpen]);
 
   const filteredItems = useMemo(() => {
