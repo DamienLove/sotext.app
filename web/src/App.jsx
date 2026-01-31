@@ -1965,7 +1965,7 @@ const Sidebar = memo(({
       {activePanel === 'beacon' && !collapsed ? (
         <>
           <div className="sidebar-search-container">
-            <div className="sidebar-search-wrapper">
+            <div className="sidebar-search-wrapper" onClick={() => searchInputRef.current?.focus()}>
               <div className="search-icon-wrapper">
                 <SearchIcon />
               </div>
@@ -4380,7 +4380,7 @@ function App() {
                 <div className="contact-count" style={{ marginBottom: 12, fontSize: '0.9em', color: 'var(--muted)' }}>
                   {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
                 </div>
-                <div className="settings-search-container" style={{ flex: 1, marginBottom: 0 }}>
+                <div className="settings-search-container" style={{ flex: 1, marginBottom: 0 }} onClick={() => contactSearchRef.current?.focus()}>
                   <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
                   <input
                     ref={contactSearchRef}
@@ -4389,6 +4389,16 @@ function App() {
                     aria-label="Search contacts (/)"
                     value={contactSearch}
                     onChange={(e) => setContactSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        if (contactSearch) {
+                          setContactSearch('');
+                        } else {
+                          e.currentTarget.blur();
+                        }
+                      }
+                    }}
                   />
                   {!contactSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
                   {contactSearch && (
@@ -4623,7 +4633,7 @@ function App() {
               </div>
               <div className="themes-grid">
                 <div className="settings-card themes-card">
-                  <div className="settings-search-container">
+                  <div className="settings-search-container" onClick={() => themeSearchRef.current?.focus()}>
                     <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
                     <input
                       ref={themeSearchRef}
@@ -4632,6 +4642,16 @@ function App() {
                       onChange={(e) => setThemeSearch(e.target.value)}
                       placeholder="Search by name or creator"
                       aria-label="Search themes (/)"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.preventDefault();
+                          if (themeSearch) {
+                            setThemeSearch('');
+                          } else {
+                            e.currentTarget.blur();
+                          }
+                        }
+                      }}
                     />
                     {!themeSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
                     {themeSearch && (
@@ -5006,7 +5026,7 @@ function App() {
                 <p>Manage account details and shared preferences.</p>
               </div>
 
-              <div className="settings-search-container">
+              <div className="settings-search-container" onClick={() => settingsSearchRef.current?.focus()}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity: 0.5}}>
                   <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
@@ -5017,6 +5037,16 @@ function App() {
                   aria-label="Search settings (/)"
                   value={settingsSearch}
                   onChange={(e) => setSettingsSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      if (settingsSearch) {
+                        setSettingsSearch('');
+                      } else {
+                        e.currentTarget.blur();
+                      }
+                    }
+                  }}
                 />
                 {!settingsSearch && <span className="shortcut-hint" aria-hidden="true">/</span>}
                 {settingsSearch && (
