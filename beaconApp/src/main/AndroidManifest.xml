@@ -51,6 +51,12 @@
                 <data android:scheme="sms" />
                 <data android:scheme="smsto" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
         </activity>
 
         <activity-alias
@@ -142,6 +148,22 @@
                 <data android:scheme="mmsto" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name=".widget.BeaconWidgetProvider"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/beacon_widget_info" />
+        </receiver>
+
+        <service
+            android:name=".widget.BeaconWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
 
     </application>
 
