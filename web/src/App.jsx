@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, memo, useCallback, useLayoutEffec
 import { auth, db, functions } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
+import Toast from './Toast';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -2128,13 +2129,6 @@ const Sidebar = memo(({
 
 Sidebar.displayName = 'Sidebar';
 
-const getToastClass = (msg) => {
-  if (!msg) return 'toast';
-  const lower = msg.toLowerCase();
-  if (lower.includes('fail') || lower.includes('error') || lower.includes('missing')) return 'toast error';
-  if (lower.includes('success') || lower.includes('saved') || lower.includes('updated') || lower.includes('sent') || lower.includes('published') || lower.includes('imported') || lower.includes('cleared')) return 'toast success';
-  return 'toast';
-};
 
 function App() {
   const webHintStorageKey = 'pulselink.hideWebHint';
@@ -3359,6 +3353,17 @@ function App() {
     }
     setIsSavingContact(true);
     setContactStatus("Saving contact...");
+
+    // Palette: Mock save for testing
+    if (user.uid === 'mock_user_123') {
+      setTimeout(() => {
+        resetContactForm();
+        setContactStatus("Contact saved.");
+        setIsSavingContact(false);
+      }, 500);
+      return;
+    }
+
     try {
       const payload = {
         displayName: contactForm.displayName.trim(),
@@ -3382,8 +3387,8 @@ function App() {
         await deleteDoc(doc(db, "users", user.uid, "trustedContacts", editingContactId));
       }
       await setDoc(doc(db, "users", user.uid, "trustedContacts", editingContactId || newDocId), payload, { merge: true });
-      setContactStatus("Contact saved.");
       resetContactForm();
+      setContactStatus("Contact saved.");
     } catch (error) {
       console.error("Contact save failed", error);
       setContactStatus(error?.message ?? "Contact save failed.");
@@ -4238,7 +4243,7 @@ function App() {
                       </>
                     ) : 'Save profile'}
                   </button>
-                    {profileStatus && <div className={getToastClass(profileStatus)} role="status" aria-live="polite">{profileStatus}</div>}
+                    <Toast message={profileStatus} onDismiss={() => setProfileStatus('')} />
                 </div>
                 <div className="settings-card">
                   <h4>Trusted contacts</h4>
@@ -4258,7 +4263,7 @@ function App() {
                       <div className="settings-note">No trusted contacts yet.</div>
                     )}
                   </div>
-                  {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
+                  <Toast message={contactStatus} onDismiss={() => setContactStatus('')} />
                 </div>
                 <div className="settings-card">
                   <h4>{editingContactId ? 'Edit trusted contact' : 'Add trusted contact'}</h4>
@@ -4364,7 +4369,7 @@ function App() {
                       Clear
                     </button>
                   </div>
-                  {contactStatus && <div className={getToastClass(contactStatus)} role="status" aria-live="polite">{contactStatus}</div>}
+                  <Toast message={contactStatus} onDismiss={() => setContactStatus('')} />
                 </div>
               </div>
             </div>
@@ -4506,7 +4511,7 @@ function App() {
                       <p>Set VITE_GOOGLE_MAPS_API_KEY in web/.env.local to load the map view.</p>
                     </div>
                   )}
-                  {mapStatus && <div className={getToastClass(mapStatus)} role="status" aria-live="polite">{mapStatus}</div>}
+                  <Toast message={mapStatus} onDismiss={() => setMapStatus('')} />
                 </div>
                 <div className="map-list">
                   {filteredAlerts.map((alert) => (
@@ -4609,7 +4614,7 @@ function App() {
                         </div>
                     )}
                     
-                    {settingsStatus && <div className={getToastClass(settingsStatus)} style={{marginTop: 12}} role="status" aria-live="polite">{settingsStatus}</div>}
+                    <Toast message={settingsStatus} onDismiss={() => setSettingsStatus('')} />
                 </div>
               </div>
             </div>
@@ -4664,7 +4669,7 @@ function App() {
                       </div>
                     )}
                   </div>
-                  {themeGalleryStatus && <div className={getToastClass(themeGalleryStatus)} role="status" aria-live="polite">{themeGalleryStatus}</div>}
+                  <Toast message={themeGalleryStatus} onDismiss={() => setThemeGalleryStatus('')} />
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Publish your theme</h4>
@@ -4730,7 +4735,7 @@ function App() {
                       </>
                     ) : 'Publish theme'}
                   </button>
-                  {themePublishStatus && <div className={getToastClass(themePublishStatus)} role="status" aria-live="polite">{themePublishStatus}</div>}
+                  <Toast message={themePublishStatus} onDismiss={() => setThemePublishStatus('')} />
                 </div>
                 <div className="settings-card themes-card">
                   <h4>Quick presets</h4>
@@ -4827,7 +4832,7 @@ function App() {
                   <button className="primary-btn" type="button" onClick={() => handleApplyPreset(themePrefs)}>
                     Save theme
                   </button>
-                  {themeStatus && <div className={getToastClass(themeStatus)} role="status" aria-live="polite">{themeStatus}</div>}
+                  <Toast message={themeStatus} onDismiss={() => setThemeStatus('')} />
                 </div>
               </div>
             </div>
@@ -4986,7 +4991,7 @@ function App() {
                   </label>
                   <button type="submit" className="primary-btn">Save extension</button>
                 </form>
-                {extensionStatus && <div className={getToastClass(extensionStatus)} role="status">{extensionStatus}</div>}
+                <Toast message={extensionStatus} onDismiss={() => setExtensionStatus('')} />
               </div>
               <div className="settings-card">
                 <h4>Submit to gallery</h4>
@@ -5065,7 +5070,7 @@ function App() {
                           <button className="secondary-btn" type="button" onClick={handlePasswordResetForUser}>
                             Send password reset email
                           </button>
-                          {settingsStatus && <div className={getToastClass(settingsStatus)} role="status" aria-live="polite">{settingsStatus}</div>}
+                          <Toast message={settingsStatus} onDismiss={() => setSettingsStatus('')} />
                         </div>
                       )}
 
@@ -5186,8 +5191,8 @@ function App() {
                               Test relay
                             </button>
                           </div>
-                          {remoteSettingsStatus && <div className={getToastClass(remoteSettingsStatus)} role="status" aria-live="polite">{remoteSettingsStatus}</div>}
-                          {syncRequestStatus && <div className={getToastClass(syncRequestStatus)} role="status" aria-live="polite">{syncRequestStatus}</div>}
+                          <Toast message={remoteSettingsStatus} onDismiss={() => setRemoteSettingsStatus('')} />
+                          <Toast message={syncRequestStatus} onDismiss={() => setSyncRequestStatus('')} />
                         </div>
                       )}
 
@@ -5215,7 +5220,7 @@ function App() {
                               {deleteAction === 'account' ? "Deleting..." : "Delete account"}
                             </button>
                           </div>
-                          {deleteStatus && <div className={getToastClass(deleteStatus)} role="status" aria-live="polite">{deleteStatus}</div>}
+                          <Toast message={deleteStatus} onDismiss={() => setDeleteStatus('')} />
                         </div>
                       )}
                     </>
