@@ -1,51 +1,47 @@
-// web/tests/beacon_inbox.spec.js
 /* eslint-env node */
 import { test, expect } from '@playwright/test';
 
-test.describe('Beacon Inbox', () => {
+test.describe('Beacon Inbox (Premium)', () => {
   test.beforeEach(async ({ page }) => {
-    // 1. Visit the app
-    await page.goto('/');
+    // 1. Visit the app with mock user and premium tier
+    await page.goto('/?mock_user=true&mock_tier=premium');
   });
 
-  test('should display login screen and dev tools toggle', async ({ page }) => {
-    await expect(page.locator('h1')).toContainText('PulseLink Web');
-    await expect(page.getByPlaceholder('you@example.com')).toBeVisible();
+  test('should display inbox and threads for premium user', async ({ page }) => {
+    // Verify Sidebar exists
+    await expect(page.locator('.sidebar')).toBeVisible();
 
-    // Simulate Ctrl+Shift+D to open DevTools
-    await page.keyboard.press('Control+Shift+D');
-    await expect(page.getByText('Dev Tools')).toBeVisible();
-    await expect(page.getByText('Populate Mock Data')).toBeVisible();
+    // Navigate to Beacon Inbox
+    // Try sidebar nav item or home tile
+    const navItem = page.locator('.nav-item[title="Beacon"]');
+    if (await navItem.isVisible()) {
+        await navItem.click();
+    } else {
+        await page.getByRole('button', { name: 'Beacon Inbox' }).first().click();
+    }
+
+    // Verify thread list
+    await expect(page.locator('.thread-list')).toBeVisible();
+    await expect(page.getByText('Test Contact')).toBeVisible();
+    await expect(page.getByText('Hello World')).toBeVisible(); // Snippet
   });
 
-  test('should toggle DevTools visibility with Ctrl+Shift+D', async ({ page }) => {
-    // Initial state: hidden
-    await expect(page.getByText('Dev Tools')).not.toBeVisible();
+  test('should allow message composition', async ({ page }) => {
+    const navItem = page.locator('.nav-item[title="Beacon"]');
+    if (await navItem.isVisible()) {
+        await navItem.click();
+    } else {
+        await page.getByRole('button', { name: 'Beacon Inbox' }).first().click();
+    }
 
-    // Open
-    await page.keyboard.press('Control+Shift+D');
-    await expect(page.getByText('Dev Tools')).toBeVisible();
+    // Select the thread
+    await page.getByText('Test Contact').click();
 
-    // Close via shortcut
-    await page.keyboard.press('Control+Shift+D');
-    await expect(page.getByText('Dev Tools')).not.toBeVisible();
-  });
+    // Check header
+    await expect(page.locator('.chat-header')).toContainText('+15559998888');
 
-  test('should handle mock data population attempt', async ({ page }) => {
-    // Open DevTools
-    await page.keyboard.press('Control+Shift+D');
-
-    // Ensure the input is visible and has default value
-    const input = page.getByLabel('Target User ID');
-    await expect(input).toBeVisible();
-    await expect(input).toHaveValue('test_user_123');
-
-    // Click populate (This might fail if Firestore isn't reachable, but we verify the attempt)
-    await page.getByText('Populate Mock Data').click();
-
-    // Check for status message (Success or Error)
-    // We expect either "Success!" or "Error:" depending on the environment connectivity
-    // This assertion just ensures the button triggered a state change
-    await expect(page.locator('[role="alert"]')).toBeVisible();
+    // Check composer
+    await expect(page.getByPlaceholder('Type a message...')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
   });
 });

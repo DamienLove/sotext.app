@@ -167,3 +167,62 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
     );
   }
 });
+
+export const onUserUpdated = functions.firestore
+    .document("users/{userId}")
+    .onUpdate(async (change, context) => {
+      const before = change.before.data();
+      const after = change.after.data();
+      const userId = context.params.userId;
+
+      const wasWebEnabled = before.remoteWebAccessEnabled === true;
+      const isWebEnabled = after.remoteWebAccessEnabled === true;
+      const webAccessChanged = !wasWebEnabled && isWebEnabled;
+
+      const wasPremium = before.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_ACTIVE" ||
+                         before.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+      const isPremium = after.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_ACTIVE" ||
+                        after.premiumSubscriptionStatus === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+      const premiumChanged = !wasPremium && isPremium;
+
+      const syncRequested = after.syncRequestedAt && after.syncRequestedAt !== before.syncRequestedAt;
+
+      if (webAccessChanged || premiumChanged || syncRequested) {
+        console.log(`User ${userId} settings/premium updated, sending SYNC_REQUEST`);
+
+        const devicesQuery = await db.collection("devices")
+            .where("uid", "==", userId)
+            .get();
+
+        if (devicesQuery.empty) return;
+
+        const tokens: string[] = [];
+        devicesQuery.forEach((doc) => {
+          const data = doc.data();
+          if (data.fcmToken) {
+            tokens.push(data.fcmToken);
+          }
+        });
+
+        if (tokens.length > 0) {
+          const payload = {
+            data: {
+              type: "SYNC_REQUEST",
+              userId: userId,
+              reason: webAccessChanged ? "web_access_enabled" : (premiumChanged ? "premium_upgrade" : "manual_request"),
+            },
+            tokens: tokens,
+            android: {
+              priority: "high" as const,
+            },
+          };
+
+          try {
+            const response = await admin.messaging().sendMulticast(payload);
+            console.log(`Sent SYNC_REQUEST to ${response.successCount} devices for user ${userId}`);
+          } catch (error) {
+            console.error("Error sending SYNC_REQUEST", error);
+          }
+        }
+      }
+    });
