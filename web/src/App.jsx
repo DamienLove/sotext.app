@@ -332,6 +332,8 @@ const DeviceContactItem = memo(({ contact }) => {
     }
   }
 
+  const primaryInfo = contact.phoneNumber || contact.email;
+
   return (
     <div className="contact-row contact-row--stacked">
       <div className="contact-main">
@@ -341,6 +343,11 @@ const DeviceContactItem = memo(({ contact }) => {
         </div>
         {extras && <div className="contact-extra">{extras}</div>}
       </div>
+      {primaryInfo && (
+        <div className="contact-actions">
+          <CopyButton text={primaryInfo} label={`Copy ${primaryInfo}`} />
+        </div>
+      )}
     </div>
   );
 }, areDeviceContactsEqual);
