@@ -72,6 +72,22 @@ class SpotifyRepository(
         }
     }
 
+    suspend fun getTrack(id: String): SpotifyTrack? = withContext(Dispatchers.IO) {
+        ensureToken()
+        val token = accessToken ?: throw IOException("Could not authenticate with Spotify")
+
+        val request = Request.Builder()
+            .url("https://api.spotify.com/v1/tracks/$id")
+            .header("Authorization", "Bearer $token")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return@withContext null
+            val body = response.body?.string() ?: return@withContext null
+            gson.fromJson(body, SpotifyTrack::class.java)
+        }
+    }
+
     private fun ensureToken() {
         if (accessToken != null && System.currentTimeMillis() < tokenExpiration) return
 
