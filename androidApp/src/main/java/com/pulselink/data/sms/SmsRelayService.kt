@@ -1,24 +1,35 @@
 package com.pulselink.data.sms
 
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
 import android.util.Log
+import androidx.core.content.FileProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
 import com.pulselink.domain.repository.SettingsRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
+import java.net.URL
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
-import java.util.concurrent.atomic.AtomicBoolean
 
 @Singleton
 class SmsRelayService @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth,
     private val smsSender: SmsSender,
@@ -61,12 +72,13 @@ class SmsRelayService @Inject constructor(
                         val body = data["body"] as? String
                         val lineId = data["lineId"] as? String
                         val status = data["status"] as? String
+                        val attachmentUrl = data["attachmentUrl"] as? String
 
                         // Skip messages that have already been processed or failed
                         if (status == "failed" || status == "sent") continue
 
-                        if (address != null && body != null) {
-                            processMessage(doc.id, address, body, uid, lineId)
+                        if (address != null && (body != null || attachmentUrl != null)) {
+                            processMessage(doc.id, address, body ?: "", uid, lineId, attachmentUrl)
                         }
                     }
                 }
@@ -123,7 +135,14 @@ class SmsRelayService @Inject constructor(
         isFirstSnapshot = true
     }
 
-    private fun processMessage(docId: String, address: String, body: String, uid: String, lineId: String?) {
+    private fun processMessage(
+        docId: String,
+        address: String,
+        body: String,
+        uid: String,
+        lineId: String?,
+        attachmentUrl: String?
+    ) {
         scope.launch {
             try {
                 val settings = settingsRepository.settings.first()
@@ -135,11 +154,12 @@ class SmsRelayService @Inject constructor(
                 if (!lineId.isNullOrBlank() && lineId != deviceId) {
                     return@launch
                 }
-                // Warning: This assumes SEND_SMS permission is granted.
-                // In a real app, we should check ContextCompat.checkSelfPermission
-                // However, since this runs in the context of the app which (usually) has permission if it's the default SMS app
-                // or requested it, we attempt it. SmsSender handles errors gracefully.
-                val success = smsSender.sendSms(address, body)
+
+                val success = if (attachmentUrl != null) {
+                    downloadAndSendMms(address, attachmentUrl)
+                } else {
+                    smsSender.sendSms(address, body)
+                }
 
                 if (success) {
                     firestore.collection("users").document(uid)
@@ -157,6 +177,56 @@ class SmsRelayService @Inject constructor(
             } catch (e: Exception) {
                 Log.e(TAG, "Exception during SMS relay", e)
             }
+        }
+    }
+
+    private suspend fun downloadAndSendMms(address: String, urlString: String): Boolean {
+        return try {
+            val url = URL(urlString)
+            // Use cache dir for temp file
+            val file = File(context.cacheDir, "mms_${UUID.randomUUID()}.tmp")
+
+            withContext(Dispatchers.IO) {
+                url.openStream().use { input ->
+                    FileOutputStream(file).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
+
+            // Must match authorities in AndroidManifest.xml: ${applicationId}.export
+            // NOTE: file_paths.xml usually points to files/exports, not cache.
+            // Let's check where SmsIntents writes. It writes to context.filesDir/exports.
+            // We should stick to that if file_paths.xml expects it.
+            // Let's move the file or write it there directly.
+
+            val exportDir = File(context.filesDir, "exports").apply { mkdirs() }
+            val destFile = File(exportDir, file.name)
+            file.copyTo(destFile, overwrite = true)
+            file.delete()
+
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.export", destFile)
+
+            val cleanupIntent = Intent(context, MmsSentReceiver::class.java).apply {
+                putExtra(MmsSentReceiver.EXTRA_FILE_PATH, destFile.absolutePath)
+            }
+
+            // Unique request code to avoid collision
+            val requestCode = destFile.name.hashCode()
+
+            val pendingCleanup = PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                cleanupIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val result = smsSender.sendMms(address, uri, pendingCleanup)
+            // cleanup is handled by MmsSentReceiver
+            result
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to download/send MMS", e)
+            false
         }
     }
 
