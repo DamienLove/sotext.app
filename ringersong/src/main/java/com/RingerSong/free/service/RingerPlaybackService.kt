@@ -418,10 +418,14 @@ class RingerPlaybackService : Service() {
         playbackJob?.cancel()
         playbackJob = null
 
-        // Ensure we pause Spotify explicitly - simplified logic
+        // Stop our players
         spotifyPlayer.pause()
+        scope.launch {
+            youtubeMusicPlayer.stop()
+            appleMusicPlayer.stop()
+        }
 
-        // Attempt to stop external players (like Apple Music) by sending a media pause key event
+        // Attempt to stop external players (like Apple Music app if fallback used) by sending a media pause key event
         // This is a workaround since we don't control the external app directly.
         try {
             audioManager?.let { am ->
