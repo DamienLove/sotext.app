@@ -313,9 +313,9 @@ private fun BeaconNav(
                         onSaveDraft = { vm.saveDraft(threadId, it) },
                         onBack = { navController.popBackStack() },
                         onSend = { vm.sendDelayedMessage(it) },
-                        onSendAttachment = { uri ->
+                        onSendAttachment = { uri, mimeType ->
                             val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "image/*"
+                                type = mimeType
                                 putExtra(Intent.EXTRA_STREAM, uri)
                                 putExtra("address", address)
                                 putExtra(Intent.EXTRA_PHONE_NUMBER, address)
@@ -520,7 +520,8 @@ private fun requiredPermissions(context: android.content.Context): List<String> 
         android.Manifest.permission.SEND_SMS,
         android.Manifest.permission.RECEIVE_MMS,
         android.Manifest.permission.RECEIVE_WAP_PUSH,
-        android.Manifest.permission.READ_CONTACTS
+        android.Manifest.permission.READ_CONTACTS,
+        android.Manifest.permission.RECORD_AUDIO
     )
     val notif =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) listOf(android.Manifest.permission.POST_NOTIFICATIONS) else emptyList()

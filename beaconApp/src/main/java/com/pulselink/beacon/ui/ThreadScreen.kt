@@ -12,6 +12,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DatePicker
@@ -84,6 +87,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.AttachFile
@@ -95,6 +99,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.MessageStatus
@@ -103,9 +109,11 @@ import com.pulselink.beacon.data.scheduled.MessageReaction
 import com.pulselink.beacon.ui.ads.NativeAdCard
 import com.pulselink.beacon.util.LinkPreviewData
 import com.pulselink.beacon.util.LinkPreviewHelper
+import com.pulselink.beacon.util.VoiceRecorder
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
+import java.io.File
 import android.content.Intent
 import android.net.Uri
 import kotlinx.coroutines.delay
@@ -126,7 +134,7 @@ fun ThreadScreen(
     onSaveDraft: (String) -> Unit = {},
     onBack: () -> Unit,
     onSend: (String) -> Unit,
-    onSendAttachment: (Uri) -> Unit = {},
+    onSendAttachment: (Uri, String) -> Unit = { _, _ -> },
     onCancelPending: () -> Unit = {},
     onSendNow: () -> Unit = {},
     onScheduleMessage: (String, Long) -> Unit = { _, _ -> },
@@ -180,11 +188,18 @@ fun ThreadScreen(
     val attachmentLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        if (uri != null) onSendAttachment(uri)
+        if (uri != null) {
+            val type = context.contentResolver.getType(uri) ?: "image/*"
+            onSendAttachment(uri, type)
+        }
     }
 
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    val recorder = remember { VoiceRecorder(context) }
+    var isRecording by remember { mutableStateOf(false) }
+    var recordingFile by remember { mutableStateOf<File?>(null) }
 
     // Constants
     val SCROLL_THRESHOLD_ITEMS = 2
@@ -538,38 +553,84 @@ fun ThreadScreen(
                             Icon(Icons.Default.Schedule, contentDescription = "Schedule", tint = iconTint)
                         }
 
-                        TextField(
-                            value = draft,
-                            onValueChange = { draft = it },
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(horizontal = 4.dp)
-                                .clip(RoundedCornerShape(24.dp)),
-                            placeholder = { Text("Text message", fontSize = 14.sp) },
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = theme.threadBackgroundColor.copy(alpha = 0.5f),
-                                unfocusedContainerColor = theme.threadBackgroundColor.copy(alpha = 0.5f),
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
-                            ),
-                            maxLines = 4
-                        )
-
-                        IconButton(
-                            onClick = {
-                                val text = draft.trim()
-                                if (text.isNotEmpty()) {
-                                    onSend(text)
-                                    draft = ""
-                                }
-                            },
-                            enabled = draft.isNotBlank()
-                        ) {
-                            Icon(
-                                Icons.Default.Send,
-                                contentDescription = "Send",
-                                tint = if (draft.isNotBlank()) iconTint else iconTint.copy(alpha = 0.5f)
+                        if (isRecording) {
+                             Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(56.dp)
+                                    .background(theme.accentColor.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
+                                    .padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.CenterStart
+                             ) {
+                                 Text("Recording... Release to send", color = theme.accentColor, fontWeight = FontWeight.Bold)
+                             }
+                        } else {
+                            TextField(
+                                value = draft,
+                                onValueChange = { draft = it },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 4.dp)
+                                    .clip(RoundedCornerShape(24.dp)),
+                                placeholder = { Text("Text message", fontSize = 14.sp) },
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = theme.threadBackgroundColor.copy(alpha = 0.5f),
+                                    unfocusedContainerColor = theme.threadBackgroundColor.copy(alpha = 0.5f),
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent
+                                ),
+                                maxLines = 4
                             )
+                        }
+
+                        if (draft.isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    val text = draft.trim()
+                                    if (text.isNotEmpty()) {
+                                        onSend(text)
+                                        draft = ""
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.Send,
+                                    contentDescription = "Send",
+                                    tint = iconTint
+                                )
+                            }
+                        } else {
+                            IconButton(
+                                onClick = {},
+                                modifier = Modifier.pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onPress = {
+                                            try {
+                                                val file = File(context.cacheDir, "voice_msg_${System.currentTimeMillis()}.m4a")
+                                                recordingFile = file
+                                                recorder.start(file)
+                                                isRecording = true
+                                                tryAwaitRelease()
+                                            } finally {
+                                                isRecording = false
+                                                recorder.stop()
+                                                recordingFile?.let {
+                                                    if (it.exists() && it.length() > 0) {
+                                                    val uri = FileProvider.getUriForFile(context, context.packageName + ".provider", it)
+                                                    onSendAttachment(uri, "audio/mp4")
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+                            ) {
+                                Icon(
+                                    if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                                    contentDescription = "Record Voice",
+                                    tint = if (isRecording) MaterialTheme.colorScheme.error else iconTint
+                                )
+                            }
                         }
                     }
                 }
@@ -742,26 +803,34 @@ private fun LazyItemScope.MessageBubble(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 if (message.isMms && message.mediaParts.isNotEmpty()) {
-                    message.mediaParts.filter { it.dataUri != null && it.contentType.startsWith("image") }
-                        .forEach { part ->
-                            AsyncImage(
-                                model = part.dataUri,
-                                contentDescription = "MMS image",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
+                    message.mediaParts.forEach { part ->
+                         if (part.dataUri != null) {
+                             if (part.contentType.startsWith("image")) {
+                                 AsyncImage(
+                                     model = part.dataUri,
+                                     contentDescription = "MMS image",
+                                     contentScale = ContentScale.Crop,
+                                     modifier = Modifier
+                                         .fillMaxWidth()
+                                         .height(200.dp)
+                                         .clip(RoundedCornerShape(8.dp))
+                                 )
+                                 Spacer(modifier = Modifier.height(8.dp))
+                             } else if (part.contentType.startsWith("audio")) {
+                                 AudioPlayer(uri = part.dataUri, contentColor = if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming)
+                                 Spacer(modifier = Modifier.height(8.dp))
+                             }
+                         }
+                    }
                 }
 
-                Text(
-                    text = message.body,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
-                    color = if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming
-                )
+                if (message.body.isNotBlank()) {
+                    Text(
+                        text = message.body,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                        color = if (isOutgoing) theme.onBubbleOutgoing else theme.onBubbleIncoming
+                    )
+                }
 
                 if (extractedUrl != null) {
                     val preview by produceState<LinkPreviewData?>(initialValue = null, key1 = extractedUrl) {
