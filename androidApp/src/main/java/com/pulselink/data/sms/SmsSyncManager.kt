@@ -75,7 +75,7 @@ class SmsSyncManager @Inject constructor(
                             (prev.proUnlocked != currentSettings.proUnlocked)
 
                     if (shouldSync) {
-                        Log.d(TAG, "Settings changed (premium/web), triggering immediate sync")
+                        Log.i(TAG, "Settings changed (premium=${currentSettings.premiumUnlocked}, web=${currentSettings.remoteWebAccessEnabled}), triggering immediate full sync")
                         smsSyncTrigger.triggerSync()
                     }
                 } catch (e: Exception) {
