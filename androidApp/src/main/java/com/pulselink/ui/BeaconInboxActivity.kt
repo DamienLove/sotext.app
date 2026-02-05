@@ -94,6 +94,7 @@ import com.pulselink.ui.state.MainViewModel
 import com.pulselink.ui.state.SmsInboxViewModel
 import com.pulselink.ui.state.SmsLinesViewModel
 import com.pulselink.ui.state.SmsThreadViewModel
+import com.pulselink.domain.model.primaryPhone
 import com.pulselink.domain.model.LineInboxMode
 import com.pulselink.domain.model.LineSendPreference
 import com.pulselink.ui.theme.PulseLinkTheme
@@ -835,9 +836,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val summaryState by threadViewModel.summaryState.collectAsStateWithLifecycle()
                                     val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
                                     val decodedAddress = Uri.decode(address)
-                                    val callNumber = contact?.phoneNumber
-                                        ?.takeIf { it.isNotBlank() }
-                                        ?: contact?.additionalPhones?.firstOrNull { it.isNotBlank() }
+                                    val callNumber = contact?.primaryPhone()
                                         ?: decodedAddress.takeIf { it.isNotBlank() }
                                     val onCallThread = callNumber?.let { number ->
                                         {
