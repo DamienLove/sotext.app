@@ -635,7 +635,7 @@ const areRingerSongsEqual = (prev, next) => {
 };
 
 // Bolt: Optimized RingerSongItem with memo to prevent re-rendering the entire playlist
-const RingerSongItem = memo(({ song, onDelete }) => {
+const RingerSongItem = memo(({ song, onDelete, index }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const isMounted = useRef(true);
 
@@ -660,6 +660,7 @@ const RingerSongItem = memo(({ song, onDelete }) => {
 
   return (
     <div className="song-card">
+      {index !== undefined && <span className="song-rank">{(index + 1).toString().padStart(2, '0')}</span>}
       {song.albumArtUrl ? (
         <img src={song.albumArtUrl} alt="" className="song-art" loading="lazy" />
       ) : (
@@ -4092,13 +4093,15 @@ function App() {
               )}
               <div className="home-grid">
                 <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
-                  <div className="home-icon beacon">
+                  <div className="status-pill">{hasBeaconData ? 'Sync Active' : 'Setup Required'}</div>
+                  <div className="home-icon beacon pulse-slow">
                     <img src={beaconLogo} alt="Beacon" />
                   </div>
                   <h3>Beacon Inbox</h3>
                   <p>View SMS synced from your phone.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
+                  <div className="status-pill">{profile.ownerName ? 'Active' : 'Setup Profile'}</div>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink" />
                   </div>
@@ -4106,6 +4109,7 @@ function App() {
                   <p>Update your profile and trusted contacts.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
+                  <div className="status-pill">{deviceContacts.length > 0 ? `${deviceContacts.length} Contacts` : 'No Contacts'}</div>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink contacts" />
                   </div>
@@ -4113,13 +4117,15 @@ function App() {
                   <p>Browse all device contacts synced from your phone.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
-                  <div className="home-icon ringersong">
+                  <div className="status-pill">{ringerPlaylist.length > 0 ? `${ringerPlaylist.length} Songs` : 'Empty'}</div>
+                  <div className="home-icon ringersong pulse-slow">
                     <img src={ringersongLogo} alt="RingerSong" />
                   </div>
                   <h3>RingerSong</h3>
                   <p>Manage ringtone progressions and streaming.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
+                  <div className="status-pill">{alertLocations.length > 0 ? `${alertLocations.length} Alerts` : 'Safe'}</div>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink map" />
                   </div>
@@ -4127,6 +4133,7 @@ function App() {
                   <p>Track shared locations from PulseLink alerts.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
+                  <div className="status-pill">Gallery</div>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="PulseLink themes" />
                   </div>
@@ -4139,6 +4146,7 @@ function App() {
                   disabled={!remoteSettings.thirdPartyExtensionsEnabled}
                   title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage features" : "Enable features in Settings"}
                 >
+                  <div className="status-pill">{remoteSettings.thirdPartyExtensionsEnabled ? 'Active' : 'Disabled'}</div>
                   <div className="home-icon pulselink">
                     <img src={logo} alt="Features" />
                   </div>
@@ -4550,6 +4558,15 @@ function App() {
                     <h3>RingerSong</h3>
                     <p style={{color: 'var(--muted)'}}>Progressive ringtone streaming & playlist manager.</p>
                 </div>
+                {ringerPlaylist.length > 0 && (
+                  <div className="visualizer">
+                    <div className="visualizer-bar" />
+                    <div className="visualizer-bar" />
+                    <div className="visualizer-bar" />
+                    <div className="visualizer-bar" />
+                    <div className="visualizer-bar" />
+                  </div>
+                )}
               </div>
 
               <div className="pulselink-grid">
@@ -4565,10 +4582,11 @@ function App() {
                         </div>
                     ) : (
                         <div className="song-grid">
-                            {ringerPlaylist.map(song => (
+                            {ringerPlaylist.map((song, i) => (
                                 <RingerSongItem
                                     key={song.id}
                                     song={song}
+                                    index={i}
                                     onDelete={handleDeleteRingerSong}
                                 />
                             ))}
@@ -4926,7 +4944,7 @@ function App() {
                           <p style={{marginBottom: 16, minHeight: 40}}>{ext.desc}</p>
 
                           {isLocked ? (
-                            <div className="badge badge-premium" style={{background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)'}}>
+                            <div className="badge badge-premium-gold">
                               Premium Required
                             </div>
                           ) : (
