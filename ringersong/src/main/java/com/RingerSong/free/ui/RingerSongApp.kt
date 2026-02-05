@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 fun RingerSongApp(
     viewModel: RingerViewModel,
     sharedUri: Uri?,
+    sharedText: String?,
     onSharedConsumed: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -35,13 +36,21 @@ fun RingerSongApp(
     val activity = LocalContext.current as? Activity
     val state = viewModel.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(sharedUri) {
+    LaunchedEffect(sharedUri, sharedText) {
         if (sharedUri != null) {
             viewModel.addSongs(listOf(sharedUri)) { result ->
                 coroutineScope.launch { snackbarHostState.showResult(result) }
                 if (result.addedCount > 0) {
                     activity?.let { AdServices.showInterstitial(it) }
                 }
+            }
+            onSharedConsumed()
+        } else if (sharedText != null) {
+            viewModel.processSharedText(sharedText) { message ->
+                 coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                 if (message.startsWith("Added")) {
+                     activity?.let { AdServices.showInterstitial(it) }
+                 }
             }
             onSharedConsumed()
         }

@@ -740,4 +740,172 @@ class RingerViewModel @Inject constructor(
             onComplete(info)
         }
     }
+
+    fun processSharedText(text: String, onResult: (String) -> Unit) {
+        // Regex patterns for different services
+        val spotifyRegex = Regex("https://open\\.spotify\\.com/track/([a-zA-Z0-9]+)")
+        val tidalRegex = Regex("https://tidal\\.com/(?:browse/)?track/([0-9]+)")
+        val youtubeMusicRegex = Regex("https://music\\.youtube\\.com/watch\\?v=([a-zA-Z0-9_-]+)")
+        val appleMusicRegex = Regex("https://music\\.apple\\.com/([a-z]{2})/album/([^/]+)/([0-9]+)\\?i=([0-9]+)")
+        // Simple apple music song link might be different
+        val appleMusicSongRegex = Regex("https://music\\.apple\\.com/([a-z]{2})/song/([^/]+)/([0-9]+)")
+
+        // Extract URL from text (simple approach: find first http link)
+        val urlMatch = Regex("https?://\\S+").find(text)
+        val url = urlMatch?.value ?: text
+
+        var songEntry: SongEntry? = null
+
+        viewModelScope.launch {
+            when {
+                spotifyRegex.containsMatchIn(url) -> {
+                    val match = spotifyRegex.find(url)
+                    val id = match?.groupValues?.get(1)
+                    if (id != null) {
+                        val track = try {
+                            spotifyRepository.getTrack(id)
+                        } catch (e: Exception) {
+                            null
+                        }
+                        if (track != null) {
+                            addSpotifyTrack(track, onResult)
+                        } else {
+                            onResult("Found Spotify link but could not fetch metadata.")
+                        }
+                        return@launch
+                    }
+                }
+                tidalRegex.containsMatchIn(url) -> {
+                    val match = tidalRegex.find(url)
+                    val id = match?.groupValues?.get(1)
+                    if (id != null) {
+                        val title = extractTitleFromText(text) ?: "Tidal Track $id"
+                        songEntry = SongEntry(
+                            id = UUID.randomUUID().toString(),
+                            title = title,
+                            uri = "https://tidal.com/track/$id",
+                            source = SongSource.TIDAL,
+                            addedAt = System.currentTimeMillis()
+                        )
+                    }
+                }
+                youtubeMusicRegex.containsMatchIn(url) -> {
+                    val match = youtubeMusicRegex.find(url)
+                    val id = match?.groupValues?.get(1)
+                    if (id != null) {
+                        val title = extractTitleFromText(text) ?: "YouTube Music Track"
+                        songEntry = SongEntry(
+                            id = UUID.randomUUID().toString(),
+                            title = title,
+                            uri = "youtube:video:$id",
+                            source = SongSource.YOUTUBE_MUSIC,
+                            addedAt = System.currentTimeMillis()
+                        )
+                    }
+                }
+                appleMusicRegex.containsMatchIn(url) -> {
+                    val match = appleMusicRegex.find(url)
+                    val slug = match?.groupValues?.get(2)
+                    val niceTitle = slug?.replace("-", " ")?.split(" ")?.joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+                    val title = niceTitle ?: extractTitleFromText(text) ?: "Apple Music Track"
+                    songEntry = SongEntry(
+                        id = UUID.randomUUID().toString(),
+                        title = title,
+                        uri = url,
+                        source = SongSource.APPLE_MUSIC,
+                        addedAt = System.currentTimeMillis()
+                    )
+                }
+                appleMusicSongRegex.containsMatchIn(url) -> {
+                    val match = appleMusicSongRegex.find(url)
+                    val slug = match?.groupValues?.get(2)
+                    val niceTitle = slug?.replace("-", " ")?.split(" ")?.joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+                    val title = niceTitle ?: extractTitleFromText(text) ?: "Apple Music Track"
+                    songEntry = SongEntry(
+                        id = UUID.randomUUID().toString(),
+                        title = title,
+                        uri = url,
+                        source = SongSource.APPLE_MUSIC,
+                        addedAt = System.currentTimeMillis()
+                    )
+                }
+            }
+
+            if (songEntry != null) {
+                addStreamingTrack(songEntry, onResult)
+            } else {
+                onResult("No supported streaming link found.")
+            }
+        }
+    }
+
+    private fun extractTitleFromText(text: String): String? {
+        // Try to find title if text looks like "Song by Artist"
+        // Or "Check out Song by Artist on Service"
+        // This is very rough.
+        return null
+    }
+
+    private fun addStreamingTrack(songEntry: SongEntry, onResult: (String) -> Unit) {
+        val uid = auth?.currentUser?.uid ?: run {
+            onResult("Error: Please sign in to add songs")
+            return
+        }
+        val safeDb = db ?: run {
+            onResult("Error: Database unavailable")
+            return
+        }
+
+        viewModelScope.launch {
+            val current = state.value
+            if (current.songs.size >= current.settings.maxSongs) {
+                onResult("Playlist is full (max ${current.settings.maxSongs})")
+                return@launch
+            }
+
+            if (current.songs.any { it.uri == songEntry.uri }) {
+                onResult("Song already in playlist")
+                return@launch
+            }
+
+            // Update local state
+            withContext(Dispatchers.IO) {
+                store.update { current ->
+                    val updatedSongs = current.songs + songEntry
+                    val updatedOrder = current.songOrder + songEntry.id
+                    current.copy(songs = updatedSongs, songOrder = updatedOrder)
+                }
+            }
+
+            // Sync to Firestore
+            val trackData = mapOf(
+                "uri" to songEntry.uri,
+                "source" to songEntry.source.name,
+                "title" to songEntry.title,
+                "artist" to "Unknown Artist",
+                "durationMs" to (songEntry.durationMs ?: 0L),
+                "addedAt" to com.google.firebase.Timestamp.now(),
+                "downloaded" to false
+            )
+
+            safeDb.collection("users").document(uid).collection("ringer_playlist")
+                .add(trackData)
+                .addOnSuccessListener {
+                    onResult("Added ${songEntry.title}")
+                }
+                .addOnFailureListener { e ->
+                    // Revert
+                    viewModelScope.launch {
+                        withContext(Dispatchers.IO) {
+                            store.update { current ->
+                                val updatedSongs = current.songs.filter { it.id != songEntry.id }
+                                val updatedOrder = current.songOrder.filter { it != songEntry.id }
+                                current.copy(songs = updatedSongs, songOrder = updatedOrder)
+                            }
+                        }
+                    }
+                    onResult("Failed to sync: ${e.message}")
+                }
+        }
+    }
 }
