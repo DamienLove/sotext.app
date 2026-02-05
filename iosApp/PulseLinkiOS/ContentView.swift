@@ -339,11 +339,24 @@ private struct ConversationView: View {
                             HStack {
                                 if msg.isIncoming { Spacer() }
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text(msg.text)
-                                        .padding(12)
-                                        .background(msg.isUrgent ? Color.red.opacity(0.15) : Color(.secondarySystemBackground))
-                                        .foregroundStyle(msg.isUrgent ? .red : .primary)
+                                    if let url = msg.attachmentUrl, let imageUrl = URL(string: url) {
+                                        AsyncImage(url: imageUrl) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFit()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                        .frame(maxHeight: 200)
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    }
+                                    if !msg.text.isEmpty {
+                                        Text(msg.text)
+                                            .padding(12)
+                                            .background(msg.isUrgent ? Color.red.opacity(0.15) : Color(.secondarySystemBackground))
+                                            .foregroundStyle(msg.isUrgent ? .red : .primary)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    }
                                     Text(msg.timestamp, style: .time)
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)

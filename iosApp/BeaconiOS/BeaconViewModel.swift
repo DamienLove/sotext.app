@@ -126,6 +126,7 @@ final class BeaconViewModel: ObservableObject {
         let message = BeaconConversationMessage(
             sender: "You",
             text: text,
+            attachmentUrl: nil,
             timestamp: Date(),
             isIncoming: false,
             isUrgent: false
