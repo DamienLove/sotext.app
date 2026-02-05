@@ -1863,6 +1863,47 @@ const loadGoogleMaps = (() => {
   };
 })();
 
+// Bolt: Optimized ContactSkeleton for loading states
+const ContactSkeleton = memo(() => (
+  <div className="contact-row">
+    <div className="skeleton-line" style={{ width: 40, height: 40, borderRadius: '50%', flexShrink: 0 }} />
+    <div className="contact-main" style={{ width: '100%', gap: 8 }}>
+      <div className="skeleton-line" style={{ width: '40%' }} />
+      <div className="skeleton-line short" style={{ width: '60%' }} />
+    </div>
+  </div>
+));
+ContactSkeleton.displayName = 'ContactSkeleton';
+
+// Bolt: Optimized ThemeSkeleton for loading states
+const ThemeSkeleton = memo(() => (
+  <div className="theme-card">
+    <div className="theme-preview" style={{ background: 'rgba(255,255,255,0.02)', border: 'none' }}>
+      <div className="skeleton-line" style={{ width: '100%', height: '100%', opacity: 0.1 }} />
+    </div>
+    <div className="theme-meta" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+      <div className="skeleton-line" style={{ width: '70%' }} />
+      <div className="skeleton-line short" style={{ width: '40%' }} />
+    </div>
+  </div>
+));
+ThemeSkeleton.displayName = 'ThemeSkeleton';
+
+// Bolt: Reusable EmptyState component
+const EmptyState = memo(({ icon, title, description, action }) => (
+  <div className="empty-state">
+    <div className="empty-logo-wrapper" style={{ display: 'grid', placeItems: 'center', marginBottom: 16 }}>
+       <div className="empty-logo" style={{ width: 64, height: 64, color: 'var(--muted)', opacity: 0.5 }}>
+         {icon}
+       </div>
+    </div>
+    <div className="empty-title" style={{ fontSize: '1.2em', fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>{title}</div>
+    {description && <div className="empty-desc" style={{ color: 'var(--muted)', maxWidth: 400, margin: '0 auto 24px', lineHeight: 1.5 }}>{description}</div>}
+    {action}
+  </div>
+));
+EmptyState.displayName = 'EmptyState';
+
 // Bolt: Optimized Sidebar to prevent re-renders on high-frequency parent updates (typing)
 const Sidebar = memo(({
   activePanel,
@@ -2248,6 +2289,8 @@ function App() {
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(true);
   const [isLoadingThreads, setIsLoadingThreads] = useState(false);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(true);
+  const [isLoadingThemes, setIsLoadingThemes] = useState(true);
   const [legacyThreads, setLegacyThreads] = useState([]);
   const [lineThreads, setLineThreads] = useState({});
   const [lines, setLines] = useState([]);
@@ -2939,6 +2982,10 @@ function App() {
       }));
       items.sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? ''));
       setDeviceContacts(items);
+      setIsLoadingContacts(false);
+    }, (error) => {
+      console.error("Failed to load contacts", error);
+      setIsLoadingContacts(false);
     });
     return () => unsubscribe();
   }, [user]);
@@ -3017,10 +3064,12 @@ function App() {
           ...docSnap.data()
         }));
         setPublicThemes(items);
+        setIsLoadingThemes(false);
       },
       (error) => {
         console.error("Failed to load theme gallery", error);
         setThemeGalleryStatus(error?.message ?? "Unable to load theme gallery.");
+        setIsLoadingThemes(false);
       }
     );
     return () => unsubscribe();
@@ -4050,6 +4099,8 @@ function App() {
       window.debugSetLines = setLines;
       window.debugSetLegacyThreads = setLegacyThreads;
       window.debugSetIsLoadingThreads = setIsLoadingThreads;
+      window.debugSetIsLoadingContacts = setIsLoadingContacts;
+      window.debugSetIsLoadingThemes = setIsLoadingThemes;
     }
   }, []);
 
@@ -4584,34 +4635,39 @@ function App() {
                 </div>
               </div>
               <div className="contact-list contact-list--full">
-                {contactListElements}
-                {filteredDeviceContacts.length > contactListLimit && (
-                  <button
-                    className="secondary-btn"
-                    style={{ marginTop: '16px', width: '100%' }}
-                    onClick={() => setContactListLimit(prev => prev + 50)}
-                  >
-                    Show more contacts
-                  </button>
-                )}
-                {filteredDeviceContacts.length === 0 && (
-                  <div className="settings-note">
-                    {contactSearch.trim() ? (
-                      <>
-                        No contacts match that search.
-                        <button
-                          className="link-button"
-                          onClick={() => {
-                            setContactSearch('');
-                            contactSearchRef.current?.focus();
-                          }}
-                          style={{ marginLeft: 4, padding: 0, textDecoration: 'underline' }}
-                        >
-                          Clear search
-                        </button>
-                      </>
-                    ) : 'No device contacts synced yet.'}
-                  </div>
+                {isLoadingContacts ? (
+                  Array.from({ length: 10 }).map((_, i) => <ContactSkeleton key={i} />)
+                ) : (
+                  <>
+                    {contactListElements}
+                    {filteredDeviceContacts.length > contactListLimit && (
+                      <button
+                        className="secondary-btn"
+                        style={{ marginTop: '16px', width: '100%' }}
+                        onClick={() => setContactListLimit(prev => prev + 50)}
+                      >
+                        Show more contacts
+                      </button>
+                    )}
+                    {filteredDeviceContacts.length === 0 && (
+                      <EmptyState
+                        icon={<ContactIcon />}
+                        title={contactSearch.trim() ? "No matches found" : "No contacts synced"}
+                        description={contactSearch.trim() ? "Try searching for a different name or number." : "Ensure your phone is online and PulseLink is active."}
+                        action={contactSearch.trim() && (
+                          <button
+                            className="link-button"
+                            onClick={() => {
+                              setContactSearch('');
+                              contactSearchRef.current?.focus();
+                            }}
+                          >
+                            Clear search
+                          </button>
+                        )}
+                      />
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -4847,17 +4903,25 @@ function App() {
                     )}
                   </div>
                   <div className="theme-gallery-grid">
-                    {filteredThemes.map((themeDoc) => (
-                      <ThemeGalleryItem
-                        key={themeDoc.id}
-                        themeDoc={themeDoc}
-                        onImport={handleImportPublicTheme}
-                      />
-                    ))}
-                    {filteredThemes.length === 0 && (
-                      <div className="theme-empty">
-                        No themes found.
-                      </div>
+                    {isLoadingThemes ? (
+                      Array.from({ length: 6 }).map((_, i) => <ThemeSkeleton key={i} />)
+                    ) : (
+                      <>
+                        {filteredThemes.map((themeDoc) => (
+                          <ThemeGalleryItem
+                            key={themeDoc.id}
+                            themeDoc={themeDoc}
+                            onImport={handleImportPublicTheme}
+                          />
+                        ))}
+                        {filteredThemes.length === 0 && (
+                          <EmptyState
+                             icon={<ThemeIcon />}
+                             title="No themes found"
+                             description={themeSearch ? "Try adjusting your search terms." : "The gallery seems to be empty right now."}
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                   <Toast message={themeGalleryStatus} onDismiss={() => setThemeGalleryStatus('')} />
@@ -5493,19 +5557,22 @@ function App() {
                     />
                   </>
                 ) : (
-                  <div className="empty-state">
-                    <img src={beaconLogo} alt="Beacon" className="empty-logo" />
-                    <div>Select a thread or start a new message</div>
-                    <MessageComposer
-                        user={user}
-                        db={db}
-                        selectedThread={selectedThread}
-                        lineInboxMode={lineInboxMode}
-                        activeLineId={activeLineId}
-                        lines={lines}
-                        isLoggingIn={isLoggingIn}
-                    />
-                  </div>
+                  <EmptyState
+                    icon={<img src={beaconLogo} alt="Beacon" className="empty-logo" style={{width: 64, height: 64}} />}
+                    title="Beacon Inbox"
+                    description="Select a thread or start a new message"
+                    action={
+                        <MessageComposer
+                          user={user}
+                          db={db}
+                          selectedThread={selectedThread}
+                          lineInboxMode={lineInboxMode}
+                          activeLineId={activeLineId}
+                          lines={lines}
+                          isLoggingIn={isLoggingIn}
+                        />
+                    }
+                  />
                 )}
               </div>
             ) : (
