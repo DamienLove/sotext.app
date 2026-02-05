@@ -16,6 +16,17 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/devices/$(deviceId)).data.uid == request.auth.uid;
     }
 
+    function isValidImageUrl(url) {
+      return url == null || (
+        url is string && (
+          url == "" ||
+          url.matches('^https?://.*') ||
+          url.matches('^data:image/.*') ||
+          url.matches('^/.*')
+        )
+      );
+    }
+
     function isSubscriptionFieldChange() {
       // Sentinel: Prevent Mass Assignment of subscription fields.
       // 1. If deleting (request.resource == null), it's not a field injection.
@@ -88,8 +99,16 @@ service cloud.firestore {
       allow read: if true;
       // Security: Sentinel - Restrict writes to allowed profile fields only.
       // Prevent injection of "isAdmin", "isVerified", or large junk data.
+      // Security: Sentinel - Prevent Persistent XSS via URL fields.
       allow create, update: if request.auth != null && request.auth.uid == userId
-                            && request.resource.data.keys().hasOnly(['ownerName', 'avatarUrl', 'avatarId', 'themePreferences', 'updatedAt']);
+                            && request.resource.data.keys().hasOnly(['ownerName', 'avatarUrl', 'avatarId', 'themePreferences', 'updatedAt'])
+                            && (!request.resource.data.keys().hasAny(['avatarUrl']) || isValidImageUrl(request.resource.data.avatarUrl))
+                            && (
+                               !request.resource.data.keys().hasAny(['themePreferences']) ||
+                               (
+                                 (!request.resource.data.themePreferences.keys().hasAny(['backgroundImageUrl']) || isValidImageUrl(request.resource.data.themePreferences.backgroundImageUrl))
+                               )
+                            );
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
 
@@ -200,7 +219,10 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.ownerUid == request.auth.uid;
       allow create: if request.auth != null &&
         request.resource.data.ownerUid == request.auth.uid &&
-        request.resource.data.status == "pending";
+        request.resource.data.status == "pending" &&
+        (!request.resource.data.keys().hasAny(['theme']) ||
+          (!request.resource.data.theme.keys().hasAny(['backgroundImageUrl']) || isValidImageUrl(request.resource.data.theme.backgroundImageUrl))
+        );
       allow update, delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
   }
