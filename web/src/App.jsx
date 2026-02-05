@@ -5124,7 +5124,12 @@ function App() {
                     <div key={ext.id} className="home-card" style={{margin: 0}}>
                       <h4>{ext.name}</h4>
                       <p className="settings-note">{ext.description || ext.endpoint || 'No description provided.'}</p>
-                      {ext.endpoint && <code className="mono" style={{fontSize: 12}}>{ext.endpoint}</code>}
+                      {ext.endpoint && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '8px', marginTop: '8px' }}>
+                          <code className="mono" style={{fontSize: 12, wordBreak: 'break-all'}}>{ext.endpoint}</code>
+                          <CopyButton text={ext.endpoint} label="Copy URL" />
+                        </div>
+                      )}
                       <div className="settings-row" style={{justifyContent: 'flex-start', gap: 8, marginTop: 8}}>
                         <button className="secondary-btn" type="button" onClick={() => handleTestExtension(ext)}>Test</button>
                         <button className="ghost-btn" type="button" onClick={() => setDevExtensions((prev) => prev.filter((d) => d.id !== ext.id))}>Remove</button>
