@@ -4,6 +4,9 @@ import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.provider.Telephony
 import android.telephony.SmsManager
 import android.util.Log
 import androidx.annotation.RequiresPermission
@@ -45,6 +48,42 @@ class SmsSender @Inject constructor(
             }
         }
         return count
+    }
+
+    @RequiresPermission(Manifest.permission.SEND_SMS)
+    suspend fun sendMms(
+        phoneNumber: String,
+        contentUri: Uri,
+        sentIntent: PendingIntent? = null
+    ): Boolean {
+        val defaultPackage = Telephony.Sms.getDefaultSmsPackage(context)
+        if (defaultPackage != null && defaultPackage != context.packageName) {
+            Log.w(TAG, "Not default SMS app, cannot send MMS")
+            return false
+        }
+
+        // Grant Telephony stack permission to read the file
+        listOf(
+            "com.android.mms.service",
+            "com.android.providers.telephony",
+            context.packageName
+        ).forEach { pkg ->
+            try {
+                context.grantUriPermission(pkg, contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: SecurityException) {
+                // best-effort
+            }
+        }
+
+        val config = Bundle().apply { putString("address", phoneNumber) }
+
+        return runCatching {
+            smsManager.sendMultimediaMessage(context, contentUri, null, config, sentIntent)
+            true
+        }.getOrElse { error ->
+            Log.e(TAG, "Failed to send MMS", error)
+            false
+        }
     }
 
     @RequiresPermission(Manifest.permission.SEND_SMS)

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, memo, useCallback, useLayoutEffect } from 'react';
-import { auth, db, functions } from './firebase';
+import { auth, db, functions, storage } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
 import {
@@ -25,6 +25,11 @@ import {
   limit,
   writeBatch
 } from "firebase/firestore";
+import {
+  ref,
+  uploadBytesResumable,
+  getDownloadURL
+} from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import './App.css';
 import logo from './assets/pulselink-pro-logo.png';
@@ -86,6 +91,7 @@ const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="no
 const PinIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>;
 const ArchiveIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>;
 const InboxIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>;
+const PaperclipIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>;
 
 const RequiredIndicator = () => (
   <span
@@ -729,7 +735,9 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
   const [lineId, setLineId] = useState('');
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [attachment, setAttachment] = useState(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useLayoutEffect(() => {
     const el = textareaRef.current;
@@ -749,7 +757,21 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     }
     setBody('');
     setStatus('');
+    setAttachment(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }, [selectedThread]);
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        setStatus("File too large (max 2MB).");
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+    }
+    setAttachment(file);
+    setStatus(`Selected: ${file.name}`);
+  };
 
   const handleSendMessage = async () => {
     if (!user) return;
@@ -757,22 +779,33 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     const cleanBody = body.trim();
     const effectiveLineId = lineInboxMode === 'PER_LINE' ? (lineId || activeLineId || lines[0]?.id || null) : null;
 
-    if (!cleanAddress || !cleanBody) {
-      setStatus("Add a phone number and message.");
+    if (!cleanAddress || (!cleanBody && !attachment)) {
+      setStatus("Add a phone number and message or attachment.");
       return;
     }
     setIsSending(true);
-    setStatus('');
+    setStatus('Sending...');
     try {
+      let attachmentUrl = null;
+      if (attachment) {
+          setStatus("Uploading attachment...");
+          const storageRef = ref(storage, `users/${user.uid}/attachments/${Date.now()}_${attachment.name}`);
+          const uploadTask = await uploadBytesResumable(storageRef, attachment);
+          attachmentUrl = await getDownloadURL(uploadTask.ref);
+      }
+
       const docRef = await addDoc(collection(db, "users", user.uid, "outbox"), {
         address: cleanAddress,
         body: cleanBody,
         createdAt: serverTimestamp(),
         source: "web",
         lineId: effectiveLineId,
-        status: "pending"
+        status: "pending",
+        attachmentUrl: attachmentUrl || null
       });
       setBody('');
+      setAttachment(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setStatus("Queued for sending...");
 
       // Monitor status
@@ -832,17 +865,33 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
         </div>
       )}
       <div className="composer-row composer-actions">
+        <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={handleFileSelect}
+            accept="image/*"
+        />
+        <button
+            className={`ghost-btn icon-only ${attachment ? 'active' : ''}`}
+            onClick={() => fileInputRef.current?.click()}
+            title={attachment ? `Change attachment (${attachment.name})` : "Attach image"}
+            aria-label="Attach image"
+            style={{ marginRight: 8 }}
+        >
+            <PaperclipIcon />
+        </button>
         <div style={{ flex: 1, position: 'relative' }}>
           <textarea
             ref={textareaRef}
             className="composer-textarea"
             style={{ width: '100%', paddingBottom: '24px', maxHeight: '200px', overflowY: 'auto' }}
-            placeholder="Type a message... (Ctrl+Enter to send)"
+            placeholder={attachment ? "Add a caption..." : "Type a message... (Ctrl+Enter to send)"}
             aria-label="Message body"
             aria-describedby="message-char-count"
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            required
+            required={!attachment}
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
