@@ -1,4 +1,39 @@
-import {escapeHtml} from "./security";
+import {escapeHtml, isValidUrl, MAX_URL_LENGTH} from "./security";
+
+describe("isValidUrl", () => {
+  it("should accept valid https URLs", () => {
+    expect(isValidUrl("https://google.com")).toBe(true);
+  });
+
+  it("should accept valid http URLs", () => {
+    expect(isValidUrl("http://example.com")).toBe(true);
+  });
+
+  it("should reject javascript protocol", () => {
+    expect(isValidUrl("javascript:alert(1)")).toBe(false);
+  });
+
+  it("should reject invalid protocols", () => {
+    expect(isValidUrl("ftp://example.com")).toBe(false);
+    expect(isValidUrl("file:///etc/passwd")).toBe(false);
+  });
+
+  it("should reject malformed URLs", () => {
+    expect(isValidUrl("not a url")).toBe(false);
+  });
+
+  it("should reject URLs exceeding MAX_URL_LENGTH", () => {
+    const longUrl = "https://example.com/" + "a".repeat(MAX_URL_LENGTH);
+    expect(isValidUrl(longUrl)).toBe(false);
+  });
+
+  it("should accept URLs exactly at MAX_URL_LENGTH", () => {
+    const prefix = "https://a.com/";
+    const padding = "a".repeat(MAX_URL_LENGTH - prefix.length);
+    const longUrl = prefix + padding;
+    expect(isValidUrl(longUrl)).toBe(true);
+  });
+});
 
 describe("escapeHtml", () => {
   describe("Basic HTML escaping", () => {

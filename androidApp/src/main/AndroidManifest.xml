@@ -571,6 +571,10 @@
             android:name=".widget.PulseLinkWidgetActionReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".data.sms.MmsSentReceiver"
+            android:exported="false" />
+
         <service
             android:name=".widget.PulseLinkWidgetService"
             android:permission="android.permission.BIND_REMOTEVIEWS"

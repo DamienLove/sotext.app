@@ -54,16 +54,18 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val notificationTarget = mutableStateOf<NotificationTarget?>(null)
+    private val sharedContent = mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         notificationTarget.value = readNotificationTarget(intent)
+        sharedContent.value = readSharedContent(intent)
         MobileAds.initialize(this)
         setContent {
             val vm: SmsViewModel = viewModel(factory = SmsViewModel.factory(application))
             val themeVm: ThemeViewModel = viewModel(factory = ThemeViewModel.factory(application))
             BeaconTheme(theme = themeVm.themeState.global) {
-                BeaconNav(vm, themeVm, notificationTarget)
+                BeaconNav(vm, themeVm, notificationTarget, sharedContent)
             }
         }
     }
@@ -71,6 +73,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         notificationTarget.value = readNotificationTarget(intent)
+        val shared = readSharedContent(intent)
+        if (shared != null) {
+            sharedContent.value = shared
+        }
     }
 
     private fun readNotificationTarget(intent: Intent?): NotificationTarget? {
@@ -83,6 +89,13 @@ class MainActivity : ComponentActivity() {
         return NotificationTarget(threadId, address)
     }
 
+    private fun readSharedContent(intent: Intent?): String? {
+        if (intent?.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true) {
+            return intent.getStringExtra(Intent.EXTRA_TEXT)
+        }
+        return null
+    }
+
 }
 
 private data class NotificationTarget(val threadId: Long, val address: String)
@@ -92,7 +105,8 @@ private data class NotificationTarget(val threadId: Long, val address: String)
 private fun BeaconNav(
     vm: SmsViewModel,
     themeVm: ThemeViewModel,
-    notificationTarget: androidx.compose.runtime.MutableState<NotificationTarget?>
+    notificationTarget: androidx.compose.runtime.MutableState<NotificationTarget?>,
+    sharedContent: androidx.compose.runtime.MutableState<String?>
 ) {
     val themeState = themeVm.themeState
     val navController = rememberNavController()
@@ -166,6 +180,13 @@ private fun BeaconNav(
         val threadId = target.threadId.takeIf { it > 0 } ?: 0L
         navController.navigate("thread/$threadId/$encoded")
         notificationTarget.value = null
+    }
+
+    val pendingShared by sharedContent
+    LaunchedEffect(pendingShared) {
+        val text = pendingShared ?: return@LaunchedEffect
+        navController.navigate("newMessage?initialText=${Uri.encode(text)}")
+        sharedContent.value = null
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -257,17 +278,22 @@ private fun BeaconNav(
                     onUpdateQuickReplies = { vm.updateQuickReplies(it) },
                     autoDeleteOtps = vm.autoDeleteOtps,
                     onSetAutoDeleteOtps = { vm.setAutoDeleteOtps(it) },
-                    onAvatarClick = { address -> openContact(context, address) }
+                    onAvatarClick = { address -> openContact(context, address) },
+                    onRename = { address, newName -> vm.renameThread(address, newName) }
                 )
             }
             composable(
-                route = "thread/{threadId}/{address}",
+                route = "thread/{threadId}/{address}?draft={draft}",
                 arguments = listOf(
                     navArgument("threadId") { type = NavType.LongType },
-                    navArgument("address") { type = NavType.StringType })
+                    navArgument("address") { type = NavType.StringType },
+                    navArgument("draft") { defaultValue = "" }
+                )
             ) { backStackEntry ->
                 val threadId = backStackEntry.arguments?.getLong("threadId") ?: 0L
                 val address = backStackEntry.arguments?.getString("address")?.let { Uri.decode(it) } ?: ""
+                val draftArg = backStackEntry.arguments?.getString("draft")?.let { Uri.decode(it) }
+
                 LaunchedEffect(threadId) {
                     vm.openThread(threadId, address)
                 }
@@ -275,20 +301,21 @@ private fun BeaconNav(
                 BeaconTheme(theme = contactTheme) {
                     ThreadScreen(
                         address = address.ifBlank { "Unknown" },
+                        displayName = vm.currentDisplayName.ifBlank { address.ifBlank { "Unknown" } },
                         uiItems = vm.uiMessages,
                         reactions = vm.reactions,
                         starredMessageIds = vm.starredMessageIds,
                         theme = contactTheme,
                         pendingMessage = vm.pendingMessage,
-                        initialDraft = vm.getDraftForThread(threadId),
+                        initialDraft = draftArg.takeIf { !it.isNullOrBlank() } ?: vm.getDraftForThread(threadId),
                         isDraftsLoaded = vm.isDraftsLoaded,
                         quickReplies = vm.quickReplies,
                         onSaveDraft = { vm.saveDraft(threadId, it) },
                         onBack = { navController.popBackStack() },
                         onSend = { vm.sendDelayedMessage(it) },
-                        onSendAttachment = { uri ->
+                        onSendAttachment = { uri, mimeType ->
                             val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "image/*"
+                                type = mimeType
                                 putExtra(Intent.EXTRA_STREAM, uri)
                                 putExtra("address", address)
                                 putExtra(Intent.EXTRA_PHONE_NUMBER, address)
@@ -306,6 +333,7 @@ private fun BeaconNav(
                             navController.popBackStack()
                         },
                         onCustomize = { navController.navigate("customize?address=${Uri.encode(address)}") },
+                        onRename = { newName -> vm.renameThread(address, newName) },
                         onEditNotificationSound = { navController.navigate("notifications?address=${Uri.encode(address)}") },
                         onCall = {
                             val intent = Intent(Intent.ACTION_DIAL).apply {
@@ -371,12 +399,18 @@ private fun BeaconNav(
                     onBack = { navController.popBackStack() }
                 )
             }
-            composable("newMessage") {
+            composable(
+                route = "newMessage?initialText={initialText}",
+                arguments = listOf(navArgument("initialText") { defaultValue = "" })
+            ) { backStackEntry ->
+                val initialText = backStackEntry.arguments?.getString("initialText")?.let { Uri.decode(it) }
                 NewMessageScreen(
                     theme = themeState.global,
+                    initialMessage = initialText,
                     onBack = { navController.popBackStack() },
-                    onStartConversation = { address ->
-                        navController.navigate("thread/0/${Uri.encode(address)}") {
+                    onStartConversation = { address, msg ->
+                        val encodedMsg = Uri.encode(msg)
+                        navController.navigate("thread/0/${Uri.encode(address)}?draft=$encodedMsg") {
                             popUpTo("inbox")
                         }
                     }
@@ -486,7 +520,8 @@ private fun requiredPermissions(context: android.content.Context): List<String> 
         android.Manifest.permission.SEND_SMS,
         android.Manifest.permission.RECEIVE_MMS,
         android.Manifest.permission.RECEIVE_WAP_PUSH,
-        android.Manifest.permission.READ_CONTACTS
+        android.Manifest.permission.READ_CONTACTS,
+        android.Manifest.permission.RECORD_AUDIO
     )
     val notif =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) listOf(android.Manifest.permission.POST_NOTIFICATIONS) else emptyList()

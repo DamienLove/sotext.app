@@ -118,7 +118,14 @@ export const onThemeSubmitted = onDocumentWritten(
       const themeId = event.params.themeId;
       const db = admin.firestore();
 
-      // 1. Verify "Safe Content" and Check for Images
+      // 1. Validate Text Content (Sanity Check) - moved to top
+      if ((data.name?.length || 0) > 50) {
+        logger.warn(`Theme ${themeId} rejected: Name too long.`);
+        await snapshot.ref.delete();
+        return;
+      }
+
+      // 2. Verify "Safe Content" and Check for Images
       let hasImages = false;
       const theme = data.theme || {};
 
@@ -152,13 +159,6 @@ export const onThemeSubmitted = onDocumentWritten(
 
       if (hasImages) {
         logger.info(`Theme ${themeId} requires review (contains images).`);
-        return;
-      }
-
-      // 2. Validate Text Content (Sanity Check)
-      if ((data.name?.length || 0) > 50) {
-        logger.warn(`Theme ${themeId} rejected: Name too long.`);
-        await snapshot.ref.delete();
         return;
       }
 

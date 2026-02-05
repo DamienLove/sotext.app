@@ -1,5 +1,6 @@
 import {onThemeSubmitted} from "./themes";
 import * as admin from "firebase-admin";
+import {MAX_URL_LENGTH} from "./security";
 
 // --- Mocks Setup ---
 
@@ -152,6 +153,42 @@ describe("onThemeSubmitted Security", () => {
     await (onThemeSubmitted as any)(event);
 
     // Should delete the submission (reject) immediately
+    expect(deleteMock).toHaveBeenCalled();
+    // Should NOT approve
+    expect(setMock).not.toHaveBeenCalled();
+  });
+
+  it("should REJECT themes with long names even if they have images", async () => {
+    const longNameTheme = {
+      name: "A".repeat(51), // Too long
+      status: "pending",
+      theme: {
+        backgroundImageUrl: "https://example.com/bg.png", // Has image
+      },
+    };
+    const event = createEvent(longNameTheme);
+
+    await (onThemeSubmitted as any)(event);
+
+    // Should delete (reject)
+    expect(deleteMock).toHaveBeenCalled();
+    // Should NOT approve
+    expect(setMock).not.toHaveBeenCalled();
+  });
+
+  it("should REJECT themes with excessively long background URLs", async () => {
+    const longUrlTheme = {
+      name: "Valid Name",
+      status: "pending",
+      theme: {
+        backgroundImageUrl: "https://example.com/" + "a".repeat(MAX_URL_LENGTH),
+      },
+    };
+    const event = createEvent(longUrlTheme);
+
+    await (onThemeSubmitted as any)(event);
+
+    // Should delete (reject)
     expect(deleteMock).toHaveBeenCalled();
     // Should NOT approve
     expect(setMock).not.toHaveBeenCalled();

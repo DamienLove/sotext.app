@@ -109,6 +109,8 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var currentAddress by mutableStateOf("")
         private set
+    var currentDisplayName by mutableStateOf("")
+        private set
     var searchState: SearchResultState by mutableStateOf(SearchResultState.Idle)
         private set
     var isLoading by mutableStateOf(true)
@@ -261,6 +263,9 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     val isArchived = inboxState.archivedThreadIds.contains(thread.threadId)
                     val draft = draftsMap[thread.threadId]
 
+                    val customName = inboxState.customNames[thread.address]
+                    val effectiveDisplayName = customName ?: thread.displayName
+
                     // Calculate effective timestamp (max of thread or draft)
                     // If we have a draft that is newer than the thread timestamp, use it.
                     val effectiveTimestamp = if (draft != null && draft.timestamp > thread.timestamp) {
@@ -273,9 +278,11 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
                     if (isPinned != thread.isPinned ||
                         isArchived != thread.isArchived ||
                         draft?.body != thread.draftSnippet ||
-                        effectiveTimestamp != thread.timestamp
+                        effectiveTimestamp != thread.timestamp ||
+                        effectiveDisplayName != thread.displayName
                     ) {
                         thread.copy(
+                            displayName = effectiveDisplayName,
                             isPinned = isPinned,
                             isArchived = isArchived,
                             draftSnippet = draft?.body,
@@ -293,6 +300,16 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
             withContext(Dispatchers.Main) {
                 threads = merged
+                // Update current display name
+                if (currentAddress.isNotBlank()) {
+                     val custom = inboxState.customNames[currentAddress]
+                     if (custom != null) {
+                         currentDisplayName = custom
+                     } else {
+                         val item = merged.find { it.address == currentAddress }
+                         currentDisplayName = item?.displayName ?: currentAddress
+                     }
+                }
             }
             updateFilteredList()
         }
@@ -503,6 +520,7 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
         if (threadId == 0L && !address.isNullOrBlank()) {
             currentThreadId = 0L
             currentAddress = address
+            currentDisplayName = inboxState.customNames[address] ?: address
             rawMessages = emptyList()
             uiMessages = emptyList()
             return
@@ -510,7 +528,24 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
 
         currentThreadId = threadId
         currentAddress = address
+
+        // Derive display name
+        val custom = inboxState.customNames[address]
+        if (custom != null) {
+            currentDisplayName = custom
+        } else {
+            // Try to find in loaded threads
+            val existing = rawThreads.find { it.threadId == threadId }
+            currentDisplayName = existing?.displayName ?: address
+        }
+
         refreshThread(threadId, refreshRead = true)
+    }
+
+    fun renameThread(address: String, newName: String) {
+        viewModelScope.launch {
+            inboxPrefs.setCustomName(address, newName)
+        }
     }
 
     private fun refreshThread(threadId: Long, refreshRead: Boolean) {

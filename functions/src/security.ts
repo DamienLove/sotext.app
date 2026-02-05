@@ -47,6 +47,8 @@ export function sanitizeScalar(unsafe: string | null | undefined): string {
   return unsafe.replace(/[\r\n\x00-\x1F\x7F]+/g, " ").trim();
 }
 
+export const MAX_URL_LENGTH = 2048;
+
 /**
  * Validates that a string is a secure URL (http or https).
  *
@@ -54,6 +56,9 @@ export function sanitizeScalar(unsafe: string | null | undefined): string {
  * @return {boolean} True if the string is a valid http/https URL.
  */
 export function isValidUrl(url: string): boolean {
+  if (!url || url.length > MAX_URL_LENGTH) {
+    return false;
+  }
   try {
     const parsed = new URL(url);
     return parsed.protocol === "http:" || parsed.protocol === "https:";

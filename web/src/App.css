@@ -879,6 +879,7 @@ textarea:focus-visible,
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px 14px;
+  cursor: text;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1075,6 +1076,14 @@ textarea:focus-visible,
   top: 0; left: -100%; width: 50%; height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
   animation: shimmer 1.5s infinite;
+}
+
+.message.sent .message-bubble.skeleton-message,
+.message.received .message-bubble.skeleton-message {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: transparent;
 }
 
 .chat-header {
@@ -1874,8 +1883,15 @@ textarea:focus-visible,
 .holographic-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(0, 255, 255, 0.4);
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2), inset 0 0 30px rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 243, 255, 0.5);
+  box-shadow: 0 0 25px rgba(0, 243, 255, 0.25), inset 0 0 30px rgba(0, 243, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.holographic-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 40px rgba(0, 243, 255, 0.5), inset 0 0 50px rgba(0, 243, 255, 0.2);
+  transform: translateY(-5px);
 }
 
 .holographic-card::before {
@@ -2061,4 +2077,92 @@ textarea:focus-visible,
 @keyframes slideDownFade {
   from { opacity: 0; transform: translateY(-20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --- Future Deep v9 Extensions --- */
+
+@keyframes scanline-scroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(0.95); }
+}
+
+.pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+.status-pill {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 243, 255, 0.1);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 0 10px var(--accent-glow);
+  z-index: 5;
+  backdrop-filter: blur(4px);
+}
+
+.badge-premium-gold {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #000;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.75em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid #fff;
+}
+
+.visualizer {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 24px;
+  margin-left: 16px;
+}
+
+.visualizer-bar {
+  width: 4px;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: visualizer-bounce 1s ease-in-out infinite alternate;
+}
+
+.visualizer-bar:nth-child(odd) {
+  background: var(--secondary);
+  animation-duration: 0.8s;
+}
+
+.visualizer-bar:nth-child(2n) { animation-delay: 0.1s; }
+.visualizer-bar:nth-child(3n) { animation-delay: 0.2s; }
+.visualizer-bar:nth-child(4n) { animation-delay: 0.3s; }
+
+@keyframes visualizer-bounce {
+  0% { height: 4px; opacity: 0.5; }
+  100% { height: 100%; opacity: 1; box-shadow: 0 0 8px var(--accent); }
+}
+
+.song-rank {
+  font-family: var(--font-mono);
+  font-size: 1.2em;
+  font-weight: 700;
+  color: var(--muted);
+  opacity: 0.5;
+  width: 30px;
+  text-align: center;
+  margin-right: 12px;
 }

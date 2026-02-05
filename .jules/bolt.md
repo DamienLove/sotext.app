@@ -9,3 +9,7 @@
 ## 2024-05-27 - Array Allocation in Render Loops
 **Learning:** `[...a, ...b].filter(Boolean).join(' • ')` is a common pattern for joining strings with separators, but it creates multiple intermediate arrays (spread, filter result) on every render.
 **Action:** For simple string joining in hot paths (like list items), use imperative string concatenation or template literals to avoid unnecessary object allocation.
+
+## 2024-05-28 - Date Allocation in Render Loops
+**Learning:** `new Date()` allocation in hot render loops (like message lists) can be avoided by passing timestamps directly to `Intl.DateTimeFormat.format()`.
+**Action:** Always check if formatting functions accept primitives before wrapping them in objects inside `render` or `map`.

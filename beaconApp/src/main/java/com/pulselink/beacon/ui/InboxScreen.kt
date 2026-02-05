@@ -161,14 +161,28 @@ fun InboxScreen(
     onUpdateQuickReplies: (List<String>) -> Unit = {},
     autoDeleteOtps: Boolean = false,
     onSetAutoDeleteOtps: (Boolean) -> Unit = {},
-    onAvatarClick: (String) -> Unit = {}
+    onAvatarClick: (String) -> Unit = {},
+    onRename: (String, String) -> Unit = { _, _ -> }
 ) {
     val host = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var navigatedFromSearch by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showQuickRepliesDialog by remember { mutableStateOf(false) }
+    var renamingThread by remember { mutableStateOf<SmsThreadItem?>(null) }
     val iconTint = theme.accentColor
+
+    if (renamingThread != null) {
+        RenameDialog(
+            currentName = renamingThread!!.displayName,
+            theme = theme,
+            onDismiss = { renamingThread = null },
+            onConfirm = { newName ->
+                onRename(renamingThread!!.address, newName)
+                renamingThread = null
+            }
+        )
+    }
 
     LaunchedEffect(userMessage) {
         userMessage?.let {
@@ -650,6 +664,7 @@ fun InboxScreen(
                                         onClick = { onOpenThread(item.threadId, item.address) },
                                         onDelete = { onDeleteThread(item.threadId) },
                                         onTogglePin = { onTogglePin(item.threadId) },
+                                        onRenameClick = { renamingThread = item },
                                         onToggleArchive = { onToggleArchive(item.threadId) },
                                         onMarkAsUnread = { onMarkAsUnread(item.threadId) },
                                         onLongClick = { onToggleSelection(item.threadId) },
@@ -1011,6 +1026,7 @@ private fun SwipeableThreadRow(
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onTogglePin: () -> Unit,
+    onRenameClick: () -> Unit = {},
     onToggleArchive: () -> Unit,
     onMarkAsUnread: () -> Unit,
     onLongClick: () -> Unit,
@@ -1049,6 +1065,7 @@ private fun SwipeableThreadRow(
                 onClick = onClick,
                 onDelete = onDelete,
                 onTogglePin = onTogglePin,
+                onRenameClick = onRenameClick,
                 onToggleArchive = onToggleArchive,
                 onMarkAsUnread = onMarkAsUnread,
                 onLongClick = onLongClick,
@@ -1070,6 +1087,7 @@ private fun ThreadRow(
     onClick: () -> Unit,
     onDelete: () -> Unit = {},
     onTogglePin: () -> Unit = {},
+    onRenameClick: () -> Unit = {},
     onToggleArchive: () -> Unit = {},
     onMarkAsUnread: () -> Unit = {},
     onLongClick: () -> Unit = {},
@@ -1111,7 +1129,7 @@ private fun ThreadRow(
                         }
                     }
                 } else {
-                    LetterAvatar(name = thread.address, theme = theme, size = 52.dp)
+                    LetterAvatar(name = thread.displayName, theme = theme, size = 52.dp)
                 }
 
                 if (thread.isPinned && !isSelected) {
@@ -1142,6 +1160,7 @@ private fun ThreadRow(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
+                        DropdownMenuItem(text = { Text("Rename") }, onClick = { onRenameClick(); showMenu = false })
                         DropdownMenuItem(text = { Text(if (thread.isPinned) "Unpin" else "Pin") }, onClick = { onTogglePin(); showMenu = false })
                         DropdownMenuItem(text = { Text(if (thread.isArchived) "Unarchive" else "Archive") }, onClick = { onToggleArchive(); showMenu = false })
                         DropdownMenuItem(text = { Text("Delete") }, onClick = { onDelete(); showMenu = false })
@@ -1150,7 +1169,7 @@ private fun ThreadRow(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = thread.address.ifBlank { "Unknown" },
+                        text = thread.displayName.ifBlank { "Unknown" },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = if (thread.unread) FontWeight.ExtraBold else FontWeight.SemiBold,
                         color = if (thread.unread) theme.frameColor else theme.frameColor.copy(alpha = 0.9f),

@@ -22,3 +22,7 @@
 ## 2024-05-28 - Image Load Error Fallbacks
 **Learning:** User-provided URLs for avatars often break (404s), resulting in ugly browser-default broken image icons that degrade perceived app quality. Relying solely on "if URL exists" logic is insufficient.
 **Action:** Implemented a `useState` + `onError` handler pattern in the `Avatar` component to detect load failures and automatically revert to the deterministic initial fallback, maintaining UI elegance even with bad data.
+
+## 2024-05-29 - Color Input Usability
+**Learning:** `input type="color"` is widely supported but offers poor usability for power users who need exact values (copy/paste). Combining it with a synchronized text input bridges the gap between visual selection and precise data entry.
+**Action:** Created a reusable `ColorInput` component to standardize this pattern across the app.

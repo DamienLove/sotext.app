@@ -3,6 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' https://maps.googleapis.com https://www.gstatic.com https://apis.google.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      img-src 'self' data: https:;
+      connect-src 'self' https://identitytoolkit.googleapis.com https://firestore.googleapis.com https://www.googleapis.com https://securetoken.googleapis.com https://maps.googleapis.com https://api.spotify.com https://us-central1-pulselink-24899.cloudfunctions.net ws://localhost:* https://*.firebaseio.com;
+      frame-src https://pulselink-24899.firebaseapp.com https://accounts.google.com;
+      object-src 'none';
+      base-uri 'self';
+    ">
     <title>PulseLink Suite Command Center</title>
   </head>
   <body>

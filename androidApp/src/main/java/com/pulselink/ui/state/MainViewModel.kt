@@ -1484,12 +1484,18 @@ class MainViewModel @Inject constructor(
         val model = Build.MODEL.orEmpty()
         val osVersion = Build.VERSION.RELEASE ?: "unknown"
         val apiLevel = Build.VERSION.SDK_INT
+        val density = context.resources.displayMetrics.density
+        val locale = context.resources.configuration.locales[0]
 
         return buildString {
             appendLine("App Version: $versionName ($versionCode)")
-            appendLine("Build Flavor: ${if (BuildConfig.PREMIUM_FEATURES) "Premium" else if (BuildConfig.PRO_FEATURES) "Pro" else "Free"}")
+            appendLine("Flavor: ${BuildConfig.FLAVOR}")
+            appendLine("Build Type: ${BuildConfig.BUILD_TYPE}")
+            appendLine("Feature Level: ${if (BuildConfig.PREMIUM_FEATURES) "Premium" else if (BuildConfig.PRO_FEATURES) "Pro" else "Free"}")
             appendLine("Device: $manufacturer $model")
             appendLine("OS: Android $osVersion (API $apiLevel)")
+            appendLine("Density: $density")
+            appendLine("Locale: $locale")
         }
     }
 
@@ -1521,6 +1527,7 @@ class MainViewModel @Inject constructor(
         // Direct to GitHub issue form so users land on the correct bug report page.
         return Uri.parse(BUG_REPORT_PAGE_URL)
             .buildUpon()
+            .appendQueryParameter("template", "bug_report.md")
             .appendQueryParameter("title", subjectSuffix)
             .appendQueryParameter("body", formattedBody)
             .build()
@@ -1845,7 +1852,7 @@ class MainViewModel @Inject constructor(
         private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
         private const val COLLECTION_USERS = "users"
         private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
-        const val BUG_REPORT_PAGE_URL = "https://github.com/DamienLove/pulselink/issues/new"
+        const val BUG_REPORT_PAGE_URL = "https://github.com/DamienLove/pulselink/issues/new?template=bug_report.md"
     }
 }
 

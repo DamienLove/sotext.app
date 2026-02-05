@@ -60,4 +60,22 @@ test.describe('Palette UX Enhancements', () => {
     await expect(hint).toHaveText('/');
     await expect(hint).toHaveAttribute('aria-hidden', 'true');
   });
+
+  test('Avatar should have accessible text contrast', async ({ page }) => {
+    // Go to PulseLink (Profile) panel
+    await page.locator('.nav-item[title="PulseLink"]').click();
+
+    // Type "Alice" (Light Background -> Black Text)
+    const nameInput = page.locator('label:has-text("Display name") input');
+    await nameInput.fill('Alice');
+
+    const avatar = page.locator('.profile-avatar-preview .profile-avatar-img');
+    // We expect color to be black (rgb(0, 0, 0))
+    await expect(avatar).toHaveCSS('color', 'rgb(0, 0, 0)');
+
+    // Type "Bob" (Dark Background -> White Text)
+    await nameInput.fill('Bob');
+    // We expect color to be white (rgb(255, 255, 255))
+    await expect(avatar).toHaveCSS('color', 'rgb(255, 255, 255)');
+  });
 });

@@ -45,3 +45,6 @@ enum class EscalationTier { EMERGENCY, CHECK_IN }
 
 @Serializable
 enum class RemotePresence { ONLINE, RECENT, OFFLINE, STALE, UNKNOWN }
+
+fun Contact.primaryPhone(): String? =
+    (listOf(phoneNumber) + additionalPhones).firstOrNull { it.isNotBlank() }

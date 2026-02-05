@@ -71,6 +71,7 @@ android {
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.04.01"))
     implementation("androidx.core:core-ktx:1.13.1")
+    implementation("com.google.android.material:material:1.13.0")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
@@ -90,6 +91,7 @@ dependencies {
 
     implementation(project(":shared"))
 
+    implementation("com.google.android.material:material:1.12.0")
     implementation("com.google.android.gms:play-services-ads:22.6.0")
 
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))

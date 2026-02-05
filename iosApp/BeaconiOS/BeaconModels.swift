@@ -33,6 +33,7 @@ struct BeaconConversationMessage: Identifiable {
     let id = UUID()
     let sender: String
     let text: String
+    let attachmentUrl: String?
     let timestamp: Date
     let isIncoming: Bool
     let isUrgent: Bool

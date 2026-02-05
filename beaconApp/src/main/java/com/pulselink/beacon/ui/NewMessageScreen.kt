@@ -17,12 +17,13 @@ import com.pulselink.beacon.ui.theme.ThemePalette
 @Composable
 fun NewMessageScreen(
     theme: ThemePalette,
+    initialMessage: String? = null,
     onBack: () -> Unit,
-    onStartConversation: (String) -> Unit,
+    onStartConversation: (String, String) -> Unit,
 ) {
     var phoneNumber by remember { mutableStateOf("") }
     val isValid = phoneNumber.isNotBlank()
-        var messageText by remember { mutableStateOf("") }
+    var messageText by remember { mutableStateOf(initialMessage ?: "") }
 
     Scaffold(
         topBar = {
@@ -45,7 +46,7 @@ fun NewMessageScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { onStartConversation(phoneNumber.trim()) },
+                onClick = { onStartConversation(phoneNumber.trim(), messageText.trim()) },
                 containerColor = theme.accentColor,
                 enabled = isValid
             ) {
@@ -84,21 +85,21 @@ fun NewMessageScreen(
                 )
             )
 
-                            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                                            OutlinedTextField(
-                                                                    value = messageText,
-                                                                                        onValueChange = { messageText = it },
-                                                                                                            modifier = Modifier.fillMaxWidth(),
-                                                                                                                                label = { Text("Message") },
-                                                                                                                                                    placeholder = { Text("Enter message") },
-                                                                                                                                                                        minLines = 3,
-                                                                                                                                                                                            maxLines = 5,
-                                                                                                                                                                                                                colors = OutlinedTextFieldDefaults.colors(
-                                                                                                                                                                                                                                            focusedBorderColor = theme.accentColor,
-                                                                                                                                                                                                                                                                    cursorColor = theme.accentColor
-                                                                                                                                                                                                                                                                                        )
-                                                                                                                                                                                                                                                                                                        )
+            OutlinedTextField(
+                value = messageText,
+                onValueChange = { messageText = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Message") },
+                placeholder = { Text("Enter message") },
+                minLines = 3,
+                maxLines = 5,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = theme.accentColor,
+                    cursorColor = theme.accentColor
+                )
+            )
         }
     }
 }

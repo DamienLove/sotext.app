@@ -90,6 +90,7 @@ private struct HomeTab: View {
                             .clipShape(Capsule())
                     }
 
+                    checkInCard
                     relayCard
                     overrideCard
                     activityCard
@@ -186,6 +187,30 @@ private struct HomeTab: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    private var checkInCard: some View {
+        Card {
+            HStack {
+                Text("Check In")
+                    .font(.headline)
+                Spacer()
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+            }
+            Button {
+                Task { await viewModel.sendCheckIn() }
+            } label: {
+                Label("I'm OK", systemImage: "checkmark")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+
+            Text("Sends a check-in alert to your trusted contacts.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -339,11 +364,24 @@ private struct ConversationView: View {
                             HStack {
                                 if msg.isIncoming { Spacer() }
                                 VStack(alignment: .leading, spacing: 6) {
-                                    Text(msg.text)
-                                        .padding(12)
-                                        .background(msg.isUrgent ? Color.red.opacity(0.15) : Color(.secondarySystemBackground))
-                                        .foregroundStyle(msg.isUrgent ? .red : .primary)
+                                    if let url = msg.attachmentUrl, let imageUrl = URL(string: url) {
+                                        AsyncImage(url: imageUrl) { image in
+                                            image
+                                                .resizable()
+                                                .scaledToFit()
+                                        } placeholder: {
+                                            ProgressView()
+                                        }
+                                        .frame(maxHeight: 200)
                                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    }
+                                    if !msg.text.isEmpty {
+                                        Text(msg.text)
+                                            .padding(12)
+                                            .background(msg.isUrgent ? Color.red.opacity(0.15) : Color(.secondarySystemBackground))
+                                            .foregroundStyle(msg.isUrgent ? .red : .primary)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    }
                                     Text(msg.timestamp, style: .time)
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)

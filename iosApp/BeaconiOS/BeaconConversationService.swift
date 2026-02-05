@@ -60,8 +60,8 @@ final class MockBeaconConversationProvider: BeaconConversationProvider {
         let c2 = BeaconContactCard(threadId: "2", name: "Morgan Lee", address: "5559876543", role: "Family", presence: .recent, unread: 0, isFavorite: false, isPrivate: true, isTrusted: true, isArchived: false, isPinned: false, timestamp: Date().addingTimeInterval(-3600))
 
         store[c1] = [
-            BeaconConversationMessage(sender: "Alex", text: "Hey, how are you?", timestamp: Date().addingTimeInterval(-3600), isIncoming: true, isUrgent: false),
-            BeaconConversationMessage(sender: "You", text: "I'm good!", timestamp: Date().addingTimeInterval(-3500), isIncoming: false, isUrgent: false)
+            BeaconConversationMessage(sender: "Alex", text: "Hey, how are you?", attachmentUrl: nil, timestamp: Date().addingTimeInterval(-3600), isIncoming: true, isUrgent: false),
+            BeaconConversationMessage(sender: "You", text: "I'm good!", attachmentUrl: nil, timestamp: Date().addingTimeInterval(-3500), isIncoming: false, isUrgent: false)
         ]
         store[c2] = []
     }
@@ -253,6 +253,7 @@ final class FirestoreBeaconConversationProvider: BeaconConversationProvider {
                     return BeaconConversationMessage(
                         sender: type == 1 ? contact.address : "You",
                         text: data["body"] as? String ?? "",
+                        attachmentUrl: data["attachmentUrl"] as? String,
                         timestamp: date,
                         isIncoming: type == 1,
                         isUrgent: false

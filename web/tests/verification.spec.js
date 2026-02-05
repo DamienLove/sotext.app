@@ -7,7 +7,7 @@ test('Full Verification Suite', async ({ page }) => {
     await page.goto('/');
 
     // Wait for App to initialize
-    await page.waitForLoadState('networkidle');
+    await page.waitForFunction(() => window.debugSetUser !== undefined);
 
     // Inject Mock User
     await page.evaluate(() => {
@@ -27,7 +27,10 @@ test('Full Verification Suite', async ({ page }) => {
         mapEnabled: true,
         contactsEnabled: true,
         themesEnabled: true,
-        ringerSongEnabled: true
+        ringerSongEnabled: true,
+        pulseLinkEnabled: true,
+        commandPaletteEnabled: true,
+        beaconLauncherEnabled: true
       };
 
       // Inject Mock User Data (Settings)
