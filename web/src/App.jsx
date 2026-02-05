@@ -2654,13 +2654,16 @@ function App() {
     // Bolt: Mock user support for Playwright testing
     const params = new URLSearchParams(window.location.search);
     if (params.get('mock_user') === 'true') {
+      const mockTier = params.get('mock_tier') || 'premium';
+      const isPremiumMock = mockTier === 'premium';
+
       const mockUser = {
         uid: 'mock_user_123',
         email: 'test@example.com',
         displayName: 'Test User',
         phoneNumber: '+15550101010',
         getIdTokenResult: async () => ({
-          claims: { premium: true, pro: true }
+          claims: { premium: isPremiumMock, pro: isPremiumMock }
         })
       };
 
@@ -2670,15 +2673,15 @@ function App() {
 
       // Inject mock data to ensure UI elements render without Firestore
       setUserData({
-        subscriptionStatus: 'premium',
-        premiumSubscriptionStatus: 'SUBSCRIPTION_STATE_ACTIVE',
-        remoteWebAccessEnabled: true,
-        premiumUnlocked: true,
-        proUnlocked: true
+        subscriptionStatus: mockTier,
+        premiumSubscriptionStatus: isPremiumMock ? 'SUBSCRIPTION_STATE_ACTIVE' : 'SUBSCRIPTION_STATE_EXPIRED',
+        remoteWebAccessEnabled: isPremiumMock,
+        premiumUnlocked: isPremiumMock,
+        proUnlocked: isPremiumMock
       });
 
       setRemoteSettings({
-        remoteWebAccessEnabled: true,
+        remoteWebAccessEnabled: isPremiumMock,
         autoUpdateContactInfo: true,
         timeFormat: 'AUTO',
         thirdPartyExtensionsEnabled: true,
@@ -2700,8 +2703,13 @@ function App() {
         commandPaletteEnabled: true
       });
 
-      setLines([{ id: 'line_1', label: 'My Pixel', phoneNumber: '+15551234567', primaryDeviceId: 'device_1' }]);
-      setLegacyThreads([{ id: 'thread_1', address: '+15559998888', display_name: 'Test Contact', date: Date.now(), snippet: 'Hello World', pinned: false, archived: false }]);
+      if (isPremiumMock) {
+        setLines([{ id: 'line_1', label: 'My Pixel', phoneNumber: '+15551234567', primaryDeviceId: 'device_1' }]);
+        setLegacyThreads([{ id: 'thread_1', address: '+15559998888', display_name: 'Test Contact', date: Date.now(), snippet: 'Hello World', pinned: false, archived: false }]);
+      } else {
+        setLines([]);
+        setLegacyThreads([]);
+      }
       setTrustedContacts([{ id: 'contact_1', displayName: 'Mom', phoneNumber: '+15551112222', contactOrder: 0 }]);
       setDeviceContacts([{ id: 'dev_1', displayName: 'Alice', phoneNumber: '+15553334444' }]);
 
