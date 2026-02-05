@@ -7,7 +7,41 @@ if (admin.apps.length === 0) {
 
 const db = admin.firestore();
 
-export const findUser = functions.https.onCall(async (data, context) => {
+// Sentinel: Rate limit check to prevent user enumeration
+async function checkUserLookupRateLimit(uid: string): Promise<void> {
+  const MAX_LOOKUPS_PER_HOUR = 30;
+  const now = admin.firestore.Timestamp.now();
+  const oneHourAgo = admin.firestore.Timestamp.fromMillis(
+      now.toMillis() - 60 * 60 * 1000,
+  );
+
+  const lookupsRef = db.collection("rate_limits")
+      .doc(uid)
+      .collection("user_lookups");
+
+  const recentLookups = await lookupsRef
+      .where("timestamp", ">", oneHourAgo)
+      .count()
+      .get();
+
+  if (recentLookups.data().count >= MAX_LOOKUPS_PER_HOUR) {
+    throw new functions.https.HttpsError(
+        "resource-exhausted",
+        "Hourly user lookup limit reached.",
+    );
+  }
+
+  // Log this lookup attempt
+  await lookupsRef.add({
+    timestamp: now,
+  });
+}
+
+export const findUserHandler = async (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    data: any,
+    context: functions.https.CallableContext,
+) => {
   // Auth check
   if (!context.auth) {
     throw new functions.https.HttpsError(
@@ -15,6 +49,9 @@ export const findUser = functions.https.onCall(async (data, context) => {
         "User must be logged in.",
     );
   }
+
+  // Sentinel: Enforce rate limit
+  await checkUserLookupRateLimit(context.auth.uid);
 
   const {phoneNumber, email} = data;
   if (!phoneNumber && !email) {
@@ -89,11 +126,16 @@ export const findUser = functions.https.onCall(async (data, context) => {
     console.error("Error finding user", error);
     return {found: false};
   }
-});
+};
+
+export const findUser = functions.https.onCall(findUserHandler);
 
 export const deleteAccount = functions.https.onCall(async (_data, context) => {
   if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "User must be logged in.");
+    throw new functions.https.HttpsError(
+        "unauthenticated",
+        "User must be logged in.",
+    );
   }
 
   const uid = context.auth.uid;
@@ -103,7 +145,9 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
   try {
     const userDocRef = db.collection("users").doc(uid);
     const userSnap = await userDocRef.get();
-    const deviceId = userSnap.exists ? (userSnap.data()?.deviceId as string | undefined) : undefined;
+    const deviceId = userSnap.exists ?
+        (userSnap.data()?.deviceId as string | undefined) :
+        undefined;
 
     // Delete user profile + subcollections
     await db.recursiveDelete(userDocRef);
@@ -122,7 +166,9 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
       }
     };
 
-    const deviceQuery = await db.collection("devices").where("uid", "==", uid).get();
+    const deviceQuery = await db.collection("devices")
+        .where("uid", "==", uid)
+        .get();
     deviceQuery.forEach((doc) => queueDelete(doc.ref));
     if (deviceId) {
       queueDelete(db.collection("devices").doc(deviceId));
@@ -134,13 +180,18 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
 
     // Delete beta agreement tied to device ID (if present)
     if (deviceId) {
-      await db.collection("betaAgreements").doc(deviceId).delete().catch(() => undefined);
+      await db.collection("betaAgreements")
+          .doc(deviceId)
+          .delete()
+          .catch(() => undefined);
     }
 
     // Delete link invites sent by or targeted to the user
     const inviteDeletes: Promise<FirebaseFirestore.WriteResult>[] = [];
     const inviteCollection = db.collection("linkEmailInvites");
-    const senderInvites = await inviteCollection.where("senderUid", "==", uid).get();
+    const senderInvites = await inviteCollection
+        .where("senderUid", "==", uid)
+        .get();
     senderInvites.forEach((doc) => inviteDeletes.push(doc.ref.delete()));
     if (email) {
       const targetInvites = await inviteCollection
@@ -151,7 +202,9 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
     await Promise.all(inviteDeletes);
 
     // Delete link docs containing this uid
-    const linksSnap = await db.collection("links").where("uids", "array-contains", uid).get();
+    const linksSnap = await db.collection("links")
+        .where("uids", "array-contains", uid)
+        .get();
     const linkDeletes = linksSnap.docs.map((doc) => doc.ref.delete());
     await Promise.all(linkDeletes);
 
@@ -159,6 +212,7 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
     await admin.auth().deleteUser(uid);
 
     return {success: true};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("Account deletion failed", error);
     throw new functions.https.HttpsError(
