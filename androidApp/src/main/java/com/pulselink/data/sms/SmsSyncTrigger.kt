@@ -35,8 +35,10 @@ class SmsSyncTrigger @Inject constructor(
 
         val syncRequest = builder.build()
 
+        val uniqueWorkName = if (threadId != null) "SmsSyncThread_$threadId" else "SmsSyncFull"
+
         WorkManager.getInstance(context).enqueueUniqueWork(
-            "SmsSyncOnDemand",
+            uniqueWorkName,
             ExistingWorkPolicy.APPEND_OR_REPLACE,
             syncRequest
         )
