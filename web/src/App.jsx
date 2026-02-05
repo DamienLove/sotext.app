@@ -1863,26 +1863,30 @@ const Sidebar = memo(({
           <HomeIcon />
           <span>Home</span>
         </button>
-        <button
-          className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
-          onClick={() => setActivePanel('pulselink')}
-          title="PulseLink"
-          aria-label="PulseLink"
-          aria-current={activePanel === 'pulselink' ? 'page' : undefined}
-        >
-          <img src={logo} alt="PulseLink" />
-          <span>PulseLink</span>
-        </button>
-        <button
-          className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-          onClick={() => setActivePanel('beacon')}
-          title="Beacon"
-          aria-label="Beacon"
-          aria-current={activePanel === 'beacon' ? 'page' : undefined}
-        >
-          <img src={beaconLogo} alt="Beacon" />
-          <span>Beacon</span>
-        </button>
+        {remoteSettings.pulseLinkEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
+            onClick={() => setActivePanel('pulselink')}
+            title="PulseLink"
+            aria-label="PulseLink"
+            aria-current={activePanel === 'pulselink' ? 'page' : undefined}
+          >
+            <img src={logo} alt="PulseLink" />
+            <span>PulseLink</span>
+          </button>
+        )}
+        {remoteSettings.beaconLauncherEnabled && (
+          <button
+            className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
+            onClick={() => setActivePanel('beacon')}
+            title="Beacon"
+            aria-label="Beacon"
+            aria-current={activePanel === 'beacon' ? 'page' : undefined}
+          >
+            <img src={beaconLogo} alt="Beacon" />
+            <span>Beacon</span>
+          </button>
+        )}
         {remoteSettings.ringerSongEnabled && (
           <button
             className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
@@ -2220,7 +2224,7 @@ function App() {
     autoUpdateContactInfo: true,
     timeFormat: 'AUTO',
     thirdPartyExtensionsEnabled: true,
-    beaconLauncherEnabled: false,
+    beaconLauncherEnabled: true,
     otpCleanupEnabled: false,
     emailFallbackEnabled: false,
     crashDetectionEnabled: false,
@@ -2233,7 +2237,9 @@ function App() {
     ringerSongEnabled: true,
     mapEnabled: true,
     contactsEnabled: true,
-    themesEnabled: true
+    themesEnabled: true,
+    pulseLinkEnabled: true,
+    commandPaletteEnabled: true
   });
   const [devExtensions, setDevExtensions] = useState(() => {
     const saved = localStorage.getItem('pulselink.devExtensions');
@@ -2361,14 +2367,14 @@ function App() {
       if (e.ctrlKey && e.shiftKey && e.key === 'D') {
         setShowDevTools(prev => !prev);
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if (remoteSettings.commandPaletteEnabled && (e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         setShowCommandPalette(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [remoteSettings.commandPaletteEnabled]);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
@@ -2593,7 +2599,9 @@ function App() {
         ringerSongEnabled: true,
         mapEnabled: true,
         contactsEnabled: true,
-        themesEnabled: true
+        themesEnabled: true,
+        pulseLinkEnabled: true,
+        commandPaletteEnabled: true
       });
 
       setLines([{ id: 'line_1', label: 'My Pixel', phoneNumber: '+15551234567', primaryDeviceId: 'device_1' }]);
@@ -2667,7 +2675,7 @@ function App() {
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
         thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true,
-        beaconLauncherEnabled: data.beaconLauncherEnabled ?? false,
+        beaconLauncherEnabled: data.beaconLauncherEnabled ?? true,
         otpCleanupEnabled: data.otpCleanupEnabled ?? false,
         emailFallbackEnabled: data.emailFallbackEnabled ?? false,
         crashDetectionEnabled: data.crashDetectionEnabled ?? false,
@@ -2680,7 +2688,9 @@ function App() {
         ringerSongEnabled: data.ringerSongEnabled ?? true,
         mapEnabled: data.mapEnabled ?? true,
         contactsEnabled: data.contactsEnabled ?? true,
-        themesEnabled: data.themesEnabled ?? true
+        themesEnabled: data.themesEnabled ?? true,
+        pulseLinkEnabled: data.pulseLinkEnabled ?? true,
+        commandPaletteEnabled: data.commandPaletteEnabled ?? true
       });
       if (data.lineInboxMode) setLineInboxMode(data.lineInboxMode);
       if (data.activeLineId) setActiveLineId(data.activeLineId);
@@ -3621,6 +3631,8 @@ function App() {
       newSettings.mapEnabled = true; // Safety core
       newSettings.contactsEnabled = true;
       newSettings.themesEnabled = false;
+      newSettings.pulseLinkEnabled = true;
+      newSettings.commandPaletteEnabled = false;
     } else if (isPower) {
       newSettings.beaconLauncherEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
@@ -3638,6 +3650,8 @@ function App() {
       newSettings.mapEnabled = true;
       newSettings.contactsEnabled = true;
       newSettings.themesEnabled = true;
+      newSettings.pulseLinkEnabled = true;
+      newSettings.commandPaletteEnabled = true;
     }
 
     setRemoteSettings(newSettings);
@@ -4885,7 +4899,8 @@ function App() {
                 {
                   title: "Core",
                   items: [
-                    { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon for quick access to your SMS inbox.', icon: beaconLogo, isImg: true },
+                    { id: 'pulseLinkEnabled', name: 'PulseLink Manager', desc: 'Manage your public profile and trusted contacts.', icon: logo, isImg: true },
+                    { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon and sidebar tab for your SMS inbox.', icon: beaconLogo, isImg: true },
                     { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> }
                   ]
                 },
@@ -4911,7 +4926,8 @@ function App() {
                   items: [
                     { id: 'smartRepliesEnabled', name: 'Smart Replies', desc: 'One-tap suggestion chips for incoming messages.', icon: <MessageSquareIcon /> },
                     { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
-                    { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true }
+                    { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true },
+                    { id: 'commandPaletteEnabled', name: 'Command Palette', desc: 'Quickly access features with Ctrl+K.', icon: <SearchIcon /> }
                   ]
                 },
                 {
