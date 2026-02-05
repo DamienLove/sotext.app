@@ -2,7 +2,9 @@ import Foundation
 #if canImport(FirebaseFirestore)
 import FirebaseFirestore
 import FirebaseAuth
+#if canImport(FirebaseMessaging)
 import FirebaseMessaging
+#endif
 import UIKit
 #endif
 
@@ -31,7 +33,10 @@ final class DeviceManager {
             return
         }
 
-        let token = try? await Messaging.messaging().token()
+        var token: String?
+        #if canImport(FirebaseMessaging)
+        token = try? await Messaging.messaging().token()
+        #endif
 
         let db = Firestore.firestore()
         let deviceData: [String: Any] = [
