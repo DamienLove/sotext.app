@@ -2348,6 +2348,8 @@ function App() {
   const [settingsStatus, setSettingsStatus] = useState('');
   const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isTestingRelay, setIsTestingRelay] = useState(false);
+  const [isRequestingSync, setIsRequestingSync] = useState(false);
   const [syncDiagnostics, setSyncDiagnostics] = useState(null);
   const [relayDiagnostics, setRelayDiagnostics] = useState(null);
   const [syncRequestStatus, setSyncRequestStatus] = useState('');
@@ -3633,6 +3635,7 @@ function App() {
 
   const handleTestRelay = async () => {
     if (!user) return;
+    setIsTestingRelay(true);
     setRemoteSettingsStatus("Queueing test message...");
     try {
       const phone = profile.phoneNumber || user.phoneNumber;
@@ -3652,11 +3655,14 @@ function App() {
     } catch (e) {
       console.error("Test relay failed", e);
       setRemoteSettingsStatus("Test failed: " + e.message);
+    } finally {
+      setIsTestingRelay(false);
     }
   };
 
   const requestPhoneSync = async () => {
     if (!user) return;
+    setIsRequestingSync(true);
     setSyncRequestStatus("Requesting sync...");
     try {
       await setDoc(
@@ -3673,6 +3679,8 @@ function App() {
     } catch (error) {
       console.error("Sync request failed", error);
       setSyncRequestStatus(error?.message ?? "Unable to request sync.");
+    } finally {
+      setIsRequestingSync(false);
     }
   };
 
@@ -5280,16 +5288,30 @@ function App() {
                               type="button"
                               onClick={requestPhoneSync}
                               style={{ flex: 1 }}
+                              disabled={isRequestingSync}
+                              aria-busy={isRequestingSync}
                             >
-                              Request phone sync
+                              {isRequestingSync ? (
+                                <>
+                                  <Spinner />
+                                  Requesting...
+                                </>
+                              ) : 'Request phone sync'}
                             </button>
                             <button
                               className="secondary-btn"
                               type="button"
                               onClick={handleTestRelay}
                               style={{ flex: 1 }}
+                              disabled={isTestingRelay}
+                              aria-busy={isTestingRelay}
                             >
-                              Test relay
+                              {isTestingRelay ? (
+                                <>
+                                  <Spinner />
+                                  Testing...
+                                </>
+                              ) : 'Test relay'}
                             </button>
                           </div>
                           {remoteSettingsStatus && <div className={getToastClass(remoteSettingsStatus)} role="status" aria-live="polite">{remoteSettingsStatus}</div>}
