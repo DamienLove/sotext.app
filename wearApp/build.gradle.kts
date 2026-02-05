@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import com.google.gms.googleservices.GoogleServicesTask
 
 plugins {
     id("com.android.application")
@@ -81,5 +82,9 @@ tasks.register("syncGoogleServices", Copy::class) {
 }
 
 tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn("syncGoogleServices")
+}
+
+tasks.withType(GoogleServicesTask::class.java).configureEach {
     dependsOn("syncGoogleServices")
 }
