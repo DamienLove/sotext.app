@@ -936,6 +936,7 @@ class MainActivity : AppCompatActivity() {
                             onSendCheckIn = viewModel::sendCheckIn,
                             onSettingsClick = { navController.navigate("settings") { launchSingleTop = true } },
                             onFaqClick = { navController.navigate("faq") { launchSingleTop = true } },
+                            onReportBugClick = { navController.navigate("bug_report") },
                             onOpenContacts = {
                                 navController.navigate("sms/inbox?filter=contacts") {
                                     launchSingleTop = true
@@ -1302,6 +1303,7 @@ class MainActivity : AppCompatActivity() {
                             onSendCheckIn = viewModel::sendCheckIn,
                             onSettingsClick = { navController.navigate("settings") { launchSingleTop = true } },
                             onFaqClick = { navController.navigate("faq") { launchSingleTop = true } },
+                            onReportBugClick = { navController.navigate("bug_report") },
                             onBeaconClick = launchBeaconInbox,
                             onOpenContacts = {
                                 navController.navigate("sms/inbox?filter=contacts") {
