@@ -1315,10 +1315,8 @@ fun TabsRow(
                 onFilterChange(target)
             }
         }
-        if (!isUnifiedMode) {
-            TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
-                toggleFilter(InboxFilter.ALL)
-            }
+        TabText(label = "All", selected = filter == InboxFilter.ALL, theme = theme) {
+            toggleFilter(InboxFilter.ALL)
         }
         if (isUnifiedMode) {
             TabText(label = "2-step", selected = filter == InboxFilter.OTP, theme = theme) {
