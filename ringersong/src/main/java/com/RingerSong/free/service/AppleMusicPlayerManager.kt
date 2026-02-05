@@ -13,56 +13,55 @@ import javax.inject.Singleton
 
 @Singleton
 class AppleMusicPlayerManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val webViewPlayer: WebViewPlayer
 ) {
     companion object {
         private const val TAG = "AppleMusicPlayer"
         private const val APPLE_MUSIC_PACKAGE = "com.apple.android.music"
     }
 
-    /**
-     * Attempts to play an Apple Music track by launching the app with a deep link.
-     * Note: This is not a true background player like Spotify App Remote.
-     * It relies on the Apple Music app handling the intent.
-     * For a "Ringer" this is a best-effort fallback if streaming API is unavailable.
-     */
     suspend fun playTrack(song: SongEntry): Boolean = withContext(Dispatchers.Main) {
         try {
-            // Apple Music deep link format: https://music.apple.com/us/song/<id> or https://music.apple.com/us/album/<name>/<albumId>?i=<songId>
             val uriString = song.uri
-            val uri = if (uriString.startsWith("http")) {
-                Uri.parse(uriString)
-            } else if (uriString.all { it.isDigit() }) {
-                // If it's just an ID (numeric), try to construct a direct song link
-                // Note: This is a guess. Apple Music IDs usually require album context or 'i=' param.
-                // Fallback to searching/playing by ID if possible via URL scheme
-                Uri.parse("https://music.apple.com/us/song/$uriString")
+
+            // Normalize URI to a valid URL string if possible
+            val fullUrl = if (uriString.all { it.isDigit() }) {
+                "https://music.apple.com/us/song/$uriString"
             } else {
-                // Assume it's a URI we can parse directly (or a different ID format)
-                Uri.parse(uriString)
+                uriString
             }
 
-            Log.d(TAG, "Attempting to launch Apple Music with URI: $uri")
-
-            // Check for overlay permission which is needed to start activity from background on Android 10+
+            // Check for overlay permission
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M &&
-                !android.provider.Settings.canDrawOverlays(context)) {
-                Log.w(TAG, "Cannot launch Apple Music: Missing Overlay Permission")
-                return@withContext false
+                android.provider.Settings.canDrawOverlays(context)) {
+
+                Log.d(TAG, "Overlay permission granted. Using WebViewPlayer.")
+
+                // Convert to embed URL for better web playback support
+                val embedUrl = if (fullUrl.contains("music.apple.com")) {
+                    fullUrl.replace("music.apple.com", "embed.music.apple.com")
+                } else {
+                    fullUrl
+                }
+
+                webViewPlayer.play(embedUrl)
+                return@withContext true
             }
+
+            Log.d(TAG, "Overlay permission missing. Falling back to Intent.")
+
+            // Use the normalized URL for parsing Uri
+            val uri = Uri.parse(fullUrl)
 
             val intent = Intent(Intent.ACTION_VIEW, uri).apply {
                 setPackage(APPLE_MUSIC_PACKAGE)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
 
-            // Verify if Apple Music is installed
             val packageManager = context.packageManager
             if (intent.resolveActivity(packageManager) != null) {
                 context.startActivity(intent)
-                // We return true because we successfully launched the intent.
-                // However, we can't guarantee playback started immediately without user interaction
-                // unless Apple Music supports auto-play on deep link (which it usually does).
                 Log.d(TAG, "Apple Music intent launched")
                 return@withContext true
             } else {
@@ -71,8 +70,12 @@ class AppleMusicPlayerManager @Inject constructor(
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error launching Apple Music", e)
+            Log.e(TAG, "Error playing Apple Music", e)
             return@withContext false
         }
+    }
+
+    suspend fun stop() {
+        webViewPlayer.stop()
     }
 }

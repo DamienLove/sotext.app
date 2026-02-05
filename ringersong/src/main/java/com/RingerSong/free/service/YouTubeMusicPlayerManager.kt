@@ -13,7 +13,8 @@ import javax.inject.Singleton
 
 @Singleton
 class YouTubeMusicPlayerManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val webViewPlayer: WebViewPlayer
 ) {
     companion object {
         private const val TAG = "YouTubeMusicPlayer"
@@ -21,27 +22,30 @@ class YouTubeMusicPlayerManager @Inject constructor(
     }
 
     /**
-     * Attempts to play a YouTube Music track by launching the app with a deep link.
-     * This replaces the "Import/Download" method which relied on unstable 3rd party APIs.
+     * Attempts to play a YouTube Music track.
+     * Tries to use a hidden WebView first (if permission granted),
+     * otherwise falls back to launching the app via deep link.
      */
     suspend fun playTrack(song: SongEntry): Boolean = withContext(Dispatchers.Main) {
         try {
             // Extract video ID from uri "youtube:video:VIDEO_ID"
             val videoId = song.uri.removePrefix("youtube:video:")
 
-            // Construct Deep Link
-            // Tapping this link on Android usually opens YouTube Music if installed
-            val uri = Uri.parse("https://music.youtube.com/watch?v=$videoId")
-
-            Log.d(TAG, "Attempting to launch YouTube Music with URI: $uri")
-
             // Check for overlay permission
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M &&
-                !android.provider.Settings.canDrawOverlays(context)) {
-                Log.w(TAG, "Cannot launch YouTube Music: Missing Overlay Permission")
-                // We might fail here if strictly background, but let's try just in case
-                // (CallStateReceiver usually ensures we are okay or starts service foreground)
+                android.provider.Settings.canDrawOverlays(context)) {
+
+                Log.d(TAG, "Overlay permission granted. Using WebViewPlayer.")
+                // https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1
+                val embedUrl = "https://www.youtube.com/embed/$videoId?autoplay=1&playsinline=1"
+                webViewPlayer.play(embedUrl)
+                return@withContext true
             }
+
+            Log.d(TAG, "Overlay permission missing. Falling back to Intent.")
+
+            // Construct Deep Link
+            val uri = Uri.parse("https://music.youtube.com/watch?v=$videoId")
 
             val intent = Intent(Intent.ACTION_VIEW, uri).apply {
                 setPackage(YOUTUBE_MUSIC_PACKAGE)
@@ -59,8 +63,12 @@ class YouTubeMusicPlayerManager @Inject constructor(
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "Error launching YouTube Music", e)
+            Log.e(TAG, "Error playing YouTube Music", e)
             return@withContext false
         }
+    }
+
+    suspend fun stop() {
+        webViewPlayer.stop()
     }
 }
