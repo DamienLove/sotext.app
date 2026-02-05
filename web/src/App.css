@@ -1077,6 +1077,14 @@ textarea:focus-visible,
   animation: shimmer 1.5s infinite;
 }
 
+.message.sent .message-bubble.skeleton-message,
+.message.received .message-bubble.skeleton-message {
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: transparent;
+}
+
 .chat-header {
   padding: 24px 40px;
   background: rgba(3, 5, 10, 0.85);

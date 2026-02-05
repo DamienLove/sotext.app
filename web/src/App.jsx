@@ -243,22 +243,31 @@ const ThreadSkeleton = () => (
   </div>
 );
 
+const MessageSkeleton = ({ isOwn }) => (
+  <div className={`message ${isOwn ? 'sent' : 'received'}`}>
+    <div className="message-bubble skeleton-message" style={{ minWidth: '150px', height: '46px', padding: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="skeleton-line" style={{ width: '80%', height: '12px', opacity: 0.5 }}></div>
+    </div>
+  </div>
+);
+
 const areMessagesEqual = (prev, next) => {
   return prev.showPreviews === next.showPreviews &&
          prev.msg.id === next.msg.id &&
          prev.msg.body === next.msg.body &&
          prev.msg.date === next.msg.date &&
-         prev.msg.type === next.msg.type;
+         prev.msg.type === next.msg.type &&
+         prev.onImageLoad === next.onImageLoad;
 };
 
 // Bolt: Optimized MessageItem with memo to prevent re-rendering all messages when typing
 // or when new messages arrive (which creates new object references).
-const MessageItem = memo(({ msg, showPreviews }) => (
+const MessageItem = memo(({ msg, showPreviews, onImageLoad }) => (
   <div className={`message ${msg.type === 1 ? 'received' : 'sent'}`}>
     <div className="message-bubble">
       {msg.imageUrl && (
         <div className="message-image-container">
-          <img src={msg.imageUrl} alt="Attachment" className="message-image" loading="lazy" />
+          <img src={msg.imageUrl} alt="Attachment" className="message-image" loading="lazy" onLoad={onImageLoad} />
         </div>
       )}
       {showPreviews ? msg.body : '••••••'}
@@ -2155,6 +2164,7 @@ function App() {
   const [selectedThread, setSelectedThread] = useState(null);
   const [showArchived, setShowArchived] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   // Fix: Use setUser to clear lint error or remove mock override if switching to real auth
   useEffect(() => {
@@ -2312,6 +2322,13 @@ function App() {
   const messagesEndRef = useRef(null);
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
+
+  // Bolt: Stable handler to ensure images trigger scroll
+  const handleImageLoad = useCallback(() => {
+    if (autoScroll && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [autoScroll]);
 
   const subscriptionStatus = userData?.subscriptionStatus;
   const premiumSubscriptionStatus = userData?.premiumSubscriptionStatus;
@@ -2543,9 +2560,9 @@ function App() {
   // Bolt: Memoize list elements to avoid re-creating them on every render
   const messageListElements = useMemo(() => (
     messages.map(msg => (
-      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} />
+      <MessageItem key={msg.id} msg={msg} showPreviews={showPreviews} onImageLoad={handleImageLoad} />
     ))
-  ), [messages, showPreviews]);
+  ), [messages, showPreviews, handleImageLoad]);
 
   // Bolt: Pagination for contact list to improve performance
   const contactListElements = useMemo(() => (
@@ -2926,10 +2943,12 @@ function App() {
           };
         });
         setMessages(messagesData);
+        setIsLoadingMessages(false);
       });
       return () => unsubscribe();
     } else {
       setMessages([]);
+      setIsLoadingMessages(false);
     }
   }, [user, selectedThread]);
 
@@ -3799,6 +3818,7 @@ function App() {
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
     setMessages([]); // Clear previous messages immediately
+    setIsLoadingMessages(true);
     setSelectedThread(thread);
     if (thread?.lineId) {
       setActiveLineId((prev) => prev ?? thread.lineId);
@@ -5301,7 +5321,15 @@ function App() {
                       </div>
                     </div>
                     <div className="messages-list">
-                      {messageListElements}
+                      {isLoadingMessages ? (
+                        <>
+                          <MessageSkeleton isOwn={false} />
+                          <MessageSkeleton isOwn={true} />
+                          <MessageSkeleton isOwn={false} />
+                        </>
+                      ) : (
+                        messageListElements
+                      )}
                       <div ref={messagesEndRef} style={{ height: 1 }} />
                     </div>
                     <MessageComposer
