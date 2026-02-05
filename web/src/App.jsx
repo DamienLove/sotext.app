@@ -264,7 +264,7 @@ const MessageItem = memo(({ msg, showPreviews }) => (
       {showPreviews ? msg.body : '••••••'}
     </div>
     <div className="message-time">
-      {timeFormatter.format(new Date(msg.date))}
+      {timeFormatter.format(msg.date)}
     </div>
   </div>
 ), areMessagesEqual);
@@ -3768,12 +3768,18 @@ function App() {
 
   // Bolt: Stable handler for Command Palette to prevent Sidebar re-renders
   const handleOpenCommandPalette = useCallback(() => setShowCommandPalette(true), []);
+  const handleCloseCommandPalette = useCallback(() => setShowCommandPalette(false), []);
 
   // Bolt: Stable handler for new thread button
   const handleNewThread = useCallback(() => {
     setActivePanel('beacon');
     setSelectedThread(null);
   }, []);
+
+  const commandPaletteActions = useMemo(() => ({
+    logout: handleLogout,
+    newThread: handleNewThread
+  }), [handleLogout, handleNewThread]);
 
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
@@ -4016,12 +4022,9 @@ function App() {
       {import.meta.env.DEV && <DevTools isVisible={showDevTools} onClose={() => setShowDevTools(false)} />}
       <CommandPalette
         isOpen={showCommandPalette}
-        onClose={() => setShowCommandPalette(false)}
+        onClose={handleCloseCommandPalette}
         setActivePanel={setActivePanel}
-        actions={{
-          logout: handleLogout,
-          newThread: handleNewThread
-        }}
+        actions={commandPaletteActions}
       />
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <div className="app-container">
