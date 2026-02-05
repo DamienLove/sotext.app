@@ -253,6 +253,7 @@ final class FirestoreConversationProvider: ConversationProvider {
                     return ConversationMessage(
                         sender: type == 1 ? contact.address : "You",
                         text: data["body"] as? String ?? "",
+                        attachmentUrl: data["attachmentUrl"] as? String,
                         timestamp: date,
                         isIncoming: type == 1,
                         isUrgent: false

@@ -39,6 +39,7 @@ struct ConversationMessage: Identifiable {
     let id = UUID()
     let sender: String
     let text: String
+    let attachmentUrl: String?
     let timestamp: Date
     let isIncoming: Bool
     let isUrgent: Bool
@@ -208,6 +209,7 @@ final class AlertRelayViewModel: ObservableObject {
         let message = ConversationMessage(
             sender: "You",
             text: text,
+            attachmentUrl: nil,
             timestamp: Date(),
             isIncoming: false,
             isUrgent: urgent
