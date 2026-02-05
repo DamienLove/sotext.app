@@ -33,7 +33,7 @@ class SmsRepository(private val context: Context) {
 
         // Static caches to survive ViewModel recreation
         // These hold only Strings, which are safe from Context leaks.
-        private val addressCache = LruCache<Long, String>(ADDRESS_CACHE_SIZE)
+        private val addressCache = LruCache<Long, Pair<String, String>>(ADDRESS_CACHE_SIZE)
         private val contactCache = LruCache<String, String>(CONTACT_CACHE_SIZE)
 
         // Clear caches on memory warning or low memory if needed
@@ -127,7 +127,7 @@ class SmsRepository(private val context: Context) {
             var count = 0
             while (c.moveToNext() && count < limit) {
                 val threadId = c.getLong(idIdx)
-                var snippet = c.getString(snippetIdx) ?: ""
+                val snippet = c.getString(snippetIdx) ?: ""
 
                 // Optimization: Fallback logic removed to prevent N+1 queries.
                 // Blank snippets are handled in UI (e.g. "Media" or hidden) to prioritize load speed.
@@ -149,14 +149,15 @@ class SmsRepository(private val context: Context) {
         val addressMap = resolveAddressesForThreads(rawThreads)
 
         return@withContext rawThreads.map { raw ->
-            val finalName = addressMap[raw.id] ?: "Unknown"
+            val (rawAddr, displayName) = addressMap[raw.id] ?: ("" to "Unknown")
             SmsThreadItem(
                 threadId = raw.id,
-                address = finalName,
+                address = rawAddr.ifBlank { displayName }, // Fallback to displayName if raw is empty (rare)
+                displayName = displayName,
                 snippet = raw.snippet,
                 timestamp = raw.timestamp,
                 unread = raw.unread,
-                category = classifyThread(finalName, raw.snippet)
+                category = classifyThread(displayName, raw.snippet)
             )
         }
     }
@@ -188,8 +189,8 @@ class SmsRepository(private val context: Context) {
         return ThreadCategory.PERSONAL
     }
 
-    private fun resolveAddressesForThreads(threads: List<RawThreadData>): Map<Long, String> {
-        val result = mutableMapOf<Long, String>()
+    private fun resolveAddressesForThreads(threads: List<RawThreadData>): Map<Long, Pair<String, String>> {
+        val result = mutableMapOf<Long, Pair<String, String>>()
         val threadsToResolve = mutableListOf<RawThreadData>()
 
         // 1. Check cache first
@@ -381,7 +382,7 @@ class SmsRepository(private val context: Context) {
         cursor.use { c ->
             if (c.moveToFirst()) {
                 val addr = c.getString(c.getColumnIndexOrThrow("address"))
-                return@withContext resolveAddress(addr)
+                return@withContext resolveAddress(addr).second
             }
         }
         return@withContext ""
@@ -452,7 +453,7 @@ class SmsRepository(private val context: Context) {
             var count = 0
             while (c.moveToNext() && count < limit) {
                 val id = c.getLong(idIdx)
-                val addr = resolveAddress(c.getString(addrIdx))
+                val (rawAddr, displayAddr) = resolveAddress(c.getString(addrIdx))
                 val body = c.getString(bodyIdx) ?: ""
                 val ts = c.getLong(dateIdx)
                 val type = c.getInt(typeIdx)
@@ -460,7 +461,7 @@ class SmsRepository(private val context: Context) {
                 items += SmsMessageItem(
                     id = id,
                     threadId = c.getLong(threadIdx),
-                    address = addr,
+                    address = displayAddr, // Use display name for messages list
                     body = body,
                     timestamp = ts,
                     outgoing = outgoing,
@@ -561,7 +562,7 @@ class SmsRepository(private val context: Context) {
                 hits += SmsMessageItem(
                     id = c.getLong(idIdx),
                     threadId = c.getLong(threadIdx),
-                    address = resolveAddress(c.getString(addrIdx)),
+                    address = resolveAddress(c.getString(addrIdx)).second,
                     body = c.getString(bodyIdx) ?: "",
                     timestamp = c.getLong(dateIdx),
                     outgoing = outgoing
@@ -758,16 +759,16 @@ class SmsRepository(private val context: Context) {
         observerFlow.tryEmit(Unit)
     }
 
-    private fun resolveAddress(raw: String?): String {
-        if (!hasReadPerms()) return raw.orEmpty()
+    private fun resolveAddress(raw: String?): Pair<String, String> {
+        if (!hasReadPerms()) return (raw.orEmpty() to raw.orEmpty())
         val number = raw?.trim().orEmpty()
-        if (number.isBlank()) return ""
+        if (number.isBlank()) return ("" to "")
 
-        contactCache[number]?.let { return it }
+        contactCache[number]?.let { return number to it }
 
         val uri = ContactsContract.PhoneLookup.CONTENT_FILTER_URI
         val lookupUri = Uri.withAppendedPath(uri, Uri.encode(number))
-        val result = runCatching {
+        val resultName = runCatching {
             context.contentResolver.query(
                 lookupUri,
                 arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME, ContactsContract.PhoneLookup.NUMBER),
@@ -787,8 +788,8 @@ class SmsRepository(private val context: Context) {
             }
         } ?: number
 
-        contactCache.put(number, result)
-        return result
+        contactCache.put(number, resultName)
+        return number to resultName
     }
 
     private fun hasReadPerms(): Boolean = isDefaultSmsApp(context) || hasReadSmsPermission(context)
@@ -870,14 +871,15 @@ class SmsRepository(private val context: Context) {
         val resolvedMap = resolveAddressesForStrings(rawItems.map { it.rawAddress })
 
         return rawItems.map { raw ->
-            val finalAddress = resolvedMap[raw.rawAddress] ?: raw.rawAddress
+            val finalName = resolvedMap[raw.rawAddress] ?: raw.rawAddress
             SmsThreadItem(
                 threadId = raw.threadId,
-                address = finalAddress,
+                address = raw.rawAddress,
+                displayName = finalName,
                 snippet = raw.body,
                 timestamp = raw.timestamp,
                 unread = raw.unread,
-                category = classifyThread(finalAddress, raw.body)
+                category = classifyThread(finalName, raw.body)
             )
         }
     }

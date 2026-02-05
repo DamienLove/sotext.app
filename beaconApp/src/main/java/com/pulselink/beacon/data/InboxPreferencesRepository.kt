@@ -18,6 +18,7 @@ class InboxPreferencesRepository(private val context: Context) {
     private val autoReplyMessageKey = stringPreferencesKey("auto_reply_message")
     private val quickRepliesKey = stringPreferencesKey("quick_replies")
     private val autoDeleteOtpsKey = androidx.datastore.preferences.core.booleanPreferencesKey("auto_delete_otps")
+    private val customNamesKey = stringPreferencesKey("custom_names")
 
     val flow: Flow<InboxState> = context.inboxDataStore.data.map { prefs ->
         val pinned = decodeSet(prefs[pinnedKey])
@@ -32,6 +33,7 @@ class InboxPreferencesRepository(private val context: Context) {
         } else {
              listOf("Ok", "Yes", "No", "Thanks", "On my way!", "Can't talk now", "Call you later?")
         }
+        val customNames = decodeMap(prefs[customNamesKey])
 
         InboxState(
             pinnedThreadIds = pinned,
@@ -40,8 +42,21 @@ class InboxPreferencesRepository(private val context: Context) {
             autoReplyEnabled = autoReplyEnabled,
             autoReplyMessage = autoReplyMessage,
             quickReplies = quickReplies,
-            autoDeleteOtps = autoDeleteOtps
+            autoDeleteOtps = autoDeleteOtps,
+            customNames = customNames
         )
+    }
+
+    suspend fun setCustomName(address: String, name: String) {
+        context.inboxDataStore.edit { prefs ->
+            val current = decodeMap(prefs[customNamesKey]).toMutableMap()
+            if (name.isBlank()) {
+                current.remove(address)
+            } else {
+                current[address] = name
+            }
+            prefs[customNamesKey] = encodeMap(current)
+        }
     }
 
     suspend fun setAutoDeleteOtps(enabled: Boolean) {
@@ -113,5 +128,33 @@ class InboxPreferencesRepository(private val context: Context) {
 
     private fun encodeSet(set: Set<Long>): String {
         return set.joinToString(",")
+    }
+
+    private fun decodeMap(json: String?): Map<String, String> {
+        if (json.isNullOrBlank()) return emptyMap()
+        val map = mutableMapOf<String, String>()
+        try {
+            val obj = org.json.JSONObject(json)
+            val keys = obj.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                map[key] = obj.getString(key)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return map
+    }
+
+    private fun encodeMap(map: Map<String, String>): String {
+        val obj = org.json.JSONObject()
+        map.forEach { (k, v) ->
+            try {
+                obj.put(k, v)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return obj.toString()
     }
 }
