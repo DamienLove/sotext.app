@@ -38,7 +38,8 @@
         android:label="@string/app_name"
         android:roundIcon="@drawable/ic_logo"
         android:supportsRtl="true"
-        android:theme="@style/Theme.PulseLink">
+        android:theme="@style/Theme.SoText">
+
 
         <!-- Remove AppLovin MAX debugger activities to avoid crashes in production -->
         <activity android:name="com.applovin.mediation.MaxDebuggerActivity" tools:node="remove" />
@@ -75,21 +76,21 @@
                 <category android:name="android.intent.category.LAUNCHER" />    
             </intent-filter>
         </activity-alias>
-        <!-- Launcher shortcut that jumps directly to SMS inbox; enabled at runtime when PulseLink is default SMS -->
         <activity
             android:name=".ui.InboxLauncherActivity"
             android:exported="true"
             android:enabled="@bool/show_beacon_launcher"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:icon="@drawable/ic_beacon_inbox"
             android:roundIcon="@drawable/ic_beacon_inbox"
-            android:taskAffinity="com.pulselink.beacon.inbox"
+            android:taskAffinity="sotext.app.inbox"
             android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
 
         <!-- Unified launcher aliases (enabled at runtime for premium + unified) -->
         <activity-alias
@@ -138,7 +139,7 @@
             android:name="com.pulselink.BeaconInboxLogo"
             android:enabled="false"
             android:icon="@drawable/ic_logo"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_logo"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -152,7 +153,7 @@
             android:name="com.pulselink.BeaconInboxPro"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_inbox"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_inbox"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -166,7 +167,7 @@
             android:name="com.pulselink.BeaconInboxThemeDefaultLight"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_default_light"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_default_light"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -180,7 +181,7 @@
             android:name="com.pulselink.BeaconInboxThemeMidnightOled"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_midnight_oled"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_midnight_oled"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -194,7 +195,7 @@
             android:name="com.pulselink.BeaconInboxThemeOceanDeep"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_ocean_deep"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_ocean_deep"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -208,7 +209,7 @@
             android:name="com.pulselink.BeaconInboxThemeRosePetal"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_rose_petal"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_rose_petal"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -222,7 +223,7 @@
             android:name="com.pulselink.BeaconInboxThemeSunsetFade"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_sunset_fade"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_sunset_fade"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -236,7 +237,7 @@
             android:name="com.pulselink.BeaconInboxThemeCitrusPop"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_citrus_pop"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_citrus_pop"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -250,7 +251,7 @@
             android:name="com.pulselink.BeaconInboxThemeForestTrail"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_forest_trail"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_forest_trail"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -264,7 +265,7 @@
             android:name="com.pulselink.BeaconInboxThemeLavenderHaze"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_lavender_haze"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_lavender_haze"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -278,7 +279,7 @@
             android:name="com.pulselink.BeaconInboxThemeSlateMono"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_slate_mono"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_slate_mono"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -292,7 +293,7 @@
             android:name="com.pulselink.BeaconInboxThemeDesertClay"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_desert_clay"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_desert_clay"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -306,7 +307,7 @@
             android:name="com.pulselink.BeaconInboxThemeNordFrost"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_nord_frost"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_nord_frost"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -320,7 +321,7 @@
             android:name="com.pulselink.BeaconInboxThemeNeonNoir"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_neon_noir"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_neon_noir"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -334,7 +335,7 @@
             android:name="com.pulselink.BeaconInboxThemePaperback"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_paperback"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_paperback"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -348,7 +349,7 @@
             android:name="com.pulselink.BeaconInboxThemeMintBreeze"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_mint_breeze"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_mint_breeze"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -362,7 +363,7 @@
             android:name="com.pulselink.BeaconInboxThemeAmethystNight"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_amethyst_night"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_amethyst_night"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -376,7 +377,7 @@
             android:name="com.pulselink.BeaconInboxThemeAurora"
             android:enabled="false"
             android:icon="@drawable/ic_beacon_theme_aurora"
-            android:label="Beacon Inbox"
+            android:label="SoText Inbox"
             android:roundIcon="@drawable/ic_beacon_theme_aurora"
             android:exported="true"
             android:targetActivity=".ui.InboxLauncherActivity">
@@ -391,8 +392,9 @@
             android:name=".ui.BeaconInboxActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
-            android:taskAffinity="com.pulselink.beacon.inbox"
+            android:taskAffinity="sotext.app.inbox"
             android:launchMode="singleTop" />
+
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
@@ -445,45 +447,39 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
-            android:theme="@style/Theme.PulseLink.Transparent">
+            android:theme="@style/Theme.SoText.Transparent">
+
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <!-- Sentinel: Removed BROWSABLE to prevent web-based attacks on deep links -->
                 <data
                     android:host="assistant"
-                    android:scheme="pulselink" />
+                    android:scheme="sotext" />
             </intent-filter>
 
             <!-- App Links intent-filter for HTTPS URLs -->
-            <!-- Requires assetlinks.json hosted at https://pulselink.app/.well-known/assetlinks.json -->
+            <!-- Requires assetlinks.json hosted at https://sotext.app/.well-known/assetlinks.json -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="pulselink.app"
-                    android:pathPrefix="/assistant" />
-                <data
-                    android:scheme="https"
-                    android:host="app.damiennichols.com"
-                    android:pathPrefix="/assistant" />
-                <data
-                    android:scheme="https"
-                    android:host="pulselink.damiennichols.com"
+                    android:host="sotext.app"
                     android:pathPrefix="/assistant" />
             </intent-filter>
+
             <intent-filter>
-                <action android:name="com.pulselink.intent.ASSISTANT_EMERGENCY" />
+                <action android:name="sotext.app.intent.ASSISTANT_EMERGENCY" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.pulselink.intent.ASSISTANT_CHECK_IN" />
+                <action android:name="sotext.app.intent.ASSISTANT_CHECK_IN" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.pulselink.intent.ASSISTANT_VOICE" />
+                <action android:name="sotext.app.intent.ASSISTANT_VOICE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -491,7 +487,7 @@
         <activity
             android:name=".ui.EmergencyPopupActivity"
             android:exported="false"
-            android:theme="@style/Theme.PulseLink.Transparent"
+            android:theme="@style/Theme.SoText.Transparent"
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:excludeFromRecents="true"
@@ -500,13 +496,14 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.export"
+            android:authorities="sotext.app.export"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
 
         <service
             android:name=".service.RespondViaMessageService"
@@ -533,7 +530,7 @@
 
         <provider
             android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
+            android:authorities="sotext.app.androidx-startup"
             android:exported="false"
             tools:node="remove" />
 
@@ -542,9 +539,10 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
-                <data android:scheme="wear" android:host="*" android:pathPrefix="/pulselink/action" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/sotext/action" />
             </intent-filter>
         </service>
+
 
         <service
             android:name=".data.messaging.PulseLinkFirebaseMessagingService"

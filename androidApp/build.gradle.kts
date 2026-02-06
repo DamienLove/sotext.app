@@ -218,15 +218,34 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.pulselink"
+        applicationId = "sotext.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 144
-        versionName = "144"
+        versionCode = 145
+        versionName = "145"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "google_maps_key", mapsApiKey)
         buildConfigField("boolean", "CRASH_DETECTION_ENABLED", "false")
+        // Default feature flags for the consolidated app
+        buildConfigField("boolean", "ADS_ENABLED", "false")
+        buildConfigField("boolean", "PRO_FEATURES", "true")
+        buildConfigField("boolean", "PREMIUM_FEATURES", "true")
+        buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "true")
+        buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-sotextapp.cloudfunctions.net\"")
+        
+        manifestPlaceholders += mapOf(
+            "admobAppId" to ""
+        )
+        
+        buildConfigField("String", "AD_APP_ID", "\"\"")
+        buildConfigField("String", "AD_UNIT_BANNER", "\"\"")
+        buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"\"")
+        buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"\"")
+        buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"\"")
+        buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
+        buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"sotext_premium_monthly\"")
+        buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"sotext_premium_yearly\"")
 
         buildConfigField("String", "NUMLOOKUP_API_BASE", "\"https://api.numlookupapi.com/v1\"")
         buildConfigField("String", "NUMLOOKUP_API_KEY", "\"$escapedNumlookupApiKey\"")
@@ -250,6 +269,8 @@ android {
         buildConfigField("int", "NUMVERIFY_MONTHLY_CAP", "${numverifyMonthlyCap}")
         buildConfigField("int", "IPQS_MONTHLY_CAP", "${ipqsMonthlyCap}")
 
+
+
         javaCompileOptions {
             annotationProcessorOptions {
                 // Export Room schemas for migration tracking; stays under build/ so it won't dirty git.
@@ -264,7 +285,6 @@ android {
 
     buildTypes {
         getByName("debug") {
-            applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
         }
         getByName("release") {
@@ -278,97 +298,12 @@ android {
 
     productFlavors {
         val releaseConfig = signingConfigs.getByName("release")
-        val freeReleaseConfig = signingConfigs.findByName("freeRelease")
-        val proReleaseConfig = signingConfigs.findByName("proRelease")
-        val premiumReleaseConfig = signingConfigs.findByName("premiumRelease")
 
-        create("free") {
+        create("sotext") {
             dimension = "tier"
-            applicationId = "com.free.pulselink"
-            manifestPlaceholders += mapOf(
-                "admobAppId" to "ca-app-pub-5327057757821609~9533221188"
-            )
-            buildConfigField("boolean", "ADS_ENABLED", "true")
-            buildConfigField("boolean", "PRO_FEATURES", "false")
-            buildConfigField("boolean", "PREMIUM_FEATURES", "false")
-            buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "true")
-            buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
-            buildConfigField("String", "AD_APP_ID", "\"ca-app-pub-5327057757821609~9533221188\"")
-            buildConfigField("String", "AD_UNIT_BANNER", "\"ca-app-pub-5327057757821609/3955684775\"")
-            buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"ca-app-pub-5327057757821609/3170992810\"")
-            buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"ca-app-pub-5327057757821609/8428571815\"")
-            buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"ca-app-pub-5327057757821609/2153424615\"")
-            buildConfigField("String", "AD_UNIT_APP_OPEN", "\"ca-app-pub-5327057757821609/4210125201\"")
-            buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"pulselink_premium_monthly\"")
-            buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"pulselink_premium_yearly\"")
-            resValue("string", "app_name", "PulseLink Beacon")
-            val targetSigning = when {
-                freeSigningSpec.isConfigured -> freeReleaseConfig
-                releaseSigningSpec.isConfigured -> releaseConfig
-                else -> null
-            }
-            if (targetSigning != null) {
-                signingConfig = targetSigning
-            }
-        }
-        create("pro") {
-            dimension = "tier"
-            applicationIdSuffix = ".pro"
-            manifestPlaceholders += mapOf(
-                "admobAppId" to ""
-            )
-            buildConfigField("boolean", "ADS_ENABLED", "false")
-            buildConfigField("boolean", "PRO_FEATURES", "true")
-            buildConfigField("boolean", "PREMIUM_FEATURES", "false")
-            buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "true")        
-            buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
-            buildConfigField("String", "AD_APP_ID", "\"\"")
-            buildConfigField("String", "AD_UNIT_BANNER", "\"\"")
-            buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"\"")
-            buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"\"")
-            buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"\"")
-            buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
-            buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"pulselink_premium_monthly\"")
-            buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"pulselink_premium_yearly\"")
-            resValue("string", "app_name", "PulseLink Pro")
-            val targetSigning = when {
-                proSigningSpec.isConfigured -> proReleaseConfig
-                releaseSigningSpec.isConfigured -> releaseConfig
-                else -> null
-            }
-            if (targetSigning != null) {
-                signingConfig = targetSigning
-            }
-        }
-        create("premium") {
-            dimension = "tier"
-            applicationIdSuffix = ".premium"
-            manifestPlaceholders += mapOf(
-                "admobAppId" to ""
-            )
-            buildConfigField("boolean", "ADS_ENABLED", "false")
-            buildConfigField("boolean", "PRO_FEATURES", "true")
-            buildConfigField("boolean", "PREMIUM_FEATURES", "true")
-            buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "true")
-            buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-pulselink-prod.cloudfunctions.net\"")
-            buildConfigField("String", "AD_APP_ID", "\"\"")
-            buildConfigField("String", "AD_UNIT_BANNER", "\"\"")
-            buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"\"")
-            buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"\"")
-            buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"\"")
-            buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
-            buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"pulselink_premium_monthly\"")
-            buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"pulselink_premium_yearly\"")
-            resValue("string", "app_name", "PulseLink Premium")
-            val targetSigning = when {
-                premiumSigningSpec.isConfigured -> premiumReleaseConfig
-                proSigningSpec.isConfigured -> proReleaseConfig
-                releaseSigningSpec.isConfigured -> releaseConfig
-                else -> null
-            }
-            if (targetSigning != null) {
-                signingConfig = targetSigning
-            }
+            applicationId = "sotext.app"
+            resValue("string", "app_name", "SoText")
+            signingConfig = releaseConfig
         }
     }
 
@@ -506,12 +441,13 @@ dependencies {
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     // AdMob + mediation adapters
     implementation("com.google.android.gms:play-services-ads:24.9.0")
-    add("freeImplementation", "com.google.ads.mediation:applovin:13.5.1.0")
-    add("freeImplementation", "com.google.ads.mediation:inmobi:11.1.0.0")
-    add("freeImplementation", "com.google.ads.mediation:ironsource:9.2.0.0")
-    add("freeImplementation", "com.google.ads.mediation:facebook:6.21.0.0")
-    add("freeImplementation", "com.google.ads.mediation:pangle:7.8.0.8.0")
-    add("freeImplementation", "com.google.ads.mediation:vungle:7.5.0.0")
+    implementation("com.google.ads.mediation:applovin:13.5.1.0")
+    implementation("com.google.ads.mediation:inmobi:11.1.0.0")
+    implementation("com.google.ads.mediation:ironsource:9.2.0.0")
+    implementation("com.google.ads.mediation:facebook:6.21.0.0")
+    implementation("com.google.ads.mediation:pangle:7.8.0.8.0")
+    implementation("com.google.ads.mediation:vungle:7.5.0.0")
+
     implementation("com.google.android.gms:play-services-auth:21.1.0")
     implementation("com.google.android.gms:play-services-wearable:18.2.0")
     implementation("com.android.billingclient:billing-ktx:8.2.1")

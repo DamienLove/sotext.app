@@ -1,4 +1,4 @@
-devBranch: Suite-Beta (based on Beta)
+devBranch: sotext.app (This is our primary/main branch)
 
 Recent work
 - 2026-01-19: Cloud Functions - Fixed premium sync gap: `verifySubscription` and `handlePlayStoreRTDN` now explicitly set `remoteWebAccessEnabled` to `true` in Firestore upon successful verification/renewal. This ensures the web app unlocks immediately even if the phone is offline or sync is delayed. Verified with new unit tests in `billing.test.ts`.

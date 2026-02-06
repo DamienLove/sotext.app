@@ -1967,9 +1967,9 @@ const Sidebar = memo(({
     <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-brand">
-          <img src={navLogo || logo} alt="PulseLink Suite" className="brand-logo small" />
+          <img src={navLogo || logo} alt="SoText" className="brand-logo small" />
           <div>
-            <div className="brand-title">{brandTitle || "PulseLink Suite"}</div>
+            <div className="brand-title">{brandTitle || "SoText"}</div>
             <div className="brand-subtitle">{tierLabel} Web Access</div>
           </div>
         </div>
@@ -4249,7 +4249,7 @@ function App() {
           isPremium={isPremium}
           remoteSettings={remoteSettings}
           navLogo={navLogo}
-          brandTitle={remoteSettings.mergedExperienceEnabled ? "PulseLink Unified" : "PulseLink Suite"}
+          brandTitle={remoteSettings.mergedExperienceEnabled ? "SoText Unified" : "SoText"}
           threads={activeLineThreads}
           selectedThreadId={selectedThread?.id}
           onSelect={handleThreadSelect}

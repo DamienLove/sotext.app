@@ -1,0 +1,73 @@
+SoText Rebrand & Migration Info
+
+== Core Rebranding ==
+- Old Name: PulseLink
+- New Name: SoText
+- Main Feature: Beacon (now the "main star")
+- PulseLink Status: Now an extension to the main SoText app
+- App Structure: Single app with In-App Purchases for Pro and Premium upgrades (merged from separate Play Store apps)
+- Web App Domain: sotext.app
+- Build Directory: C:\pulselink_build (required for successful build/deploy/push)
+- Primary Development Branch: sotext.app (as far as we are concerned, this is "main")
+
+== Hosting & Server Configuration ==
+Domain: sotext.app
+Control Panel URL: https://server8.webhostmost.com:2222
+Server Name: Shared Fully Featured Hosting - Iowa
+Server IP: 104.224.88.15
+
+Nameservers:
+ns1.server1.webhostmost.com
+ns2.server2.webhostmost.com
+ns3.server3.webhostmost.com
+ns4.server4.webhostmost.com
+
+Credentials:
+Username: qthdunpa
+Password: 8XyIt(39Qt2qS;
+
+== sFTP Information ==
+Hostname: server8.webhostmost.com
+Port: 2323
+Username: qthdunpa
+Key File: G:\My Drive\projects\pulselink\secrets\qthdunpa.ppk
+
+== Email Settings (Temporary) ==
+Default Login: qthdunpa@sotext.app
+Password: 8XyIt(39Qt2qS;
+IMAP: mail.sotext.app (Port 993, SSL On)
+POP3: mail.sotext.app (Port 995, SSL On)
+SMTP: smtp.sotext.app (Port 465, SSL On, Auth Required)
+
+== New Firebase Configuration ==
+Project Name: sotextapp
+Project ID: sotextapp
+Project Number: 861460679274
+Parent Org: dmnlat.com
+Support Email: damiensteam@googlegroups.com
+
+Android App Config:
+App ID: 1:861460679274:android:46edc2a789fd05c855d813
+Package Name: sotext.app
+Nickname: sotext.app
+
+Web App Config:
+App ID: 1:861460679274:web:f6179ec058b1c0bf55d813
+Nickname: sotext.app
+Auth Domain: sotextapp.firebaseapp.com
+Storage Bucket: sotextapp.firebasestorage.app
+Messaging Sender ID: 861460679274
+Measurement ID: G-0NZRE9QGS0
+API Key: AIzaSyDT-dDiNWjpd-5Ek2qxMFIQznxuuW9QvXw
+
+== Hosting Features ==
+Available via Control Panel/Softaculous:
+- Node.js App, Python App
+- Redis, Cloudflare CDN
+- SQL Database Manager, phpMyAdmin, MongoDB, PostgreSQL
+- Git, Cron Jobs, SSH Access
+- SSL Certificates (Let's Encrypt supported)
+
+== Branding Concepts ==
+Proposed Icon Prompt:
+"A modern, high-tech app icon for 'SoText', a messaging app where 'Beacon' is the main feature. The design should feature a stylized, radiating beacon signal or a pulse integrated with a sleek letter 'S'. Use a color palette of deep black, laser blue (#00F3FF), and neon purple (#E000FF). The style should be 'Future Deep' / 'Cyber Mist' aesthetic: glowing, glassmorphism, clean lines. Minimalist but impactful."

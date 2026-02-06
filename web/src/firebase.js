@@ -3,36 +3,22 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 import { getStorage } from "firebase/storage";
+import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyDT-dDiNWjpd-5Ek2qxMFIQznxuuW9QvXw",
+  authDomain: "sotextapp.firebaseapp.com",
+  projectId: "sotextapp",
+  storageBucket: "sotextapp.firebasestorage.app",
+  messagingSenderId: "861460679274",
+  appId: "1:861460679274:web:f6179ec058b1c0bf55d813",
+  measurementId: "G-0NZRE9QGS0"
 };
 
-// Bolt: Prevent crash on missing config (e.g. CI/CD or code review envs)
-let app;
-if (!firebaseConfig.apiKey) {
-  console.warn("Firebase API key missing. App will run in mock mode or fail gracefully.");
-  const apps = getApps();
-  if (apps.length > 0) {
-      app = apps[0];
-  } else {
-      // Initialize with dummy values to allow UI to render without crashing immediately
-      app = initializeApp({
-          ...firebaseConfig,
-          apiKey: "dummy-key",
-          projectId: "dummy-project"
-      });
-  }
-} else {
-  app = initializeApp(firebaseConfig);
-}
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app, "us-central1");
 export const storage = getStorage(app);
+export const analytics = getAnalytics(app);

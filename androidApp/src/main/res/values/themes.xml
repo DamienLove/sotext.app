@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Base.Theme.PulseLink" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Base.Theme.SoText" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/pulse_primary</item>
         <item name="colorSecondary">@color/pulse_secondary</item>
         <item name="colorError">@color/pulse_error</item>
@@ -11,11 +11,12 @@
         <item name="android:navigationBarColor" tools:targetApi="l">@color/pulse_background</item>
     </style>
 
-    <style name="Theme.PulseLink" parent="Base.Theme.PulseLink" />
+    <style name="Theme.SoText" parent="Base.Theme.SoText" />
 
-    <style name="Theme.PulseLink.Transparent" parent="Theme.Material3.DayNight.Dialog">
+    <style name="Theme.SoText.Transparent" parent="Theme.Material3.DayNight.Dialog">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:colorBackgroundCacheHint">@null</item>
     </style>
+
 </resources>

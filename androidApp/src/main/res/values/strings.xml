@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PulseLink</string>
+    <string name="app_name">SoText</string>
     <string name="default_web_client_id">156950194350-76c7hvth2a399e93f1ko49p3e2i5mak1.apps.googleusercontent.com</string>
     <string name="cta_add_contact">Add trusted contact</string>
     <string name="cta_send_check_in">Send check-in</string>
     <string name="cta_trigger_test">Trigger test alert</string>
     <string name="title_contacts">Support Circle</string>
     <string name="title_settings">Safety Settings</string>
-    <string name="label_phrase_primary">Primary PulseLink phrase</string>
-    <string name="label_phrase_secondary">Secondary PulseLink phrase</string>
+    <string name="label_phrase_primary">Primary SoText phrase</string>
+    <string name="label_phrase_secondary">Secondary SoText phrase</string>
     <string name="label_include_location">Include location when alerting</string>
     <string name="label_alert_mode">Alert profile</string>
     <string name="label_emergency_sound">Emergency alert sound</string>
@@ -20,52 +20,53 @@
     <string name="action_save">Save</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_back">Back</string>
-    <string name="notification_title_alert">PulseLink alert active</string>
+    <string name="notification_title_alert">SoText alert active</string>
     <string name="notification_body_alert">Alert dispatched to your circle.</string>
     <string name="notification_title_alert_sent">Emergency alert sent</string>
     <string name="notification_text_alert_sent">Your emergency alert was sent to %1$d contacts.</string>
     <string name="notification_title_checkin_sent">Check-in sent</string>
     <string name="notification_text_checkin_sent">Your check-in was sent to %1$d contacts.</string>
-    <string name="notification_title_check_in">PulseLink check-in</string>
+    <string name="notification_title_check_in">SoText check-in</string>
     <string name="notification_body_check_in">Check-in sent successfully.</string>
     <string name="notification_channel_alert_confirmations">Alert confirmations</string>
     <string name="notification_channel_alert_confirmations_desc">Silent notifications that confirm alerts were sent.</string>
     <string name="notification_action_call">Call contact</string>
     <string name="notification_action_ack">Acknowledge</string>
-    <string name="channel_alerts">PulseLink Alerts</string>
-    <string name="channel_check_ins">PulseLink Check-ins</string>
-    <string name="channel_background">PulseLink Services</string>
-    <string name="link_notification_channel">PulseLink Linking</string>
+    <string name="channel_alerts">SoText Alerts</string>
+    <string name="channel_check_ins">SoText Check-ins</string>
+    <string name="channel_background">SoText Services</string>
+    <string name="link_notification_channel">SoText Linking</string>
     <string name="otp_notification_channel">2-step codes</string>
     <string name="otp_notification_channel_desc">Heads-up popups for 2-step login codes.</string>
     <string name="otp_notification_title">2-step code copied</string>
     <string name="otp_notification_body">Code: %1$s</string>
     <string name="otp_toast_copied">2-step code copied: %1$s</string>
     <string name="link_request_title">Link request received</string>
-    <string name="link_request_body">%1$s wants to connect on PulseLink.</string>
+    <string name="link_request_body">%1$s wants to connect on SoText.</string>
     <string name="link_success_title">Contact linked</string>
     <string name="link_success_body">You are now linked with %1$s.</string>
     <string name="ping_received_title">Check-in from %1$s</string>
     <string name="ping_received_body">They are checking in with you.</string>
     <string name="manual_message_title">%1$s sent a message</string>
     <string name="incoming_call_alert_title">%1$s is trying to reach you</string>
-    <string name="incoming_call_alert_body">PulseLink is overriding Do Not Disturb so you don\'t miss their call. If you still can\'t hear it, confirm the Emergency Alerts notification channel can bypass DND.</string>
+    <string name="incoming_call_alert_body">SoText is overriding Do Not Disturb so you don\'t miss their call. If you still can\'t hear it, confirm the Emergency Alerts notification channel can bypass DND.</string>
     <string name="incoming_call_detected">Emergency call from %1$s</string>
-    <string name="channel_calls">PulseLink Call Alerts</string>
-    <string name="channel_manual_messages">PulseLink Messages</string>
-    <string name="permission_microphone">PulseLink needs microphone access for hotword detection.</string>
-    <string name="permission_sms">PulseLink needs SMS permission to contact your circle.</string>
-    <string name="permission_location">PulseLink needs location access to share your position.</string>
+    <string name="channel_calls">SoText Call Alerts</string>
+    <string name="channel_manual_messages">SoText Messages</string>
+    <string name="permission_microphone">SoText needs microphone access for hotword detection.</string>
+    <string name="permission_sms">SoText needs SMS permission to contact your circle.</string>
+    <string name="permission_location">SoText needs location access to share your position.</string>
     <string name="permission_call_log_title">Allow access to call log</string>
-    <string name="permission_call_log_description">PulseLink needs this to detect incoming calls from your linked contacts and play emergency tones.</string>
+    <string name="permission_call_log_description">SoText needs this to detect incoming calls from your linked contacts and play emergency tones.</string>
     <string name="permission_battery_opt_title">Battery optimization</string>
-    <string name="permission_battery_opt_description">Allow PulseLink to run unrestricted so alerts work in the background.</string>
+    <string name="permission_battery_opt_description">Allow SoText to run unrestricted so alerts work in the background.</string>
     <string name="permission_battery_opt_action">Allow</string>
-    <string name="permission_unused_apps_title">Keep PulseLink active</string>
-    <string name="permission_unused_apps_description">Switch &quot;Manage app if unused&quot; to Off so Android never pauses PulseLink.</string>
+    <string name="permission_unused_apps_title">Keep SoText active</string>
+    <string name="permission_unused_apps_description">Switch &quot;Manage app if unused&quot; to Off so Android never pauses SoText.</string>
     <string name="permission_unused_apps_action">Turn off</string>
-    <string name="permission_unused_apps_manual">Open the permissions screen, tap Manage app if unused, and switch it off so PulseLink stays ready.</string>
+    <string name="permission_unused_apps_manual">Open the permissions screen, tap Manage app if unused, and switch it off so SoText stays ready.</string>
     <string name="permission_unused_apps_emphasis">Toggle &quot;Manage app if unused&quot; to Off. The switch should be gray before you return.</string>
+
     <string name="quick_action_emergency_label">Emergency alert</string>
     <string name="quick_action_emergency_description">Loud siren and shares your location.</string>
     <string name="quick_action_checkin_label">I am safe</string>
@@ -74,8 +75,9 @@
     <string name="quick_action_location_primary">Emergency and I am safe share your location.</string>
     <string name="quick_action_location_secondary">Calls and manual messages stay private.</string>
     <string name="shortcut_check_in_short">Send check-in</string>
-    <string name="shortcut_check_in_long">Send PulseLink check-in</string>
-    <string name="pulselink_contact_import_failed">PulseLink couldn\'t load that contact. Check contact permissions and try again.</string>
+    <string name="shortcut_check_in_long">Send SoText check-in</string>
+    <string name="pulselink_contact_import_failed">SoText couldn\'t load that contact. Check contact permissions and try again.</string>
+
     <string name="call_preparing">Preparing call...</string>
     <string name="call_ready">Call ready</string>
     <string name="call_failed">Call failed</string>
@@ -158,22 +160,22 @@
     <string name="settings_help_battery_title">Battery optimizations</string>
     <string name="settings_help_battery_body">Disable battery optimizations for PulseLink so alerts, SMS sync, and trusted contact checks run on time. On most devices this is under Battery &gt; Unrestricted or Don’t optimize.</string>
     <string name="settings_help_unused_title">Unused app pause</string>
-    <string name="settings_help_unused_body">Turn off Android’s “Remove permissions and free up space” / “Pause app if unused” so PulseLink keeps permissions and background sync even if you don’t open the app often.</string>
+    <string name="settings_help_unused_body">Turn off Android’s “Remove permissions and free up space” / “Pause app if unused” so SoText keeps permissions and background sync even if you don’t open the app often.</string>
     <string name="settings_help_default_sms_title">Default SMS role</string>
-    <string name="settings_help_default_sms_body">Setting PulseLink as the default SMS app is required for Beacon messaging, MMS handling, and Play compliance. You can switch back anytime from Android’s default apps settings.</string>
+    <string name="settings_help_default_sms_body">Setting SoText as the default SMS app is required for messaging, MMS handling, and Play compliance. You can switch back anytime from Android’s default apps settings.</string>
     <string name="settings_help_web_title">Web access to messages</string>
-    <string name="settings_help_web_body">When enabled (Premium), your device syncs SMS securely to the web portal. Visit https://app.damiennichols.com and sign in with your PulseLink account to view messages, trusted contacts, and settings. Use only on devices you trust; you can disable anytime to stop syncing immediately.</string>
+    <string name="settings_help_web_body">When enabled (Premium), your device syncs SMS securely to the web portal. Visit https://sotext.app and sign in with your SoText account to view messages, trusted contacts, and settings. Use only on devices you trust; you can disable anytime to stop syncing immediately.</string>
     <string name="settings_help_pin_title">Private chats PIN</string>
     <string name="settings_help_pin_body">Set a PIN to lock private contacts and their threads. You’ll need the PIN to open or change them, keeping sensitive messages hidden if someone else opens the app.</string>
     <string name="settings_faq_section_title">Frequently Asked Questions</string>
-    <string name="faq_question_1">How do I enable Beacon messaging?</string>
-    <string name="faq_answer_1">Open Messages, tap Enable Beacon, grant SMS permissions, and set PulseLink or Beacon as the default SMS app. Your inbox loads once the role is active.</string>
+    <string name="faq_question_1">How do I enable SoText messaging?</string>
+    <string name="faq_answer_1">Open Messages, tap Enable SoText, grant SMS permissions, and set SoText as the default SMS app. Your inbox loads once the role is active.</string>
     <string name="faq_question_2">Where do 2-step codes go?</string>
     <string name="faq_answer_2">Short-code OTPs are detected automatically and shown in the 2-step codes tab. They are removed from All messages to keep your main inbox clean.</string>
     <string name="faq_question_3">How do favorites, trusted, and private tabs work?</string>
-    <string name="faq_answer_3">Trusted contacts are your PulseLink contacts, Favorites are marked in a contact profile, and Private hides threads behind the Private tab and PIN if set. Favorites and trusted still appear in All messages.</string>
+    <string name="faq_answer_3">Trusted contacts are your SoText contacts, Favorites are marked in a contact profile, and Private hides threads behind the Private tab and PIN if set. Favorites and trusted still appear in All messages.</string>
     <string name="faq_question_4">How do I access messages on the web?</string>
-    <string name="faq_answer_4">Premium users can enable Web access in Settings, then sign in at https://app.damiennichols.com to view messages, trusted contacts, and settings.</string>
+    <string name="faq_answer_4">Premium users can enable Web access in Settings, then sign in at https://sotext.app to view messages, trusted contacts, and settings.</string>
     <string name="faq_question_5">What does Premium include?</string>
     <string name="faq_answer_5">Premium removes ads and unlocks web access, AI summaries and compose assist, urgency alerts, and multi-device SMS sync with line controls.</string>
     <string name="faq_question_6">How do I customize alerts and themes?</string>
@@ -182,70 +184,72 @@
     <string name="faq_answer_version">Version %1$s (build %2$d).</string>
     <string name="settings_help_faq_cta">Open FAQ page</string>
     <string name="faq_title">FAQs</string>
-    <string name="faq_page_subtitle">Answers to the most common PulseLink questions.</string>
-    <string name="home_beacon_label">Beacon</string>
-    <string name="settings_beacon_icon_title">Beacon inbox icon</string>
-    <string name="settings_beacon_icon_subtitle">Show the Beacon shortcut in PulseLink and your app drawer.</string>
+    <string name="faq_page_subtitle">Answers to the most common SoText questions.</string>
+    <string name="home_beacon_label">SoText</string>
+    <string name="settings_beacon_icon_title">SoText inbox icon</string>
+    <string name="settings_beacon_icon_subtitle">Show the SoText shortcut in your app drawer.</string>
     <string name="settings_default_sms_title">Default SMS app</string>
-    <string name="settings_default_sms_ready">PulseLink is set as the default SMS app.</string>
-    <string name="settings_default_sms_required">Required for Beacon messaging.</string>
+    <string name="settings_default_sms_ready">SoText is set as the default SMS app.</string>
+    <string name="settings_default_sms_required">Required for messaging features.</string>
     <string name="settings_default_sms_unavailable">Default SMS role unavailable on this device.</string>
     <string name="settings_default_sms_action_make_default">Make default</string>
     <string name="settings_default_sms_action_change">Change</string>
-    <string name="beacon_flow_permissions_needed">Grant SMS permissions to open Beacon inbox.</string>
-    <string name="beacon_flow_default_needed">Set PulseLink as default SMS to open Beacon.</string>
+    <string name="beacon_flow_permissions_needed">Grant SMS permissions to open SoText inbox.</string>
+    <string name="beacon_flow_default_needed">Set SoText as default SMS to open inbox.</string>
     <string name="beacon_flow_unavailable">Default SMS role unavailable on this device.</string>
-    <string name="beacon_flow_ready">Opening Beacon inbox...</string>
-    <string name="beacon_flow_enable_icon">Enabling Beacon icon...</string>
-    <string name="beacon_flow_retry">Beacon inbox not ready yet. Check default SMS and permissions.</string>
-    <string name="settings_beacon_title">Beacon inbox &amp; launcher</string>
-    <string name="settings_beacon_subtitle">Set PulseLink as your default SMS app to unlock the Beacon launcher icon and inbox.</string>
-    <string name="settings_beacon_enabled_subtitle">Beacon icon is enabled in the app drawer and SMS inbox is ready.</string>
+    <string name="beacon_flow_ready">Opening SoText inbox...</string>
+    <string name="beacon_flow_enable_icon">Enabling SoText icon...</string>
+    <string name="beacon_flow_retry">SoText inbox not ready yet. Check default SMS and permissions.</string>
+    <string name="settings_beacon_title">SoText inbox &amp; launcher</string>
+    <string name="settings_beacon_subtitle">Set SoText as your default SMS app to unlock the launcher icon and inbox.</string>
+    <string name="settings_beacon_enabled_subtitle">SoText icon is enabled in the app drawer and SMS inbox is ready.</string>
     <string name="settings_beacon_action_enable">Enable</string>
     <string name="settings_beacon_action_open">Open</string>
-    <string name="beacon_hint_title">Beacon inbox in app drawer</string>
-    <string name="beacon_hint_description">A Beacon inbox icon has been added to your app drawer. Tap it anytime to access your SMS messages directly. You can disable this icon if you prefer.</string>
-    <string name="beacon_hint_action_use">Use Beacon</string>
+    <string name="beacon_hint_title">SoText inbox in app drawer</string>
+    <string name="beacon_hint_description">A SoText inbox icon has been added to your app drawer. Tap it anytime to access your SMS messages directly. You can disable this icon if you prefer.</string>
+    <string name="beacon_hint_action_use">Use SoText</string>
     <string name="beacon_hint_action_disable">Disable</string>
     <string name="beacon_hint_dismiss_content_description">Dismiss</string>
     <string name="emergency_alert_title">%1$s triggered an emergency</string>
-    <string name="emergency_alert_body">PulseLink is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → PulseLink → Notifications and re-enable bypass.</string>
+    <string name="emergency_alert_body">SoText is overriding Do Not Disturb and playing the emergency tone so you can respond immediately. If the siren stays silent, open Settings → Apps → SoText → Notifications and re-enable bypass.</string>
+
     <string name="assistant_trigger_emergency">Emergency alert sent via Google Assistant.</string>
     <string name="assistant_trigger_check_in">Check-in sent via Google Assistant.</string>
-    <string name="assistant_shortcut_emergency_long">Send a PulseLink emergency alert</string>
-    <string name="assistant_shortcut_check_in_long">Send a PulseLink check-in</string>
-    <string name="assistant_shortcut_cancel_long">Cancel a PulseLink alert</string>
+    <string name="assistant_shortcut_emergency_long">Send a SoText emergency alert</string>
+    <string name="assistant_shortcut_check_in_long">Send a SoText check-in</string>
+    <string name="assistant_shortcut_cancel_long">Cancel a SoText alert</string>
     <string name="assistant_hint_title">Voice commands, no setup</string>
-    <string name="assistant_hint_subtitle">Say "Hey Google" or "Hey Google, talk to Gemini" and ask PulseLink for help.</string>
+    <string name="assistant_hint_subtitle">Say "Hey Google" or "Hey Google, talk to Gemini" and ask SoText for help.</string>
     <string name="assistant_hint_examples_title">Try saying:</string>
-    <string name="assistant_hint_examples">• "Hey Google, have PulseLink send an emergency alert"\n• "Hey Google, have PulseLink message mom I\'m safe"\n• "Hey Google, have PulseLink cancel my alert"</string>
+    <string name="assistant_hint_examples">• "Hey Google, have SoText send an emergency alert"\n• "Hey Google, have SoText message mom I\'m safe"\n• "Hey Google, have SoText cancel my alert"</string>
     <string name="assistant_hint_dismiss">Hide voice tips</string>
     <string name="assistant_hint_upgrade_badge">Pro exclusive</string>
-    <string name="assistant_hint_upgrade_copy">Gemini-powered natural language commands unlock with PulseLink Pro.</string>
+    <string name="assistant_hint_upgrade_copy">Gemini-powered natural language commands unlock with SoText Pro.</string>
     <string name="assistant_hint_upgrade_action">See Pro features</string>
     <string name="assistant_hint_ready_state">Gemini voice commands are ready.</string>
     <string name="upgrade_card_pitch">Unlock Gemini voice commands, realtime contact messaging, biometric cancel safeguards, and remove every ad.</string>
-    <string name="upgrade_card_active_copy">PulseLink Pro is active. Hands-free commands and realtime messaging are standing by.</string>
+    <string name="upgrade_card_active_copy">SoText Pro is active. Hands-free commands and realtime messaging are standing by.</string>
     <string name="upgrade_card_cta">See why Pro is different</string>
     <string name="assistant_shortcut_help_google">In the Google app, tap your profile photo -> Settings -> Shortcuts to finish setup.</string>
     <string name="assistant_shortcut_help_gemini">In Gemini, open Profile -> Settings -> Google Assistant features in Gemini -> Shortcuts.</string>
-    <string name="assistant_shortcut_help_generic">Follow your assistant\'s instructions on the next screen to enable the PulseLink shortcuts.</string>
+    <string name="assistant_shortcut_help_generic">Follow your assistant\'s instructions on the next screen to enable the SoText shortcuts.</string>
     <string name="assistant_shortcut_missing">No Assistant or Gemini app found. Install the Google app or Gemini to enable hands-free shortcuts.</string>
     <string name="assistant_commands_title">Voice commands</string>
     <string name="assistant_commands_title_free">Voice commands (Pro)</string>
-    <string name="assistant_commands_body_pro">Use Google Assistant or Gemini to trigger PulseLink instantly.</string>
-    <string name="assistant_commands_body_free">Hands-free alerts, cancel, and urgent messages are a PulseLink Pro feature. Upgrade to unlock them.</string>
-    <string name="assistant_commands_examples">• "Send a PulseLink emergency"\n• "Cancel my PulseLink alert" (biometric required)\n• "Send an urgent check-in to Mom"\n• "Send a non-urgent PulseLink to Alex at half volume"\n• "Make an urgent PulseLink call to Sam"</string>
+    <string name="assistant_commands_body_pro">Use Google Assistant or Gemini to trigger SoText instantly.</string>
+    <string name="assistant_commands_body_free">Hands-free alerts, cancel, and urgent messages are a SoText Pro feature. Upgrade to unlock them.</string>
+    <string name="assistant_commands_examples">• "Send a SoText emergency"\n• "Cancel my SoText alert" (biometric required)\n• "Send an urgent check-in to Mom"\n• "Send a non-urgent SoText to Alex at half volume"\n• "Make an urgent SoText call to Sam"</string>
     <string name="assistant_commands_manage">Manage assistant tips</string>
     <string name="assistant_commands_learn">Learn how</string>
     <string name="blocked_contact_attempt_title">Blocked contact tried to reach you</string>
     <string name="blocked_contact_attempt_body">%1$s attempted to send a message but is blocked.</string>
     <string name="dnd_override_title">Do Not Disturb override</string>
-    <string name="dnd_override_permission_prompt">Grant access so PulseLink can break through Do Not Disturb during emergencies.</string>
-    <string name="dnd_override_ready">PulseLink can raise alarm volume and use bypass-enabled channels so emergency alerts break through Do Not Disturb.</string>
-    <string name="dnd_override_android15_note">On Android 15+, notification channels control Do Not Disturb bypass. Ensure the PulseLink Emergency Alerts channel is set to allow interruptions.</string>
-    <string name="dnd_override_troubleshooting">If alerts stay quiet, open Settings → Apps → PulseLink → Notifications and confirm the channel can override Do Not Disturb.</string>
+    <string name="dnd_override_permission_prompt">Grant access so SoText can break through Do Not Disturb during emergencies.</string>
+    <string name="dnd_override_ready">SoText can raise alarm volume and use bypass-enabled channels so emergency alerts break through Do Not Disturb.</string>
+    <string name="dnd_override_android15_note">On Android 15+, notification channels control Do Not Disturb bypass. Ensure the SoText Emergency Alerts channel is set to allow interruptions.</string>
+    <string name="dnd_override_troubleshooting">If alerts stay quiet, open Settings → Apps → SoText → Notifications and confirm the channel can override Do Not Disturb.</string>
     <string name="dnd_override_action_allow">Allow</string>
+
     <string name="dnd_override_action_manage">Manage</string>
     <string name="audio_override_failed">Unable to override audio settings. Check Do Not Disturb permissions.</string>
     <string name="audio_override_partial">Android limited the Do Not Disturb override. Verify PulseLink\'s notification channels can bypass DND.</string>
@@ -462,12 +466,12 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="action_new_message">New Message</string>
 
     <!-- Assistant Strings -->
-    <string name="assistant_shortcut_emergency_short">PulseLink emergency</string>
+    <string name="assistant_shortcut_emergency_short">SoText emergency</string>
     <string name="assistant_shortcut_cancel_short">Cancel alert</string>
-    <string name="assistant_shortcut_check_in_short">PulseLink check-in</string>
+    <string name="assistant_shortcut_check_in_short">SoText check-in</string>
     <string name="assistant_shortcut_urgent_message_short">Send urgent message</string>
     <string name="assistant_shortcut_non_urgent_message_short">Send non-urgent message</string>
-    <string name="assistant_contact_not_found">Couldn\'t find %1$s in your PulseLink contacts.</string>
+    <string name="assistant_contact_not_found">Couldn\'t find %1$s in your SoText contacts.</string>
     <string name="assistant_message_sent">Message sent to %1$s.</string>
     <string name="assistant_message_failed">Failed to send message to %1$s.</string>
     <string name="assistant_urgent_message_sent">Urgent alert sent to %1$s.</string>
@@ -475,7 +479,7 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="assistant_non_urgent_sent">Non-urgent message sent to %1$s at %2$s volume.</string>
 
     <!-- Widget Strings -->
-    <string name="widget_emergency_title">PulseLink Emergency</string>
+    <string name="widget_emergency_title">SoText Emergency</string>
     <string name="widget_emergency_description">Quick access to emergency alerts and check-ins</string>
     <string name="widget_button_emergency">Emergency Alert</string>
     <string name="widget_button_check_in">Check In</string>
@@ -492,10 +496,10 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="extensions_store_header">Customize Your Experience</string>
     <string name="extensions_store_subtitle">Turn on only the features you need. Basic users can keep it simple, while power users can unlock everything.</string>
 
-    <string name="extension_beacon_title">Beacon Inbox</string>
+    <string name="extension_beacon_title">SoText Messaging</string>
     <string name="extension_beacon_desc">A fully-featured SMS/MMS client with a futuristic design. Replaces your default SMS app.</string>
 
-    <string name="extension_relay_title">PulseLink Relay</string>
+    <string name="extension_relay_title">SoText Relay</string>
     <string name="extension_relay_desc">Sync messages between your Android phone and other devices (like iOS or Web) over the cloud.</string>
 
     <string name="extension_email_backup_title">Email Backup</string>
@@ -511,7 +515,7 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="extension_ai_desc">Get smart summaries of long threads and help composing messages. (Premium)</string>
 
     <string name="extension_merged_title">Unified Home</string>
-    <string name="extension_merged_desc">Merge the Beacon Inbox directly into the PulseLink home screen for a single-app experience.</string>
+    <string name="extension_merged_desc">Merge the SoText messaging directly into the home screen for a single-app experience.</string>
 
     <string name="extension_third_party_title">Third-Party Extensions</string>
     <string name="extension_third_party_desc">Allow experimental community plugins. Use at your own risk. (Premium)</string>
@@ -537,7 +541,7 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     </string-array>
 
     <string name="extensions_store_premium_badge">PREMIUM</string>
-    <string name="extensions_store_premium_hint">Requires PulseLink Premium subscription.</string>
+    <string name="extensions_store_premium_hint">Requires SoText Premium subscription.</string>
     <string name="extensions_store_unavailable">This feature is not available on your device.</string>
 
     <string name="extensions_store_external_header">Want more features?</string>
@@ -551,4 +555,7 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="extensions_store_quick_setup_essentials_desc">Just the basics: Relay and Email Backup.</string>
     <string name="extensions_store_quick_setup_power">Power User</string>
     <string name="extensions_store_quick_setup_power_desc">Enable everything available to you.</string>
+    <string name="extension_pulselink_title">PulseLink Safety</string>
+    <string name="extension_pulselink_desc">The original safety suite: Emergency Alerts, Check-ins, and trusted circle coordination.</string>
+
 </resources>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Emergency Alert Shortcut -->
+    <!-- Users can say: "Hey Google, have SoText send an emergency alert" -->
+    <shortcut
+        android:shortcutId="emergency_alert"
+        android:enabled="true"
+        android:icon="@drawable/ic_logo"
+        android:shortcutShortLabel="@string/assistant_shortcut_emergency_short"
+        android:shortcutLongLabel="@string/assistant_shortcut_emergency_long">
+
+        <!-- Built-in Intent for triggering emergency action -->
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="sotext.app"
+            android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
+            android:data="sotext://assistant/emergency" />
+
+
+        <!-- Capability binding for Google Assistant integration -->
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
+            <parameter-binding
+                android:key="feature"
+                android:value="@array/emergency_synonyms" />
+        </capability-binding>
+    </shortcut>
+
+    <!-- Check-in Shortcut -->
+    <!-- Users can say: "Hey Google, have SoText send a check-in" -->
+    <shortcut
+        android:shortcutId="checkin"
+        android:enabled="true"
+        android:icon="@drawable/ic_logo"
+        android:shortcutShortLabel="@string/assistant_shortcut_check_in_short"
+        android:shortcutLongLabel="@string/assistant_shortcut_check_in_long">
+
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="sotext.app"
+            android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
+            android:data="sotext://assistant/checkin" />
+
+
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
+            <parameter-binding
+                android:key="feature"
+                android:value="@array/checkin_synonyms" />
+        </capability-binding>
+    </shortcut>
+
+    <!-- Cancel Emergency Shortcut -->
+    <!-- Users can say: "Hey Google, have SoText cancel my alert" -->
+    <shortcut
+        android:shortcutId="cancel_emergency"
+        android:enabled="true"
+        android:icon="@drawable/ic_logo"
+        android:shortcutShortLabel="@string/assistant_shortcut_cancel_short"
+        android:shortcutLongLabel="@string/assistant_shortcut_cancel_long">
+
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="sotext.app"
+            android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
+            android:data="sotext://assistant/cancel" />
+
+
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
+            <parameter-binding
+                android:key="feature"
+                android:value="@array/cancel_synonyms" />
+        </capability-binding>
+    </shortcut>
+
+</shortcuts>
