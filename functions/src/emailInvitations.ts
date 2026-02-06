@@ -49,28 +49,28 @@ const generateEmailTemplate = (
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>PulseLink Invitation</title>
+      <title>SoText Invitation</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header { background: linear-gradient(135deg, #00F3FF 0%, #E000FF 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
         .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-radius: 0 0 8px 8px; }
-        .button { display: inline-block; padding: 14px 28px; background: #667eea; color: white !important; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
-        .button:hover { background: #5568d3; }
+        .button { display: inline-block; padding: 14px 28px; background: #00F3FF; color: black !important; text-decoration: none; border-radius: 6px; font-weight: 600; margin: 20px 0; }
+        .button:hover { background: #00d8e6; }
         .app-links { display: flex; gap: 15px; justify-content: center; margin-top: 25px; }
         .app-link { display: inline-block; }
-        .code { background: #f5f5f5; padding: 12px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; text-align: center; margin: 20px 0; color: #667eea; }
+        .code { background: #f5f5f5; padding: 12px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; text-align: center; margin: 20px 0; color: #E000FF; }
         .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
       </style>
     </head>
     <body>
       <div class="header">
-        <h1 style="margin: 0; font-size: 28px;">🔗 PulseLink Invitation</h1>
+        <h1 style="margin: 0; font-size: 28px;">🔗 SoText Invitation</h1>
       </div>
       <div class="content">
         <p style="font-size: 18px; margin-top: 0;">Hi there!</p>
-        <p><strong>${safeSenderName}</strong> wants to connect with you on <strong>PulseLink</strong>, the safety app that keeps your loved ones informed and protected.</p>
+        <p><strong>${safeSenderName}</strong> wants to connect with you on <strong>SoText</strong>, the safety app that keeps your loved ones informed and protected.</p>
         
-        <p style="margin-top: 25px;">With PulseLink, you can:</p>
+        <p style="margin-top: 25px;">With SoText, you can:</p>
         <ul style="padding-left: 20px;">
           <li>Share real-time location updates with trusted contacts</li>
           <li>Send and receive safety alerts instantly</li>
@@ -85,7 +85,7 @@ const generateEmailTemplate = (
         <p style="margin-top: 25px;">Or use this invitation code:</p>
         <div class="code">${safeInvitationCode}</div>
 
-        <p style="font-size: 14px; color: #666; margin-top: 30px;">Don't have PulseLink yet? Download it now:</p>
+        <p style="font-size: 14px; color: #666; margin-top: 30px;">Don't have SoText yet? Download it now:</p>
         <div class="app-links">
           <a href="${playStoreUrl}" class="app-link">
             <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60">
@@ -96,7 +96,7 @@ const generateEmailTemplate = (
       
       <div class="footer">
         <p>This invitation will expire in 7 days.</p>
-        <p style="font-size: 12px; margin-top: 15px;">PulseLink - Your Safety Network<br>
+        <p style="font-size: 12px; margin-top: 15px;">SoText - Your Safety Network<br>
 If you didn't expect this invitation, you can safely ignore this email.</p>
       </div>
     </body>
@@ -157,8 +157,8 @@ export const sendEmailInvitation = functions.https.onCall(
 
         // Get configuration
         const config = functions.config();
-        const deepLinkBase = config.app?.deep_link_base || "https://pulselink.app";
-        const playStoreUrl = config.app?.play_store_url || "https://play.google.com/store/apps/details?id=com.pulselink";
+        const deepLinkBase = config.app?.deep_link_base || "https://sotext.app";
+        const playStoreUrl = config.app?.play_store_url || "https://play.google.com/store/apps/details?id=sotext.app";
         const appStoreUrl = config.app?.app_store_url || "";
 
         // Create invitation document in Firestore
@@ -186,12 +186,12 @@ export const sendEmailInvitation = functions.https.onCall(
 
         // Send email
         const transporter = createTransporter();
-        const emailFrom = config.email?.from_name || "PulseLink Team";
+        const emailFrom = config.email?.from_name || "SoText Team";
 
         const mailOptions = {
           from: `${emailFrom} <${config.email.user}>`,
           to: recipientEmail,
-          subject: `${senderName} wants to connect on PulseLink`,
+          subject: `${senderName} wants to connect on SoText`,
           html: generateEmailTemplate(
               senderName,
               invitationCode,

@@ -1,5 +1,5 @@
 {
-  "name": "pulselink-functions",
+  "name": "sotext-functions",
   "private": true,
   "main": "lib/index.js",
   "engines": {

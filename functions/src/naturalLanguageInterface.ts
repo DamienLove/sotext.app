@@ -21,7 +21,7 @@ const ai = genkit({
 export function buildQueryPrompt(query: string): string {
   const safeQuery = sanitizeScalar(query);
   return `
-    You are the natural language interface for PulseLink, an emergency alert + escalation app.
+    You are the natural language interface for SoText, an emergency alert + escalation app.
     You MUST classify the user's sentence into one of the intents below and capture any relevant entities.
 
     Supported intents (return the lowercase identifier exactly as written):
@@ -53,9 +53,9 @@ export function buildQueryPrompt(query: string): string {
 export const naturalLanguageQueryFlow = ai.defineFlow({
   name: "naturalLanguageQueryFlow",
   inputSchema: z.string()
-      .describe("A natural language query from a PulseLink user"),
+      .describe("A natural language query from a SoText user"),
   outputSchema: z.object({
-    intent: z.string().describe("One of the supported PulseLink intents"),
+    intent: z.string().describe("One of the supported SoText intents"),
     entities: z.record(z.string())
         .describe("Key/value pairs that parameterize the intent"),
   }),

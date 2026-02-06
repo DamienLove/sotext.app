@@ -28,7 +28,7 @@ export const buildSummaryPrompt = (contactName: string, messages: string[]): str
   const safeContactName = sanitizeScalar(contactName);
 
   return `
-You summarize SMS threads for PulseLink Premium.
+You summarize SMS threads for SoText Premium.
 Write a concise 1-2 sentence summary (max 240 chars).
 If the thread suggests urgency or danger, mention it.
 Do NOT invent facts. Use plain language.
@@ -49,7 +49,7 @@ export const buildComposePrompt = (action: string, draft: string | undefined, la
   const safeLastMsg = lastMessage ? sanitizeDelimiter(lastMessage, "user_content") : "";
 
   return `
-You assist with composing SMS replies for PulseLink Premium.
+You assist with composing SMS replies for SoText Premium.
 Action: ${action}
 
 User Context:
@@ -74,7 +74,7 @@ export const buildUrgencyPrompt = (message: string): string => {
   const safeMessage = sanitizeDelimiter(message, "message");
 
   return `
-You classify inbound SMS urgency for PulseLink.
+You classify inbound SMS urgency for SoText.
 Return one of: standard, urgent, emergency.
 Emergency = imminent danger or immediate action required.
 Urgent = time-sensitive but not imminent danger.

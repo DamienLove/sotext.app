@@ -192,9 +192,6 @@ fun com.android.build.api.dsl.SigningConfig.applySpec(
 }
 
 val releaseSigningSpec = project.buildSigningSpec(flavor = null)
-val freeSigningSpec = project.buildSigningSpec("free")
-val proSigningSpec = project.buildSigningSpec("pro")
-val premiumSigningSpec = project.buildSigningSpec("premium")
 
 android {
     namespace = "com.pulselink"
@@ -206,15 +203,6 @@ android {
 
     signingConfigs {
         create("release") { applySpec(releaseSigningSpec, "release", logger) }
-        if (freeSigningSpec.isConfigured) {
-            create("freeRelease") { applySpec(freeSigningSpec, "freeRelease", logger) }
-        }
-        if (proSigningSpec.isConfigured) {
-            create("proRelease") { applySpec(proSigningSpec, "proRelease", logger) }
-        }
-        if (premiumSigningSpec.isConfigured) {
-            create("premiumRelease") { applySpec(premiumSigningSpec, "premiumRelease", logger) }
-        }
     }
 
     defaultConfig {
@@ -227,23 +215,23 @@ android {
 
         resValue("string", "google_maps_key", mapsApiKey)
         buildConfigField("boolean", "CRASH_DETECTION_ENABLED", "false")
-        // Default feature flags for the consolidated app
-        buildConfigField("boolean", "ADS_ENABLED", "false")
-        buildConfigField("boolean", "PRO_FEATURES", "true")
-        buildConfigField("boolean", "PREMIUM_FEATURES", "true")
+        // Consolidated single-app feature flags (Tier unlocked via IAP)
+        buildConfigField("boolean", "ADS_ENABLED", "true") // Default ON, disabled if Pro/Premium detected
+        buildConfigField("boolean", "PRO_FEATURES", "false") // Default OFF, enabled via IAP
+        buildConfigField("boolean", "PREMIUM_FEATURES", "false") // Default OFF, enabled via IAP
         buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "true")
         buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-sotextapp.cloudfunctions.net\"")
         
         manifestPlaceholders += mapOf(
-            "admobAppId" to ""
+            "admobAppId" to "ca-app-pub-5327057757821609~9533221188" // Use actual ID from free flavor
         )
         
-        buildConfigField("String", "AD_APP_ID", "\"\"")
-        buildConfigField("String", "AD_UNIT_BANNER", "\"\"")
-        buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"\"")
-        buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"\"")
-        buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"\"")
-        buildConfigField("String", "AD_UNIT_APP_OPEN", "\"\"")
+        buildConfigField("String", "AD_APP_ID", "\"ca-app-pub-5327057757821609~9533221188\"")
+        buildConfigField("String", "AD_UNIT_BANNER", "\"ca-app-pub-5327057757821609/3955684775\"")
+        buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"ca-app-pub-5327057757821609/3170992810\"")
+        buildConfigField("String", "AD_UNIT_REWARDED_INTERSTITIAL", "\"ca-app-pub-5327057757821609/8428571815\"")
+        buildConfigField("String", "AD_UNIT_NATIVE_ADVANCED", "\"ca-app-pub-5327057757821609/2153424615\"")
+        buildConfigField("String", "AD_UNIT_APP_OPEN", "\"ca-app-pub-5327057757821609/4210125201\"")
         buildConfigField("String", "SUBS_MONTHLY_PRODUCT_ID", "\"sotext_premium_monthly\"")
         buildConfigField("String", "SUBS_ANNUAL_PRODUCT_ID", "\"sotext_premium_yearly\"")
 
@@ -347,28 +335,6 @@ kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
     }
-}
-
-// Automatically copy per-flavor google-services.json from secure folders if present.
-listOf(
-    "free" to rootProject.file("Free-Certs/google-services.json"),
-    "pro" to rootProject.file("PRO-CERTS/google-services-premium.json"),
-    "premium" to rootProject.file("PRO-CERTS/google-services-premium.json")
-).forEach { (flavor, sourceFile) ->
-    tasks.register("sync${flavor.replaceFirstChar { it.titlecase(Locale.US) }}GoogleServices", Copy::class) {
-        onlyIf { sourceFile.exists() }
-        from(sourceFile)
-        into(file("src/$flavor"))
-        rename { "google-services.json" }
-    }
-}
-
-tasks.matching { it.name == "preBuild" }.configureEach {
-    dependsOn("syncFreeGoogleServices", "syncProGoogleServices", "syncPremiumGoogleServices")
-}
-
-tasks.withType(GoogleServicesTask::class.java).configureEach {
-    dependsOn("syncFreeGoogleServices", "syncProGoogleServices", "syncPremiumGoogleServices")
 }
 
 kapt {
