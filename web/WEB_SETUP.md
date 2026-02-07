@@ -1,6 +1,6 @@
-# PulseLink Web Portal Setup Guide
+# SoText Web App Setup Guide
 
-This guide describes how to configure and deploy the PulseLink Web Portal (Premium/Pro feature) to Firebase Hosting.
+This guide describes how to configure and deploy the SoText Web App (Premium/Pro feature) to Firebase Hosting.
 
 ## Prerequisites
 

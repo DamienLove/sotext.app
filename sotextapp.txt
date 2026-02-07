@@ -10,6 +10,11 @@ SoText Rebrand & Migration Info
 - Build Directory: C:\pulselink_build (required for successful build/deploy/push)
 - Primary Development Branch: sotext.app (as far as we are concerned, this is "main")
 
+== Feature Tiering Principles ==
+- Premium: Features with direct overhead costs (e.g., location lookups via paid API, extensive AI processing). "Add Location" feature is Premium.
+- Pro: Features that typically generate revenue (e.g., ad removal).
+- Free: Supported by non-obnoxious ads.
+
 == Hosting & Server Configuration ==
 Domain: sotext.app
 Control Panel URL: https://server8.webhostmost.com:2222
@@ -71,3 +76,10 @@ Available via Control Panel/Softaculous:
 == Branding Concepts ==
 Proposed Icon Prompt:
 "A modern, high-tech app icon for 'SoText', a messaging app where 'Beacon' is the main feature. The design should feature a stylized, radiating beacon signal or a pulse integrated with a sleek letter 'S'. Use a color palette of deep black, laser blue (#00F3FF), and neon purple (#E000FF). The style should be 'Future Deep' / 'Cyber Mist' aesthetic: glowing, glassmorphism, clean lines. Minimalist but impactful."
+
+== Current Status ==
+- "Add Location" feature implemented in web app message composer and Command Palette.
+- "Add Location" feature is gated as a Premium feature.
+
+== Important Note ==
+This file (`sotextapp.txt`) contains sensitive information (passwords, API keys) and is intended to be ignored by Git. DO NOT commit this file to the repository.

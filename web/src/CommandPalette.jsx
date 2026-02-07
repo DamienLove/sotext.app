@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useMemo, memo } from 'react';
+import { useState, useEffect, useRef, useMemo, memo, useCallback } from 'react';
 import './App.css';
+import { LocationIcon } from './App'; // Assuming LocationIcon is exported from App.jsx or similarly accessible
 
 const ACTIONS = [
   { id: 'nav-home', label: 'Go to Home', icon: '🏠', action: (setActivePanel) => setActivePanel('home') },
-  { id: 'nav-beacon', label: 'Open Beacon Inbox', icon: '📨', action: (setActivePanel) => setActivePanel('beacon') },
+  { id: 'nav-beacon', label: 'Open SoText Inbox', icon: '📨', action: (setActivePanel) => setActivePanel('beacon') },
   { id: 'nav-pulselink', label: 'Manage Profile', icon: '👤', action: (setActivePanel) => setActivePanel('pulselink') },
   { id: 'nav-contacts', label: 'View Contacts', icon: '👥', action: (setActivePanel) => setActivePanel('contacts') },
   { id: 'nav-map', label: 'Emergency Map', icon: '🗺️', action: (setActivePanel) => setActivePanel('map') },
@@ -15,11 +16,108 @@ const ACTIONS = [
 ];
 
 const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
+  const { isPremium, deviceContacts, trustedContacts, sendMessage, setStatus, activeLineId, lines, lineInboxMode } = actions;
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
   const restoreFocusRef = useRef(null);
+  const [pendingCommand, setPendingCommand] = useState(null); // { type: 'sendMessage', details: { contact, message, withLocation } }
+
+  const resolveContact = useCallback((term) => {
+    const lowerTerm = term.toLowerCase();
+    const allContacts = [...deviceContacts, ...trustedContacts];
+    // Prioritize exact phone number match
+    let found = allContacts.find(c => c.phoneNumber === term);
+    if (found) return found;
+
+    // Then try exact display name match
+    found = allContacts.find(c => c.displayName?.toLowerCase() === lowerTerm);
+    if (found) return found;
+
+    // Then try partial display name or phone number includes
+    found = allContacts.find(c =>
+      c.displayName?.toLowerCase().includes(lowerTerm) ||
+      c.phoneNumber?.includes(term)
+    );
+    return found;
+  }, [deviceContacts, trustedContacts]);
+
+  const handleExecuteCommand = useCallback(async (commandType, details) => {
+    switch (commandType) {
+      case 'sendMessage':
+        const { recipient, message, withLocation } = details;
+        let targetContact = recipient;
+
+        // 1. Resolve Contact
+        if (typeof recipient === 'string') {
+          targetContact = resolveContact(recipient);
+          if (!targetContact) {
+            setStatus(`Contact "${recipient}" not found. Please try a phone number or a different name.`);
+            setPendingCommand(null); // Clear pending if contact resolution fails
+            return false;
+          }
+        } else if (!recipient) {
+           setStatus("Recipient not specified. Please provide a contact name or phone number.");
+           setPendingCommand(null);
+           return false;
+        }
+
+
+        let locationData = null;
+        if (withLocation) {
+          if (!isPremium) {
+            setStatus("Location sharing is a Premium feature. Please upgrade.");
+            setPendingCommand({ type: 'sendMessage', details });
+            onClose(); // Close palette to allow user to react to toast
+            return false;
+          }
+          if (!navigator.geolocation) {
+            setStatus("Geolocation is not supported by your browser.");
+            setPendingCommand(null); // Cannot fulfill command if geolocation not supported
+            return false;
+          }
+
+          setStatus("Getting your current location...");
+          try {
+            const position = await new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+            });
+            locationData = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+            setStatus(`Location acquired.`);
+          } catch (error) {
+            console.error("Geolocation error:", error);
+            setStatus(`Failed to get location: ${error.message}. Please enable location services.`);
+            setPendingCommand(null); // Geolocation failed
+            return false;
+          }
+        }
+
+        // 2. Send Message
+        const success = await sendMessage({
+          address: targetContact.phoneNumber,
+          body: message,
+          location: locationData,
+          lineId: activeLineId || lines[0]?.id || null // Use active line or first line if available
+        });
+
+        if (success) {
+          setStatus("Message sent!");
+          setPendingCommand(null); // Clear any pending command
+          setActivePanel('beacon'); // Navigate to beacon to see message
+        } else {
+          setStatus("Failed to send message.");
+          setPendingCommand(null); // Clear pending as send failed
+        }
+        return success;
+
+      default:
+        setStatus(`Unknown command: ${commandType}`);
+        setPendingCommand(null);
+        return false;
+    }
+  }, [isPremium, deviceContacts, trustedContacts, sendMessage, setStatus, setActivePanel, resolveContact, onClose, activeLineId, lines]);
+
 
   useEffect(() => {
     let timeoutId;
@@ -27,6 +125,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
       restoreFocusRef.current = document.activeElement;
       setQuery('');
       setSelectedIndex(0);
+      // setPendingCommand(null); // Don't clear pending command here, allow it to be retried
       // Small timeout to allow render before focus
       timeoutId = setTimeout(() => inputRef.current?.focus(), 50);
     } else {
@@ -36,12 +135,81 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
   }, [isOpen]);
 
   const filteredItems = useMemo(() => {
-    if (!query) return ACTIONS;
-    const lower = query.toLowerCase();
-    return ACTIONS.filter(item =>
-      item.label.toLowerCase().includes(lower)
-    );
-  }, [query]);
+    let currentActions = [...ACTIONS];
+
+    if (pendingCommand) {
+      currentActions.unshift({
+        id: 'retry-pending',
+        label: `Retry pending command: "${pendingCommand.details.message}" to ${pendingCommand.details.recipient}${pendingCommand.details.withLocation ? ' (with location)' : ''}`,
+        icon: '🔄',
+        action: async () => {
+          const success = await handleExecuteCommand(pendingCommand.type, pendingCommand.details);
+          if (success) onClose();
+        },
+        alwaysShow: true // Ensure this action is always visible
+      });
+    }
+
+    if (query.trim()) {
+      const lowerQuery = query.toLowerCase();
+
+      // NLU for "text [contact] [message] [and give my location]"
+      const textCommandMatch = lowerQuery.match(/(?:text|message)\s+([^,]+?)(?:\s+(?:with|and)\s+(?:my|current)\s+location)?(?:,?\s*(.*))?$/i);
+      if (textCommandMatch) {
+        let recipientTerm = textCommandMatch[1]?.trim();
+        let messageBody = textCommandMatch[2]?.trim();
+        const hasLocation = lowerQuery.includes('location') && (lowerQuery.includes('with') || lowerQuery.includes('and'));
+
+        if (!messageBody && recipientTerm && !hasLocation && (lowerQuery.includes('text ') || lowerQuery.includes('message '))) {
+          // If message is empty but command has "text/message" and a recipient, assume recipient is a contact and the rest is message
+          const parts = recipientTerm.split(/\s+/);
+          const potentialContactName = parts[0];
+          const contact = resolveContact(potentialContactName);
+          if (contact) {
+            recipientTerm = potentialContactName;
+            messageBody = parts.slice(1).join(' ').trim();
+          } else {
+            // No contact found for first word, assume entire match[1] is message, no recipient
+            messageBody = recipientTerm;
+            recipientTerm = null;
+          }
+        }
+        
+        // Final fallback for messageBody if it's still empty and a "text/message" command was detected
+        if (!messageBody && (lowerQuery.startsWith('text ') || lowerQuery.startsWith('message '))) {
+          messageBody = "Hey!"; // Default message if none provided
+        }
+
+        if (recipientTerm || messageBody) {
+          const parsedCommand = {
+            command: 'sendMessage',
+            recipient: recipientTerm,
+            message: messageBody,
+            withLocation: hasLocation
+          };
+          
+          currentActions.unshift({
+            id: 'nlu-send-text',
+            label: `Send message: "${messageBody || '...'}" to ${recipientTerm || '...'}${hasLocation ? ' (with location)' : ''}`,
+            icon: hasLocation ? <LocationIcon /> : '📝',
+            action: async (currentSetActivePanel, currentActions) => { // Use arguments from handleSelect
+              const success = await handleExecuteCommand(parsedCommand.command, parsedCommand);
+              // if (success) currentActions.onClose(); // onClose is passed as a prop, not in actions
+              if (success) onClose();
+            },
+            keepOpen: true // Keep open if more info needed or geo permission etc.
+          });
+        }
+      }
+
+      // Filter existing static actions
+      currentActions = currentActions.filter(item =>
+        item.alwaysShow || item.label.toLowerCase().includes(lowerQuery)
+      );
+    }
+
+    return currentActions;
+  }, [query, pendingCommand, handleExecuteCommand, resolveContact, isPremium, setStatus, onClose, setActivePanel, deviceContacts, trustedContacts]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -57,7 +225,8 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (filteredItems[selectedIndex]) {
-        handleSelect(filteredItems[selectedIndex]);
+        filteredItems[selectedIndex].action(setActivePanel, actions);
+        if (!filteredItems[selectedIndex].keepOpen) onClose(); // New property to keep palette open
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
@@ -67,7 +236,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
 
   const handleSelect = (item) => {
     item.action(setActivePanel, actions);
-    onClose();
+    if (!item.keepOpen) onClose();
   };
 
   // Auto-scroll to selected item
@@ -127,7 +296,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
               role="option"
               aria-selected={index === selectedIndex}
             >
-              <span className="item-icon">{item.icon}</span>
+              {typeof item.icon === 'string' ? <span className="item-icon">{item.icon}</span> : <div className="item-icon">{item.icon}</div>}
               <span className="item-label">{item.label}</span>
               {index === selectedIndex && <span className="item-enter">↵</span>}
             </div>

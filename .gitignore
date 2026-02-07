@@ -54,7 +54,7 @@ iosApp/build/
 shared/build/
 shared/.gradle/
 /PulseLink-ui-mockup/Beacon-ui-mockup/Screenshot 2025-12-14 114416.png
-/PulseLink-ui-mockup/Beacon-ui-mockup/beacon-free-logo.png
+/PulseLink-ui-mockup/Beacon-ui-mockup/Beacon-ui-mockup/beacon-free-logo.png
 /PulseLink-ui-mockup/Beacon-ui-mockup/beacon-pro-premium-logo.png
 /PulseLink-ui-mockup/Beacon-ui-mockup/Screenshot 2025-12-14 114458.png
 /PulseLink-ui-mockup/Beacon-ui-mockup/Screenshot 2025-12-14 114527.png
@@ -96,3 +96,6 @@ ringersong/libs/android-sdk-*-appremote*/
 web/*.log
 web/playwright-report/
 web/test-results/
+
+# SoText private config
+sotextapp.txt

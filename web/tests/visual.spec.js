@@ -12,11 +12,11 @@ test('visual verification of login page', async ({ page }) => {
   // Verify key elements are visible with correct classes
   await expect(page.locator('.login-card')).toBeVisible();
   await expect(page.locator('.brand-logo')).toBeVisible();
-  await expect(page.getByText('PulseLink Web')).toBeVisible();
+  await expect(page.getByText('SoText Web')).toBeVisible();
 
   // Verify Fonts are loaded (Inter and Space Grotesk)
   // This is a basic check to see if the computed style matches
-  const heading = page.getByRole('heading', { name: 'PulseLink Web' });
+  const heading = page.getByRole('heading', { name: 'SoText Web' });
   await expect(heading).toHaveCSS('font-family', /Space Grotesk/);
 
   const body = page.locator('body');

@@ -33,9 +33,9 @@ import {
 } from "firebase/storage";
 import { httpsCallable } from "firebase/functions";
 import './App.css';
-import logo from './assets/pulselink-pro-logo.png';
-import beaconLogo from './assets/beacon-logo.png';
-import ringersongLogo from './assets/ringersong-logo.png';
+import logo from './assets/sotext-logo.png'; // Placeholder, to be replaced by actual SoText logo
+// import beaconLogo from './assets/beacon-logo.png'; // No longer a separate app
+// import ringersongLogo from './assets/ringersong-logo.png'; // No longer a separate app
 import auroraBg from './assets/themes/aurora.svg';
 import midnightBg from './assets/themes/midnight_oled.svg';
 import sunsetBg from './assets/themes/sunset_fade.svg';
@@ -93,6 +93,7 @@ const PinIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none
 const ArchiveIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>;
 const InboxIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>;
 const PaperclipIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>;
+const LocationIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21.7c-3.1-2.8-8-7.7-8-12.7C4 5.2 7.6 2 12 2s8 3.2 8 6.9c0 5-4.9 9.9-8 12.7z"/><circle cx="12" cy="8" r="3"/></svg>;
 
 const RequiredIndicator = () => (
   <span
@@ -275,7 +276,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
 ThreadItem.displayName = 'ThreadItem';
 
 const ThreadSkeleton = () => (
-  <div className="skeleton-thread">
+  <div className={`skeleton-thread ${activePanel === 'beacon' ? 'sidebar-only' : ''}`}>
     <div className="skeleton-line" style={{ width: '40%' }}></div>
     <div className="skeleton-line short"></div>
   </div>
@@ -685,101 +686,19 @@ const ThemePresetItem = memo(({ preset, onApply }) => (
 ));
 ThemePresetItem.displayName = 'ThemePresetItem';
 
-const areRingerSongsEqual = (prev, next) => {
-  return prev.song.id === next.song.id &&
-         prev.song.title === next.song.title &&
-         prev.song.artist === next.song.artist &&
-         prev.song.albumArtUrl === next.song.albumArtUrl &&
-         prev.onDelete === next.onDelete;
-};
 
-// Bolt: Optimized RingerSongItem with memo to prevent re-rendering the entire playlist
-const RingerSongItem = memo(({ song, onDelete, index }) => {
-  const [isDeleting, setIsDeleting] = useState(false);
-  const isMounted = useRef(true);
 
-  useEffect(() => {
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
 
-  const handleDelete = useCallback(async () => {
-    setIsDeleting(true);
-    try {
-      await onDelete(song.id);
-    } catch (error) {
-      console.error("Failed to delete song", error);
-    } finally {
-      if (isMounted.current) {
-        setIsDeleting(false);
-      }
-    }
-  }, [song.id, onDelete]);
-
-  return (
-    <div className="song-card">
-      {index !== undefined && <span className="song-rank">{(index + 1).toString().padStart(2, '0')}</span>}
-      {song.albumArtUrl ? (
-        <img src={song.albumArtUrl} alt="" className="song-art" loading="lazy" />
-      ) : (
-        <div className="song-art" style={{ display: 'grid', placeItems: 'center' }}>♫</div>
-      )}
-      <div className="song-info">
-        <div className="song-title">{song.title}</div>
-        <div className="song-artist">{song.artist}</div>
-      </div>
-      <button
-        className="ghost-btn icon-only"
-        onClick={handleDelete}
-        disabled={isDeleting}
-        title="Remove from playlist"
-        aria-label={`Remove ${song.title} from playlist`}
-        style={{ width: 32, height: 32, padding: 0, display: 'grid', placeItems: 'center', border: 'none' }}
-      >
-        {isDeleting ? <Spinner className="no-margin" /> : <TrashIcon />}
-      </button>
-    </div>
-  );
-}, areRingerSongsEqual);
-RingerSongItem.displayName = 'RingerSongItem';
-
-const areSpotifyResultsEqual = (prev, next) => {
-  return prev.isAdding === next.isAdding &&
-         prev.track.id === next.track.id &&
-         prev.onAdd === next.onAdd;
-};
-
-// Bolt: Optimized SpotifyResultItem to prevent re-rendering all results when one is adding
-const SpotifyResultItem = memo(({ track, onAdd, isAdding }) => (
-  <div className="song-card">
-    <img src={track.album?.images[0]?.url} alt="" className="song-art" loading="lazy" />
-    <div className="song-info">
-      <div className="song-title">{track.name}</div>
-      <div className="song-artist">{track.artists.map(a => a.name).join(', ')}</div>
-    </div>
-    <button
-      className="secondary-btn"
-      style={{ padding: '6px 12px', fontSize: '0.85em' }}
-      onClick={() => onAdd(track)}
-      disabled={isAdding}
-      aria-busy={isAdding}
-      aria-label={`Add ${track.name} to playlist`}
-    >
-      {isAdding ? "Adding..." : "Add"}
-    </button>
-  </div>
-), areSpotifyResultsEqual);
-SpotifyResultItem.displayName = 'SpotifyResultItem';
 
 // Bolt: MessageComposer extracted to prevent App re-renders on typing
-const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn }) => {
+const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeLineId, lines, isLoggingIn, isPremium }) => {
   const [address, setAddress] = useState('');
   const [body, setBody] = useState('');
   const [lineId, setLineId] = useState('');
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [attachment, setAttachment] = useState(null);
+  const [locationData, setLocationData] = useState(null); // {latitude, longitude}
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -802,6 +721,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     setBody('');
     setStatus('');
     setAttachment(null);
+    setLocationData(null); // Clear location data on thread change
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [selectedThread]);
 
@@ -817,14 +737,41 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
     setStatus(`Selected: ${file.name}`);
   };
 
+  const handleAttachLocation = () => {
+    if (!isPremium) {
+      setStatus("Location sharing is a Premium feature. Please upgrade.");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setStatus("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setStatus("Getting location...");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setLocationData({ latitude, longitude });
+        setStatus(`Location attached: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        setStatus(`Failed to get location: ${error.message}. Please enable location services.`);
+        setLocationData(null);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
   const handleSendMessage = async () => {
     if (!user) return;
     const cleanAddress = address.trim();
     const cleanBody = body.trim();
     const effectiveLineId = lineInboxMode === 'PER_LINE' ? (lineId || activeLineId || lines[0]?.id || null) : null;
 
-    if (!cleanAddress || (!cleanBody && !attachment)) {
-      setStatus("Add a phone number and message or attachment.");
+    if (!cleanAddress || (!cleanBody && !attachment && !locationData)) {
+      setStatus("Add a phone number and message, attachment, or location.");
       return;
     }
     setIsSending(true);
@@ -845,10 +792,12 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
         source: "web",
         lineId: effectiveLineId,
         status: "pending",
-        attachmentUrl: attachmentUrl || null
+        attachmentUrl: attachmentUrl || null,
+        location: locationData || null // Add location data
       });
       setBody('');
       setAttachment(null);
+      setLocationData(null); // Clear location after sending
       if (fileInputRef.current) fileInputRef.current.value = '';
       setStatus("Queued for sending...");
 
@@ -925,6 +874,17 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
         >
             <PaperclipIcon />
         </button>
+        {isPremium && ( // Only show location button for Premium users
+          <button
+              className={`ghost-btn icon-only ${locationData ? 'active' : ''}`}
+              onClick={handleAttachLocation}
+              title={locationData ? `Location attached: ${locationData.latitude.toFixed(2)}, ${locationData.longitude.toFixed(2)}` : "Attach location (Premium)"}
+              aria-label="Attach location"
+              style={{ marginRight: 8 }}
+          >
+              <LocationIcon />
+          </button>
+        )}
         <div style={{ flex: 1, position: 'relative' }}>
           <textarea
             ref={textareaRef}
@@ -935,7 +895,7 @@ const MessageComposer = memo(({ user, db, selectedThread, lineInboxMode, activeL
             aria-describedby="message-char-count"
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            required={!attachment}
+            required={!attachment && !locationData}
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
@@ -994,7 +954,7 @@ const defaultTheme = {
   iconSizeFactor: 1.0,
   fontStyle: "Default",
   bubbleCornerRadius: 22,
-  inboxIconVariant: "Beacon",
+  inboxIconVariant: "SoText",
   onBubbleOutgoing: "#000000",
   onBubbleIncoming: "#EEF2FB",
   onBackground: "#E0F7FA",
@@ -2006,40 +1966,16 @@ const Sidebar = memo(({
           <HomeIcon />
           <span>Home</span>
         </button>
-        {remoteSettings.pulseLinkEnabled && (
-          <button
-            className={`nav-item ${activePanel === 'pulselink' ? 'active' : ''}`}
-            onClick={() => setActivePanel('pulselink')}
-            title="PulseLink"
-            aria-label="PulseLink"
-            aria-current={activePanel === 'pulselink' ? 'page' : undefined}
-          >
-            <img src={logo} alt="PulseLink" />
-            <span>PulseLink</span>
-          </button>
-        )}
         {remoteSettings.beaconLauncherEnabled && (
           <button
             className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
             onClick={() => setActivePanel('beacon')}
-            title="Beacon"
-            aria-label="Beacon"
+            title="SoText"
+            aria-label="SoText"
             aria-current={activePanel === 'beacon' ? 'page' : undefined}
           >
-            <img src={beaconLogo} alt="Beacon" />
-            <span>Beacon</span>
-          </button>
-        )}
-        {remoteSettings.ringerSongEnabled && (
-          <button
-            className={`nav-item ${activePanel === 'ringersong' ? 'active' : ''}`}
-            onClick={() => setActivePanel('ringersong')}
-            title="RingerSong"
-            aria-label="RingerSong"
-            aria-current={activePanel === 'ringersong' ? 'page' : undefined}
-          >
-            <img src={ringersongLogo} alt="RingerSong" />
-            <span>RingerSong</span>
+            <img src={logo} alt="SoText" />
+            <span>SoText</span>
           </button>
         )}
         {remoteSettings.mapEnabled && (
@@ -2215,7 +2151,7 @@ const Sidebar = memo(({
                   <div className="sidebar-tip muted">
                     To see your messages here:
                     <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
-                      <li>Open PulseLink on your phone</li>
+                      <li>Open SoText on your phone</li>
                       <li>Go to Extensions Store</li>
                       <li>Enable &quot;Remote Web Access&quot;</li>
                     </ol>
@@ -2251,7 +2187,7 @@ const Sidebar = memo(({
         </>
       ) : (
         <div className="sidebar-placeholder">
-          <div className="sidebar-tip">Use the tiles on Home to jump into PulseLink or Beacon.</div>
+          <div className="sidebar-tip">Use the tiles on Home to jump into SoText.</div>
           <div className="sidebar-tip muted">Theme and settings sync to your device.</div>
         </div>
       )}
@@ -2284,7 +2220,7 @@ Sidebar.displayName = 'Sidebar';
 
 
 function App() {
-  const webHintStorageKey = 'pulselink.hideWebHint';
+  const webHintStorageKey = 'sotext.hideWebHint';
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(true);
@@ -2383,11 +2319,10 @@ function App() {
     mapEnabled: true,
     contactsEnabled: true,
     themesEnabled: true,
-    pulseLinkEnabled: true,
     commandPaletteEnabled: true
   });
   const [devExtensions, setDevExtensions] = useState(() => {
-    const saved = localStorage.getItem('pulselink.devExtensions');
+    const saved = localStorage.getItem('sotext.devExtensions');
     if (saved) return JSON.parse(saved);
     return [
       {
@@ -2409,7 +2344,7 @@ function App() {
   const [extensionForm, setExtensionForm] = useState({ name: '', endpoint: '', description: '' });
   const [extensionStatus, setExtensionStatus] = useState('');
   useEffect(() => {
-    localStorage.setItem('pulselink.devExtensions', JSON.stringify(devExtensions));
+    localStorage.setItem('sotext.devExtensions', JSON.stringify(devExtensions));
   }, [devExtensions]);
 
   const [email, setEmail] = useState('');
@@ -2753,11 +2688,9 @@ function App() {
         privateSafeEnabled: true,
         smartRepliesEnabled: true,
         truecallerEnabled: true,
-        ringerSongEnabled: true,
         mapEnabled: true,
         contactsEnabled: true,
         themesEnabled: true,
-        pulseLinkEnabled: true,
         commandPaletteEnabled: true
       });
 
@@ -2843,15 +2776,12 @@ function App() {
         crashDetectionEnabled: data.crashDetectionEnabled ?? false,
         aiSummariesEnabled: data.aiSummariesEnabled ?? false,
         firebaseMessagingEnabled: data.firebaseMessagingEnabled ?? true,
-        mergedExperienceEnabled: data.mergedExperienceEnabled ?? false,
         privateSafeEnabled: data.privateSafeEnabled ?? false,
         smartRepliesEnabled: data.smartRepliesEnabled ?? true,
         truecallerEnabled: data.truecallerEnabled ?? false,
-        ringerSongEnabled: data.ringerSongEnabled ?? true,
         mapEnabled: data.mapEnabled ?? true,
         contactsEnabled: data.contactsEnabled ?? true,
         themesEnabled: data.themesEnabled ?? true,
-        pulseLinkEnabled: data.pulseLinkEnabled ?? true,
         commandPaletteEnabled: data.commandPaletteEnabled ?? true
       });
       if (data.lineInboxMode) setLineInboxMode(data.lineInboxMode);
@@ -2913,6 +2843,7 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
     if (!user || !isPremiumUser || !userData) return;
     if (userData.remoteWebAccessEnabled === undefined) {
       setDoc(doc(db, "users", user.uid), {
@@ -3619,6 +3550,9 @@ function App() {
 
       // Sync theme to public profile
       await setDoc(doc(db, "public_profiles", user.uid), {
+        ownerName: profile.ownerName,
+        avatarUrl: profile.avatarUrl,
+        avatarId: profile.avatarId,
         themePreferences: normalized,
         updatedAt: serverTimestamp()
       }, { merge: true });
@@ -3725,14 +3659,13 @@ function App() {
         crashDetectionEnabled: remoteSettings.crashDetectionEnabled,
         aiSummariesEnabled: remoteSettings.aiSummariesEnabled,
         firebaseMessagingEnabled: remoteSettings.firebaseMessagingEnabled,
-        mergedExperienceEnabled: remoteSettings.mergedExperienceEnabled,
         privateSafeEnabled: remoteSettings.privateSafeEnabled,
         smartRepliesEnabled: remoteSettings.smartRepliesEnabled,
         truecallerEnabled: remoteSettings.truecallerEnabled,
-        ringerSongEnabled: remoteSettings.ringerSongEnabled,
         mapEnabled: remoteSettings.mapEnabled,
         contactsEnabled: remoteSettings.contactsEnabled,
         themesEnabled: remoteSettings.themesEnabled,
+        commandPaletteEnabled: remoteSettings.commandPaletteEnabled,
         settingsUpdatedAt: serverTimestamp()
       }, { merge: true });
       setRemoteSettingsStatus("Settings updated.");
@@ -3757,7 +3690,7 @@ function App() {
 
       await addDoc(collection(db, "users", user.uid, "outbox"), {
         address: phone,
-        body: "PulseLink Web Relay Test: " + new Date().toLocaleTimeString(),
+        body: "SoText Web Relay Test: " + new Date().toLocaleTimeString(),
         createdAt: serverTimestamp(),
         source: "web_test",
         lineId: activeLineId || lines[0]?.id || null
@@ -3786,7 +3719,7 @@ function App() {
         },
         { merge: true }
       );
-      setSyncRequestStatus("Sync requested. Open PulseLink on your phone and keep it online.");
+      setSyncRequestStatus("Sync requested. Open SoText on your phone and keep it online.");
     } catch (error) {
       console.error("Sync request failed", error);
       setSyncRequestStatus(error?.message ?? "Unable to request sync.");
@@ -3811,33 +3744,28 @@ function App() {
       newSettings.aiSummariesEnabled = false;
       newSettings.remoteWebAccessEnabled = false;
       newSettings.crashDetectionEnabled = false;
-      newSettings.mergedExperienceEnabled = false;
       newSettings.privateSafeEnabled = false;
       newSettings.smartRepliesEnabled = true;
-      newSettings.ringerSongEnabled = false;
       newSettings.mapEnabled = true; // Safety core
       newSettings.contactsEnabled = true;
       newSettings.themesEnabled = false;
-      newSettings.pulseLinkEnabled = true;
       newSettings.commandPaletteEnabled = false;
+      newSettings.thirdPartyExtensionsEnabled = false; // Add this line
     } else if (isPower) {
       newSettings.beaconLauncherEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
       newSettings.emailFallbackEnabled = true;
       newSettings.otpCleanupEnabled = true;
       newSettings.aiSummariesEnabled = isPremiumUser; // Check premium
-      newSettings.remoteWebAccessEnabled = isPremiumUser;
+      newSettings.remoteWebAccessEnabled = true; // Always true for Power
       newSettings.crashDetectionEnabled = isPremiumUser;
-      newSettings.mergedExperienceEnabled = true;
       newSettings.thirdPartyExtensionsEnabled = true;
       newSettings.privateSafeEnabled = true;
       newSettings.smartRepliesEnabled = true;
       newSettings.truecallerEnabled = true;
-      newSettings.ringerSongEnabled = true;
       newSettings.mapEnabled = true;
       newSettings.contactsEnabled = true;
       newSettings.themesEnabled = true;
-      newSettings.pulseLinkEnabled = true;
       newSettings.commandPaletteEnabled = true;
     }
 
@@ -3891,7 +3819,7 @@ function App() {
         body: JSON.stringify({
           event: 'ping',
           user: user?.uid ?? 'anonymous',
-          sampleMessage: messages[0]?.body ?? 'hello from PulseLink',
+          sampleMessage: messages[0]?.body ?? 'hello from SoText',
           timestamp: Date.now()
         })
       });
@@ -3978,10 +3906,52 @@ function App() {
     setSelectedThread(null);
   }, []);
 
+  const handleSendMessageFromPalette = useCallback(async ({ address, body, location, attachment = null, lineId = null }) => {
+    if (!user) {
+      setRemoteSettingsStatus("Please sign in to send messages.");
+      return;
+    }
+    const cleanAddress = address.trim();
+    const cleanBody = body.trim();
+
+    if (!cleanAddress || (!cleanBody && !attachment && !location)) {
+      setRemoteSettingsStatus("Message requires a recipient, body, attachment, or location.");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "users", user.uid, "outbox"), {
+        address: cleanAddress,
+        body: cleanBody,
+        createdAt: serverTimestamp(),
+        source: "web_command_palette",
+        lineId: lineId || activeLineId || lines[0]?.id || null, // Use active line or first line if available
+        status: "pending",
+        attachmentUrl: attachment,
+        location: location || null
+      });
+      setRemoteSettingsStatus("Message queued via Command Palette!");
+      return true; // Indicate success
+    } catch (error) {
+      console.error("Command Palette send failed", error);
+      setRemoteSettingsStatus(`Send failed: ${error.message}`);
+      return false; // Indicate failure
+    }
+  }, [user, db, activeLineId, lines]);
+
   const commandPaletteActions = useMemo(() => ({
     logout: handleLogout,
-    newThread: handleNewThread
-  }), [handleLogout, handleNewThread]);
+    newThread: handleNewThread,
+    sendMessage: handleSendMessageFromPalette, // New action
+    setStatus: setRemoteSettingsStatus, // New action for palette to display status
+    setActivePanel: setActivePanel, // Allow palette to navigate panels
+    isPremium: isPremium, // Pass premium status
+    deviceContacts: deviceContacts, // Pass device contacts for resolution
+    trustedContacts: trustedContacts, // Pass trusted contacts for resolution
+    lines: lines, // Pass lines for explicit line selection
+    activeLineId: activeLineId, // Pass active line for context
+    lineInboxMode: lineInboxMode // Pass line inbox mode
+  }), [handleLogout, handleNewThread, handleSendMessageFromPalette, setRemoteSettingsStatus, setActivePanel, isPremium, deviceContacts, trustedContacts, lines, activeLineId, lineInboxMode]);
 
   // Bolt: Stable handler to prevent ghost content when switching threads
   const handleThreadSelect = useCallback((thread) => {
@@ -4077,11 +4047,9 @@ function App() {
   const hasBeaconData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
 
   const navLogo = useMemo(() => {
-     if (remoteSettings.mergedExperienceEnabled) {
-         return beaconLogo;
-     }
+     // Removed remoteSettings.mergedExperienceEnabled as that feature is deprecated
      return logo;
-  }, [remoteSettings.mergedExperienceEnabled]);
+  }, []);
 
   // Bolt: Debug hooks for verification
   useEffect(() => {
@@ -4113,8 +4081,8 @@ function App() {
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <div className="container login-container" id="main-content">
           <div className="login-card neon-border">
-            <img src={logo} alt="PulseLink Pro" className="brand-logo" />
-            <h1>PulseLink Web</h1>
+            <img src={logo} alt="SoText" className="brand-logo" />
+            <h1>SoText Web</h1>
             <p>Login to access your messages</p>
             <form
               className="login-form"
@@ -4272,7 +4240,7 @@ function App() {
                   })()}
                   {profile.ownerName ? `, ${profile.ownerName.split(' ')[0]}` : ''}
                 </h2>
-                <p>Choose what you want to manage on PulseLink Web.</p>
+                <p>Choose what you want to manage on SoText Web.</p>
               </div>
               {/* Web app info tooltip - fixes #236: Users need to know about web app availability */}
               {/* QA TEST: Visit web app home screen after login */}
@@ -4293,7 +4261,7 @@ function App() {
                   </button>
                   <div className="hint-icon">??</div>
                   <div className="hint-content">
-                    <strong>Access PulseLink Web anytime:</strong> Visit pulselink.damiennichols.com (or app.damiennichols.com / pulselink-24899.web.app) from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
+                    <strong>Access SoText Web anytime:</strong> Visit sotext.app from any browser to manage contacts, view synced messages, customize themes, and track emergency locations. All settings sync automatically with your mobile app.
                   </div>
                 </div>
               )}
@@ -4301,9 +4269,9 @@ function App() {
                 <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
                   <div className="status-pill">{hasBeaconData ? 'Sync Active' : 'Setup Required'}</div>
                   <div className="home-icon beacon pulse-slow">
-                    <img src={beaconLogo} alt="Beacon" />
+                    <img src={logo} alt="SoText" />
                   </div>
-                  <h3>Beacon Inbox</h3>
+                  <h3>SoText Inbox</h3>
                   <p>View SMS synced from your phone.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
@@ -4322,26 +4290,18 @@ function App() {
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
                 </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('ringersong')}>
-                  <div className="status-pill">{ringerPlaylist.length > 0 ? `${ringerPlaylist.length} Songs` : 'Empty'}</div>
-                  <div className="home-icon ringersong pulse-slow">
-                    <img src={ringersongLogo} alt="RingerSong" />
-                  </div>
-                  <h3>RingerSong</h3>
-                  <p>Manage ringtone progressions and streaming.</p>
-                </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
                   <div className="status-pill">{alertLocations.length > 0 ? `${alertLocations.length} Alerts` : 'Safe'}</div>
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink map" />
+                    <img src={logo} alt="SoText map" />
                   </div>
                   <h3>Emergency Map</h3>
-                  <p>Track shared locations from PulseLink alerts.</p>
+                  <p>Track shared locations from SoText alerts.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
                   <div className="status-pill">Gallery</div>
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink themes" />
+                    <img src={logo} alt="SoText themes" />
                   </div>
                   <h3>Theme Gallery</h3>
                   <p>Browse, import, and publish custom themes.</p>
@@ -4653,7 +4613,7 @@ function App() {
                       <EmptyState
                         icon={<ContactIcon />}
                         title={contactSearch.trim() ? "No matches found" : "No contacts synced"}
-                        description={contactSearch.trim() ? "Try searching for a different name or number." : "Ensure your phone is online and PulseLink is active."}
+                        description={contactSearch.trim() ? "Try searching for a different name or number." : "Ensure your phone is online and SoText is active."}
                         action={contactSearch.trim() && (
                           <button
                             className="link-button"
@@ -4677,7 +4637,7 @@ function App() {
             <div className="map-panel">
               <div className="panel-header">
                 <h3>Emergency map</h3>
-                <p>Locations parsed from PulseLink alert messages synced to this account.</p>
+                <p>Locations parsed from SoText alert messages synced to this account.</p>
               </div>
               {!user && (
                 <div className="settings-card" style={{ marginBottom: 20 }}>
@@ -4762,98 +4722,6 @@ function App() {
               </div>
               </>
               )}
-            </div>
-          )}
-
-          {activePanel === 'ringersong' && (
-            <div className="pulselink-panel">
-              <div className="ringersong-header">
-                <div
-                  className="ringersong-logo-container"
-                  style={{
-                      maskImage: `url(${ringersongLogo})`,
-                      WebkitMaskImage: `url(${ringersongLogo})`
-                  }}
-                />
-                <div>
-                    <h3>RingerSong</h3>
-                    <p style={{color: 'var(--muted)'}}>Progressive ringtone streaming & playlist manager.</p>
-                </div>
-                {ringerPlaylist.length > 0 && (
-                  <div className="visualizer">
-                    <div className="visualizer-bar" />
-                    <div className="visualizer-bar" />
-                    <div className="visualizer-bar" />
-                    <div className="visualizer-bar" />
-                    <div className="visualizer-bar" />
-                  </div>
-                )}
-              </div>
-
-              <div className="pulselink-grid">
-                <div className="settings-card">
-                    <div className="card-header-row" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20}}>
-                        <h4>Current Playlist</h4>
-                        <span className="badge" style={{background: 'var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: 12, fontSize: '0.8em'}}>{ringerPlaylist.length} songs</span>
-                    </div>
-                    
-                    {ringerPlaylist.length === 0 ? (
-                        <div className="empty-state">
-                            <p className="muted">Your playlist is empty. Add songs to start streaming.</p>
-                        </div>
-                    ) : (
-                        <div className="song-grid">
-                            {ringerPlaylist.map((song, i) => (
-                                <RingerSongItem
-                                    key={song.id}
-                                    song={song}
-                                    index={i}
-                                    onDelete={handleDeleteRingerSong}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
-              
-                <div className="settings-card">
-                    <h4>Add Music</h4>
-                    <div className="search-container">
-                        <div className="search-input-wrapper">
-                            <input
-                                className="login-input"
-                                placeholder="Search Spotify for songs..."
-                                aria-label="Search Spotify for songs"
-                                value={spotifySearch}
-                                onChange={(e) => setSpotifySearch(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSpotifySearch()}
-                            />
-                            <button
-                                className="primary-btn"
-                                onClick={handleSpotifySearch}
-                                disabled={isSearchingSpotify}
-                                aria-busy={isSearchingSpotify}
-                            >
-                                {isSearchingSpotify ? "Searching..." : "Search"}
-                            </button>
-                        </div>
-                    </div>
-
-                    {spotifyResults.length > 0 && (
-                        <div className="song-grid">
-                            {spotifyResults.map(track => (
-                                <SpotifyResultItem
-                                    key={track.id}
-                                    track={track}
-                                    onAdd={handlePushSpotifyTrack}
-                                    isAdding={addingTrackId === track.id}
-                                />
-                            ))}
-                        </div>
-                    )}
-                    
-                    <Toast message={settingsStatus} onDismiss={() => setSettingsStatus('')} />
-                </div>
-              </div>
             </div>
           )}
 
@@ -4953,7 +4821,7 @@ function App() {
                       className="login-input"
                       value={themePublishForm.authorHandle}
                       onChange={(e) => setThemePublishForm((prev) => ({ ...prev, authorHandle: e.target.value }))}
-                      placeholder="@pulseartist"
+                      placeholder="@sotextartist"
                     />
                   </label>
                   <label className="settings-toggle">
@@ -5077,7 +4945,7 @@ function App() {
             <div className="pulselink-panel">
               <div className="panel-header">
                 <h3>Extensions Store</h3>
-                <p>Enhance your PulseLink experience with powerful add-ons.</p>
+                <p>Enhance your SoText experience with powerful add-ons.</p>
               </div>
 
               <div className="settings-card" style={{marginBottom: 20}}>
@@ -5088,7 +4956,7 @@ function App() {
                       <BoltIcon />
                     </div>
                     <h4 style={{marginTop: 8}}>Essentials</h4>
-                    <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Just the basics: Beacon, Relay, Email Backup, and OTP Cleanup.</p>
+                    <p style={{fontSize: '0.9em', color: 'var(--muted)', margin: 0}}>Just the basics: SoText Inbox, Relay, Email Backup, and OTP Cleanup.</p>
                   </button>
                   <button className="home-card" style={{margin: 0, flex: 1, textAlign: 'left', alignItems: 'flex-start'}} onClick={() => handleQuickSetup('power')}>
                     <div className="home-icon" style={{width: 40, height: 40, background: 'rgba(34, 211, 238, 0.1)', color: 'var(--accent)'}}>
@@ -5103,45 +4971,44 @@ function App() {
               {[
                 {
                   title: "Core",
-                  items: [
-                    { id: 'pulseLinkEnabled', name: 'PulseLink Manager', desc: 'Manage your public profile and trusted contacts.', icon: logo, isImg: true },
-                    { id: 'beaconLauncherEnabled', name: 'Beacon Inbox', desc: 'Separate launcher icon and sidebar tab for your SMS inbox.', icon: beaconLogo, isImg: true },
-                    { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between PulseLink users.', icon: <CloudSyncIcon /> }
-                  ]
-                },
-                {
-                  title: "PulseLink Apps",
-                  items: [
-                    { id: 'ringerSongEnabled', name: 'RingerSong', desc: 'Progressive ringtone streaming & playlist manager.', icon: ringersongLogo, isImg: true },
-                    { id: 'mapEnabled', name: 'Emergency Map', desc: 'Track shared locations from PulseLink alerts.', icon: <MapIcon /> },
-                    { id: 'contactsEnabled', name: 'Contacts Manager', desc: 'Browse and manage synced device contacts.', icon: <ContactIcon /> },
-                    { id: 'themesEnabled', name: 'Theme Gallery', desc: 'Browse, import, and publish custom themes.', icon: <ThemeIcon /> }
-                  ]
-                },
-                {
-                  title: "Safety & Security",
-                  items: [
-                    { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
-                    { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon />, premium: true },
-                    { id: 'privateSafeEnabled', name: 'Private Safe', desc: 'Lock and hide sensitive conversations.', icon: <LockIcon /> }
-                  ]
-                },
-                {
-                  title: "Smart Features",
-                  items: [
-                    { id: 'smartRepliesEnabled', name: 'Smart Replies', desc: 'One-tap suggestion chips for incoming messages.', icon: <MessageSquareIcon /> },
-                    { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
-                    { id: 'aiSummariesEnabled', name: 'PulseLink AI', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon />, premium: true },
+                                    items: [
+                                      { id: 'beaconLauncherEnabled', name: 'SoText Inbox', desc: 'Separate launcher icon and sidebar tab for your SMS inbox.', icon: logo, isImg: true },
+                                      { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between SoText users.', icon: <CloudSyncIcon /> }
+                                    ]
+                                  },
+                                  {
+                                    title: "SoText Features",
+                                    items: [
+                                      { id: 'mapEnabled', name: 'Emergency Map', desc: 'Track shared locations from SoText alerts.', icon: <MapIcon /> },
+                                      { id: 'contactsEnabled', name: 'Contacts Manager', desc: 'Browse and manage synced device contacts.', icon: <ContactIcon /> },
+                                      { id: 'themesEnabled', name: 'Theme Gallery', desc: 'Browse, import, and publish custom themes.', icon: <ThemeIcon /> }
+                                    ]
+                                  },
+                                  {
+                                    title: "Safety & Security",
+                                    items: [
+                                      { id: 'emailFallbackEnabled', name: 'Email Backup', desc: 'Forward urgent alerts to email if SMS fails.', icon: <EmailIcon /> },
+                                      { id: 'crashDetectionEnabled', name: 'Crash Detection', desc: 'Detects car crashes and notifies emergency contacts.', icon: <CarCrashIcon /> },
+                                      { id: 'privateSafeEnabled', name: 'Private Safe', desc: 'Lock and hide sensitive conversations.', icon: <LockIcon /> }
+                                    ]
+                                  },
+                                  {
+                                    title: "Smart Features",
+                                    items: [
+                                      { id: 'smartRepliesEnabled', name: 'Smart Replies', desc: 'One-tap suggestion chips for incoming messages.', icon: <MessageSquareIcon /> },
+                                      { id: 'otpCleanupEnabled', name: 'Smart OTP Cleanup', desc: 'Automatically deletes one-time passwords after 24 hours.', icon: <DeleteSweepIcon /> },
+                                      { id: 'aiSummariesEnabled', name: 'AI Summaries', desc: 'Smart summaries and urgency detection for your chats.', icon: <SmartToyIcon /> },
                     { id: 'commandPaletteEnabled', name: 'Command Palette', desc: 'Quickly access features with Ctrl+K.', icon: <SearchIcon /> }
+
                   ]
                 },
                 {
                   title: "Integrations",
                   items: [
-                    { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true, premium: true },
-                    { id: 'mergedExperienceEnabled', name: 'Unified Home', desc: 'Merge PulseLink and Beacon navigation into a single simplified experience.', icon: <HomeIcon />, premium: true },
-                    { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Allow community-built plugins (Beta).', icon: <ExtensionIcon />, premium: true },
-                    { id: 'truecallerEnabled', name: 'Truecaller Caller ID', desc: 'Identify unknown callers and block spam using Truecaller directory.', icon: <SearchIcon /> }
+                    { id: 'remoteWebAccessEnabled', name: 'Remote Web Access', desc: 'Sync messages and contacts to this web portal.', icon: logo, isImg: true },
+
+                    { id: 'thirdPartyExtensionsEnabled', name: '3rd Party Extensions', desc: 'Unlock powerful community-built plugins to customize your experience.', icon: <ExtensionIcon /> },
+                    { id: 'truecallerEnabled', name: 'Truecaller Caller ID', desc: 'Identify unknown callers and block spam using Truecaller directory.', icon: <ContactIcon /> }
                   ]
                 }
               ].map((category) => (
@@ -5240,7 +5107,7 @@ function App() {
                 <p className="settings-note">Share your extension with other testers.</p>
                 <div className="settings-row" style={{gap: 8, flexWrap: 'wrap'}}>
                   <a className="secondary-btn" href="https://github.com/DamienLove/pulselink/blob/Suite-Beta/docs/extensions-dev.md" target="_blank" rel="noreferrer">Read dev guide</a>
-                  <a className="ghost-btn" href="mailto:extensions@pulselink.app?subject=PulseLink%20Extension%20Submission">Email us your zip</a>
+                  <a className="ghost-btn" href="mailto:extensions@sotext.app?subject=SoText%20Extension%20Submission">Email us your zip</a>
                 </div>
               </div>
             </div>
@@ -5351,9 +5218,9 @@ function App() {
                         </div>
                       )}
 
-                      {show(['pulselink', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']) && (
+                      {show(['sotext', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']) && (
                         <div className="settings-card">
-                          <h4>PulseLink settings</h4>
+                          <h4>SoText settings</h4>
                           <label className="settings-toggle">
                             <input
                               type="checkbox"
@@ -5402,7 +5269,7 @@ function App() {
                                 <Spinner />
                                 Saving...
                               </>
-                          ) : 'Save PulseLink settings'}
+                          ) : 'Save SoText settings'}
                           </button>
                           <div className="settings-row">
                             <span className="settings-label">Web sync</span>
@@ -5426,21 +5293,6 @@ function App() {
                             </span>
                           </div>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              className="secondary-btn"
-                              type="button"
-                              onClick={requestPhoneSync}
-                              style={{ flex: 1 }}
-                              disabled={isRequestingSync}
-                              aria-busy={isRequestingSync}
-                            >
-                              {isRequestingSync ? (
-                                <>
-                                  <Spinner />
-                                  Requesting...
-                                </>
-                              ) : 'Request phone sync'}
-                            </button>
                             <button
                               className="secondary-btn"
                               type="button"
@@ -5511,14 +5363,14 @@ function App() {
                 All
               </button>
               {lines.map((line) => (
-                <button
-                  key={line.id}
-                  className={`chip ${activeLineId === line.id ? 'active' : ''}`}
-                  onClick={() => setActiveLineId(line.id)}
-                  title={line.phoneNumber || 'Line'}
-                >
-                  {line.label || line.phoneNumber || line.id.slice(0, 6)}
-                </button>
+                  <button
+                    key={line.id}
+                    className={`chip ${activeLineId === line.id ? 'active' : ''}`}
+                    onClick={() => setActiveLineId(line.id)}
+                    title={line.phoneNumber || 'Line'}
+                  >
+                    {line.label || line.phoneNumber || line.id.slice(0,6)}
+                  </button>
               ))}
             </div>
           </div>
@@ -5554,12 +5406,13 @@ function App() {
                       activeLineId={activeLineId}
                       lines={lines}
                       isLoggingIn={isLoggingIn}
+                      isPremium={isPremium}
                     />
                   </>
                 ) : (
                   <EmptyState
-                    icon={<img src={beaconLogo} alt="Beacon" className="empty-logo" style={{width: 64, height: 64}} />}
-                    title="Beacon Inbox"
+                    icon={<img src={logo} alt="SoText" className="empty-logo" style={{width: 64, height: 64}} />}
+                    title="SoText Inbox"
                     description="Select a thread or start a new message"
                     action={
                         <MessageComposer
@@ -5570,6 +5423,7 @@ function App() {
                           activeLineId={activeLineId}
                           lines={lines}
                           isLoggingIn={isLoggingIn}
+                          isPremium={isPremium}
                         />
                     }
                   />
@@ -5577,13 +5431,13 @@ function App() {
               </div>
             ) : (
               <div className="empty-state">
-                <img src={beaconLogo} alt="Beacon" className="empty-logo" style={{ marginBottom: '24px', opacity: 1, filter: 'none' }} />
-                <h2 style={{ marginBottom: '16px' }}>Beacon Inbox</h2>
+                <img src={logo} alt="SoText" className="empty-logo" style={{ marginBottom: '24px', opacity: 1, filter: 'none' }} />
+                <h2 style={{ marginBottom: '16px' }}>SoText Inbox</h2>
                 <div className="badge badge-premium" style={{ background: 'var(--accent)', color: '#fff', marginBottom: '24px' }}>
                   Premium Feature
                 </div>
                 <p style={{ maxWidth: '400px', textAlign: 'center', lineHeight: '1.6', color: 'var(--muted)' }}>
-                  Upgrade to PulseLink Pro or Premium to access your SMS messages directly from the web.
+                  Upgrade to SoText Pro or Premium to access your SMS messages directly from the web.
                   Send and receive texts even when your phone is in the other room.
                 </p>
                 <button
@@ -5603,4 +5457,3 @@ function App() {
 }
 
 export default App;
-
