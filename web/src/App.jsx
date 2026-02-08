@@ -34,7 +34,7 @@ import {
 import { httpsCallable } from "firebase/functions";
 import './App.css';
 import logo from './assets/sotext-logo.png'; // Placeholder, to be replaced by actual SoText logo
-// import beaconLogo from './assets/beacon-logo.png'; // No longer a separate app
+// Legacy app-specific logos are intentionally unused after the SoText.app rebrand.
 // import ringersongLogo from './assets/ringersong-logo.png'; // No longer a separate app
 import auroraBg from './assets/themes/aurora.svg';
 import midnightBg from './assets/themes/midnight_oled.svg';
@@ -276,7 +276,7 @@ const ThreadItem = memo(({ thread, isActive, onSelect, showPreviews, onPin, onAr
 ThreadItem.displayName = 'ThreadItem';
 
 const ThreadSkeleton = () => (
-  <div className={`skeleton-thread ${activePanel === 'beacon' ? 'sidebar-only' : ''}`}>
+  <div className={`skeleton-thread ${activePanel === 'inbox' ? 'sidebar-only' : ''}`}>
     <div className="skeleton-line" style={{ width: '40%' }}></div>
     <div className="skeleton-line short"></div>
   </div>
@@ -1491,7 +1491,7 @@ const specialThemePresets = [
       primaryColor: "#2aa198",
       secondaryColor: "#268bd2",
       dividerColor: "#586e75",
-      inboxIconVariant: "beacon",
+      inboxIconVariant: "sotext",
       backgroundImageUrl: blueprintBg
     }
   },
@@ -1558,7 +1558,7 @@ const specialThemePresets = [
       primaryColor: "#8A2BE2",
       secondaryColor: "#9370DB",
       dividerColor: "#191970",
-      inboxIconVariant: "beacon",
+      inboxIconVariant: "sotext",
       backgroundImageUrl: eternalBg
     }
   }
@@ -1895,7 +1895,7 @@ const Sidebar = memo(({
   const searchInputRef = useRef(null);
 
   useEffect(() => {
-    if (activePanel !== 'beacon') return;
+    if (activePanel !== 'inbox') return;
 
     const handleKeyDown = (e) => {
       // Focus search on "/"
@@ -1934,7 +1934,7 @@ const Sidebar = memo(({
           </div>
         </div>
         <div className="sidebar-actions">
-          {!collapsed && activePanel === 'beacon' && (
+          {!collapsed && activePanel === 'inbox' && (
             <>
               <button
                 onClick={() => setShowArchived(!showArchived)}
@@ -1966,13 +1966,13 @@ const Sidebar = memo(({
           <HomeIcon />
           <span>Home</span>
         </button>
-        {remoteSettings.beaconLauncherEnabled && (
+        {remoteSettings.inboxLauncherEnabled && (
           <button
-            className={`nav-item ${activePanel === 'beacon' ? 'active' : ''}`}
-            onClick={() => setActivePanel('beacon')}
+            className={`nav-item ${activePanel === 'inbox' ? 'active' : ''}`}
+            onClick={() => setActivePanel('inbox')}
             title="SoText"
             aria-label="SoText"
-            aria-current={activePanel === 'beacon' ? 'page' : undefined}
+            aria-current={activePanel === 'inbox' ? 'page' : undefined}
           >
             <img src={logo} alt="SoText" />
             <span>SoText</span>
@@ -2046,7 +2046,7 @@ const Sidebar = memo(({
           )}
         </button>
       </div>
-      {activePanel === 'beacon' && !collapsed ? (
+      {activePanel === 'inbox' && !collapsed ? (
         <>
           <div className="sidebar-search-container">
             <div className="sidebar-search-wrapper" onClick={() => searchInputRef.current?.focus()}>
@@ -2305,7 +2305,7 @@ function App() {
     autoUpdateContactInfo: true,
     timeFormat: 'AUTO',
     thirdPartyExtensionsEnabled: true,
-    beaconLauncherEnabled: true,
+    inboxLauncherEnabled: true,
     otpCleanupEnabled: false,
     emailFallbackEnabled: false,
     crashDetectionEnabled: false,
@@ -2352,7 +2352,7 @@ function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [activePanel, setActivePanel] = useState('beacon');
+  const [activePanel, setActivePanel] = useState('inbox');
 
   // Bolt: Reset contact list limit when search or panel changes
   useEffect(() => {
@@ -2678,7 +2678,7 @@ function App() {
         autoUpdateContactInfo: true,
         timeFormat: 'AUTO',
         thirdPartyExtensionsEnabled: true,
-        beaconLauncherEnabled: true,
+        inboxLauncherEnabled: true,
         otpCleanupEnabled: true,
         emailFallbackEnabled: true,
         crashDetectionEnabled: true,
@@ -2770,7 +2770,7 @@ function App() {
         autoUpdateContactInfo: data.autoUpdateContactInfo ?? true,
         timeFormat: data.timeFormat ?? 'AUTO',
         thirdPartyExtensionsEnabled: data.thirdPartyExtensionsEnabled ?? true,
-        beaconLauncherEnabled: data.beaconLauncherEnabled ?? true,
+        inboxLauncherEnabled: data.inboxLauncherEnabled ?? true,
         otpCleanupEnabled: data.otpCleanupEnabled ?? false,
         emailFallbackEnabled: data.emailFallbackEnabled ?? false,
         crashDetectionEnabled: data.crashDetectionEnabled ?? false,
@@ -3653,7 +3653,7 @@ function App() {
         autoUpdateContactInfo: remoteSettings.autoUpdateContactInfo,
         timeFormat: remoteSettings.timeFormat,
         thirdPartyExtensionsEnabled: remoteSettings.thirdPartyExtensionsEnabled,
-        beaconLauncherEnabled: remoteSettings.beaconLauncherEnabled,
+        inboxLauncherEnabled: remoteSettings.inboxLauncherEnabled,
         otpCleanupEnabled: remoteSettings.otpCleanupEnabled,
         emailFallbackEnabled: remoteSettings.emailFallbackEnabled,
         crashDetectionEnabled: remoteSettings.crashDetectionEnabled,
@@ -3737,7 +3737,7 @@ function App() {
     const newSettings = { ...remoteSettings };
 
     if (isEssentials) {
-      newSettings.beaconLauncherEnabled = true;
+      newSettings.inboxLauncherEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
       newSettings.emailFallbackEnabled = true;
       newSettings.otpCleanupEnabled = true;
@@ -3752,7 +3752,7 @@ function App() {
       newSettings.commandPaletteEnabled = false;
       newSettings.thirdPartyExtensionsEnabled = false; // Add this line
     } else if (isPower) {
-      newSettings.beaconLauncherEnabled = true;
+      newSettings.inboxLauncherEnabled = true;
       newSettings.firebaseMessagingEnabled = true;
       newSettings.emailFallbackEnabled = true;
       newSettings.otpCleanupEnabled = true;
@@ -3902,7 +3902,7 @@ function App() {
 
   // Bolt: Stable handler for new thread button
   const handleNewThread = useCallback(() => {
-    setActivePanel('beacon');
+    setActivePanel('inbox');
     setSelectedThread(null);
   }, []);
 
@@ -4044,7 +4044,7 @@ function App() {
 
   const isPremium = isPremiumUser;
   const tierLabel = isPremiumUser ? 'Premium' : (isProUser ? 'Pro' : 'Free');
-  const hasBeaconData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
+  const hasInboxData = isPremiumUser || lines.length > 0 || legacyThreads.length > 0;
 
   const navLogo = useMemo(() => {
      // Removed remoteSettings.mergedExperienceEnabled as that feature is deprecated
@@ -4082,8 +4082,8 @@ function App() {
         <div className="container login-container" id="main-content">
           <div className="login-card neon-border">
             <img src={logo} alt="SoText" className="brand-logo" />
-            <h1>SoText Web</h1>
-            <p>Login to access your messages</p>
+            <h1>sotext.app</h1>
+            <p>Sign in to access your messages</p>
             <form
               className="login-form"
               onSubmit={(e) => {
@@ -4266,9 +4266,9 @@ function App() {
                 </div>
               )}
               <div className="home-grid">
-                <button className="home-card holographic-card" onClick={() => setActivePanel('beacon')}>
-                  <div className="status-pill">{hasBeaconData ? 'Sync Active' : 'Setup Required'}</div>
-                  <div className="home-icon beacon pulse-slow">
+                <button className="home-card holographic-card" onClick={() => setActivePanel('inbox')}>
+                  <div className="status-pill">{hasInboxData ? 'Sync Active' : 'Setup Required'}</div>
+                  <div className="home-icon inbox pulse-slow">
                     <img src={logo} alt="SoText" />
                   </div>
                   <h3>SoText Inbox</h3>
@@ -4277,15 +4277,15 @@ function App() {
                 <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
                   <div className="status-pill">{profile.ownerName ? 'Active' : 'Setup Profile'}</div>
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink" />
+                    <img src={logo} alt="PulseLink extension" />
                   </div>
-                  <h3>PulseLink</h3>
-                  <p>Update your profile and trusted contacts.</p>
+                  <h3>PulseLink Extension</h3>
+                  <p>Manage your profile and trusted contacts.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
                   <div className="status-pill">{deviceContacts.length > 0 ? `${deviceContacts.length} Contacts` : 'No Contacts'}</div>
                   <div className="home-icon pulselink">
-                    <img src={logo} alt="PulseLink contacts" />
+                    <img src={logo} alt="SoText contacts" />
                   </div>
                   <h3>Contacts</h3>
                   <p>Browse all device contacts synced from your phone.</p>
@@ -4326,8 +4326,8 @@ function App() {
           {activePanel === 'pulselink' && (
             <div className="pulselink-panel">
               <div className="panel-header">
-                <h3>PulseLink</h3>
-                <p>Manage trusted contacts and your public profile.</p>
+                <h3>PulseLink Extension</h3>
+                <p>Manage trusted contacts and your public profile for the PulseLink extension.</p>
               </div>
               <div className="pulselink-grid">
                 <div className="settings-card">
@@ -4972,7 +4972,7 @@ function App() {
                 {
                   title: "Core",
                                     items: [
-                                      { id: 'beaconLauncherEnabled', name: 'SoText Inbox', desc: 'Separate launcher icon and sidebar tab for your SMS inbox.', icon: logo, isImg: true },
+                                      { id: 'inboxLauncherEnabled', name: 'SoText Inbox', desc: 'Separate launcher icon and sidebar tab for your SMS inbox.', icon: logo, isImg: true },
                                       { id: 'firebaseMessagingEnabled', name: 'Firebase Relay', desc: 'Faster messaging between SoText users.', icon: <CloudSyncIcon /> }
                                     ]
                                   },
@@ -5175,11 +5175,11 @@ function App() {
                       {show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']) && (
                         <div className="settings-card">
                           <h4>Account</h4>
-                          <div className="settings-row">
-                            <span className="settings-label">Signed in as</span>
+                          <div className="settings-kv-row">
+                            <span className="settings-label">Signed in</span>
                             <span className="settings-value">{user.email || 'Unknown'}</span>
                           </div>
-                          <div className="settings-row">
+                          <div className="settings-kv-row">
                             <span className="settings-label">User ID</span>
                             <span className="settings-value mono">
                               {user.uid}
@@ -5271,7 +5271,7 @@ function App() {
                               </>
                           ) : 'Save SoText settings'}
                           </button>
-                          <div className="settings-row">
+                          <div className="settings-kv-row">
                             <span className="settings-label">Web sync</span>
                             <span className="settings-value">
                               {syncDiagnostics
@@ -5284,7 +5284,7 @@ function App() {
                               Threads: {syncDiagnostics.threadCount ?? 0} · Messages: {syncDiagnostics.messageCount ?? 0} · READ_SMS: {syncDiagnostics.hasReadSms ? 'yes' : 'no'} · App: {syncDiagnostics.appVersion ?? 'unknown'}
                             </p>
                           )}
-                          <div className="settings-row">
+                          <div className="settings-kv-row">
                             <span className="settings-label">Relay status</span>
                             <span className="settings-value">
                               {relayDiagnostics
@@ -5348,9 +5348,9 @@ function App() {
             </div>
           )}
 
-          {activePanel === 'beacon' && (
-            hasBeaconData ? (
-              <div className="beacon-layout">
+          {activePanel === 'inbox' && (
+            hasInboxData ? (
+              <div className="inbox-layout">
       {lineInboxMode === 'PER_LINE' && lines.length > 0 && (
         <div className="line-tabs line-tabs--main">
           <div className="line-tabs-header">
@@ -5457,3 +5457,4 @@ function App() {
 }
 
 export default App;
+
