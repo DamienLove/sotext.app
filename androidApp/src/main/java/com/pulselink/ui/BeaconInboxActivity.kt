@@ -1012,7 +1012,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleAiUrgencyBypass = { enabled -> viewModel.setAiUrgencyBypassDnd(enabled) },
                                         onToggleAiUrgencyIncludeUnknown = { enabled ->
                                             viewModel.setAiUrgencyIncludeUnknown(enabled)
-                                        }
+                                        },
+                                        blockRcsReadReceipts = state.settings.blockRcsReadReceipts,
+                                        onToggleBlockRcsReadReceipts = { enabled -> viewModel.setBlockRcsReadReceipts(enabled) }
                                     )
                                 }
                                 composable("extensions_store") {

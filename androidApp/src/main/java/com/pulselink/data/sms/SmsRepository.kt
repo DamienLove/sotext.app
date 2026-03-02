@@ -656,22 +656,26 @@ class SmsRepository @Inject constructor(
         return if (input.startsWith("+")) "+$digits" else digits
     }
 
-    fun markThreadRead(threadId: Long): Boolean {
+    fun markThreadRead(threadId: Long, blockReadReceipts: Boolean = false): Boolean {
         if (!hasWritePerms()) return false
-        val values = android.content.ContentValues().apply {
-            put(Telephony.Sms.READ, 1)
+        val smsValues = android.content.ContentValues().apply {
+            if (!blockReadReceipts) put(Telephony.Sms.READ, 1)
+            put(Telephony.Sms.SEEN, 1)
+        }
+        val threadValues = android.content.ContentValues().apply {
+            if (!blockReadReceipts) put(Telephony.Threads.READ, 1)
             put(Telephony.Sms.SEEN, 1)
         }
         return runCatching {
             context.contentResolver.update(
                 Telephony.Sms.CONTENT_URI,
-                values,
+                smsValues,
                 "${Telephony.Sms.THREAD_ID}=?",
                 arrayOf(threadId.toString())
             )
             context.contentResolver.update(
                 Telephony.Threads.CONTENT_URI,
-                values,
+                threadValues,
                 "${Telephony.Threads._ID}=?",
                 arrayOf(threadId.toString())
             )

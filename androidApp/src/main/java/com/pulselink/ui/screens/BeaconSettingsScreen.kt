@@ -87,7 +87,9 @@ fun BeaconSettingsScreen(
     onToggleAiCompose: (Boolean) -> Unit,
     onToggleAiUrgency: (Boolean) -> Unit,
     onToggleAiUrgencyBypass: (Boolean) -> Unit,
-    onToggleAiUrgencyIncludeUnknown: (Boolean) -> Unit
+    onToggleAiUrgencyIncludeUnknown: (Boolean) -> Unit,
+    blockRcsReadReceipts: Boolean,
+    onToggleBlockRcsReadReceipts: (Boolean) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -233,6 +235,17 @@ fun BeaconSettingsScreen(
                     subtitle = if (settings.privatePinHash != null) "PIN set - tap to change/clear" else "Protect private contacts and chats",
                     actionLabel = "Set",
                     onAction = onSetPrivatePin,
+                    leadingIcon = Icons.Filled.Lock
+                )
+                BeaconSettingsToggleRow(
+                    title = "Block RCS read receipts",
+                    subtitle = if (blockRcsReadReceipts) {
+                        "Read receipts hidden — threads stay unread"
+                    } else {
+                        "Senders can see when you read their messages"
+                    },
+                    checked = blockRcsReadReceipts,
+                    onCheckedChange = onToggleBlockRcsReadReceipts,
                     leadingIcon = Icons.Filled.Lock
                 )
             }

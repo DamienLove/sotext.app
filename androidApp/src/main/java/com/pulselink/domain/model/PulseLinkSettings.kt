@@ -77,7 +77,8 @@ data class PulseLinkSettings(
     // Extensions
     val privateSafeEnabled: Boolean = false,
     val smartRepliesEnabled: Boolean = false,
-    val truecallerEnabled: Boolean = false
+    val truecallerEnabled: Boolean = false,
+    val blockRcsReadReceipts: Boolean = false
 ) {
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }

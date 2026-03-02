@@ -1651,6 +1651,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setBlockRcsReadReceipts(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setBlockRcsReadReceipts(enabled)
+        }
+    }
+
     fun setOtpCleanupEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setOtpCleanupEnabled(enabled)

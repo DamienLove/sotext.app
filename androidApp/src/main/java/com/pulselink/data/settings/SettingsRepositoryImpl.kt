@@ -94,6 +94,7 @@ private val DEFAULT_SEND_LINE_ID = stringPreferencesKey("default_send_line_id")
 private val LINE_SEND_PREFERENCE = stringPreferencesKey("line_send_preference")
 private val THREAD_LINE_OVERRIDES = stringPreferencesKey("thread_line_overrides")
 private val DEVICE_PHONE_NUMBER = stringPreferencesKey("device_phone_number")
+private val BLOCK_RCS_READ_RECEIPTS = booleanPreferencesKey("block_rcs_read_receipts")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -221,7 +222,8 @@ class SettingsRepositoryImpl @Inject constructor(
             threadLineOverrides = decodeJsonOrNull(prefs[THREAD_LINE_OVERRIDES]) {
                 json.decodeFromString<Map<String, String>>(it)
             } ?: PulseLinkSettings().threadLineOverrides,
-            devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER]
+            devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER],
+            blockRcsReadReceipts = prefs[BLOCK_RCS_READ_RECEIPTS] ?: PulseLinkSettings().blockRcsReadReceipts
         )
     }
 
@@ -309,6 +311,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 json.encodeToString(updated.threadLineOverrides)
             }
             updated.devicePhoneNumber?.let { prefs[DEVICE_PHONE_NUMBER] = it } ?: prefs.remove(DEVICE_PHONE_NUMBER)
+            prefs[BLOCK_RCS_READ_RECEIPTS] = updated.blockRcsReadReceipts
         }
     }
 
@@ -646,6 +649,12 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setBlockRcsReadReceipts(enabled: Boolean) {
+        editOnIo { prefs ->
+            prefs[BLOCK_RCS_READ_RECEIPTS] = enabled
+        }
+    }
+
     private suspend fun settingsValue(prefs: Preferences): PulseLinkSettings {
         return PulseLinkSettings(
             primaryPhrase = prefs[PRIMARY_PHRASE] ?: PulseLinkSettings().primaryPhrase,
@@ -717,7 +726,8 @@ class SettingsRepositoryImpl @Inject constructor(
             threadLineOverrides = decodeJsonOrNull(prefs[THREAD_LINE_OVERRIDES]) {
                 json.decodeFromString<Map<String, String>>(it)
             } ?: PulseLinkSettings().threadLineOverrides,
-            devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER]
+            devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER],
+            blockRcsReadReceipts = prefs[BLOCK_RCS_READ_RECEIPTS] ?: PulseLinkSettings().blockRcsReadReceipts
         )
     }
 

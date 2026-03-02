@@ -191,7 +191,8 @@ class SmsInboxViewModel @Inject constructor(
         viewModelScope.launch {
             runDatabaseAction {
                 withContext(Dispatchers.IO) {
-                    smsRepository.markThreadRead(threadId)
+                    val blockReceipts = settingsRepository.settings.first().blockRcsReadReceipts
+                    smsRepository.markThreadRead(threadId, blockReadReceipts = blockReceipts)
                     smsRepository.archiveThread(threadId)
                 }
                 refresh(force = true)
@@ -399,7 +400,8 @@ class SmsThreadViewModel @Inject constructor(
         val contact = result.second
         val (archived, pinned) = result.third
         activeThreadId?.let { threadId ->
-            withContext(Dispatchers.IO) { smsRepository.markThreadRead(threadId) }
+            val blockReceipts = settingsRepository.settings.first().blockRcsReadReceipts
+            withContext(Dispatchers.IO) { smsRepository.markThreadRead(threadId, blockReadReceipts = blockReceipts) }
         }
         updateMessages(msgs)
         _contact.value = contact
