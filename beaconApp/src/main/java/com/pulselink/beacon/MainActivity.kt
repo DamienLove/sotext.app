@@ -343,7 +343,9 @@ private fun BeaconNav(
                         },
                         onReact = { msgId, emoji -> vm.addReaction(msgId, emoji) },
                         onToggleStar = { msgId -> vm.toggleStar(msgId, threadId) },
-                        onBlock = { vm.blockNumber(address) }
+                        onBlock = { vm.blockNumber(address) },
+                        onDeleteMessage = { msgId -> vm.deleteMessage(msgId) },
+                        onDeleteForEveryone = { msgId -> vm.deleteMessageForEveryone(msgId) }
                     )
                 }
             }

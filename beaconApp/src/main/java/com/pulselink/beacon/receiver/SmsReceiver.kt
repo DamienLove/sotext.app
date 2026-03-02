@@ -11,6 +11,7 @@ import com.pulselink.beacon.data.InboxPreferencesRepository
 import com.pulselink.beacon.data.MessageNotificationPreferences
 import com.pulselink.beacon.data.SmsSyncManager
 import com.pulselink.beacon.data.SmsRepository
+import com.pulselink.beacon.data.SotextProtocol
 import com.pulselink.beacon.notifications.MessageNotificationManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,11 +32,19 @@ class SmsReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
+                val origin = msgs.firstOrNull()?.displayOriginatingAddress.orEmpty()
+                val body = msgs.joinToString(separator = "") { it.displayMessageBody }.trim()
+
+                // Intercept delete commands before writing to inbox
+                val deleteCommand = SotextProtocol.parseDeleteCommand(body)
+                if (deleteCommand != null && origin.isNotBlank()) {
+                    handleDeleteCommand(context, origin, deleteCommand)
+                    return@launch
+                }
+
                 msgs.forEach { sms ->
                     writeToInbox(context, sms)
                 }
-                val origin = msgs.firstOrNull()?.displayOriginatingAddress.orEmpty()
-                val body = msgs.joinToString(separator = "") { it.displayMessageBody }.trim()
                 if (origin.isNotBlank() && body.isNotBlank()) {
                     val timestamp = msgs.maxOfOrNull { it.timestampMillis } ?: System.currentTimeMillis()
 
@@ -82,6 +91,43 @@ class SmsReceiver : BroadcastReceiver() {
             }
         }
         context.contentResolver.insert(Telephony.Sms.Inbox.CONTENT_URI, values)
+    }
+
+    private fun handleDeleteCommand(
+        context: Context,
+        origin: String,
+        command: SotextProtocol.DeleteCommand
+    ) {
+        val lowerBound = command.timestamp - 10_000L
+        val upperBound = command.timestamp + 10_000L
+        val projection = arrayOf(Telephony.Sms._ID, Telephony.Sms.BODY)
+        val cursor = runCatching {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                projection,
+                "${Telephony.Sms.ADDRESS}=? AND ${Telephony.Sms.DATE} BETWEEN ? AND ?",
+                arrayOf(origin, lowerBound.toString(), upperBound.toString()),
+                null
+            )
+        }.getOrNull() ?: return
+
+        val idsToDelete = mutableListOf<Long>()
+        cursor.use { c ->
+            val idIdx = c.getColumnIndexOrThrow(Telephony.Sms._ID)
+            val bodyIdx = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            while (c.moveToNext()) {
+                val msgBody = c.getString(bodyIdx) ?: ""
+                val snippetMatches = command.bodySnippet.isBlank() ||
+                    msgBody.startsWith(command.bodySnippet) ||
+                    (msgBody.length < command.bodySnippet.length && command.bodySnippet.startsWith(msgBody))
+                if (snippetMatches) {
+                    idsToDelete += c.getLong(idIdx)
+                }
+            }
+        }
+
+        val repo = SmsRepository(context)
+        idsToDelete.forEach { id -> repo.deleteMessage(id) }
     }
 
     private suspend fun handleAutoReply(context: Context, origin: String, body: String) {

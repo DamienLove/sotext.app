@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DatePicker
@@ -145,7 +146,9 @@ fun ThreadScreen(
     onCall: () -> Unit = {},
     onReact: (Long, String) -> Unit = { _, _ -> },
     onToggleStar: (Long) -> Unit = {},
-    onBlock: () -> Unit = {}
+    onBlock: () -> Unit = {},
+    onDeleteMessage: (Long) -> Unit = {},
+    onDeleteForEveryone: (Long) -> Unit = {}
 ) {
     var draft by remember { mutableStateOf("") }
     var draftLoaded by remember { mutableStateOf(false) }
@@ -430,7 +433,9 @@ fun ThreadScreen(
                                 isStarred = starredMessageIds.contains(item.message.id),
                                 theme = theme,
                                 onReact = onReact,
-                                onToggleStar = { onToggleStar(item.message.id) }
+                                onToggleStar = { onToggleStar(item.message.id) },
+                                onDeleteMessage = { onDeleteMessage(item.message.id) },
+                                onDeleteForEveryone = { onDeleteForEveryone(item.message.id) }
                             )
                         }
                         is ThreadUiItem.DateHeader -> DateHeader(date = item.date, theme = theme)
@@ -702,7 +707,9 @@ private fun LazyItemScope.MessageBubble(
     isStarred: Boolean,
     theme: ThemePalette,
     onReact: (Long, String) -> Unit,
-    onToggleStar: () -> Unit
+    onToggleStar: () -> Unit,
+    onDeleteMessage: () -> Unit = {},
+    onDeleteForEveryone: () -> Unit = {}
 ) {
     val isOutgoing = message.outgoing
     val background = if (isOutgoing) theme.outgoingColor else theme.incomingColor
@@ -734,6 +741,7 @@ private fun LazyItemScope.MessageBubble(
     val extractedUrl = remember(message.body) { LinkPreviewHelper.extractUrl(message.body) }
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
     Box(
@@ -797,6 +805,24 @@ private fun LazyItemScope.MessageBubble(
                     },
                     leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }
                 )
+                DropdownMenuItem(
+                    text = { Text("Delete") },
+                    onClick = {
+                        onDeleteMessage()
+                        showMenu = false
+                    },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                )
+                if (isOutgoing) {
+                    DropdownMenuItem(
+                        text = { Text("Delete for everyone") },
+                        onClick = {
+                            showDeleteConfirm = true
+                            showMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
+                    )
+                }
             }
 
             Column(
@@ -929,6 +955,25 @@ private fun LazyItemScope.MessageBubble(
                 }
             }
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete for everyone?") },
+            text = {
+                Text("This will delete the message on your device and send a delete request to the recipient. Works best when both parties use sotext.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteForEveryone()
+                    showDeleteConfirm = false
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 

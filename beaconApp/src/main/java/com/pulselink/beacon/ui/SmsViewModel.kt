@@ -15,6 +15,7 @@ import com.pulselink.beacon.data.SmsMessageItem
 import com.pulselink.beacon.data.SmsRepository
 import com.pulselink.beacon.data.SmsThreadItem
 import com.pulselink.beacon.data.InboxPreferencesRepository
+import com.pulselink.beacon.data.SotextProtocol
 import com.pulselink.beacon.data.InboxState
 import com.pulselink.beacon.data.scheduled.BeaconDatabase
 import com.pulselink.beacon.data.scheduled.ScheduledMessage
@@ -825,6 +826,31 @@ class SmsViewModel(app: Application) : AndroidViewModel(app) {
             uiMessages = emptyList()
         }
         refreshThreads()
+    }
+
+    fun deleteMessage(messageId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repo.deleteMessage(messageId)
+            withContext(Dispatchers.Main) {
+                currentThreadId?.let { refreshThread(it, refreshRead = false) }
+            }
+        }
+    }
+
+    fun deleteMessageForEveryone(messageId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val message = rawMessages.find { it.id == messageId } ?: return@launch
+            repo.deleteMessage(messageId)
+            val deleteCommand = SotextProtocol.encodeDeleteCommand(
+                messageId = messageId,
+                timestamp = message.timestamp,
+                bodySnippet = message.body.take(30)
+            )
+            repo.sendSms(currentAddress, deleteCommand)
+            withContext(Dispatchers.Main) {
+                currentThreadId?.let { refreshThread(it, refreshRead = false) }
+            }
+        }
     }
 
     fun search(query: String) {
