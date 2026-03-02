@@ -1,78 +1,72 @@
-# PulseLink Ecosystem
+SoText Messaging Suite
+Unified SMS, Safety, and AI Messaging
 
-**Advanced Personal Safety & Utility Suite**
+SoText is a modern messaging hub that combines fast, reliable SMS/MMS with intelligent safety tools and add-ons like the PulseLink safety layer and RingerSong audio utilities. Instead of being a standalone safety app, PulseLink now plugs into SoText to provide context-aware alerts, DND overrides, and trusted-contact workflows on top of your everyday texting.
+​
 
-Welcome to the **PulseLink** ecosystem—a family of next-generation safety and utility applications designed to protect you and enhance your mobile experience. PulseLink integrates intelligent safety monitoring, Google Assistant voice triggers, and robust messaging into a unified platform, while RingerSong provides a unique audio utility experience.
+Product Overview
+SoText is designed to be your default SMS app, giving you a clean inbox, rich theming, and high reliability, while exposing optional modules for personal safety, AI-powered assistance, and caller/media utilities. Users who just want a great texting app can stay lightweight, while those who enable the PulseLink add-on unlock advanced emergency, check-in, and web-portal features managed through the same interface.
+​
 
----
+Core SoText Features
+SoText focuses on being a fast, intuitive, and extensible messaging experience.
+​
 
-## 🚀 Application Lineup
+Default SMS/MMS handler with a unified, modern inbox for all conversations.
+​
 
-| App | Flavor | Description | Status |
-| :--- | :--- | :--- | :--- |
-| **PulseLink Beacon** | `free` | The essential safety app & default SMS handler. Ad-supported. Features Google Assistant integration, Emergency Alerts, Check-Ins, and a unified messaging inbox. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)]() |
-| **PulseLink Pro** | `pro` | The ad-free, definitive safety experience. Unlocks advanced SMS/MMS features, visual customization, and priority support. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)]() |
-| **PulseLink Premium** | `subscription` | The ultimate suite. Adds cloud-powered features: AI Assist (Context-aware DND override, smart replies), Remote Web Portal access via `app.damiennichols.com` or `pulselink.damiennichols.com`, and Caller ID screening. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Live-green?logo=google-play)]() |
-| **RingerSong** | `RingerSong` | Free Audio Add-on. Use your Spotify Premium account to set tracks as "Progressive Ringtones" that play through your favorite songs while you wait to pick up. | [![Build Status](https://img.shields.io/badge/Build-Passing-success)]() [![Play Store](https://img.shields.io/badge/Google_Play-Coming_Soon-grey?logo=google-play)]() |
+Responsive UI with future-facing visual design and themes inspired by glassmorphism and ambient lighting (for example, Aurora or Midnight OLED–style looks).
+​
 
----
+Simple navigation that keeps conversations, safety controls, and settings one tap away when PulseLink is enabled.
+​
 
-## 🛠️ Key Features
+Optional AI-assisted messaging features, such as smart replies and urgency detection, available in higher tiers through the PulseLink integration.
+​
 
-### PulseLink (Safety & Messaging)
-*   **Beacon SMS:** A fully-featured Default SMS handler built for speed and reliability. Manage your standard texts alongside safety alerts in one unified, modern inbox.
-*   **Future Deep Design:** A stunning, modern UI with glassmorphism effects and dynamic themes like *Aurora*, *Midnight OLED*, and *Cyber Mist*.
-*   **Unified Launcher:** Seamlessly switch between your inbox, safety controls, and settings from a single, intuitive home screen.
-*   **Voice Integration:** Works with your device's built-in assistant. Just say "Hey Google, open PulseLink Emergency" to trigger alerts hands-free.
-*   **AI Context Awareness:** (Premium) Our on-device AI analyzes incoming message urgency. If a contact is frantically texting you during an emergency, PulseLink can automatically punch through Do Not Disturb to ring your phone.
-*   **DND Override:** Critical safety alerts bypass "Do Not Disturb" settings to ensure your network hears you.
-*   **Multi-Channel Delivery:** Smart routing uses Firebase data messaging for speed, falling back to SMS/MMS for reliability.
-*   **Web Portal (Premium):** Access your messages, location, and safety status remotely from `app.damiennichols.com` or `pulselink.damiennichols.com`.
+PulseLink Add-On (Safety Layer)
+PulseLink now ships as an add-on inside the SoText ecosystem rather than as the main app branding. When enabled, it adds a safety-first layer on top of your existing SoText inbox and device capabilities.
+​
 
-### RingerSong (Media & Utility)
-*   **Progressive Ringtones:** Connect your Spotify Premium account to set tracks as ringtones. When someone calls, the song plays through its entire duration in sequential 30-second blocks (0-30s, then 30-60s, etc.) until you answer or the call ends.
-*   **Smart Caller ID:** Identify unknown numbers and block spam using advanced lookup integrations (Truecaller).
-*   **Free Add-on:** A simple, fun utility to spice up your incoming calls using the music you already pay for.
+Key capabilities include:
 
----
+Emergency and beacon-style alerts that can use both data and SMS channels for reliability.
+​
 
-## 📥 Downloads & Installation
+Voice triggers via your device assistant so you can initiate safety flows hands‑free (for example, “Hey Google, open PulseLink Emergency”).
+​
 
-**Official Releases:**
-*   [PulseLink Beacon (Free) on Google Play](https://play.google.com/store/apps/details?id=com.free.pulselink)
-*   [PulseLink Pro on Google Play](https://play.google.com/store/apps/details?id=com.pulselink.pro)
+Context-aware AI that detects urgent situations in your conversations and can override Do Not Disturb for critical contacts on supported tiers.
+​
 
-**Beta / Testing:**
-*   Join our [Open Beta](https://github.com/DamienLove/pulselink/releases) to test the latest features before they hit the store.
+Multi-channel delivery logic that prioritizes fast data messaging but falls back to SMS/MMS when needed, so alerts are more likely to get through.
+​
 
----
+Remote access through web portals (for example, hosted endpoints like app.damiennichols.com or equivalent PulseLink domains) where supported by your plan.
+​
 
-## 📚 Documentation & Support
+RingerSong Add-On (Audio Utility)
+RingerSong remains a fun, optional media utility that plugs into your calling experience. It is not required for SoText or PulseLink, but works nicely alongside them for users who want more control over how incoming calls sound.
+​
 
-Explore our [Wiki](wiki/) for detailed guides:
+Capabilities include:
 
-*   [**PulseLink User Guide**](wiki/PulseLink-User-Guide.md): Setup, Assistant Triggers, and Trusted Contacts.
-*   [**RingerSong Manual**](wiki/RingerSong-Manual.md): Spotify Progressive Ringer setup.
-*   [**Edition Comparison**](wiki/Pro-vs-Premium.md): Understand the differences between Free, Pro, and Premium.
-*   [**Troubleshooting**](wiki/Troubleshooting.md): Permissions, Battery Optimization, and DND issues.
+Progressive ringtones that use your existing Spotify Premium tracks, advancing through the song in segments while a call rings.
+​
 
-### Contributing
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-*   **Report Bugs:** Use the in-app "Report a Bug" feature or [visit our report page](https://damiennichols.com/report-bug/).
-*   **iOS Roadmap:** [View Status](docs/ios-roadmap.md)
+Smart caller ID and spam blocking using external lookup integrations where available.
+​
 
----
+A lightweight install and configuration path, treated as a free add-on in the broader SoText ecosystem.
+​
 
-## 💖 Support the Project
+Editions and Status
+SoText and PulseLink can be offered in multiple editions, each layering in more capability on the same core messaging foundation.
 
-PulseLink is built on the belief that personal safety is a right, not a privilege. Your support funds our server infrastructure (Firebase, SMS gateways) and continued development.
-
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-❤_GitHub_Sponsors-ea4aaa?logo=github)](https://github.com/sponsors/DamienLove)
-[![Ko‑fi](https://img.shields.io/badge/Buy_me_a_coffee-Ko%E2%80%91fi-29abe0?logo=kofi)](https://ko-fi.com/DamienLove)
-
----
-
-## 📄 License
-
-Copyright © 2026 PulseLink. All Rights Reserved.
-See [LICENSE](LICENSE) for details.
+| Product / Module     | Tier / Flavor  | Role in SoText Ecosystem                                                       | Status / Links                                                             |
+| -------------------- | -------------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| SoText               | core           | Default SMS/MMS inbox and primary UI; required for all add-ons.                | In active development.jubilant-system-wrqgxvjv9pg9h5pq4.github​            |
+| PulseLink Add-On     | free / bundled | Baseline safety tools and basic emergency flows inside SoText.                 | Previously “PulseLink Beacon.”jubilant-system-wrqgxvjv9pg9h5pq4.github​    |
+| PulseLink Pro / Plus | paid           | Advanced safety, richer controls, and customization layered into SoText.       | Evolved from “PulseLink Pro.”jubilant-system-wrqgxvjv9pg9h5pq4.github​     |
+| PulseLink Premium    | subscription   | Full AI assist, DND override, and remote web portal access via SoText.         | Evolved from “PulseLink Premium.”jubilant-system-wrqgxvjv9pg9h5pq4.github​ |
+| RingerSong           | media add‑on   | Progressive ringtones and caller utilities, independent of messaging features. | Free utility add‑on.jubilant-system-wrqgxvjv9pg9h5pq4.github​              |
