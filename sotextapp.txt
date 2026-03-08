@@ -17,28 +17,26 @@ SoText Rebrand & Migration Info
 
 == Hosting & Server Configuration ==
 Domain: sotext.app
-Control Panel URL: https://server8.webhostmost.com:2222
-Server Name: Shared Fully Featured Hosting - Iowa
-Server IP: 104.224.88.15
+Control Panel URL: https://node712.extrainfra.com:2222/
+Server Name: BonoHost - node712.extrainfra.com
+Server IP: 185.73.8.100
 
 Nameservers:
-ns1.server1.webhostmost.com
-ns2.server2.webhostmost.com
-ns3.server3.webhostmost.com
-ns4.server4.webhostmost.com
+ns1n712.extrainfra.com
+ns2n712.extrainfra.com
 
 Credentials:
-Username: qthdunpa
-Password: 8XyIt(39Qt2qS;
+Username: abwjyvtj
+Password: 1wyEh2v65H
 
 == sFTP Information ==
-Hostname: server8.webhostmost.com
-Port: 2323
-Username: qthdunpa
-Key File: G:\My Drive\projects\pulselink\secrets\qthdunpa.ppk
+Hostname: node712.extrainfra.com
+Port: 21
+Username: abwjyvtj
+
 
 == Email Settings (Temporary) ==
-Default Login: qthdunpa@sotext.app
+Default Login: abwjyvtj@sotext.app
 Password: 8XyIt(39Qt2qS;
 IMAP: mail.sotext.app (Port 993, SSL On)
 POP3: mail.sotext.app (Port 995, SSL On)
@@ -90,6 +88,6 @@ This file (`sotextapp.txt`) contains sensitive information (passwords, API keys)
 
 - 2026-02-07: Built Android debug APK via ./gradlew :androidApp:assembleSotextDebug (artifact: androidApp/build/outputs/apk/sotext/debug/androidApp-sotext-debug.apk).
 - 2026-02-07: Updated web login header copy to show 'sotext.app' (web/src/App.jsx), rebuilt web (npm --prefix web run build), and deployed Firebase Hosting to project sotextapp (https://sotextapp.web.app).
-- 2026-02-07: Synced web/dist deployment files to DirectAdmin host path /home/qthdunpa/domains/sotext.app/public_html via SFTP; verified https://sotext.app serves latest asset bundle (index-AgAv1T8m.js / index-8dUdjxNI.css).
+- 2026-02-07: Synced web/dist deployment files to DirectAdmin host path /home/abwjyvtj/domains/sotext.app/public_html via SFTP; verified https://sotext.app serves latest asset bundle (index-AgAv1T8m.js / index-8dUdjxNI.css).
 
 - 2026-02-07: Functions deploy attempt to Firebase project sotextapp blocked by GCP billing status. Error from Service Usage API when enabling artifactregistry.googleapis.com: 'Billing account for project 861460679274 is not open.' Local functions TypeScript build now passes after updating functions/tsconfig.json to compile runtime sources with Node types only and exclude *.test.ts/*.spec.ts.

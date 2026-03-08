@@ -64,6 +64,13 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
+
+private const val TAG = "MainViewModel"
+private const val BETA_AGREEMENT_VERSION = "2025.12.19"
+private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
+private const val COLLECTION_USERS = "users"
+private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
+private const val BUG_REPORT_PAGE_URL = "https://github.com/DamienLove/pulselink/issues/new?template=bug_report.md"
 @HiltViewModel
 class MainViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -310,12 +317,6 @@ class MainViewModel @Inject constructor(
                     }
                 }
             }
-        }
-
-    fun markAlertsAsRead(alertIds: List<Long>) {
-        viewModelScope.launch {
-            alertRepository.markAsRead(alertIds)
-        }
     }
     }
 
@@ -1653,7 +1654,7 @@ class MainViewModel @Inject constructor(
 
     fun setBlockRcsReadReceipts(enabled: Boolean) {
         viewModelScope.launch {
-            settingsRepository.setBlockRcsReadReceipts(enabled)
+            settingsRepository.setRcsSendReadReceipts(!enabled)
         }
     }
 
@@ -1851,19 +1852,23 @@ class MainViewModel @Inject constructor(
         }
         dndStatus.value = messageRes?.let { DndStatusMessage(it) }
     }
-
-    companion object {
-        const val TAG = "MainViewModel"
-        const val BETA_AGREEMENT_VERSION = "2025.12.19"
-        private const val REMOTE_BETA_AGREEMENT_TIMEOUT_MS = 10_000L
-        private const val COLLECTION_USERS = "users"
-        private const val COLLECTION_TRUSTED_CONTACTS = "trustedContacts"
-        const val BUG_REPORT_PAGE_URL = "https://github.com/DamienLove/pulselink/issues/new?template=bug_report.md"
-    }
 }
-
 data class PublicProfile(
     val displayName: String?,
     val avatarUrl: String?,
     val email: String?
 )
+
+
+
+
+
+
+
+
+
+
+
+
+
+

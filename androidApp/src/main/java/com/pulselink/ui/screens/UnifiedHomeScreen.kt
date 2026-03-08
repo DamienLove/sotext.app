@@ -84,6 +84,7 @@ fun UnifiedHomeScreen(
     isPro: Boolean,
     // Unified-specific
     onComposeMessage: () -> Unit,
+    onSendBroadcastMessage: suspend (String, List<Contact>) -> BroadcastDispatchResult,
     onOpenThread: (SmsThreadItem) -> Unit,
     onViewAllMessages: () -> Unit,
     onOpenContactForThread: (SmsThreadItem) -> Unit
@@ -195,6 +196,7 @@ fun UnifiedHomeScreen(
         isPro = isPro,
         showComposeButton = true,
         onComposeMessage = onComposeMessage,
+        onSendBroadcastMessage = onSendBroadcastMessage,
         smsPreviewContent = if (shouldShowPreview) {
             {
                 SmsInboxPreviewSection(
@@ -353,3 +355,5 @@ fun SmsInboxPreviewSection(
         }
     }
 }
+
+

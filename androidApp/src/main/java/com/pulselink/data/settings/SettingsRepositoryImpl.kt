@@ -16,6 +16,7 @@ import com.pulselink.domain.model.LineInboxMode
 import com.pulselink.domain.model.LineSendPreference
 import com.pulselink.domain.model.MessageChannel
 import com.pulselink.domain.model.PulseLinkSettings
+import com.pulselink.domain.model.RcsSettings
 import com.pulselink.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -94,7 +95,9 @@ private val DEFAULT_SEND_LINE_ID = stringPreferencesKey("default_send_line_id")
 private val LINE_SEND_PREFERENCE = stringPreferencesKey("line_send_preference")
 private val THREAD_LINE_OVERRIDES = stringPreferencesKey("thread_line_overrides")
 private val DEVICE_PHONE_NUMBER = stringPreferencesKey("device_phone_number")
-private val BLOCK_RCS_READ_RECEIPTS = booleanPreferencesKey("block_rcs_read_receipts")
+private val RCS_SETTINGS = stringPreferencesKey("rcs_settings")
+// Legacy key for migration - users with this setting will be migrated to RcsSettings
+private val BLOCK_RCS_READ_RECEIPTS_LEGACY = booleanPreferencesKey("block_rcs_read_receipts")
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -223,7 +226,21 @@ class SettingsRepositoryImpl @Inject constructor(
                 json.decodeFromString<Map<String, String>>(it)
             } ?: PulseLinkSettings().threadLineOverrides,
             devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER],
-            blockRcsReadReceipts = prefs[BLOCK_RCS_READ_RECEIPTS] ?: PulseLinkSettings().blockRcsReadReceipts
+            rcsSettings = decodeJsonOrNull(prefs[RCS_SETTINGS]) {
+                json.decodeFromString(RcsSettings.serializer(), it)
+            } ?: run {
+                // Migration: convert legacy blockRcsReadReceipts to new RcsSettings
+                val legacyBlock = prefs[BLOCK_RCS_READ_RECEIPTS_LEGACY] ?: false
+                if (legacyBlock) {
+                    RcsSettings(
+                        rcsEnabled = true,
+                        sendReadReceipts = false, // This is what blocking meant
+                        receiveReadReceipts = true
+                    )
+                } else {
+                    RcsSettings()
+                }
+            }
         )
     }
 
@@ -311,7 +328,9 @@ class SettingsRepositoryImpl @Inject constructor(
                 json.encodeToString(updated.threadLineOverrides)
             }
             updated.devicePhoneNumber?.let { prefs[DEVICE_PHONE_NUMBER] = it } ?: prefs.remove(DEVICE_PHONE_NUMBER)
-            prefs[BLOCK_RCS_READ_RECEIPTS] = updated.blockRcsReadReceipts
+            prefs[RCS_SETTINGS] = encodeJson {
+                json.encodeToString(RcsSettings.serializer(), updated.rcsSettings)
+            }
         }
     }
 
@@ -649,10 +668,53 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun setBlockRcsReadReceipts(enabled: Boolean) {
+    // RCS Settings methods
+    override suspend fun setRcsSettings(settings: RcsSettings) {
         editOnIo { prefs ->
-            prefs[BLOCK_RCS_READ_RECEIPTS] = enabled
+            prefs[RCS_SETTINGS] = encodeJson {
+                json.encodeToString(RcsSettings.serializer(), settings)
+            }
         }
+    }
+
+    private suspend fun updateRcsSetting(transform: (RcsSettings) -> RcsSettings) {
+        editOnIo { prefs ->
+            val current = decodeJsonOrNull(prefs[RCS_SETTINGS]) {
+                json.decodeFromString(RcsSettings.serializer(), it)
+            } ?: RcsSettings()
+            val updated = transform(current)
+            prefs[RCS_SETTINGS] = encodeJson {
+                json.encodeToString(RcsSettings.serializer(), updated)
+            }
+        }
+    }
+
+    override suspend fun setRcsEnabled(enabled: Boolean) {
+        updateRcsSetting { it.copy(rcsEnabled = enabled) }
+    }
+
+    override suspend fun setRcsSendReadReceipts(enabled: Boolean) {
+        updateRcsSetting { it.copy(sendReadReceipts = enabled) }
+    }
+
+    override suspend fun setRcsReceiveReadReceipts(enabled: Boolean) {
+        updateRcsSetting { it.copy(receiveReadReceipts = enabled) }
+    }
+
+    override suspend fun setRcsSendTypingIndicators(enabled: Boolean) {
+        updateRcsSetting { it.copy(sendTypingIndicators = enabled) }
+    }
+
+    override suspend fun setRcsReceiveTypingIndicators(enabled: Boolean) {
+        updateRcsSetting { it.copy(receiveTypingIndicators = enabled) }
+    }
+
+    override suspend fun setRcsHighResolutionMedia(enabled: Boolean) {
+        updateRcsSetting { it.copy(highResolutionMedia = enabled) }
+    }
+
+    override suspend fun setRcsShowDeliveryStatus(enabled: Boolean) {
+        updateRcsSetting { it.copy(showDeliveryStatus = enabled) }
     }
 
     private suspend fun settingsValue(prefs: Preferences): PulseLinkSettings {
@@ -727,7 +789,20 @@ class SettingsRepositoryImpl @Inject constructor(
                 json.decodeFromString<Map<String, String>>(it)
             } ?: PulseLinkSettings().threadLineOverrides,
             devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER],
-            blockRcsReadReceipts = prefs[BLOCK_RCS_READ_RECEIPTS] ?: PulseLinkSettings().blockRcsReadReceipts
+            rcsSettings = decodeJsonOrNull(prefs[RCS_SETTINGS]) {
+                json.decodeFromString(RcsSettings.serializer(), it)
+            } ?: run {
+                val legacyBlock = prefs[BLOCK_RCS_READ_RECEIPTS_LEGACY] ?: false
+                if (legacyBlock) {
+                    RcsSettings(
+                        rcsEnabled = true,
+                        sendReadReceipts = false,
+                        receiveReadReceipts = true
+                    )
+                } else {
+                    RcsSettings()
+                }
+            }
         )
     }
 
@@ -740,3 +815,4 @@ fun provideSettingsDataStore(@ApplicationContext context: Context): DataStore<Pr
     androidx.datastore.preferences.core.PreferenceDataStoreFactory.create(
         produceFile = { context.preferencesDataStoreFile(DATA_STORE_NAME) }
     )
+

@@ -4,7 +4,7 @@ import './App.css';
 const ACTIONS = [
   { id: 'nav-home', label: 'Go to Home', icon: '🏠', action: (setActivePanel) => setActivePanel('home') },
   { id: 'nav-inbox', label: 'Open SoText Inbox', icon: '📨', action: (setActivePanel) => setActivePanel('inbox') },
-  { id: 'nav-pulselink', label: 'Manage Profile', icon: '👤', action: (setActivePanel) => setActivePanel('pulselink') },
+  { id: 'nav-profile', label: 'Manage Profile', icon: '👤', action: (setActivePanel) => setActivePanel('profile') },
   { id: 'nav-contacts', label: 'View Contacts', icon: '👥', action: (setActivePanel) => setActivePanel('contacts') },
   { id: 'nav-map', label: 'Emergency Map', icon: '🗺️', action: (setActivePanel) => setActivePanel('map') },
   { id: 'nav-themes', label: 'Theme Gallery', icon: '🎨', action: (setActivePanel) => setActivePanel('themes') },

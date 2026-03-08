@@ -1,0 +1,10 @@
+e: file:///G:/My%20Drive/projects/sotext/androidApp/src/main/java/com/pulselink/data/settings/SettingsRepositoryImpl.kt:792:13 No parameter with name 'blockRcsReadReceipts' found.
+e: file:///G:/My%20Drive/projects/sotext/androidApp/src/main/java/com/pulselink/data/settings/SettingsRepositoryImpl.kt:792:36 Cannot infer type for this parameter. Please specify it explicitly.
+e: file:///G:/My%20Drive/projects/sotext/androidApp/src/main/java/com/pulselink/data/settings/SettingsRepositoryImpl.kt:792:42 Unresolved reference 'BLOCK_RCS_READ_RECEIPTS'.
+e: file:///G:/My%20Drive/projects/sotext/androidApp/src/main/java/com/pulselink/data/settings/SettingsRepositoryImpl.kt:792:90 Unresolved reference 'blockRcsReadReceipts'.
+e: file:///G:/My%20Drive/projects/sotext/androidApp/src/main/java/com/pulselink/ui/BeaconInboxActivity.kt:1016:79 Unresolved reference 'blockRcsReadReceipts'.
+e: file:///G:/My%20Drive/projects/sotext/androidApp/src/main/java/com/pulselink/ui/MainActivity.kt:1150:62 Unresolved reference 'BETA_AGREEMENT_VERSION'.
+e: file:///G:/My%20Drive/projects/sotext/androidApp/src/main/java/com/pulselink/ui/screens/HomeScreen.kt:702:13 The API of this layout is experimental and is likely to change in the future.
+e: file:///G:/My%20Drive/projects/sotext/androidApp/src/main/java/com/pulselink/ui/state/MainViewModel.kt:1657:32 Unresolved reference 'setBlockRcsReadReceipts'.
+e: file:///G:/My%20Drive/projects/sotext/androidApp/src/main/java/com/pulselink/ui/state/SmsInboxViewModel.kt:194:77 Unresolved reference 'blockRcsReadReceipts'.
+e: file:///G:/My%20Drive/projects/sotext/androidApp/src/main/java/com/pulselink/ui/state/SmsInboxViewModel.kt:403:69 Unresolved reference 'blockRcsReadReceipts'.

@@ -34,7 +34,7 @@ import {
 import { httpsCallable } from "firebase/functions";
 import './App.css';
 import fallbackLogo from './assets/sotext-logo.png';
-import pulselinkLogo from './assets/pulselink-pro-logo.png';
+import pulselinkLogo from './assets/sotext-logo.png';
 // Legacy app-specific logos are intentionally unused after the SoText.app rebrand.
 // import ringersongLogo from './assets/ringersong-logo.png'; // No longer a separate app
 import auroraBg from './assets/themes/aurora.svg';
@@ -3653,7 +3653,7 @@ function App() {
     });
     setEditingContactId(contact.id);
     setContactStatus('');
-    setActivePanel('pulselink');
+    setActivePanel('profile');
   }, []);
 
   const handleSaveContact = async () => {
@@ -4467,17 +4467,17 @@ function App() {
                   <h3>SoText Inbox</h3>
                   <p>View SMS synced from your phone.</p>
                 </button>
-                <button className="home-card holographic-card" onClick={() => setActivePanel('pulselink')}>
+                <button className="home-card holographic-card" onClick={() => setActivePanel('profile')}>
                   <div className="status-pill">{profile.ownerName ? 'Active' : 'Setup Profile'}</div>
-                  <div className="home-icon pulselink">
-                    <img src={pulselinkLogo} alt="PulseLink extension" />
+                  <div className="home-icon profile">
+                    <img src={pulselinkLogo} alt="SoText extension" />
                   </div>
-                  <h3>PulseLink Extension</h3>
+                  <h3>SoText Profile</h3>
                   <p>Manage your profile and trusted contacts.</p>
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('contacts')}>
                   <div className="status-pill">{deviceContacts.length > 0 ? `${deviceContacts.length} Contacts` : 'No Contacts'}</div>
-                  <div className="home-icon pulselink">
+                  <div className="home-icon profile">
                     <ContactIcon />
                   </div>
                   <h3>Contacts</h3>
@@ -4485,7 +4485,7 @@ function App() {
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('map')}>
                   <div className="status-pill">{alertLocations.length > 0 ? `${alertLocations.length} Alerts` : 'Safe'}</div>
-                  <div className="home-icon pulselink">
+                  <div className="home-icon profile">
                     <MapIcon />
                   </div>
                   <h3>Emergency Map</h3>
@@ -4493,7 +4493,7 @@ function App() {
                 </button>
                 <button className="home-card holographic-card" onClick={() => setActivePanel('themes')}>
                   <div className="status-pill">Gallery</div>
-                  <div className="home-icon pulselink">
+                  <div className="home-icon profile">
                     <ThemeIcon />
                   </div>
                   <h3>Theme Gallery</h3>
@@ -4506,7 +4506,7 @@ function App() {
                   title={remoteSettings.thirdPartyExtensionsEnabled ? "Manage features" : "Enable features in Settings"}
                 >
                   <div className="status-pill">{remoteSettings.thirdPartyExtensionsEnabled ? 'Active' : 'Disabled'}</div>
-                  <div className="home-icon pulselink">
+                  <div className="home-icon profile">
                     <ExtensionIcon />
                   </div>
                   <h3>Features</h3>
@@ -4516,13 +4516,13 @@ function App() {
             </div>
           )}
 
-          {activePanel === 'pulselink' && (
-            <div className="pulselink-panel">
+          {activePanel === 'profile' && (
+            <div className="profile-panel">
               <div className="panel-header">
-                <h3>PulseLink Extension</h3>
-                <p>Manage trusted contacts and your public profile for the PulseLink extension.</p>
+                <h3>SoText Profile</h3>
+                <p>Manage trusted contacts and your public profile for SoText.</p>
               </div>
-              <div className="pulselink-grid">
+              <div className="profile-grid">
                 <div className="settings-card">
                   <h4>Public profile</h4>
                   <div className="profile-header-row">
@@ -5163,7 +5163,7 @@ function App() {
           )}
 
           {activePanel === 'extensions' && (
-            <div className="pulselink-panel">
+            <div className="extensions-panel">
               <div className="panel-header">
                 <h3>Extensions Store</h3>
                 <p>Enhance your SoText experience with powerful add-ons.</p>

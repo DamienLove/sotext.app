@@ -228,7 +228,7 @@
   scroll-behavior: smooth;
 }
 
-.home-panel, .pulselink-panel, .contacts-panel, .settings-panel, .map-panel, .themes-panel {
+.home-panel, .profile-panel, .extensions-panel, .contacts-panel, .settings-panel, .map-panel, .themes-panel {
   padding: 24px 32px;
   max-width: 1400px;
   margin: 0 auto;
@@ -393,7 +393,7 @@
 /*  Components: Settings & Forms                                              */
 /* -------------------------------------------------------------------------- */
 
-.settings-grid, .pulselink-grid, .themes-grid {
+.settings-grid, .profile-grid, .extensions-grid, .themes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;

@@ -78,8 +78,12 @@ data class PulseLinkSettings(
     val privateSafeEnabled: Boolean = false,
     val smartRepliesEnabled: Boolean = false,
     val truecallerEnabled: Boolean = false,
-    val blockRcsReadReceipts: Boolean = false
+    val rcsSettings: RcsSettings = RcsSettings()
 ) {
+    // Backward-compatible alias used by legacy UI/viewmodels.
+    val blockRcsReadReceipts: Boolean
+        get() = !rcsSettings.sendReadReceipts
+
     fun phrases(): List<String> = listOf(primaryPhrase, secondaryPhrase)
         .map { it.trim().lowercase() }
         .filter { it.isNotBlank() }
@@ -120,3 +124,4 @@ data class ThemePreferences(
     val useHolographicGlow: Boolean = false,
     val uiDensity: String = "Comfortable"
 )
+

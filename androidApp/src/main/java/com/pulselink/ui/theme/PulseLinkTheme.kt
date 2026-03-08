@@ -9,34 +9,37 @@ import androidx.compose.ui.graphics.Color
 
 private val DarkColors = darkColorScheme(
     primary = DeepAccent,
-    onPrimary = Color(0xFF04101C), // Deep dark for contrast on bright accent
-    primaryContainer = Color(0xFF0D3642), // Darker cyan container
-    onPrimaryContainer = Color(0xFFCFFAFE),
-    secondary = DeepAccentStrong,
-    onSecondary = Color(0xFF04101C),
-    tertiary = DeepTertiary,
-    onTertiary = Color(0xFFFFFFFF),
+    onPrimary = Color(0xFF032016),
+    primaryContainer = Color(0xFF154835),
+    onPrimaryContainer = Color(0xFFD8FBEA),
+    secondary = DeepTertiary,
+    onSecondary = Color(0xFF2B1500),
+    secondaryContainer = Color(0xFF5A340A),
+    onSecondaryContainer = Color(0xFFFFE4BE),
+    tertiary = Color(0xFF74B9FF),
+    onTertiary = Color(0xFF041A30),
     background = DeepBackground,
-    onBackground = DeepOnSurface, // Using v5 Ink
+    onBackground = DeepOnSurface,
     surface = DeepSurface,
     onSurface = DeepOnSurface,
     surfaceVariant = DeepSurfaceAlt,
     onSurfaceVariant = DeepMuted,
     error = DeepError,
-    onError = Color(0xFF2B0B0B)
+    onError = Color(0xFF2D0B10)
 )
 
-// Legacy Light Mode - Kept for compatibility but design system prefers Dark
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF1A237E),
-    secondary = Color(0xFFFFEA00),
-    surface = Color(0xFFF4F4FF),
-    onSurface = Color(0xFF060713),
-    background = Color(0xFFF6F7FF),
-    onBackground = Color(0xFF111321),
-    surfaceVariant = Color(0xFFE7E9F6),
-    onSurfaceVariant = Color(0xFF444A5F),
-    error = Color(0xFFD32F2F),
+    primary = Color(0xFF0F8D60),
+    onPrimary = Color(0xFFFFFFFF),
+    secondary = Color(0xFFB56A16),
+    onSecondary = Color(0xFFFFFFFF),
+    surface = Color(0xFFF5F8FF),
+    onSurface = Color(0xFF131A2B),
+    background = Color(0xFFF4F7FE),
+    onBackground = Color(0xFF121A2A),
+    surfaceVariant = Color(0xFFE4EAF8),
+    onSurfaceVariant = Color(0xFF4C5B76),
+    error = Color(0xFFD63F4F),
     onError = Color(0xFFFFFFFF)
 )
 
@@ -45,9 +48,7 @@ fun PulseLinkTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    // Future Deep design requires dark mode for full fidelity.
-    // System setting is ignored to ensure brand consistency.
-    val colors = DarkColors
+    val colors = if (darkTheme) DarkColors else LightColors
 
     MaterialTheme(
         colorScheme = colors,

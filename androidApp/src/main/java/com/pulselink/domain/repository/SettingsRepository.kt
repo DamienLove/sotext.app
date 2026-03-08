@@ -4,6 +4,7 @@ import com.pulselink.domain.model.LineInboxMode
 import com.pulselink.domain.model.LineSendPreference
 import com.pulselink.domain.model.MessageChannel
 import com.pulselink.domain.model.PulseLinkSettings
+import com.pulselink.domain.model.RcsSettings
 import kotlinx.coroutines.flow.Flow
 
 interface SettingsRepository {
@@ -60,5 +61,14 @@ interface SettingsRepository {
     suspend fun setDevicePhoneNumber(phone: String?)
     suspend fun setCustomVibrationPattern(name: String, pattern: List<Long>)
     suspend fun clearCustomVibrationPattern()
-    suspend fun setBlockRcsReadReceipts(enabled: Boolean)
+
+    // RCS Settings
+    suspend fun setRcsSettings(settings: RcsSettings)
+    suspend fun setRcsEnabled(enabled: Boolean)
+    suspend fun setRcsSendReadReceipts(enabled: Boolean)
+    suspend fun setRcsReceiveReadReceipts(enabled: Boolean)
+    suspend fun setRcsSendTypingIndicators(enabled: Boolean)
+    suspend fun setRcsReceiveTypingIndicators(enabled: Boolean)
+    suspend fun setRcsHighResolutionMedia(enabled: Boolean)
+    suspend fun setRcsShowDeliveryStatus(enabled: Boolean)
 }

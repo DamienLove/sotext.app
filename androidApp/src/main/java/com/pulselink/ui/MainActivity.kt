@@ -83,6 +83,7 @@ import com.pulselink.domain.model.LineSendPreference
 import com.pulselink.R
 import com.pulselink.ui.ads.BannerAdSlot
 import com.pulselink.ui.screens.BetaTesterListScreen
+import com.pulselink.ui.screens.BroadcastDispatchResult
 import com.pulselink.ui.screens.HomeScreen
 import com.pulselink.ui.screens.AlertHistoryScreen
 import com.pulselink.ui.screens.EmergencyMapScreen
@@ -731,6 +732,27 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
+                val sendBroadcastHandler: suspend (String, List<Contact>) -> BroadcastDispatchResult = handler@ { message, contacts ->
+                    val trimmed = message.trim()
+                    if (trimmed.isBlank()) return@handler BroadcastDispatchResult(0, 0, 0)
+
+                    var attempted = 0
+                    var success = 0
+                    contacts.forEach { contact ->
+                        if (contact.id == 0L) return@forEach
+                        attempted += 1
+                        when (viewModel.sendManualMessage(contact.id, trimmed)) {
+                            is ManualMessageResult.Success -> success += 1
+                            is ManualMessageResult.Failure -> Unit
+                        }
+                    }
+                    BroadcastDispatchResult(
+                        successCount = success,
+                        attemptedCount = attempted,
+                        failedCount = (attempted - success).coerceAtLeast(0)
+                    )
+                }
+
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
                         if (event == Lifecycle.Event.ON_RESUME) {
@@ -991,6 +1013,7 @@ class MainActivity : AppCompatActivity() {
                             isPremium = isPremium,
                             isPro = isPro,
                             onComposeMessage = { navController.navigate("sms/new") },
+                            onSendBroadcastMessage = sendBroadcastHandler,
                             onOpenThread = { thread ->
                                 val lineSuffix = thread.lineId?.let { Uri.encode(it) }.orEmpty()
                                 navController.navigate(
@@ -1124,7 +1147,7 @@ class MainActivity : AppCompatActivity() {
                         var submitting by remember { mutableStateOf(false) }
                         BetaAgreementScreen(
                             ownerName = onboardingName.ifBlank { ownerName },
-                            agreementVersion = MainViewModel.BETA_AGREEMENT_VERSION,
+                            agreementVersion = "2025.12.19",
                             isSubmitting = submitting,
                             onViewFullAgreement = { navController.navigate("onboarding_beta_agreement_full") },
                             onAgree = {
@@ -1368,7 +1391,8 @@ class MainActivity : AppCompatActivity() {
                                 }
                             },
                             onOpenThemes = { navController.navigate("visual_settings") { launchSingleTop = true } },
-                            onOpenNotifications = { navController.navigate("notifications/message_sound") { launchSingleTop = true } }
+                            onOpenNotifications = { navController.navigate("notifications/message_sound") { launchSingleTop = true } },
+                            onSendBroadcastMessage = sendBroadcastHandler
                         )
                     }
                     composable("alerts_history") {
@@ -2771,3 +2795,8 @@ private fun BugReportWebScreen(
         }
     }
 }
+
+
+
+
+
