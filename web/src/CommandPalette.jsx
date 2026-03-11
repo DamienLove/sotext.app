@@ -51,7 +51,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
 
   const handleExecuteCommand = useCallback(async (commandType, details) => {
     switch (commandType) {
-      case 'sendMessage':
+      case 'sendMessage': {
         const { recipient, message, withLocation } = details;
         let targetContact = recipient;
 
@@ -116,6 +116,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
           setPendingCommand(null); // Clear pending as send failed
         }
         return success;
+      }
 
       default:
         setStatus(`Unknown command: ${commandType}`);
