@@ -77,6 +77,21 @@ const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: 'short'
 });
 
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'short'
+});
+
+// Bolt: Extracted relative time formatter to avoid re-creation and allocations during render
+const getRelativeTime = (timestamp) => {
+  if (!timestamp) return '';
+  const timeMs = timestamp.seconds * 1000;
+  const diff = (Date.now() - timeMs) / 1000;
+  if (diff < 60) return 'Synced just now';
+  if (diff < 3600) return `Synced ${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `Synced ${Math.floor(diff / 3600)}h ago`;
+  return `Synced ${dateFormatter.format(timeMs)}`;
+};
+
 // Icons
 const HomeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>;
 const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>;
@@ -2296,17 +2311,6 @@ const Sidebar = memo(({
                         const targetLine = activeLineId ? lines.find(l => l.id === activeLineId) : lines.find(l => l.primaryDeviceId);
                         const lastSync = targetLine?.lastSyncAt;
                         if (!lastSync) return null;
-
-                        // Simple relative time formatter
-                        const getRelativeTime = (timestamp) => {
-                             if (!timestamp) return '';
-                             const date = new Date(timestamp.seconds * 1000);
-                             const diff = (new Date() - date) / 1000;
-                             if (diff < 60) return 'Synced just now';
-                             if (diff < 3600) return `Synced ${Math.floor(diff / 60)}m ago`;
-                             if (diff < 86400) return `Synced ${Math.floor(diff / 3600)}h ago`;
-                             return `Synced ${date.toLocaleDateString()}`;
-                        };
 
                         return getRelativeTime(lastSync);
                     })()}
