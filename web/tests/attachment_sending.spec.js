@@ -32,7 +32,7 @@ test('Web Message Composer shows paperclip and handles file selection', async ({
   await fileInput.setInputFiles({
     name: 'test.png',
     mimeType: 'image/png',
-    buffer: Buffer.from('this is a test image')
+    buffer: Buffer.from('this is a test image') // eslint-disable-line no-undef
   });
 
   // Verify UI feedback - Placeholder changes when attachment is present
