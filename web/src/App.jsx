@@ -83,7 +83,6 @@ const MapIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none
 const ThemeIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="14.31" y1="8" x2="20.05" y2="17.94"></line><line x1="9.69" y1="8" x2="21.17" y2="8"></line><line x1="7.38" y1="12" x2="13.12" y2="2.06"></line><line x1="9.69" y1="16" x2="3.95" y2="6.06"></line><line x1="14.31" y1="16" x2="2.83" y2="16"></line><line x1="16.62" y1="12" x2="10.88" y2="21.94"></line></svg>;
 const ContactIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 const SettingsIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
-const TrashIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
 const LinkIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>;
 const CopyIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
 const CheckIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
@@ -2542,7 +2541,6 @@ function App() {
   const [remoteSettingsStatus, setRemoteSettingsStatus] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isTestingRelay, setIsTestingRelay] = useState(false);
-  const [isRequestingSync, setIsRequestingSync] = useState(false);
   const [syncDiagnostics, setSyncDiagnostics] = useState(null);
   const [relayDiagnostics, setRelayDiagnostics] = useState(null);
   const [syncRequestStatus, setSyncRequestStatus] = useState('');
@@ -2551,12 +2549,6 @@ function App() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [showPreviews, setShowPreviews] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [spotifyToken, setSpotifyToken] = useState(null);
-  const [spotifySearch, setSpotifySearch] = useState('');
-  const [isSearchingSpotify, setIsSearchingSpotify] = useState(false);
-  const [spotifyResults, setSpotifyResults] = useState([]);
-  const [ringerPlaylist, setRingerPlaylist] = useState([]);
-  const [addingTrackId, setAddingTrackId] = useState(null);
   const [showDevTools, setShowDevTools] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [settingsSearch, setSettingsSearch] = useState('');
@@ -2637,110 +2629,6 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [remoteSettings.commandPaletteEnabled]);
 
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('mock_user') === 'true') return;
-    if (!user) {
-      setRingerPlaylist([]);
-      return;
-    }
-    const playlistRef = collection(db, "users", user.uid, "ringer_playlist");
-    const q = query(playlistRef, orderBy("addedAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setRingerPlaylist(items);
-    });
-    return () => unsubscribe();
-  }, [user]);
-
-  const handleDeleteRingerSong = useCallback(async (songId) => {
-    if (!user) return;
-    try {
-      await deleteDoc(doc(db, "users", user.uid, "ringer_playlist", songId));
-    } catch (e) {
-      console.error("Failed to delete song", e);
-    }
-  }, [user]);
-
-  const getSpotifyToken = async () => {
-    // Sentinel: Use Cloud Function to fetch token securely, avoiding exposed secrets
-    const callable = httpsCallable(functions, 'getSpotifyAccessToken');
-    const result = await callable();
-    const token = result.data.access_token;
-    if (!token) throw new Error("Failed to retrieve access token");
-    setSpotifyToken(token);
-    return token;
-  };
-
-  const handleSpotifySearch = async () => {
-    if (!spotifySearch.trim()) return;
-    setIsSearchingSpotify(true);
-    setSettingsStatus("Searching...");
-    try {
-        let token = spotifyToken;
-        if (!token) {
-            token = await getSpotifyToken();
-        }
-        
-        const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(spotifySearch)}&type=track&limit=5`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.status === 401) {
-            // Token expired, retry once
-            token = await getSpotifyToken();
-            const retry = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(spotifySearch)}&type=track&limit=5`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const data = await retry.json();
-            setSpotifyResults(data.tracks?.items || []);
-        } else {
-            const data = await response.json();
-            setSpotifyResults(data.tracks?.items || []);
-        }
-        setSettingsStatus("");
-    } catch (e) {
-        setSettingsStatus("Search failed: " + e.message);
-    } finally {
-        setIsSearchingSpotify(false);
-    }
-  };
-
-  const handlePushSpotifyTrack = useCallback(async (track) => {
-      const target = user?.uid;
-      if(!target) {
-          setSettingsStatus("Please sign in to push tracks.");
-          return;
-      }
-      try {
-          setAddingTrackId(track.id);
-          setSettingsStatus(`Adding "${track.name}"...`);
-          const trackData = {
-              spotifyId: track.id,
-              uri: track.uri,
-              title: track.name,
-              artist: track.artists?.map(a => a.name).join(', ') || "Unknown Artist",
-              durationMs: track.duration_ms || 0,
-              albumArtUrl: track.album?.images?.[0]?.url || null,
-              addedAt: serverTimestamp()
-          };
-          
-          // Use addDoc to let Firestore generate the ID, or use track.id as doc ID to prevent duplicates
-          // The Android app uses add(), so we should probably mimic that or just use setDoc with track.id
-          // Using setDoc with track.id prevents duplicates better.
-          await setDoc(doc(db, "users", target, "ringer_playlist", track.id), trackData);
-          
-          setSettingsStatus("Added to playlist!");
-          // Clear search results after adding? Maybe not, user might want to add multiple.
-      } catch(e) {
-          setSettingsStatus("Error adding: " + e.message);
-      } finally {
-          setAddingTrackId(null);
-      }
-  }, [user]);
-
   // const messagesEndRef = useRef(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -2805,16 +2693,28 @@ function App() {
   // Bolt: Create a unified contact lookup map for avatars
   const contactLookup = useMemo(() => {
     const map = {};
-    const add = (c) => {
-      const nums = [c.phoneNumber, ...(c.additionalPhones || [])];
-      nums.forEach(n => {
-        if (!n) return;
-        const clean = n.replace(/\D/g, '');
-        if (clean) map[clean] = c;
-      });
+    const addPhone = (c, phone) => {
+      if (!phone) return;
+      const clean = phone.replace(/\D/g, '');
+      if (clean) map[clean] = c;
     };
-    deviceContacts.forEach(add);
-    trustedContacts.forEach(add);
+    const addContact = (c) => {
+      addPhone(c, c.phoneNumber);
+      const addPhones = c.additionalPhones;
+      if (Array.isArray(addPhones)) {
+        for (let i = 0; i < addPhones.length; i++) {
+          addPhone(c, addPhones[i]);
+        }
+      }
+    };
+
+    // Bolt: Avoid .forEach and array spreads to prevent allocations
+    for (let i = 0; i < deviceContacts.length; i++) {
+      addContact(deviceContacts[i]);
+    }
+    for (let i = 0; i < trustedContacts.length; i++) {
+      addContact(trustedContacts[i]);
+    }
     return map;
   }, [deviceContacts, trustedContacts]);
 
@@ -3756,7 +3656,7 @@ function App() {
       console.error("Theme update failed", error);
       setThemeStatus(error?.message ?? "Theme update failed.");
     }
-  }, [user]);
+  }, [user, profile.ownerName, profile.avatarUrl, profile.avatarId]);
 
   const handleImportPublicTheme = useCallback(async (themeDoc) => {
     if (!themeDoc?.theme) return;
@@ -3894,30 +3794,6 @@ function App() {
       setRemoteSettingsStatus("Test failed: " + e.message);
     } finally {
       setIsTestingRelay(false);
-    }
-  };
-
-  const requestPhoneSync = async () => {
-    if (!user) return;
-    setIsRequestingSync(true);
-    setSyncRequestStatus("Requesting sync...");
-    try {
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          syncRequestedAt: serverTimestamp(),
-          syncRequestedBy: "web",
-          remoteWebAccessEnabled: true,
-          settingsUpdatedAt: serverTimestamp()
-        },
-        { merge: true }
-      );
-      setSyncRequestStatus("Sync requested. Open SoText on your phone and keep it online.");
-    } catch (error) {
-      console.error("Sync request failed", error);
-      setSyncRequestStatus(error?.message ?? "Unable to request sync.");
-    } finally {
-      setIsRequestingSync(false);
     }
   };
 
@@ -4130,7 +4006,7 @@ function App() {
       setRemoteSettingsStatus(`Send failed: ${error.message}`);
       return false; // Indicate failure
     }
-  }, [user, db, activeLineId, lines]);
+  }, [user, activeLineId, lines]);
 
   const commandPaletteActions = useMemo(() => ({
     logout: handleLogout,
@@ -4201,18 +4077,38 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    const lineAddresses = new Set();
+    const all = [];
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Bolt: Avoid Object.values().flat() and map/filter array allocations
+    for (const lineId in lineThreads) {
+      const threads = lineThreads[lineId];
+      for (let i = 0; i < threads.length; i++) {
+        const t = threads[i];
+        all.push(t);
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        all.push(t);
+      }
+    }
 
-    // Sort: Pinned first, then date
+    // Bolt: Avoid another intermediate array from .filter()
+    const filtered = [];
+    for (let i = 0; i < all.length; i++) {
+      const t = all[i];
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
+
     return filtered.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return (b.date ?? 0) - (a.date ?? 0);

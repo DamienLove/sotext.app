@@ -22,7 +22,7 @@ const LocationIcon = () => (
 );
 
 const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
-  const { isPremium, deviceContacts, trustedContacts, sendMessage, setStatus, activeLineId, lines, lineInboxMode } = actions;
+  const { isPremium, deviceContacts, trustedContacts, sendMessage, setStatus, activeLineId, lines } = actions;
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
@@ -51,7 +51,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
 
   const handleExecuteCommand = useCallback(async (commandType, details) => {
     switch (commandType) {
-      case 'sendMessage':
+      case 'sendMessage': {
         const { recipient, message, withLocation } = details;
         let targetContact = recipient;
 
@@ -116,13 +116,13 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
           setPendingCommand(null); // Clear pending as send failed
         }
         return success;
-
+      }
       default:
         setStatus(`Unknown command: ${commandType}`);
         setPendingCommand(null);
         return false;
     }
-  }, [isPremium, deviceContacts, trustedContacts, sendMessage, setStatus, setActivePanel, resolveContact, onClose, activeLineId, lines]);
+  }, [isPremium, sendMessage, setStatus, setActivePanel, resolveContact, onClose, activeLineId, lines]);
 
 
   useEffect(() => {
@@ -198,9 +198,8 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
             id: 'nlu-send-text',
             label: `Send message: "${messageBody || '...'}" to ${recipientTerm || '...'}${hasLocation ? ' (with location)' : ''}`,
             icon: hasLocation ? <LocationIcon /> : '📝',
-            action: async (currentSetActivePanel, currentActions) => { // Use arguments from handleSelect
+            action: async () => {
               const success = await handleExecuteCommand(parsedCommand.command, parsedCommand);
-              // if (success) currentActions.onClose(); // onClose is passed as a prop, not in actions
               if (success) onClose();
             },
             keepOpen: true // Keep open if more info needed or geo permission etc.
@@ -215,7 +214,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
     }
 
     return currentActions;
-  }, [query, pendingCommand, handleExecuteCommand, resolveContact, isPremium, setStatus, onClose, setActivePanel, deviceContacts, trustedContacts]);
+  }, [query, pendingCommand, handleExecuteCommand, onClose, resolveContact]);
 
   useEffect(() => {
     setSelectedIndex(0);
