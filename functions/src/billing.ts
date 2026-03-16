@@ -59,7 +59,7 @@ export const verifySubscription = onCall({maxInstances: 10}, async (request) => 
     }
 
     await admin.firestore().collection("users").doc(uid)
-      .set(updateData, {merge: true});
+        .set(updateData, {merge: true});
     await setPremiumClaim(uid, active);
     return {status, expiryMillis, active};
   } catch (err) {

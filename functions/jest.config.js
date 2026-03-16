@@ -1,6 +1,12 @@
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
+  setupFilesAfterEnv: [],
+  globals: {
+    "ts-jest": {
+      diagnostics: false,
+    },
+  },
   testMatch: ["**/__tests__/**/*.ts", "**/?(*.)+(spec|test).ts"],
   collectCoverageFrom: [
     "src/**/*.ts",
