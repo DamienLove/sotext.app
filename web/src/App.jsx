@@ -2806,12 +2806,21 @@ function App() {
   const contactLookup = useMemo(() => {
     const map = {};
     const add = (c) => {
-      const nums = [c.phoneNumber, ...(c.additionalPhones || [])];
-      nums.forEach(n => {
-        if (!n) return;
-        const clean = n.replace(/\D/g, '');
+      const p = c.phoneNumber;
+      if (p) {
+        const clean = p.replace(/\D/g, '');
         if (clean) map[clean] = c;
-      });
+      }
+      const addPhones = c.additionalPhones;
+      if (Array.isArray(addPhones)) {
+        for (let i = 0; i < addPhones.length; i++) {
+          const n = addPhones[i];
+          if (n) {
+            const clean = n.replace(/\D/g, '');
+            if (clean) map[clean] = c;
+          }
+        }
+      }
     };
     deviceContacts.forEach(add);
     trustedContacts.forEach(add);
@@ -4201,19 +4210,38 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Optimized to avoid allocating intermediate arrays (.flat(), .map(), .filter(), spread operator)
+    const lineAddresses = new Set();
+    const all = [];
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // 1. Collect all line threads and their addresses in one pass
+    const threadsVals = Object.values(lineThreads);
+    for (let i = 0; i < threadsVals.length; i++) {
+      const threadsArr = threadsVals[i];
+      for (let j = 0; j < threadsArr.length; j++) {
+        const t = threadsArr[j];
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+        if (showArchived ? t.archived : !t.archived) {
+          all.push(t);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // 2. Collect unique legacy threads in one pass
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          all.push(t);
+        }
+      }
+    }
 
     // Sort: Pinned first, then date
-    return filtered.sort((a, b) => {
+    return all.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return (b.date ?? 0) - (a.date ?? 0);
     });
