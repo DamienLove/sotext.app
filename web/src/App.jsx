@@ -2522,6 +2522,7 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const passwordInputRef = useRef(null);
   const [authError, setAuthError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('inbox');
@@ -4298,8 +4299,9 @@ function App() {
               </label>
               <div className="login-field">
                 <label htmlFor="login-password">Password</label>
-                <div className="password-input-wrapper">
+                <div className="password-input-wrapper" onClick={() => passwordInputRef.current?.focus()}>
                   <input
+                    ref={passwordInputRef}
                     id="login-password"
                     className="login-input"
                     type={showPassword ? "text" : "password"}
