@@ -13,3 +13,7 @@
 ## 2024-05-28 - Date Allocation in Render Loops
 **Learning:** `new Date()` allocation in hot render loops (like message lists) can be avoided by passing timestamps directly to `Intl.DateTimeFormat.format()`.
 **Action:** Always check if formatting functions accept primitives before wrapping them in objects inside `render` or `map`.
+
+## 2026-02-12 - Sync Search Stuttering
+**Learning:** Real-time filtering of large datasets (like contacts, themes, or threads) blocks the main thread on every keystroke, causing typing stutter (jank) and poor perceived performance.
+**Action:** Use `useDeferredValue` for search input strings when filtering large lists synchronously. This tells React to prioritize the input update (keeping typing smooth) and defer the expensive filtering calculation.
