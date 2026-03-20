@@ -22,7 +22,7 @@ const LocationIcon = () => (
 );
 
 const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
-  const { isPremium, deviceContacts, trustedContacts, sendMessage, setStatus, activeLineId, lines, lineInboxMode } = actions;
+  const { isPremium, deviceContacts, trustedContacts, sendMessage, setStatus, activeLineId, lines } = actions;
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
@@ -51,7 +51,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
 
   const handleExecuteCommand = useCallback(async (commandType, details) => {
     switch (commandType) {
-      case 'sendMessage':
+      case 'sendMessage': {
         const { recipient, message, withLocation } = details;
         let targetContact = recipient;
 
@@ -116,13 +116,14 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
           setPendingCommand(null); // Clear pending as send failed
         }
         return success;
+      }
 
       default:
         setStatus(`Unknown command: ${commandType}`);
         setPendingCommand(null);
         return false;
     }
-  }, [isPremium, deviceContacts, trustedContacts, sendMessage, setStatus, setActivePanel, resolveContact, onClose, activeLineId, lines]);
+  }, [isPremium, sendMessage, setStatus, resolveContact, activeLineId, lines, setActivePanel, onClose]);
 
 
   useEffect(() => {
@@ -198,9 +199,8 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
             id: 'nlu-send-text',
             label: `Send message: "${messageBody || '...'}" to ${recipientTerm || '...'}${hasLocation ? ' (with location)' : ''}`,
             icon: hasLocation ? <LocationIcon /> : '📝',
-            action: async (currentSetActivePanel, currentActions) => { // Use arguments from handleSelect
+            action: async () => {
               const success = await handleExecuteCommand(parsedCommand.command, parsedCommand);
-              // if (success) currentActions.onClose(); // onClose is passed as a prop, not in actions
               if (success) onClose();
             },
             keepOpen: true // Keep open if more info needed or geo permission etc.
@@ -215,7 +215,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
     }
 
     return currentActions;
-  }, [query, pendingCommand, handleExecuteCommand, resolveContact, isPremium, setStatus, onClose, setActivePanel, deviceContacts, trustedContacts]);
+  }, [query, pendingCommand, handleExecuteCommand, resolveContact, onClose]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -265,7 +265,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
       aria-label="Command Palette"
     >
       <div className="command-palette-modal" onClick={e => e.stopPropagation()}>
-        <div className="command-palette-header">
+        <div className="command-palette-header" onClick={() => inputRef.current?.focus()}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="search-icon">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
