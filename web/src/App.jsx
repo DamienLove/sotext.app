@@ -2564,6 +2564,7 @@ function App() {
   const contactSearchRef = useRef(null);
   const themeSearchRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const passwordInputRef = useRef(null);
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
 
@@ -4298,8 +4299,9 @@ function App() {
               </label>
               <div className="login-field">
                 <label htmlFor="login-password">Password</label>
-                <div className="password-input-wrapper">
+                <div className="password-input-wrapper" onClick={() => passwordInputRef.current?.focus()}>
                   <input
+                    ref={passwordInputRef}
                     id="login-password"
                     className="login-input"
                     type={showPassword ? "text" : "password"}
