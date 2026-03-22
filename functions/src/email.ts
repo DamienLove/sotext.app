@@ -2,6 +2,7 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
 import {escapeHtml} from "./security";
+import {defineSecret} from "firebase-functions/params";
 
 // Ensure admin is initialized (handled in index.ts, but safe to check)
 if (admin.apps.length === 0) {
@@ -9,15 +10,28 @@ if (admin.apps.length === 0) {
 }
 const db = admin.firestore();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const emailUserSecret = defineSecret("EMAIL_USER");
+const emailPassSecret = defineSecret("EMAIL_PASS");
 
-export const sendEmailNotification = functions.https.onCall(
+// Lazily initialize the transporter inside the function
+// so that defineSecret().value() is available.
+let transporter: nodemailer.Transporter | null = null;
+
+function getTransporter() {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: emailUserSecret.value(),
+        pass: emailPassSecret.value(),
+      },
+    });
+  }
+  return transporter;
+}
+
+export const sendEmailNotification = functions.runWith(
+    {secrets: [emailUserSecret, emailPassSecret]}).https.onCall(
     async (data, context) => {
       if (!context.auth) {
         throw new functions.https.HttpsError(
@@ -93,7 +107,7 @@ export const sendEmailNotification = functions.https.onCall(
       }
 
       const mailOptions = {
-        from: `SoText <${process.env.EMAIL_USER}>`,
+        from: `SoText <${emailUserSecret.value()}>`,
         to: email,
         subject: subject,
         text: text,
@@ -101,7 +115,7 @@ export const sendEmailNotification = functions.https.onCall(
       };
 
       try {
-        await transporter.sendMail(mailOptions);
+        await getTransporter().sendMail(mailOptions);
         return {success: true};
       } catch (error) {
         console.error("Error sending email", error);
