@@ -5391,9 +5391,16 @@ function App() {
                     return keywords.some(k => k.includes(term));
                   };
 
+                  const showAccount = show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']);
+                  const showWebPrefs = show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']);
+                  const showSotext = show(['sotext', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']);
+                  const showData = show(['data', 'delete', 'clear', 'cloud', 'account data', 'remove', 'privacy']);
+
+                  const hasNoResults = term && !showAccount && !showWebPrefs && !showSotext && !showData;
+
                   return (
                     <>
-                      {show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']) && (
+                      {showAccount && (
                         <div className="settings-card">
                           <h4>Account</h4>
                           <div className="settings-kv-row">
@@ -5414,7 +5421,7 @@ function App() {
                         </div>
                       )}
 
-                      {show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']) && (
+                      {showWebPrefs && (
                         <div className="settings-card">
                           <h4>Web preferences</h4>
                           <label className="settings-toggle">
@@ -5439,7 +5446,7 @@ function App() {
                         </div>
                       )}
 
-                      {show(['sotext', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']) && (
+                      {showSotext && (
                         <div className="settings-card">
                           <h4>SoText settings</h4>
                           <label className="settings-toggle">
@@ -5535,7 +5542,7 @@ function App() {
                         </div>
                       )}
 
-                      {show(['data', 'delete', 'clear', 'cloud', 'account data', 'remove', 'privacy']) && (
+                      {showData && (
                         <div className="settings-card">
                           <h4>Account data</h4>
                           <p className="settings-note">
@@ -5561,6 +5568,25 @@ function App() {
                           </div>
                           <Toast message={deleteStatus} onDismiss={() => setDeleteStatus('')} />
                         </div>
+                      )}
+
+                      {hasNoResults && (
+                        <EmptyState
+                          icon={<SettingsIcon />}
+                          title="No matches found"
+                          description="Try adjusting your search terms."
+                          action={
+                            <button
+                              className="link-button"
+                              onClick={() => {
+                                setSettingsSearch('');
+                                settingsSearchRef.current?.focus();
+                              }}
+                            >
+                              Clear search
+                            </button>
+                          }
+                        />
                       )}
                     </>
                   );
