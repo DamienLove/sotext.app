@@ -31,3 +31,8 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+
+## 2024-05-28 - [Initialization Issue with Firebase Secret Manager]
+**Vulnerability:** Initializing resources (like `nodemailer.createTransport`) at the global scope using `defineSecret().value()` caused runtime crashes because secret values are not available during the module load phase in Firebase Functions.
+**Learning:** When using `defineSecret()` from `firebase-functions/params`, the secret values are only resolved when the function is actually executed, not when the file is loaded. Global initialization with `.value()` will fail or result in undefined values.
+**Prevention:** Always perform lazy initialization of resources that depend on secret values inside the function handler. For example, move the `nodemailer.createTransport` call inside the `onCall` or `onRequest` handler to ensure secrets are correctly populated.
