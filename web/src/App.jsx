@@ -4981,6 +4981,17 @@ function App() {
                              icon={<ThemeIcon />}
                              title="No themes found"
                              description={themeSearch ? "Try adjusting your search terms." : "The gallery seems to be empty right now."}
+                             action={themeSearch.trim() && (
+                               <button
+                                 className="link-button"
+                                 onClick={() => {
+                                   setThemeSearch('');
+                                   themeSearchRef.current?.focus();
+                                 }}
+                               >
+                                 Clear search
+                               </button>
+                             )}
                           />
                         )}
                       </>
