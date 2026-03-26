@@ -2803,18 +2803,33 @@ function App() {
   }, [getContactSearchIndex, contactSearch, deviceContacts]);
 
   // Bolt: Create a unified contact lookup map for avatars
+  // Optimization: Replaced chained array methods (.flat, .forEach) and spread operators
+  // with imperative loops to eliminate intermediate array allocations during render.
   const contactLookup = useMemo(() => {
     const map = {};
     const add = (c) => {
-      const nums = [c.phoneNumber, ...(c.additionalPhones || [])];
-      nums.forEach(n => {
-        if (!n) return;
-        const clean = n.replace(/\D/g, '');
+      const p = c.phoneNumber;
+      if (p) {
+        const clean = p.replace(/\D/g, '');
         if (clean) map[clean] = c;
-      });
+      }
+      const addPhones = c.additionalPhones;
+      if (Array.isArray(addPhones)) {
+        for (let i = 0; i < addPhones.length; i++) {
+          const n = addPhones[i];
+          if (n) {
+            const clean = n.replace(/\D/g, '');
+            if (clean) map[clean] = c;
+          }
+        }
+      }
     };
-    deviceContacts.forEach(add);
-    trustedContacts.forEach(add);
+    for (let i = 0; i < deviceContacts.length; i++) {
+      add(deviceContacts[i]);
+    }
+    for (let i = 0; i < trustedContacts.length; i++) {
+      add(trustedContacts[i]);
+    }
     return map;
   }, [deviceContacts, trustedContacts]);
 
@@ -4199,18 +4214,39 @@ function App() {
     }
   }, [user]);
 
+  // Bolt: Optimization: Replaced chained array methods (.flat, .filter) and spread operators
+  // with imperative loops to eliminate intermediate array allocations during render.
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
+
+    const filtered = [];
+    const lineAddresses = new Set();
+    const threadsVals = Object.values(lineThreads);
 
     // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    for (let i = 0; i < threadsVals.length; i++) {
+      const threadsArr = threadsVals[i];
+      for (let j = 0; j < threadsArr.length; j++) {
+        const t = threadsArr[j];
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+        // Filter by archive status for line threads
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
-    const all = [...uniqueLegacy, ...lineFlattened];
-
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Process legacy threads and filter by archive status
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
