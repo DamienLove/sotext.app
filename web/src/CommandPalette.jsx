@@ -30,9 +30,12 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
   const restoreFocusRef = useRef(null);
   const [pendingCommand, setPendingCommand] = useState(null); // { type: 'sendMessage', details: { contact, message, withLocation } }
 
+  const allContacts = useMemo(() => {
+    return [...deviceContacts, ...trustedContacts];
+  }, [deviceContacts, trustedContacts]);
+
   const resolveContact = useCallback((term) => {
     const lowerTerm = term.toLowerCase();
-    const allContacts = [...deviceContacts, ...trustedContacts];
     // Prioritize exact phone number match
     let found = allContacts.find(c => c.phoneNumber === term);
     if (found) return found;
@@ -47,7 +50,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
       c.phoneNumber?.includes(term)
     );
     return found;
-  }, [deviceContacts, trustedContacts]);
+  }, [allContacts]);
 
   const handleExecuteCommand = useCallback(async (commandType, details) => {
     switch (commandType) {

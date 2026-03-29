@@ -2806,12 +2806,20 @@ function App() {
   const contactLookup = useMemo(() => {
     const map = {};
     const add = (c) => {
-      const nums = [c.phoneNumber, ...(c.additionalPhones || [])];
-      nums.forEach(n => {
-        if (!n) return;
-        const clean = n.replace(/\D/g, '');
+      // Bolt: Use imperative loop to avoid array allocation
+      if (c.phoneNumber) {
+        const clean = c.phoneNumber.replace(/\D/g, '');
         if (clean) map[clean] = c;
-      });
+      }
+      if (c.additionalPhones) {
+        for (let i = 0; i < c.additionalPhones.length; i++) {
+          const n = c.additionalPhones[i];
+          if (n) {
+            const clean = n.replace(/\D/g, '');
+            if (clean) map[clean] = c;
+          }
+        }
+      }
     };
     deviceContacts.forEach(add);
     trustedContacts.forEach(add);
@@ -4201,16 +4209,37 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Use imperative single-pass loop to avoid intermediate array allocations
+    // Replaces .flat(), .map(), .filter(), and spread operators
+    const filtered = [];
+    const lineAddresses = new Set();
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Process line threads
+    for (const lineId in lineThreads) {
+      const threads = lineThreads[lineId];
+      if (!threads) continue;
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+      for (let i = 0; i < threads.length; i++) {
+        const t = threads[i];
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
+
+    // Process legacy threads
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
