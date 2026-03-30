@@ -4201,16 +4201,34 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Use imperative loops to avoid creating multiple intermediate arrays
+    // during flat(), map(), filter(), and spread operations.
+    const filtered = [];
+    const lineAddresses = new Set();
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Process line threads
+    for (const lineId in lineThreads) {
+      const threads = lineThreads[lineId];
+      if (!threads) continue;
+      for (let i = 0; i < threads.length; i++) {
+        const t = threads[i];
+        if (t.address) lineAddresses.add(t.address);
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Process legacy threads, filtering out duplicates
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
@@ -4224,8 +4242,14 @@ function App() {
     const chosenLine = activeLineId || lines[0]?.id || null;
     const current = chosenLine ? lineThreads[chosenLine] || [] : [];
 
-    // Filter by archive status
-    const filtered = current.filter(t => showArchived ? t.archived : !t.archived);
+    // Bolt: Replace filter() with an imperative loop
+    const filtered = [];
+    for (let i = 0; i < current.length; i++) {
+      const t = current[i];
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
