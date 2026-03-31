@@ -13,3 +13,7 @@
 ## 2024-05-28 - Date Allocation in Render Loops
 **Learning:** `new Date()` allocation in hot render loops (like message lists) can be avoided by passing timestamps directly to `Intl.DateTimeFormat.format()`.
 **Action:** Always check if formatting functions accept primitives before wrapping them in objects inside `render` or `map`.
+
+## 2024-05-29 - Avoid Chained Array Methods in useMemo
+**Learning:** Chained array methods like `.map().filter()` inside `useMemo` hooks create multiple intermediate array allocations. When executed frequently or with large data sets, this causes memory bloat and blocking main thread rendering.
+**Action:** Replace chained array methods with single-pass imperative loops inside frequently executing `useMemo` blocks to avoid intermediate array allocations.
