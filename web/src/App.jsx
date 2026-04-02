@@ -4199,18 +4199,46 @@ function App() {
     }
   }, [user]);
 
+  // Bolt: Optimized thread combinations to prevent multiple intermediate array allocations
+  // (flat(), map(), filter(), spread) while maintaining readability.
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // 1. Flatten lines imperatively and build Set simultaneously
+    const lineAddresses = new Set();
+    const lineFlattened = [];
+    const lineThreadsValues = Object.values(lineThreads);
+    for (let i = 0; i < lineThreadsValues.length; i++) {
+      const threadsArr = lineThreadsValues[i];
+      if (!threadsArr) continue;
+      for (let j = 0; j < threadsArr.length; j++) {
+        const t = threadsArr[j];
+        lineFlattened.push(t);
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+      }
+    }
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // 2. Filter legacy threads and merge into final array imperatively
+    const filtered = [];
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Process legacy threads
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if ((!t.address || !lineAddresses.has(t.address)) &&
+          (showArchived ? t.archived : !t.archived)) {
+        filtered.push(t);
+      }
+    }
+
+    // Process line threads
+    for (let i = 0; i < lineFlattened.length; i++) {
+      const t = lineFlattened[i];
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
