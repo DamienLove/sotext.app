@@ -2806,15 +2806,31 @@ function App() {
   const contactLookup = useMemo(() => {
     const map = {};
     const add = (c) => {
-      const nums = [c.phoneNumber, ...(c.additionalPhones || [])];
-      nums.forEach(n => {
-        if (!n) return;
-        const clean = n.replace(/\D/g, '');
+      if (c.phoneNumber) {
+        const clean = c.phoneNumber.replace(/\D/g, '');
         if (clean) map[clean] = c;
-      });
+      }
+      if (Array.isArray(c.additionalPhones)) {
+        for (let i = 0; i < c.additionalPhones.length; i++) {
+          const n = c.additionalPhones[i];
+          if (n) {
+            const clean = n.replace(/\D/g, '');
+            if (clean) map[clean] = c;
+          }
+        }
+      }
     };
-    deviceContacts.forEach(add);
-    trustedContacts.forEach(add);
+
+    if (Array.isArray(deviceContacts)) {
+      for (let i = 0; i < deviceContacts.length; i++) {
+        add(deviceContacts[i]);
+      }
+    }
+    if (Array.isArray(trustedContacts)) {
+      for (let i = 0; i < trustedContacts.length; i++) {
+        add(trustedContacts[i]);
+      }
+    }
     return map;
   }, [deviceContacts, trustedContacts]);
 
@@ -4201,16 +4217,45 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Use imperative loops to avoid array allocations (flat, map, filter, spread)
+    const lineAddresses = new Set();
+    const all = [];
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Collect all line threads and their addresses
+    for (const lineId in lineThreads) {
+      if (Object.hasOwn(lineThreads, lineId)) {
+        const threads = lineThreads[lineId];
+        if (Array.isArray(threads)) {
+          for (let i = 0; i < threads.length; i++) {
+            const t = threads[i];
+            if (t) {
+              if (t.address) lineAddresses.add(t.address);
+              all.push(t);
+            }
+          }
+        }
+      }
+    }
+
+    // Add legacy threads that don't duplicate line addresses
+    if (Array.isArray(legacyThreads)) {
+      for (let i = 0; i < legacyThreads.length; i++) {
+        const t = legacyThreads[i];
+        if (t && (!t.address || !lineAddresses.has(t.address))) {
+          all.push(t);
+        }
+      }
+    }
 
     // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    const filtered = [];
+    for (let i = 0; i < all.length; i++) {
+      const t = all[i];
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
