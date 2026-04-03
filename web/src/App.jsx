@@ -2112,7 +2112,8 @@ const Sidebar = memo(({
                 onClick={() => setShowArchived(!showArchived)}
                 className={`ghost-btn icon-only ${showArchived ? 'active' : ''}`}
                 title={showArchived ? "Show Inbox" : "Show Archive"}
-                aria-label={showArchived ? "Show Inbox" : "Show Archive"}
+                aria-label="Toggle archive view"
+                aria-pressed={showArchived}
               >
                 {showArchived ? <InboxIcon /> : <ArchiveIcon />}
               </button>
@@ -2210,7 +2211,7 @@ const Sidebar = memo(({
       </div>
       <div className="sidebar-footer">
         {!collapsed && <button onClick={handleLogout} className="ghost-btn">Logout</button>}
-        <button onClick={() => setCollapsed(prev => !prev)} className="ghost-btn icon-only" title={collapsed ? "Expand" : "Collapse"} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+        <button onClick={() => setCollapsed(prev => !prev)} className="ghost-btn icon-only" title={collapsed ? "Expand" : "Collapse"} aria-label="Toggle sidebar" aria-expanded={!collapsed}>
           {collapsed ? (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
           ) : (
@@ -2563,6 +2564,7 @@ function App() {
   const settingsSearchRef = useRef(null);
   const contactSearchRef = useRef(null);
   const themeSearchRef = useRef(null);
+  const passwordInputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
@@ -4298,8 +4300,9 @@ function App() {
               </label>
               <div className="login-field">
                 <label htmlFor="login-password">Password</label>
-                <div className="password-input-wrapper">
+                <div className="password-input-wrapper" onClick={() => passwordInputRef.current?.focus()}>
                   <input
+                    ref={passwordInputRef}
                     id="login-password"
                     className="login-input"
                     type={showPassword ? "text" : "password"}
@@ -4312,7 +4315,8 @@ function App() {
                     type="button"
                     className="password-toggle-btn"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label="Toggle password visibility"
+                    aria-pressed={showPassword}
                     title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
