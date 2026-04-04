@@ -1,3 +1,3 @@
-## 2025-05-15 - Interactive Containers
-**Learning:** Users expect "input-like" containers (with icons and borders) to be fully interactive. Making the parent div focus the input on click reduces friction.
-**Action:** Always add onClick handlers to custom input wrappers to forward focus to the inner input.
+## 2025-01-20 - Input Wrapper UX
+**Learning:** For composite input components (e.g., search bars with clear buttons or password inputs with show/hide toggles), wrapping them in a container without making the entire container clickable creates a frustrating "dead zone" where users expect a click to focus the input.
+**Action:** Always add an `onClick={() => inputRef.current?.focus()}` handler to the wrapper container element to ensure clicking anywhere inside the perceived input bounds focuses the actual input element.
