@@ -2088,9 +2088,16 @@ const Sidebar = memo(({
   const filteredThreads = useMemo(() => {
     const term = searchQuery.trim().toLowerCase();
     if (!term) return threads;
-    return getSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ thread }) => thread);
+
+    // Bolt: Optimized to use an imperative loop, avoiding intermediate array allocation
+    const index = getSearchIndex();
+    const result = [];
+    for (let i = 0; i < index.length; i++) {
+      if (index[i].searchString.includes(term)) {
+        result.push(index[i].thread);
+      }
+    }
+    return result;
   }, [getSearchIndex, searchQuery, threads]);
 
   const [collapsed, setCollapsed] = useState(false);
@@ -2771,9 +2778,16 @@ function App() {
   const filteredThemes = useMemo(() => {
     const term = themeSearch.trim().toLowerCase();
     if (!term) return publicThemes;
-    return getThemeSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ theme }) => theme);
+
+    // Bolt: Optimized to use an imperative loop, avoiding intermediate array allocation
+    const index = getThemeSearchIndex();
+    const result = [];
+    for (let i = 0; i < index.length; i++) {
+      if (index[i].searchString.includes(term)) {
+        result.push(index[i].theme);
+      }
+    }
+    return result;
   }, [getThemeSearchIndex, themeSearch, publicThemes]);
 
   const featuredThemeDocs = useMemo(() => {
@@ -2797,9 +2811,15 @@ function App() {
     if (!term) return deviceContacts;
 
     // Bolt: Use the pre-computed index for O(N) simple string inclusion check
-    return getContactSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ contact }) => contact);
+    // Optimized to use an imperative loop, avoiding intermediate array allocation
+    const index = getContactSearchIndex();
+    const result = [];
+    for (let i = 0; i < index.length; i++) {
+      if (index[i].searchString.includes(term)) {
+        result.push(index[i].contact);
+      }
+    }
+    return result;
   }, [getContactSearchIndex, contactSearch, deviceContacts]);
 
   // Bolt: Create a unified contact lookup map for avatars
@@ -4201,16 +4221,44 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Optimized chained array methods into imperative loops to prevent intermediate array allocations
+    const lineValues = Object.values(lineThreads);
+    const lineAddresses = new Set();
+    const lineFlattened = [];
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    for (let i = 0; i < lineValues.length; i++) {
+      const threadsArray = lineValues[i];
+      if (Array.isArray(threadsArray)) {
+        for (let j = 0; j < threadsArray.length; j++) {
+          const t = threadsArray[j];
+          lineFlattened.push(t);
+          if (t.address) {
+            lineAddresses.add(t.address);
+          }
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    const filtered = [];
+
+    // Process legacy threads
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if ((showArchived && t.archived) || (!showArchived && !t.archived)) {
+          filtered.push(t);
+        }
+      }
+    }
+
+    // Process line threads
+    for (let i = 0; i < lineFlattened.length; i++) {
+      const t = lineFlattened[i];
+      if ((showArchived && t.archived) || (!showArchived && !t.archived)) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
