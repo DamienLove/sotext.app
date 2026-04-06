@@ -2088,9 +2088,15 @@ const Sidebar = memo(({
   const filteredThreads = useMemo(() => {
     const term = searchQuery.trim().toLowerCase();
     if (!term) return threads;
-    return getSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ thread }) => thread);
+    // Bolt: Use single-pass imperative loop instead of filter().map() chain
+    const result = [];
+    const index = getSearchIndex();
+    for (let i = 0; i < index.length; i++) {
+      if (index[i].searchString.includes(term)) {
+        result.push(index[i].thread);
+      }
+    }
+    return result;
   }, [getSearchIndex, searchQuery, threads]);
 
   const [collapsed, setCollapsed] = useState(false);
@@ -2771,9 +2777,15 @@ function App() {
   const filteredThemes = useMemo(() => {
     const term = themeSearch.trim().toLowerCase();
     if (!term) return publicThemes;
-    return getThemeSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ theme }) => theme);
+    // Bolt: Use single-pass imperative loop instead of filter().map() chain
+    const result = [];
+    const index = getThemeSearchIndex();
+    for (let i = 0; i < index.length; i++) {
+      if (index[i].searchString.includes(term)) {
+        result.push(index[i].theme);
+      }
+    }
+    return result;
   }, [getThemeSearchIndex, themeSearch, publicThemes]);
 
   const featuredThemeDocs = useMemo(() => {
@@ -2797,24 +2809,45 @@ function App() {
     if (!term) return deviceContacts;
 
     // Bolt: Use the pre-computed index for O(N) simple string inclusion check
-    return getContactSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ contact }) => contact);
+    // and use single-pass imperative loop instead of filter().map() chain
+    const result = [];
+    const index = getContactSearchIndex();
+    for (let i = 0; i < index.length; i++) {
+      if (index[i].searchString.includes(term)) {
+        result.push(index[i].contact);
+      }
+    }
+    return result;
   }, [getContactSearchIndex, contactSearch, deviceContacts]);
 
   // Bolt: Create a unified contact lookup map for avatars
   const contactLookup = useMemo(() => {
     const map = {};
     const add = (c) => {
-      const nums = [c.phoneNumber, ...(c.additionalPhones || [])];
-      nums.forEach(n => {
-        if (!n) return;
-        const clean = n.replace(/\D/g, '');
+      // Bolt: Use imperative approach instead of spread operator to avoid array allocation
+      if (c.phoneNumber) {
+        const clean = c.phoneNumber.replace(/\D/g, '');
         if (clean) map[clean] = c;
-      });
+      }
+
+      if (Array.isArray(c.additionalPhones)) {
+        for (let i = 0; i < c.additionalPhones.length; i++) {
+          const n = c.additionalPhones[i];
+          if (!n) continue;
+          const clean = n.replace(/\D/g, '');
+          if (clean) map[clean] = c;
+        }
+      }
     };
-    deviceContacts.forEach(add);
-    trustedContacts.forEach(add);
+
+    // Bolt: Use imperative loops instead of forEach
+    for (let i = 0; i < deviceContacts.length; i++) {
+      add(deviceContacts[i]);
+    }
+    for (let i = 0; i < trustedContacts.length; i++) {
+      add(trustedContacts[i]);
+    }
+
     return map;
   }, [deviceContacts, trustedContacts]);
 
@@ -4201,19 +4234,38 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Use imperative loop to prevent intermediate array allocations
+    // from flat(), map(), filter() and spread operator chains
+    const all = [];
+    const lineAddresses = new Set();
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Process line threads
+    for (const threads of Object.values(lineThreads)) {
+      if (!Array.isArray(threads)) continue;
+      for (const t of threads) {
+        if (!t) continue;
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+        if (showArchived ? t.archived : !t.archived) {
+          all.push(t);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Process legacy threads
+    for (const t of legacyThreads) {
+      if (!t) continue;
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          all.push(t);
+        }
+      }
+    }
 
     // Sort: Pinned first, then date
-    return filtered.sort((a, b) => {
+    return all.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return (b.date ?? 0) - (a.date ?? 0);
     });
