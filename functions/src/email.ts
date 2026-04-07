@@ -1,7 +1,11 @@
-import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {defineSecret} from "firebase-functions/params";
 import {escapeHtml} from "./security";
+
+const EMAIL_USER = defineSecret("EMAIL_USER");
+const EMAIL_PASS = defineSecret("EMAIL_PASS");
 
 // Ensure admin is initialized (handled in index.ts, but safe to check)
 if (admin.apps.length === 0) {
@@ -9,32 +13,37 @@ if (admin.apps.length === 0) {
 }
 const db = admin.firestore();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+let transporter: nodemailer.Transporter | null = null;
 
-export const sendEmailNotification = functions.https.onCall(
-    async (data, context) => {
-      if (!context.auth) {
-        throw new functions.https.HttpsError(
+export const sendEmailNotification = onCall(
+    { secrets: [EMAIL_USER, EMAIL_PASS] },
+    async (request) => {
+      if (!request.auth) {
+        throw new HttpsError(
             "unauthenticated", "User must be authenticated");
       }
 
-      const {email, messageType, payload} = data;
+      if (!transporter) {
+        transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: EMAIL_USER.value(),
+            pass: EMAIL_PASS.value(),
+          },
+        });
+      }
+
+      const {email, messageType, payload} = request.data;
 
       // Sentinel: Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!email || !emailRegex.test(email)) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
             "invalid-argument", "Valid email is required");
       }
 
       // Sentinel: Fetch verified user identity to prevent spoofing
-      const uid = context.auth.uid;
+      const uid = request.auth.uid;
       let verifiedName = "SoText User";
 
       try {
@@ -93,7 +102,7 @@ export const sendEmailNotification = functions.https.onCall(
       }
 
       const mailOptions = {
-        from: `SoText <${process.env.EMAIL_USER}>`,
+        from: `SoText <${EMAIL_USER.value()}>`,
         to: email,
         subject: subject,
         text: text,
@@ -101,11 +110,12 @@ export const sendEmailNotification = functions.https.onCall(
       };
 
       try {
-        await transporter.sendMail(mailOptions);
+        // Use non-null assertion since it's initialized above
+        await transporter!.sendMail(mailOptions);
         return {success: true};
       } catch (error) {
         console.error("Error sending email", error);
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
             "internal", "Failed to send email");
       }
     });
