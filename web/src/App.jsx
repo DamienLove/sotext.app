@@ -4201,16 +4201,36 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Avoid intermediate arrays (.flat, .map, .filter) by using an imperative loop.
+    // This reduces memory bloat and execution time since lineThreads can be large and updates frequently.
+    const lineAddresses = new Set();
+    const filtered = [];
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    const threadValues = Object.values(lineThreads);
+    for (let i = 0; i < threadValues.length; i++) {
+      const item = threadValues[i];
+      const items = Array.isArray(item) ? item : [item];
+      for (let j = 0; j < items.length; j++) {
+        const t = items[j];
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Filter legacy and by archive status in one pass
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
