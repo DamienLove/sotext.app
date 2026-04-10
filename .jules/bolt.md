@@ -13,3 +13,7 @@
 ## 2024-05-28 - Date Allocation in Render Loops
 **Learning:** `new Date()` allocation in hot render loops (like message lists) can be avoided by passing timestamps directly to `Intl.DateTimeFormat.format()`.
 **Action:** Always check if formatting functions accept primitives before wrapping them in objects inside `render` or `map`.
+
+## 2024-05-29 - Array Operations within useMemo
+**Learning:** Chained array methods like `.flat().map().filter()` inside a frequently executed `useMemo` create substantial overhead by allocating intermediate arrays. This is especially true for data-heavy structures like a messaging inbox where rendering speed is critical.
+**Action:** Replace functional array method chains with imperative single-pass loops inside React hooks that process lists, while preserving the logical flow.
