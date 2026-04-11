@@ -17,11 +17,16 @@ test.describe('Login UX Improvements', () => {
     const toggleBtn = page.locator('.password-toggle-btn');
     await expect(toggleBtn).toBeVisible();
 
+    // Verify static aria-label
+    await expect(toggleBtn).toHaveAttribute('aria-label', 'Toggle password visibility');
+
     // Initially hidden (password type)
+    await expect(toggleBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(toggleBtn).toHaveAttribute('title', 'Show password');
 
     // Click to show
     await toggleBtn.click();
+    await expect(toggleBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(toggleBtn).toHaveAttribute('title', 'Hide password');
   });
 });
