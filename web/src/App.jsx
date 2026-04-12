@@ -4201,16 +4201,52 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    const lineAddresses = new Set();
+    const lineValues = Object.values(lineThreads);
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Bolt: Collect addresses without allocating intermediate arrays (replacing .flat().map().filter())
+    for (let i = 0; i < lineValues.length; i++) {
+      const val = lineValues[i];
+      // Emulate .flat() behavior by handling both array and non-array elements
+      if (Array.isArray(val)) {
+        for (let j = 0; j < val.length; j++) {
+          if (val[j].address) lineAddresses.add(val[j].address);
+        }
+      } else {
+        if (val.address) lineAddresses.add(val.address);
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    const filtered = [];
+
+    // Process legacyThreads first to preserve the original [...uniqueLegacy, ...lineFlattened] order
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
+
+    // Process lineThreads directly into the filtered array
+    for (let i = 0; i < lineValues.length; i++) {
+      const val = lineValues[i];
+      if (Array.isArray(val)) {
+        for (let j = 0; j < val.length; j++) {
+          const t = val[j];
+          if (showArchived ? t.archived : !t.archived) {
+            filtered.push(t);
+          }
+        }
+      } else {
+        const t = val;
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {

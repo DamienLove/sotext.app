@@ -13,3 +13,7 @@
 ## 2024-05-28 - Date Allocation in Render Loops
 **Learning:** `new Date()` allocation in hot render loops (like message lists) can be avoided by passing timestamps directly to `Intl.DateTimeFormat.format()`.
 **Action:** Always check if formatting functions accept primitives before wrapping them in objects inside `render` or `map`.
+
+## 2024-05-31 - Object Allocation from Array Methods
+**Learning:** Chained array methods like `[...uniqueLegacy, ...Object.values(lineThreads).flat()].filter(...)` allocate numerous intermediate arrays (for `values()`, `flat()`, the spread operation, and the output of `filter()`) which must then be garbage collected. In highly reactive structures like `useMemo`, this creates unnecessary memory bloat and CPU overhead.
+**Action:** Within frequent rendering or recalculation cycles, replace chained declarative array operations with single-pass imperative `for` loops directly pushing into the final array.
