@@ -2747,6 +2747,7 @@ function App() {
   const mapMarkersRef = useRef(new Map());
   const mapInfoRef = useRef(null);
   const mapHomeMarkerRef = useRef(null);
+  const passwordInputRef = useRef(null);
   const mapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const defaultMapCenter = useMemo(() => ({ lat: 39.5, lng: -98.35 }), []);
   const normalizedThemePrefs = useMemo(() => normalizeTheme(themePrefs), [themePrefs]);
@@ -4298,8 +4299,9 @@ function App() {
               </label>
               <div className="login-field">
                 <label htmlFor="login-password">Password</label>
-                <div className="password-input-wrapper">
+                <div className="password-input-wrapper" onClick={() => passwordInputRef.current?.focus()}>
                   <input
+                    ref={passwordInputRef}
                     id="login-password"
                     className="login-input"
                     type={showPassword ? "text" : "password"}
