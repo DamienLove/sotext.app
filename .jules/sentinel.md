@@ -31,3 +31,8 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+
+## 2024-05-28 - Environment Variable Secret Exposure
+**Vulnerability:** The `getSpotifyAccessToken` Cloud Function loaded the `SPOTIFY_CLIENT_ID` and `SPOTIFY_CLIENT_SECRET` secrets from the runtime environment via `process.env`.
+**Learning:** Legacy codebase patterns (like using `process.env` in `email.ts`) often act as an attractant for developers to blindly copy-paste insecure patterns. Relying on process environment variables in serverless functions can expose sensitive secrets to broader system logging, memory dumps, and potential leakage in debugging dashboards.
+**Prevention:** Always use `defineSecret()` from `firebase-functions/params` to define and inject configuration secrets. Never propagate insecure legacy patterns for the sake of "consistency".
