@@ -13,3 +13,6 @@
 ## 2024-05-28 - Date Allocation in Render Loops
 **Learning:** `new Date()` allocation in hot render loops (like message lists) can be avoided by passing timestamps directly to `Intl.DateTimeFormat.format()`.
 **Action:** Always check if formatting functions accept primitives before wrapping them in objects inside `render` or `map`.
+## 2024-05-29 - Array Allocation via Destructuring/Methods in Render Loops
+**Learning:** Destructuring and chained array methods (like `[...a, ...b].flat().map().filter()`) inside frequently executed React hooks (like `useMemo` for derived lists) create significant overhead via intermediate array allocations and redundant iteration passes.
+**Action:** Replace multi-pass declarative array operations with single-pass imperative `for...of` loops in hot, frequently-recalculating list derivatives, properly checking for `.isArray()` when replacing `.flat()`, to conserve garbage collection and computation time.
