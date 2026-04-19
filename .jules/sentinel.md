@@ -31,3 +31,7 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+## 2024-05-24 - Lazily Initializing Modules with Secret Manager
+**Vulnerability:** Found `process.env` used for hardcoded secrets instead of Google Cloud Secret Manager. Nodemailer and other clients accessing secrets must be initialized safely.
+**Learning:** `defineSecret()` creates references, but the actual secret values `.value()` are only resolved inside the function execution context. When using global variables for setup, accessing secrets early leads to errors or unauthenticated access attempts.
+**Prevention:** Always lazy-load clients requiring secrets inside the function handler. Furthermore, distinguish between sensitive (`defineSecret`) and non-sensitive (`defineString`) parameters to prevent exposing secrets unnecessarily.
