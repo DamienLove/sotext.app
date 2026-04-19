@@ -11,17 +11,22 @@ test.describe('Login UX Improvements', () => {
     await expect(emailInput).toBeFocused();
   });
 
-  test('Password toggle button should have tooltip title', async ({ page }) => {
+  test('Password toggle button should have correct accessibility attributes and tooltip title', async ({ page }) => {
     await page.goto('/');
 
     const toggleBtn = page.locator('.password-toggle-btn');
     await expect(toggleBtn).toBeVisible();
 
+    // Static ARIA label
+    await expect(toggleBtn).toHaveAttribute('aria-label', 'Toggle password visibility');
+
     // Initially hidden (password type)
     await expect(toggleBtn).toHaveAttribute('title', 'Show password');
+    await expect(toggleBtn).toHaveAttribute('aria-pressed', 'false');
 
     // Click to show
     await toggleBtn.click();
     await expect(toggleBtn).toHaveAttribute('title', 'Hide password');
+    await expect(toggleBtn).toHaveAttribute('aria-pressed', 'true');
   });
 });
