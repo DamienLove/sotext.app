@@ -2088,9 +2088,14 @@ const Sidebar = memo(({
   const filteredThreads = useMemo(() => {
     const term = searchQuery.trim().toLowerCase();
     if (!term) return threads;
-    return getSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ thread }) => thread);
+    // Bolt: Use single-pass loop to avoid intermediate array allocation
+    const result = [];
+    for (const item of getSearchIndex()) {
+      if (item.searchString && item.searchString.includes(term)) {
+        result.push(item.thread);
+      }
+    }
+    return result;
   }, [getSearchIndex, searchQuery, threads]);
 
   const [collapsed, setCollapsed] = useState(false);
@@ -2771,9 +2776,14 @@ function App() {
   const filteredThemes = useMemo(() => {
     const term = themeSearch.trim().toLowerCase();
     if (!term) return publicThemes;
-    return getThemeSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ theme }) => theme);
+    // Bolt: Use single-pass loop to avoid intermediate array allocation
+    const result = [];
+    for (const item of getThemeSearchIndex()) {
+      if (item.searchString && item.searchString.includes(term)) {
+        result.push(item.theme);
+      }
+    }
+    return result;
   }, [getThemeSearchIndex, themeSearch, publicThemes]);
 
   const featuredThemeDocs = useMemo(() => {
@@ -2796,10 +2806,14 @@ function App() {
     const term = contactSearch.trim().toLowerCase();
     if (!term) return deviceContacts;
 
-    // Bolt: Use the pre-computed index for O(N) simple string inclusion check
-    return getContactSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ contact }) => contact);
+    // Bolt: Use single-pass loop to avoid intermediate array allocation
+    const result = [];
+    for (const item of getContactSearchIndex()) {
+      if (item.searchString && item.searchString.includes(term)) {
+        result.push(item.contact);
+      }
+    }
+    return result;
   }, [getContactSearchIndex, contactSearch, deviceContacts]);
 
   // Bolt: Create a unified contact lookup map for avatars
@@ -4201,16 +4215,39 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Use single-pass loops to avoid intermediate array allocations
+    const lineFlattened = [];
+    const lineAddresses = new Set();
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    for (const threads of Object.values(lineThreads)) {
+      if (!Array.isArray(threads)) continue;
+      for (const t of threads) {
+        lineFlattened.push(t);
+        if (t && t.address) {
+          lineAddresses.add(t.address);
+        }
+      }
+    }
+
+    const all = [];
+    for (const t of legacyThreads) {
+      if (!t.address || !lineAddresses.has(t.address)) {
+        all.push(t);
+      }
+    }
+
+    for (const t of lineFlattened) {
+      all.push(t);
+    }
 
     // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    const filtered = [];
+    for (const t of all) {
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
