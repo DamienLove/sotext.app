@@ -13,3 +13,6 @@
 ## 2024-05-28 - Date Allocation in Render Loops
 **Learning:** `new Date()` allocation in hot render loops (like message lists) can be avoided by passing timestamps directly to `Intl.DateTimeFormat.format()`.
 **Action:** Always check if formatting functions accept primitives before wrapping them in objects inside `render` or `map`.
+## 2024-05-29 - V8 Warmup in Benchmarks
+**Learning:** When benchmarking JavaScript performance locally (e.g., comparing array methods vs imperative loops), be cautious of V8 JIT warmup optimizations, which can cause subsequent runs to skew or flip results.
+**Action:** Ensure sufficient sample sizes or iterations to avoid misleading benchmark timings.
