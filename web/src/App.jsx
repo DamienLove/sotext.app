@@ -4199,20 +4199,42 @@ function App() {
     }
   }, [user]);
 
+  // Bolt: Optimized combinedThreads memo using a single-pass imperative loop
+  // to avoid large intermediate array allocations from .flat(), .map(), and spread ops.
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    const lineAddresses = new Set();
+    const filtered = [];
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // 1. Process line threads: extract addresses and apply archive filter
+    for (const group of Object.values(lineThreads)) {
+      if (Array.isArray(group)) {
+        for (const t of group) {
+          if (t.address) lineAddresses.add(t.address);
+          if (showArchived ? t.archived : !t.archived) {
+            filtered.push(t);
+          }
+        }
+      } else if (group) {
+        // Fallback in case a non-array group is encountered (handles edge cases like .flat())
+        if (group.address) lineAddresses.add(group.address);
+        if (showArchived ? group.archived : !group.archived) {
+          filtered.push(group);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // 2. Process legacy threads: deduplicate against lineAddresses and apply archive filter
+    for (const t of legacyThreads) {
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
-    // Sort: Pinned first, then date
+    // Sort: Pinned first, then date (sorts in place)
     return filtered.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return (b.date ?? 0) - (a.date ?? 0);
