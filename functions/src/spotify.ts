@@ -1,18 +1,23 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {logger} from "firebase-functions";
+import {defineSecret} from "firebase-functions/params";
 
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 
-export const getSpotifyAccessToken = onCall(async (request) => {
+const spotifyClientIdSecret = defineSecret("SPOTIFY_CLIENT_ID");
+const spotifyClientSecretSecret = defineSecret("SPOTIFY_CLIENT_SECRET");
+
+export const getSpotifyAccessToken = onCall({
+  secrets: [spotifyClientIdSecret, spotifyClientSecretSecret],
+}, async (request) => {
   // 1. Authenticate the user
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "User must be authenticated.");
   }
 
-  // 2. Retrieve secrets (assumed to be in process.env for this environment)
-  // In production, use defineSecret() for better security, but process.env matches existing pattern (email.ts).
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  // 2. Retrieve secrets using defineSecret()
+  const clientId = spotifyClientIdSecret.value();
+  const clientSecret = spotifyClientSecretSecret.value();
 
   if (!clientId || !clientSecret) {
     logger.error("Missing Spotify credentials in environment.");
@@ -21,7 +26,8 @@ export const getSpotifyAccessToken = onCall(async (request) => {
 
   try {
     // 3. Request token from Spotify
-    const authHeader = "Basic " + Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`);
+    const authHeader = "Basic " + credentials.toString("base64");
 
     const response = await fetch(SPOTIFY_TOKEN_URL, {
       method: "POST",
@@ -34,14 +40,19 @@ export const getSpotifyAccessToken = onCall(async (request) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error("Spotify API error", {status: response.status, body: errorText});
-      throw new HttpsError("unavailable", "Failed to communicate with Spotify.");
+      logger.error("Spotify API error", {
+        status: response.status,
+        body: errorText,
+      });
+      throw new HttpsError(
+          "unavailable",
+          "Failed to communicate with Spotify.");
     }
 
     const data = await response.json();
 
     // 4. Return the token
-    // We only return the access_token and expires_in, not the scope or type if not needed.
+    // We only return access_token and expires_in.
     return {
       access_token: data.access_token,
       expires_in: data.expires_in,
