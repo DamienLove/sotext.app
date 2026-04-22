@@ -2771,9 +2771,16 @@ function App() {
   const filteredThemes = useMemo(() => {
     const term = themeSearch.trim().toLowerCase();
     if (!term) return publicThemes;
-    return getThemeSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ theme }) => theme);
+
+    // Bolt: Use imperative loop to avoid intermediate array allocations
+    const filtered = [];
+    const index = getThemeSearchIndex();
+    for (const item of index) {
+      if (item.searchString.includes(term)) {
+        filtered.push(item.theme);
+      }
+    }
+    return filtered;
   }, [getThemeSearchIndex, themeSearch, publicThemes]);
 
   const featuredThemeDocs = useMemo(() => {
@@ -2797,9 +2804,15 @@ function App() {
     if (!term) return deviceContacts;
 
     // Bolt: Use the pre-computed index for O(N) simple string inclusion check
-    return getContactSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ contact }) => contact);
+    // and imperative loops to avoid intermediate array allocations
+    const filtered = [];
+    const index = getContactSearchIndex();
+    for (const item of index) {
+      if (item.searchString.includes(term)) {
+        filtered.push(item.contact);
+      }
+    }
+    return filtered;
   }, [getContactSearchIndex, contactSearch, deviceContacts]);
 
   // Bolt: Create a unified contact lookup map for avatars
@@ -4201,16 +4214,40 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Optimized array operations to avoid intermediate allocations
+    const lineFlattened = [];
+    const lineAddresses = new Set();
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    for (const threadArray of Object.values(lineThreads)) {
+      if (Array.isArray(threadArray)) {
+        for (const thread of threadArray) {
+          lineFlattened.push(thread);
+          if (thread.address) {
+            lineAddresses.add(thread.address);
+          }
+        }
+      } else if (threadArray) {
+         lineFlattened.push(threadArray);
+         if (threadArray.address) {
+            lineAddresses.add(threadArray.address);
+         }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    const filtered = [];
+
+    for (const t of legacyThreads) {
+      if ((!t.address || !lineAddresses.has(t.address)) && (showArchived ? t.archived : !t.archived)) {
+        filtered.push(t);
+      }
+    }
+
+    for (const t of lineFlattened) {
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
