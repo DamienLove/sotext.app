@@ -4199,18 +4199,40 @@ function App() {
     }
   }, [user]);
 
+  // Bolt: Optimize combinedThreads useMemo to eliminate intermediate array allocations
+  // by using imperative single-pass for...of loops instead of chained .flat().map().filter() and spread.
+  // Impact: Reduces GC pressure and memory bloat on frequent renders.
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    const filtered = [];
+    const lineAddresses = new Set();
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Process line threads
+    for (const lineArray of Object.values(lineThreads)) {
+      // Handle both arrays and individual elements
+      const items = Array.isArray(lineArray) ? lineArray : [lineArray];
+      for (const t of items) {
+        if (!t) continue;
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Process legacy threads
+    for (const t of legacyThreads) {
+      if (!t) continue;
+      // Filter out legacy duplicates
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
