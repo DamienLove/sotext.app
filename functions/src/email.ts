@@ -1,7 +1,8 @@
-import * as functions from "firebase-functions";
+import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
 import {escapeHtml} from "./security";
+import {defineSecret, defineString} from "firebase-functions/params";
 
 // Ensure admin is initialized (handled in index.ts, but safe to check)
 if (admin.apps.length === 0) {
@@ -9,18 +10,27 @@ if (admin.apps.length === 0) {
 }
 const db = admin.firestore();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const emailUser = defineString("EMAIL_USER");
+const emailPass = defineSecret("EMAIL_PASS");
 
-export const sendEmailNotification = functions.https.onCall(
-    async (data, context) => {
+export const sendEmailNotification = onCall(
+    {
+      secrets: [emailPass],
+    },
+    async (request) => {
+      const data = request.data;
+      const context = request;
+
+      // Initialize transporter dynamically to access secret values at runtime
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: emailUser.value(),
+          pass: emailPass.value(),
+        },
+      });
       if (!context.auth) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
             "unauthenticated", "User must be authenticated");
       }
 
@@ -29,7 +39,7 @@ export const sendEmailNotification = functions.https.onCall(
       // Sentinel: Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!email || !emailRegex.test(email)) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
             "invalid-argument", "Valid email is required");
       }
 
@@ -93,7 +103,7 @@ export const sendEmailNotification = functions.https.onCall(
       }
 
       const mailOptions = {
-        from: `SoText <${process.env.EMAIL_USER}>`,
+        from: `SoText <${emailUser.value()}>`,
         to: email,
         subject: subject,
         text: text,
@@ -105,7 +115,7 @@ export const sendEmailNotification = functions.https.onCall(
         return {success: true};
       } catch (error) {
         console.error("Error sending email", error);
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
             "internal", "Failed to send email");
       }
     });
