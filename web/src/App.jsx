@@ -4201,19 +4201,30 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    const all = [];
+    const lineAddresses = new Set();
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Process lineThreads
+    for (const threadList of Object.values(lineThreads)) {
+      const items = Array.isArray(threadList) ? threadList : [threadList];
+      for (const t of items) {
+        if (t.address) lineAddresses.add(t.address);
+        if (showArchived ? t.archived : !t.archived) {
+          all.push(t);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Process legacyThreads
+    for (const t of legacyThreads) {
+      if ((!t.address || !lineAddresses.has(t.address)) && (showArchived ? t.archived : !t.archived)) {
+        all.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
-    return filtered.sort((a, b) => {
+    return all.sort((a, b) => {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return (b.date ?? 0) - (a.date ?? 0);
     });

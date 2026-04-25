@@ -13,3 +13,7 @@
 ## 2024-05-28 - Date Allocation in Render Loops
 **Learning:** `new Date()` allocation in hot render loops (like message lists) can be avoided by passing timestamps directly to `Intl.DateTimeFormat.format()`.
 **Action:** Always check if formatting functions accept primitives before wrapping them in objects inside `render` or `map`.
+
+## 2025-04-25 - Array Flat and Non-Array Elements
+**Learning:** When converting `.flat()` operations to imperative loops for performance optimization, `.flat()` keeps non-array elements intact while strict `Array.isArray()` checks may silently drop them.
+**Action:** When manually flattening nested structures, always handle both array and non-array elements explicitly (e.g., wrap non-array items in an array before iterating) to prevent data loss.
