@@ -2564,6 +2564,7 @@ function App() {
   const contactSearchRef = useRef(null);
   const themeSearchRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const passwordInputRef = useRef(null);
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
 
@@ -4298,9 +4299,10 @@ function App() {
               </label>
               <div className="login-field">
                 <label htmlFor="login-password">Password</label>
-                <div className="password-input-wrapper">
+                <div className="password-input-wrapper" onClick={() => passwordInputRef.current?.focus()} role="presentation">
                   <input
                     id="login-password"
+                    ref={passwordInputRef}
                     className="login-input"
                     type={showPassword ? "text" : "password"}
                     value={password}
@@ -4311,7 +4313,7 @@ function App() {
                   <button
                     type="button"
                     className="password-toggle-btn"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={(e) => { e.stopPropagation(); setShowPassword(!showPassword); }}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     title={showPassword ? "Hide password" : "Show password"}
                   >
