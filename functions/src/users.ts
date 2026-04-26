@@ -144,10 +144,6 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
 
   try {
     const userDocRef = db.collection("users").doc(uid);
-    const userSnap = await userDocRef.get();
-    const deviceId = userSnap.exists ?
-        (userSnap.data()?.deviceId as string | undefined) :
-        undefined;
 
     // Delete user profile + subcollections
     await db.recursiveDelete(userDocRef);
@@ -170,21 +166,18 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
         .where("uid", "==", uid)
         .get();
     deviceQuery.forEach((doc) => queueDelete(doc.ref));
-    if (deviceId) {
-      queueDelete(db.collection("devices").doc(deviceId));
-    }
+
     if (ops > 0) deviceDeletes.push(batch);
     for (const b of deviceDeletes) {
       await b.commit();
     }
 
-    // Delete beta agreement tied to device ID (if present)
-    if (deviceId) {
-      await db.collection("betaAgreements")
-          .doc(deviceId)
-          .delete()
-          .catch(() => undefined);
-    }
+    // Delete beta agreements tied to authorized device IDs
+    const betaDeletes = deviceQuery.docs.map((doc) =>
+      db.collection("betaAgreements").doc(doc.id).delete()
+          .catch(() => undefined),
+    );
+    await Promise.all(betaDeletes);
 
     // Delete link invites sent by or targeted to the user
     const inviteDeletes: Promise<FirebaseFirestore.WriteResult>[] = [];
