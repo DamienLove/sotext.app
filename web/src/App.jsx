@@ -4312,7 +4312,8 @@ function App() {
                     type="button"
                     className="password-toggle-btn"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label="Toggle password visibility"
+                    aria-pressed={showPassword}
                     title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
