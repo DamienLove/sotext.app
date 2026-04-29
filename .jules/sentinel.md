@@ -31,3 +31,7 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+## 2026-04-29 - [IDOR in Account Deletion]
+**Vulnerability:** IDOR vulnerability where the `deleteAccount` function trusted the `deviceId` field from a user's modifiable profile document, potentially allowing a user to delete other users' `devices` and `betaAgreements` documents.
+**Learning:** Client-modifiable fields (like a profile document) cannot be trusted as references for sensitive operations (like cross-collection deletion) without authorization checks.
+**Prevention:** When performing sensitive operations based on relationships, always use server-authoritative queries mapped to the authenticated user's ID (e.g., `where("uid", "==", uid)`) rather than blindly trusting reference fields stored in modifiable documents.
