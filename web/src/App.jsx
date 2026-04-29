@@ -2088,9 +2088,16 @@ const Sidebar = memo(({
   const filteredThreads = useMemo(() => {
     const term = searchQuery.trim().toLowerCase();
     if (!term) return threads;
-    return getSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ thread }) => thread);
+
+    // Bolt: Use single-pass loop instead of chained .filter().map() to prevent intermediate array allocations
+    const result = [];
+    const index = getSearchIndex();
+    for (const item of index) {
+      if (item.searchString.includes(term)) {
+        result.push(item.thread);
+      }
+    }
+    return result;
   }, [getSearchIndex, searchQuery, threads]);
 
   const [collapsed, setCollapsed] = useState(false);
@@ -2771,9 +2778,16 @@ function App() {
   const filteredThemes = useMemo(() => {
     const term = themeSearch.trim().toLowerCase();
     if (!term) return publicThemes;
-    return getThemeSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ theme }) => theme);
+
+    // Bolt: Use single-pass loop instead of chained .filter().map() to prevent intermediate array allocations
+    const result = [];
+    const index = getThemeSearchIndex();
+    for (const item of index) {
+      if (item.searchString.includes(term)) {
+        result.push(item.theme);
+      }
+    }
+    return result;
   }, [getThemeSearchIndex, themeSearch, publicThemes]);
 
   const featuredThemeDocs = useMemo(() => {
@@ -2797,9 +2811,15 @@ function App() {
     if (!term) return deviceContacts;
 
     // Bolt: Use the pre-computed index for O(N) simple string inclusion check
-    return getContactSearchIndex()
-      .filter(({ searchString }) => searchString.includes(term))
-      .map(({ contact }) => contact);
+    // Use single-pass loop instead of chained .filter().map() to prevent intermediate array allocations
+    const result = [];
+    const index = getContactSearchIndex();
+    for (const item of index) {
+      if (item.searchString.includes(term)) {
+        result.push(item.contact);
+      }
+    }
+    return result;
   }, [getContactSearchIndex, contactSearch, deviceContacts]);
 
   // Bolt: Create a unified contact lookup map for avatars
@@ -4201,16 +4221,41 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Prevent multiple intermediate arrays (.flat, .map, .filter, spreads) in hot path
+    const lineFlattened = [];
+    const lineAddresses = new Set();
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Safely replicate .flat() while collecting addresses
+    for (const lineArray of Object.values(lineThreads)) {
+      const items = Array.isArray(lineArray) ? lineArray : [lineArray];
+      for (const t of items) {
+        lineFlattened.push(t);
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    const filtered = [];
+
+    // Process unique legacy threads and filter by archive status
+    for (const t of legacyThreads) {
+      if (!t.address || !lineAddresses.has(t.address)) {
+        const isArchived = Boolean(t.archived);
+        if (showArchived ? isArchived : !isArchived) {
+          filtered.push(t);
+        }
+      }
+    }
+
+    // Process line threads and filter by archive status
+    for (const t of lineFlattened) {
+      const isArchived = Boolean(t.archived);
+      if (showArchived ? isArchived : !isArchived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
