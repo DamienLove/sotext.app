@@ -13,3 +13,7 @@
 ## 2024-05-28 - Date Allocation in Render Loops
 **Learning:** `new Date()` allocation in hot render loops (like message lists) can be avoided by passing timestamps directly to `Intl.DateTimeFormat.format()`.
 **Action:** Always check if formatting functions accept primitives before wrapping them in objects inside `render` or `map`.
+
+## 2024-05-30 - Flat() Edge Cases in Imperative Loops
+**Learning:** When converting `.flat()` operations to imperative loops for performance optimization, `.flat()` keeps non-array elements intact. Strict `Array.isArray()` checks without fallback will silently drop those items, causing data loss.
+**Action:** Always wrap elements using `Array.isArray(val) ? val : [val]` when replicating `.flat()` behavior in imperative loops to ensure non-array elements are preserved.
