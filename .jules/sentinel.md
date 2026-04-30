@@ -31,3 +31,8 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+
+## 2025-02-20 - [IDOR in Account Deletion]
+**Vulnerability:** The account deletion function (`deleteAccount` in `users.ts`) deleted the beta agreement associated with a user using the `deviceId` field from the user's profile (`users/{uid}`). Since the user's profile was modifiable by the user, an attacker could spoof their `deviceId` to delete another user's beta agreement or device registration (Insecure Direct Object Reference).
+**Learning:** Never rely on user-provided or modifiable foreign keys (like `deviceId` stored in `users/{uid}`) to perform sensitive operations (like deletions) across different collections unless explicit ownership checks are performed at the point of deletion.
+**Prevention:** Rely strictly on server-authoritative queries using the authenticated user's ID (e.g., querying the `devices` collection with `where("uid", "==", uid)`) to resolve owned records, rather than trusting foreign keys found within modifiable documents.
