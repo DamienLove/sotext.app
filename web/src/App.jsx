@@ -2526,6 +2526,7 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const passwordInputRef = useRef(null);
   const [authError, setAuthError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('inbox');
@@ -4313,9 +4314,10 @@ function App() {
               </label>
               <div className="login-field">
                 <label htmlFor="login-password">Password</label>
-                <div className="password-input-wrapper">
+                <div className="password-input-wrapper" role="presentation" onClick={() => passwordInputRef.current?.focus()}>
                   <input
                     id="login-password"
+                    ref={passwordInputRef}
                     className="login-input"
                     type={showPassword ? "text" : "password"}
                     value={password}
@@ -4326,8 +4328,12 @@ function App() {
                   <button
                     type="button"
                     className="password-toggle-btn"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPassword(!showPassword);
+                    }}
+                    aria-label="Toggle password visibility"
+                    aria-pressed={showPassword}
                     title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
