@@ -2806,15 +2806,26 @@ function App() {
   const contactLookup = useMemo(() => {
     const map = {};
     const add = (c) => {
-      const nums = [c.phoneNumber, ...(c.additionalPhones || [])];
-      nums.forEach(n => {
-        if (!n) return;
-        const clean = n.replace(/\D/g, '');
+      if (c.phoneNumber) {
+        const clean = c.phoneNumber.replace(/\D/g, '');
         if (clean) map[clean] = c;
-      });
+      }
+      if (c.additionalPhones) {
+        for (let i = 0; i < c.additionalPhones.length; i++) {
+          const p = c.additionalPhones[i];
+          if (p) {
+            const clean = p.replace(/\D/g, '');
+            if (clean) map[clean] = c;
+          }
+        }
+      }
     };
-    deviceContacts.forEach(add);
-    trustedContacts.forEach(add);
+    for (let i = 0; i < deviceContacts.length; i++) {
+      add(deviceContacts[i]);
+    }
+    for (let i = 0; i < trustedContacts.length; i++) {
+      add(trustedContacts[i]);
+    }
     return map;
   }, [deviceContacts, trustedContacts]);
 
