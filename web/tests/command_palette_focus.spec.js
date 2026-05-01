@@ -8,8 +8,8 @@ test.describe('Command Palette Focus', () => {
     await page.waitForSelector('.sidebar');
 
     // Navigate to Beacon panel to ensure the Command Palette button is visible in Sidebar
-    // The nav item has title="Beacon"
-    await page.locator('.nav-item[title="Beacon"]').click();
+    // The nav item has title="SoText"
+    await page.locator('.nav-item[title="SoText"]').click();
   });
 
   test('should restore focus to trigger button after closing with Escape', async ({ page }) => {
