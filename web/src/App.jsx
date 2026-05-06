@@ -4313,7 +4313,7 @@ function App() {
               </label>
               <div className="login-field">
                 <label htmlFor="login-password">Password</label>
-                <div className="password-input-wrapper">
+                <div className="password-input-wrapper" onClick={() => document.getElementById('login-password')?.focus()} role="presentation">
                   <input
                     id="login-password"
                     className="login-input"
@@ -4326,8 +4326,9 @@ function App() {
                   <button
                     type="button"
                     className="password-toggle-btn"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={(e) => { e.stopPropagation(); setShowPassword(!showPassword); }}
+                    aria-label="Toggle password visibility"
+                    aria-pressed={showPassword}
                     title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
