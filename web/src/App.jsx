@@ -2529,6 +2529,7 @@ function App() {
   const [authError, setAuthError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('inbox');
+  const passwordInputRef = useRef(null);
 
   // Bolt: Reset contact list limit when search or panel changes
   useEffect(() => {
@@ -4313,8 +4314,9 @@ function App() {
               </label>
               <div className="login-field">
                 <label htmlFor="login-password">Password</label>
-                <div className="password-input-wrapper">
+                <div className="password-input-wrapper" onClick={() => passwordInputRef.current?.focus()} role="presentation">
                   <input
+                    ref={passwordInputRef}
                     id="login-password"
                     className="login-input"
                     type={showPassword ? "text" : "password"}
@@ -4326,8 +4328,12 @@ function App() {
                   <button
                     type="button"
                     className="password-toggle-btn"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPassword(!showPassword);
+                    }}
+                    aria-label="Toggle password visibility"
+                    aria-pressed={showPassword}
                     title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
