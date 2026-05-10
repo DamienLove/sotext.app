@@ -2526,7 +2526,6 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const passwordInputRef = useRef(null);
   const [authError, setAuthError] = useState('');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [activePanel, setActivePanel] = useState('inbox');
@@ -2688,11 +2687,11 @@ function App() {
         if (!token) {
             token = await getSpotifyToken();
         }
-        
+
         const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(spotifySearch)}&type=track&limit=5`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (response.status === 401) {
             // Token expired, retry once
             token = await getSpotifyToken();
@@ -2731,12 +2730,12 @@ function App() {
               albumArtUrl: track.album?.images?.[0]?.url || null,
               addedAt: serverTimestamp()
           };
-          
+
           // Use addDoc to let Firestore generate the ID, or use track.id as doc ID to prevent duplicates
           // The Android app uses add(), so we should probably mimic that or just use setDoc with track.id
           // Using setDoc with track.id prevents duplicates better.
           await setDoc(doc(db, "users", target, "ringer_playlist", track.id), trackData);
-          
+
           setSettingsStatus("Added to playlist!");
           // Clear search results after adding? Maybe not, user might want to add multiple.
       } catch(e) {
@@ -3007,7 +3006,7 @@ function App() {
 
       specialThemePresets.forEach(preset => {
         if (currentUnlockedIds.includes(preset.id)) return;
-        
+
         let unlocked = false;
         if (preset.condition === 'premium' && isPremium) unlocked = true;
         if (preset.condition === 'pro' && isPro) unlocked = true;
@@ -3021,7 +3020,7 @@ function App() {
 
       avatarPresets.forEach(preset => {
         if (currentUnlockedAvatars.includes(preset.id)) return;
-        
+
         let unlocked = false;
         if (preset.condition === 'premium' && isPremium) unlocked = true;
         if (preset.condition === 'pro' && isPro) unlocked = true;
@@ -3220,7 +3219,7 @@ function App() {
       // Listen to messages for the selected thread
       const basePath = selectedThread.lineId
         ? ["users", user.uid, "lines", selectedThread.lineId, "threads", selectedThread.id, "messages"]
-        : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];  
+        : ["users", user.uid, "synced_threads", selectedThread.id, "messages"];
       const messagesRef = collection(db, ...basePath);
       // Bolt: Standard chat order (Oldest -> Newest)
       const q = query(messagesRef, orderBy("date", "asc"));
@@ -3618,7 +3617,7 @@ function App() {
         payload.emailLowercase = payload.email.toLowerCase();
       }
       await setDoc(doc(db, "users", user.uid), payload, { merge: true });
-      
+
       // Sync to public profile
       await setDoc(doc(db, "public_profiles", user.uid), {
         ownerName: payload.ownerName,
@@ -4314,13 +4313,8 @@ function App() {
               </label>
               <div className="login-field">
                 <label htmlFor="login-password">Password</label>
-                <div
-                  className="password-input-wrapper"
-                  onClick={() => passwordInputRef.current?.focus()}
-                  role="presentation"
-                >
+                <div className="password-input-wrapper">
                   <input
-                    ref={passwordInputRef}
                     id="login-password"
                     className="login-input"
                     type={showPassword ? "text" : "password"}
@@ -4332,12 +4326,8 @@ function App() {
                   <button
                     type="button"
                     className="password-toggle-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowPassword(!showPassword);
-                    }}
-                    aria-label="Toggle password visibility"
-                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
@@ -5703,4 +5693,3 @@ function App() {
 }
 
 export default App;
-
