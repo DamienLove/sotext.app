@@ -4216,16 +4216,54 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Use imperative loops instead of chained array methods (.flat, .map, .filter, spreads)
+    // to prevent intermediate array allocations and reduce GC overhead for large thread lists.
+    const filtered = [];
+    const lineAddresses = new Set();
+    const lineThreadValues = Object.values(lineThreads);
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Pass 1: Build the set of addresses present in the new line threads
+    for (let i = 0; i < lineThreadValues.length; i++) {
+      const threads = lineThreadValues[i];
+      if (Array.isArray(threads)) {
+        for (let j = 0; j < threads.length; j++) {
+          const t = threads[j];
+          if (t && t.address) {
+            lineAddresses.add(t.address);
+          }
+        }
+      } else if (threads && threads.address) {
+        lineAddresses.add(threads.address);
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Pass 2: Add unique legacy threads (original order placed these first)
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
+
+    // Pass 3: Add line threads
+    for (let i = 0; i < lineThreadValues.length; i++) {
+      const threads = lineThreadValues[i];
+      if (Array.isArray(threads)) {
+        for (let j = 0; j < threads.length; j++) {
+          const t = threads[j];
+          if (showArchived ? t.archived : !t.archived) {
+            filtered.push(t);
+          }
+        }
+      } else if (threads) {
+        if (showArchived ? threads.archived : !threads.archived) {
+          filtered.push(threads);
+        }
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
