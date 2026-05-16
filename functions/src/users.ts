@@ -144,13 +144,16 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
 
   try {
     const userDocRef = db.collection("users").doc(uid);
-    const userSnap = await userDocRef.get();
-    const deviceId = userSnap.exists ?
-        (userSnap.data()?.deviceId as string | undefined) :
-        undefined;
 
     // Delete user profile + subcollections
     await db.recursiveDelete(userDocRef);
+
+    // Sentinel: Fix IDOR by querying authorized device IDs instead of trusting client-provided deviceId
+    const deviceQuery = await db.collection("devices")
+        .where("uid", "==", uid)
+        .get();
+
+    const authorizedDeviceIds: string[] = [];
 
     // Delete device registrations
     const deviceDeletes: FirebaseFirestore.WriteBatch[] = [];
@@ -166,25 +169,26 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
       }
     };
 
-    const deviceQuery = await db.collection("devices")
-        .where("uid", "==", uid)
-        .get();
-    deviceQuery.forEach((doc) => queueDelete(doc.ref));
-    if (deviceId) {
-      queueDelete(db.collection("devices").doc(deviceId));
-    }
+    deviceQuery.forEach((doc) => {
+      authorizedDeviceIds.push(doc.id);
+      queueDelete(doc.ref);
+    });
+
     if (ops > 0) deviceDeletes.push(batch);
     for (const b of deviceDeletes) {
       await b.commit();
     }
 
-    // Delete beta agreement tied to device ID (if present)
-    if (deviceId) {
-      await db.collection("betaAgreements")
-          .doc(deviceId)
+    // Delete beta agreements tied to authorized device IDs
+    const betaDeletes: Promise<FirebaseFirestore.WriteResult>[] = [];
+    for (const authorizedDeviceId of authorizedDeviceIds) {
+      const deletePromise = db.collection("betaAgreements")
+          .doc(authorizedDeviceId)
           .delete()
           .catch(() => undefined);
+      betaDeletes.push(deletePromise as Promise<FirebaseFirestore.WriteResult>);
     }
+    await Promise.all(betaDeletes);
 
     // Delete link invites sent by or targeted to the user
     const inviteDeletes: Promise<FirebaseFirestore.WriteResult>[] = [];
