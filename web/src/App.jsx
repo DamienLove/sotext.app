@@ -4216,16 +4216,42 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Performance: Replaced .flat(), .map().filter(), and array spreads with
+    // imperative loops to prevent allocating multiple intermediate arrays in a hot path.
+    const filtered = [];
+    const lineAddresses = new Set();
+    const lineFlattened = [];
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    const lineValues = Object.values(lineThreads);
+    for (let i = 0; i < lineValues.length; i++) {
+      const val = lineValues[i];
+      const arr = Array.isArray(val) ? val : [val];
+      for (let j = 0; j < arr.length; j++) {
+        const t = arr[j];
+        lineFlattened.push(t);
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Push uniqueLegacy first, then lineFlattened, to maintain the exact sequence
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
+
+    for (let i = 0; i < lineFlattened.length; i++) {
+      const t = lineFlattened[i];
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
