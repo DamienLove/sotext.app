@@ -10,7 +10,7 @@ import {gemini20Flash} from "@genkit-ai/vertexai";
 // function from a Genkit action. It automatically implements streaming if your flow does.
 // The https library also has other utility methods such as hasClaim, which verifies that
 // a caller's token has a specific claim (optionally matching a specific value)
-import {onCall} from "firebase-functions/v2/https";
+import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {defineSecret} from "firebase-functions/params";
 const apiKey = defineSecret("GOOGLE_GENAI_API_KEY");
 
@@ -51,6 +51,12 @@ const menuSuggestionFlow = ai.defineFlow({
 export const menuSuggestion = onCall({
   secrets: [apiKey],
 }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError(
+        "unauthenticated",
+        "The function must be called while authenticated.",
+    );
+  }
   const subject = request.data || "seafood";
   return await menuSuggestionFlow.run(subject);
 });
