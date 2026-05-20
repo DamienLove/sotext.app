@@ -17,3 +17,6 @@
 ## 2026-03-11 - Array Allocation in Render Loops (Revisited)
 **Learning:** Spread operators and `forEach` inside `useMemo` hooks (like `contactLookup` processing thousands of contacts) cause significant intermediate array allocations and garbage collection overhead, slowing down the main thread.
 **Action:** Replace array spreads and `forEach` loops with standard `for` loops in hot paths or large data derivations.
+## 2024-06-03 - Chained Array Methods in useMemo
+**Learning:** Chaining array methods like .flat(), .map(), and .filter() alongside spread operators in useMemo derivations (like combinedThreads) creates multiple intermediate arrays. This significantly increases garbage collection overhead and main thread blocking time during render cycles.
+**Action:** Replace chained array operations and spread syntax with imperative for loops in performance-critical derivations to minimize allocations and improve execution speed.
