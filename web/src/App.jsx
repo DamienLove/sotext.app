@@ -2236,7 +2236,7 @@ const Sidebar = memo(({
       {activePanel === 'inbox' && !collapsed ? (
         <>
           <div className="sidebar-search-container">
-            <div className="sidebar-search-wrapper" onClick={() => searchInputRef.current?.focus()}>
+            <div className="sidebar-search-wrapper" role="presentation" onClick={() => searchInputRef.current?.focus()}>
               <div className="search-icon-wrapper">
                 <SearchIcon />
               </div>
@@ -2263,7 +2263,8 @@ const Sidebar = memo(({
               {searchQuery && (
                 <button
                   className="ghost-btn icon-only sidebar-search-clear-btn"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setSearchQuery('');
                     searchInputRef.current?.focus();
                   }}
@@ -4313,7 +4314,7 @@ function App() {
               </label>
               <div className="login-field">
                 <label htmlFor="login-password">Password</label>
-                <div className="password-input-wrapper">
+                <div className="password-input-wrapper" role="presentation" onClick={() => document.getElementById('login-password')?.focus()}>
                   <input
                     id="login-password"
                     className="login-input"
@@ -4326,7 +4327,10 @@ function App() {
                   <button
                     type="button"
                     className="password-toggle-btn"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPassword(!showPassword);
+                    }}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                     title={showPassword ? "Hide password" : "Show password"}
                   >
@@ -4765,7 +4769,7 @@ function App() {
                 <div className="contact-count" style={{ marginBottom: 12, fontSize: '0.9em', color: 'var(--muted)' }}>
                   {filteredDeviceContacts.length} contact{filteredDeviceContacts.length === 1 ? '' : 's'}
                 </div>
-                <div className="settings-search-container" style={{ flex: 1, marginBottom: 0 }} onClick={() => contactSearchRef.current?.focus()}>
+                <div className="settings-search-container" role="presentation" style={{ flex: 1, marginBottom: 0 }} onClick={() => contactSearchRef.current?.focus()}>
                   <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
                   <input
                     ref={contactSearchRef}
@@ -4789,7 +4793,8 @@ function App() {
                   {contactSearch && (
                     <button
                       className="ghost-btn icon-only"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setContactSearch('');
                         contactSearchRef.current?.focus();
                       }}
@@ -4942,7 +4947,7 @@ function App() {
               <div className="themes-grid">
                 <div className="settings-card themes-card">
                   <h4>Discover looks</h4>
-                  <div className="settings-search-container" onClick={() => themeSearchRef.current?.focus()}>
+                  <div className="settings-search-container" role="presentation" onClick={() => themeSearchRef.current?.focus()}>
                     <div style={{ opacity: 0.5, display: 'flex' }}><SearchIcon /></div>
                     <input
                       ref={themeSearchRef}
@@ -4967,7 +4972,8 @@ function App() {
                       <button
                         type="button"
                         className="ghost-btn icon-only"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setThemeSearch('');
                           themeSearchRef.current?.focus();
                         }}
@@ -5356,7 +5362,7 @@ function App() {
                 <p>Manage account details and shared preferences.</p>
               </div>
 
-              <div className="settings-search-container" onClick={() => settingsSearchRef.current?.focus()}>
+              <div className="settings-search-container" role="presentation" onClick={() => settingsSearchRef.current?.focus()}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity: 0.5}}>
                   <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
@@ -5382,7 +5388,8 @@ function App() {
                 {settingsSearch && (
                   <button
                     className="ghost-btn icon-only"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setSettingsSearch('');
                       settingsSearchRef.current?.focus();
                     }}
