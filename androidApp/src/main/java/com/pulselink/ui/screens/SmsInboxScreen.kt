@@ -84,6 +84,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -94,9 +95,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import android.text.format.DateUtils
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
+import androidx.core.content.getSystemService
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.pulselink.R
+import com.pulselink.data.sms.OtpHelper
 import com.pulselink.data.sms.SmsThreadItem
 import com.pulselink.domain.model.Contact
 import com.pulselink.domain.model.MessageUrgency
@@ -722,6 +728,28 @@ fun SmsInboxScreen(
                                      )
                                  }
                              }
+                        } else if (!hasMoreToLoad) {
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    ThemeIcon(
+                                        iconKey = ThemeIconKey.LOCK,
+                                        theme = theme,
+                                        imageVector = Icons.Filled.Lock,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp),
+                                        tint = onBackgroundMuted
+                                    )
+                                    Text(
+                                        text = "Press and hold a conversation for more options — pin, mark private, archive, or delete.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = onBackgroundMuted
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -971,7 +999,16 @@ internal fun ThreadRow(
                         }
                         if (thread.isOtp) {
                             Spacer(modifier = Modifier.height(4.dp))
-                            OtpPill()
+                            val otpCode = remember(thread.snippet) { OtpHelper.extractCode(thread.snippet) }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OtpPill()
+                                if (otpCode != null) {
+                                    OtpCopyChip(code = otpCode, primary = primary)
+                                }
+                            }
                         }
                         if (isPrivate) {
                             Spacer(modifier = Modifier.height(4.dp))
@@ -1125,6 +1162,37 @@ private fun OtpPill() {
             text = "2-step",
             style = MaterialTheme.typography.labelSmall,
             color = color,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+    }
+}
+
+/**
+ * Tappable chip that copies a detected 2-step code straight from the inbox row,
+ * without opening the thread.
+ */
+@Composable
+private fun OtpCopyChip(code: String, primary: Color) {
+    val context = LocalContext.current
+    Surface(
+        color = primary.copy(alpha = 0.16f),
+        shape = CircleShape,
+        modifier = Modifier
+            .clickable(role = Role.Button) {
+                val clipboard = context.getSystemService<ClipboardManager>()
+                clipboard?.setPrimaryClip(ClipData.newPlainText("2-step code", code))
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.otp_toast_copied, code),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+    ) {
+        Text(
+            text = "Copy $code",
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = FontFamily.Monospace,
+            color = primary,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
         )
     }
