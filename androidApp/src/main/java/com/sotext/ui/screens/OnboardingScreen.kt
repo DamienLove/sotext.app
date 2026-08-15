@@ -2,6 +2,9 @@ package com.sotext.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -65,7 +68,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sotext.R
+import com.sotext.domain.model.ThemePreferences
 import androidx.compose.material.icons.filled.VpnKey
 
 data class OnboardingPermissionState(
@@ -79,13 +84,91 @@ data class OnboardingPermissionState(
     val emphasis: String? = null
 )
 
+/**
+ * Design: "starting look" theme presets offered during onboarding.
+ * Values mirror the presets in VisualSettingsScreen / the SoText prototype.
+ */
+data class StartingLook(
+    val name: String,
+    val swatchStart: Color,
+    val swatchEnd: Color,
+    val theme: ThemePreferences
+)
+
+val startingLooks: List<StartingLook> = listOf(
+    StartingLook(
+        name = "Midnight OLED",
+        swatchStart = Color(0xFF38BDF8),
+        swatchEnd = Color(0xFF38BDF8),
+        theme = ThemePreferences(
+            fontStyle = "Default", bubbleCornerRadius = 14,
+            backgroundColor = "#0B0B0F", onBackground = "#F1F5F9",
+            topBarColor = "#111827", onTopBarColor = "#F8FAFC",
+            bubbleOutgoing = "#1F2937", onBubbleOutgoing = "#F8FAFC",
+            bubbleIncoming = "#0F172A", onBubbleIncoming = "#E2E8F0",
+            primaryColor = "#38BDF8", secondaryColor = "#22D3EE",
+            timestampColor = "#94A3B8", dividerColor = "#1F2937",
+            inboxIconVariant = "midnight_oled"
+        )
+    ),
+    StartingLook(
+        name = "Aurora",
+        swatchStart = Color(0xFF0F766E),
+        swatchEnd = Color(0xFF6366F1),
+        theme = ThemePreferences(
+            fontStyle = "Default", bubbleCornerRadius = 20,
+            appBackgroundGradientStart = "#0F766E", appBackgroundGradientEnd = "#6366F1",
+            onBackground = "#F8FAFC",
+            topBarColor = "#0F766E", onTopBarColor = "#F8FAFC",
+            bubbleOutgoing = "#6366F1", onBubbleOutgoing = "#FFFFFF",
+            bubbleIncoming = "#14B8A6", onBubbleIncoming = "#FFFFFF",
+            primaryColor = "#14B8A6", secondaryColor = "#6366F1",
+            dividerColor = "#5EEAD4", inboxIconVariant = "aurora",
+            iconSizeFactor = 1.15f
+        )
+    ),
+    StartingLook(
+        name = "Lavender Haze",
+        swatchStart = Color(0xFF7C3AED),
+        swatchEnd = Color(0xFF7C3AED),
+        theme = ThemePreferences(
+            fontStyle = "Cursive", bubbleCornerRadius = 16,
+            backgroundColor = "#F5F3FF", onBackground = "#4C1D95",
+            topBarColor = "#EDE9FE", onTopBarColor = "#4C1D95",
+            bubbleOutgoing = "#C4B5FD", onBubbleOutgoing = "#312E81",
+            bubbleIncoming = "#EDE9FE", onBubbleIncoming = "#4C1D95",
+            primaryColor = "#7C3AED", secondaryColor = "#A78BFA",
+            dividerColor = "#DDD6FE", inboxIconVariant = "lavender_haze",
+            iconSizeFactor = 1.1f
+        )
+    ),
+    StartingLook(
+        name = "Sunset Fade",
+        swatchStart = Color(0xFFFF5F6D),
+        swatchEnd = Color(0xFFFFC371),
+        theme = ThemePreferences(
+            fontStyle = "Default", bubbleCornerRadius = 24,
+            appBackgroundGradientStart = "#FF5F6D", appBackgroundGradientEnd = "#FFC371",
+            onBackground = "#FFFFFF",
+            topBarColor = "#FF5F6D", onTopBarColor = "#FFFFFF",
+            bubbleOutgoing = "#FFFFFF", onBubbleOutgoing = "#FF5F6D",
+            bubbleIncoming = "#FFF7ED", onBubbleIncoming = "#C2410C",
+            primaryColor = "#FF5F6D", secondaryColor = "#F97316",
+            dividerColor = "#FED7AA", inboxIconVariant = "sunset_fade",
+            bubbleCornerRadiusTopStart = 0, bubbleCornerRadiusBottomEnd = 0
+        )
+    )
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingIntroScreen(
     modifier: Modifier = Modifier,
     ownerName: String,
     onOwnerNameChange: (String) -> Unit,
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    onApplyTheme: ((ThemePreferences) -> Unit)? = null,
+    currentTheme: ThemePreferences? = null
 ) {
     val gradient = Brush.verticalGradient(
         colors = listOf(Color(0xFF10131F), Color(0xFF0B0D16))
@@ -99,63 +182,64 @@ fun OnboardingIntroScreen(
             .background(gradient)
             .padding(horizontal = 24.dp, vertical = 32.dp)
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(28.dp))
-                .background(Color.Transparent)
-        ) {}
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(28.dp))
                 .background(Color.White.copy(alpha = 0.04f))
-                .padding(horizontal = 24.dp, vertical = 32.dp)
+                .padding(horizontal = 22.dp, vertical = 26.dp)
                 .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_logo),
-                contentDescription = "SoText logo",
-                modifier = Modifier.size(72.dp)
-            )
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Design: gradient logo tile.
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFF38BDF8), Color(0xFF22D3EE))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_logo),
+                    contentDescription = "SoText logo",
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Welcome to SoText",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                    text = "Make texting\nlook like you.",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Medium),
+                    lineHeight = MaterialTheme.typography.headlineMedium.fontSize * 1.15,
                     color = Color.White
                 )
                 Text(
-                    text = "SoText links your trusted contacts, pushes through Do Not Disturb, and keeps everyone in sync when it matters most.",
+                    text = "So.Text is your default SMS app. Pick a starting look now — every color, corner and font stays editable later.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFCBD5F5)
+                    color = Color.White.copy(alpha = 0.72f)
                 )
             }
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color.White.copy(alpha = 0.05f))
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                IntroBullet(text = "Say “Hey Google, SoText emergency” for a hands-free alert.")
-                IntroBullet(text = "Escalations send SMS, play tones, and can auto-dial help.")
-                IntroBullet(text = "SoText can override silent/DND so partners hear urgent alerts.")
-            }
+
+            OnboardingSectionLabel("Your name")
             OutlinedTextField(
                 value = ownerName,
                 onValueChange = onOwnerNameChange,
-                label = { Text("Your name") },
+                placeholder = { Text("Your name") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                shape = RoundedCornerShape(14.dp),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color.White.copy(alpha = 0.18f),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedContainerColor = Color.White.copy(alpha = 0.05f),
+                    unfocusedContainerColor = Color.White.copy(alpha = 0.05f),
                     cursorColor = MaterialTheme.colorScheme.primary
                 )
             )
@@ -164,16 +248,79 @@ fun OnboardingIntroScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFFFCD34D)
             )
+
+            if (onApplyTheme != null) {
+                // Design: starting-look preset chips.
+                OnboardingSectionLabel("Starting look")
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    startingLooks.forEach { look ->
+                        val selected = currentTheme != null &&
+                            currentTheme.primaryColor == look.theme.primaryColor &&
+                            currentTheme.bubbleOutgoing == look.theme.bubbleOutgoing
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(100.dp))
+                                .background(
+                                    if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+                                )
+                                .border(
+                                    1.dp,
+                                    if (selected) Color.Transparent else Color.White.copy(alpha = 0.18f),
+                                    RoundedCornerShape(100.dp)
+                                )
+                                .clickable { onApplyTheme(look.theme) }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(12.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(look.swatchStart, look.swatchEnd)
+                                        )
+                                    )
+                            )
+                            Text(
+                                text = look.name,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = if (selected) Color(0xFF03151F) else Color.White,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
             androidx.compose.material3.Button(
                 onClick = onContinue,
                 modifier = Modifier
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
                 enabled = ownerName.isNotBlank()
             ) {
                 Text(text = "Continue to permissions")
             }
         }
     }
+}
+
+@Composable
+private fun OnboardingSectionLabel(text: String) {
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+        color = Color.White.copy(alpha = 0.55f)
+    )
 }
 
 @Composable
@@ -374,11 +521,22 @@ private fun PermissionCard(state: OnboardingPermissionState) {
                         color = Color(0xFFCBD5F5)
                     )
                 }
-                Text(
-                    text = if (state.granted) "Granted" else "Pending",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = statusColor
-                )
+                // Design: pill-shaped status — outlined once granted, filled while pending.
+                Surface(
+                    shape = RoundedCornerShape(100.dp),
+                    color = if (state.granted) Color.Transparent else statusColor,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (state.granted) Color.White.copy(alpha = 0.18f) else Color.Transparent
+                    )
+                ) {
+                    Text(
+                        text = if (state.granted) "Granted" else "Allow",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (state.granted) Color.White.copy(alpha = 0.8f) else Color(0xFF1A1200),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
             }
             if (!state.emphasis.isNullOrBlank() && !state.granted) {
                 Text(

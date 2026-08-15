@@ -37,8 +37,13 @@ import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -78,6 +83,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -89,6 +95,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.sotext.data.sms.SmsMessageItem
@@ -101,6 +108,7 @@ import com.sotext.ui.components.ThemeIconKey
 import com.sotext.ui.state.AiComposeState
 import com.sotext.ui.state.AiSummaryState
 import com.sotext.util.sendAttachmentViaSms
+import com.sotext.util.ensureReadableOnColor
 import com.sotext.util.parseColorOr
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -141,7 +149,8 @@ fun SmsThreadScreen(
     onRequestAiSignIn: () -> Unit = {},
     onLoadMore: () -> Unit = {},
     hasMoreToLoad: Boolean = true,
-    smartRepliesEnabled: Boolean = false
+    smartRepliesEnabled: Boolean = false,
+    isPremium: Boolean = false
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -221,7 +230,13 @@ fun SmsThreadScreen(
                 onAiAction = { action ->
                     onRequestCompose(action, draft, lastInbound)
                 },
-                smartRepliesEnabled = smartRepliesEnabled
+                smartRepliesEnabled = smartRepliesEnabled,
+                isPremium = isPremium,
+                onUseSuggestion = { text ->
+                    draft = text
+                    onClearCompose()
+                },
+                onDismissSuggestion = onClearCompose
             )
         },
         topBar = {
@@ -438,28 +453,6 @@ fun SmsThreadScreen(
         }
     }
 
-    if (aiComposeState is AiComposeState.Suggestion) {
-        val suggestion = aiComposeState
-        AlertDialog(
-            onDismissRequest = onClearCompose,
-            title = { Text("AI suggestion") },
-            text = { Text(suggestion.text) },
-            confirmButton = {
-                TextButton(onClick = {
-                    draft = suggestion.text
-                    onClearCompose()
-                }) {
-                    Text("Use")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onClearCompose) {
-                    Text("Dismiss")
-                }
-            }
-        )
-    }
-
     if (showOfflineDialog) {
         AlertDialog(
             onDismissRequest = { showOfflineDialog = false },
@@ -516,27 +509,96 @@ private fun MessageInput(
     onRequestAiSignIn: () -> Unit,
     aiState: AiComposeState,
     onAiAction: (AiComposeAction) -> Unit,
-    smartRepliesEnabled: Boolean
+    smartRepliesEnabled: Boolean,
+    isPremium: Boolean = false,
+    onUseSuggestion: (String) -> Unit = {},
+    onDismissSuggestion: () -> Unit = {}
 ) {
-    var showAiMenu by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val onSurface = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+    val onTopBar = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
+    val secondary = parseColorOr(MaterialTheme.colorScheme.secondary, theme.secondaryColor)
+    val timestamp = parseColorOr(
+        onTopBar.copy(alpha = 0.7f),
+        theme.timestampColor
+    )
+    val dividerColor = parseColorOr(onTopBar.copy(alpha = 0.12f), theme.dividerColor)
+        .copy(alpha = 0.9f)
     val errorMessage = (aiState as? AiComposeState.Error)?.message
 
     Surface(
-        color = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor), // Or distinct input BG
-        tonalElevation = 2.dp,
+        // Design: composer sits on the top-bar color, separated by a hairline.
+        color = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor)
+            .copy(alpha = 0.92f),
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .imePadding()
     ) {
-        Column(
-            modifier = Modifier
-                .padding(8.dp)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            HorizontalDivider(color = dividerColor, thickness = 1.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+            if (aiState is AiComposeState.Suggestion) {
+                // Design: inline AI suggestion card with Use / Dismiss pills.
+                Surface(
+                    color = secondary.copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, secondary.copy(alpha = 0.34f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            ThemeIcon(
+                                iconKey = ThemeIconKey.AI,
+                                theme = theme,
+                                imageVector = Icons.Filled.AutoFixHigh,
+                                contentDescription = null,
+                                tint = onSurface.copy(alpha = 0.7f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "AI SUGGESTION",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                        Text(
+                            text = aiState.text,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = onSurface
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { onUseSuggestion(aiState.text) },
+                                shape = CircleShape,
+                                colors = ButtonDefaults.buttonColors(containerColor = primary)
+                            ) {
+                                Text("Use")
+                            }
+                            OutlinedButton(
+                                onClick = onDismissSuggestion,
+                                shape = CircleShape,
+                                border = BorderStroke(1.dp, dividerColor),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = onSurface)
+                            ) {
+                                Text("Dismiss")
+                            }
+                        }
+                    }
+                }
+            }
             if (smartRepliesEnabled) {
                 val suggestions = stringArrayResource(com.sotext.R.array.smart_replies_defaults).toList()
                 LazyRow(
@@ -574,52 +636,66 @@ private fun MessageInput(
                     }
                 }
             }
-            if (aiEnabled) {
+            if (aiEnabled || !isPremium) {
+                // Design: AI compose actions as a scrolling chip row.
+                // Locked chips (non-Premium) show a padlock and surface the upgrade note.
+                val chipsEnabled = aiEnabled && aiState !is AiComposeState.Loading
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "AI assist",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = onSurface
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
+                    LazyRow(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(AiComposeAction.values().toList()) { action ->
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.Transparent,
+                                border = BorderStroke(1.dp, dividerColor),
+                                modifier = Modifier.clickable {
+                                    if (!aiEnabled) {
+                                        Toast.makeText(
+                                            context,
+                                            "AI assist is a Premium feature.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else if (chipsEnabled) {
+                                        onAiAction(action)
+                                    }
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .padding(horizontal = 14.dp, vertical = 9.dp)
+                                        .then(if (aiEnabled) Modifier else Modifier.alpha(0.55f)),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    if (!aiEnabled) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Lock,
+                                            contentDescription = null,
+                                            tint = onTopBar,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = action.label,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = onTopBar
+                                    )
+                                }
+                            }
+                        }
+                    }
                     if (aiState is AiComposeState.Loading) {
                         CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .padding(end = 4.dp),
+                            modifier = Modifier.size(18.dp),
                             strokeWidth = 2.dp,
                             color = primary
                         )
-                    }
-                    IconButton(
-                        onClick = { showAiMenu = true },
-                        enabled = aiState !is AiComposeState.Loading
-                    ) {
-                        ThemeIcon(
-                            iconKey = ThemeIconKey.AI,
-                            theme = theme,
-                            imageVector = Icons.Filled.AutoFixHigh,
-                            contentDescription = "AI assist",
-                            tint = primary,
-                            modifier = Modifier.size(iconSize)
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showAiMenu,
-                        onDismissRequest = { showAiMenu = false }
-                    ) {
-                        AiComposeAction.values().forEach { action ->
-                            DropdownMenuItem(
-                                text = { Text(action.label) },
-                                onClick = {
-                                    showAiMenu = false
-                                    onAiAction(action)
-                                }
-                            )
-                        }
                     }
                 }
                 if (!errorMessage.isNullOrBlank()) {
@@ -632,7 +708,8 @@ private fun MessageInput(
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 IconButton(
                     onClick = onPickAttachment
@@ -642,11 +719,10 @@ private fun MessageInput(
                         theme = theme,
                         imageVector = Icons.Filled.AttachFile,
                         contentDescription = "Attach file",
-                        tint = primary,
+                        tint = onTopBar,
                         modifier = Modifier.size(iconSize)
                     )
                 }
-                Spacer(modifier = Modifier.width(4.dp))
                 OutlinedTextField(
                     value = draft,
                     onValueChange = onDraftChange,
@@ -659,33 +735,47 @@ private fun MessageInput(
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Send
                     ),
-                    trailingIcon = {
-                        val enabled = draft.isNotBlank()
-                        IconButton(
-                            onClick = {
-                                onSend(draft, selectedLineId)
-                            },
-                            enabled = enabled
-                        ) {
-                            ThemeIcon(
-                                iconKey = ThemeIconKey.SEND,
-                                theme = theme,
-                                imageVector = Icons.Filled.Send,
-                                contentDescription = "Send",
-                                tint = if (enabled) primary else primary.copy(alpha = 0.38f),
-                                modifier = Modifier.size(iconSize)
-                            )
-                        }
-                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = primary,
-                        unfocusedBorderColor = onSurface.copy(alpha = 0.5f),
+                        unfocusedBorderColor = dividerColor,
                         focusedTextColor = onSurface,
                         unfocusedTextColor = onSurface,
+                        focusedContainerColor = parseColorOr(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            theme.bubbleIncoming
+                        ).copy(alpha = 0.7f),
+                        unfocusedContainerColor = parseColorOr(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            theme.bubbleIncoming
+                        ).copy(alpha = 0.7f),
                         cursorColor = primary
                     ),
-                    shape = RoundedCornerShape(24.dp)
+                    shape = RoundedCornerShape(22.dp)
                 )
+                // Design: circular filled send button.
+                val sendEnabled = draft.isNotBlank()
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(if (sendEnabled) primary else primary.copy(alpha = 0.38f))
+                        .clickable(enabled = sendEnabled) { onSend(draft, selectedLineId) }
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        ThemeIcon(
+                            iconKey = ThemeIconKey.SEND,
+                            theme = theme,
+                            imageVector = Icons.Filled.Send,
+                            contentDescription = "Send",
+                            tint = ensureReadableOnColor(
+                                background = primary,
+                                desired = parseColorOr(Color.Black, theme.onBubbleOutgoing),
+                                fallback = Color.Black
+                            ),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
                 if (lineOptions.isNotEmpty()) {
                     Spacer(modifier = Modifier.width(8.dp))
                     var expanded by remember { mutableStateOf(false) }
@@ -773,6 +863,28 @@ private fun MessageInput(
                         }
                     }
                 }
+            }
+            // Design: delivery-channel note under the composer.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Bolt,
+                    contentDescription = null,
+                    tint = timestamp,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = if (isPremium) {
+                        "Firebase first, SMS fallback after 5s"
+                    } else {
+                        "SMS · Firebase delivery needs Premium sync"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = timestamp
+                )
+            }
             }
         }
     }

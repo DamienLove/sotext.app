@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -22,15 +23,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import coil.compose.AsyncImage
 import com.sotext.domain.model.ThemePreferences
+import com.sotext.util.ensureReadableOnColor
 import com.sotext.util.parseColorOr
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,7 +44,8 @@ fun VisualSettingsScreen(
     theme: ThemePreferences,
     onSelectTheme: (ThemePreferences) -> Unit,
     onBack: () -> Unit,
-    isGlobal: Boolean = true
+    isGlobal: Boolean = true,
+    isPremium: Boolean = false
 ) {
     var activeTab by remember { mutableStateOf(0) }
     var tempTheme by remember(theme) { mutableStateOf(theme) }
@@ -51,15 +57,54 @@ fun VisualSettingsScreen(
         }
     }
 
+    // Design: the whole screen reads from the live theme record.
+    val colorScheme = MaterialTheme.colorScheme
+    val background = parseColorOr(colorScheme.background, tempTheme.backgroundColor)
+    val onBackground = parseColorOr(colorScheme.onBackground, tempTheme.onBackground)
+    val topBar = parseColorOr(colorScheme.surface, tempTheme.topBarColor)
+    val onTopBar = parseColorOr(colorScheme.onSurface, tempTheme.onTopBarColor)
+    val primary = parseColorOr(colorScheme.primary, tempTheme.primaryColor)
+    val bgModifier = if (tempTheme.appBackgroundGradientStart != null && tempTheme.appBackgroundGradientEnd != null) {
+        Modifier.background(
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    parseColorOr(Color.White, tempTheme.appBackgroundGradientStart!!),
+                    parseColorOr(Color.White, tempTheme.appBackgroundGradientEnd!!)
+                )
+            )
+        )
+    } else {
+        Modifier.background(background)
+    }
+
     Scaffold(
+        containerColor = Color.Transparent,
+        modifier = Modifier.then(bgModifier),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(if (isGlobal) "Visual Settings" else "Chat Customization") },
+                title = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            if (isGlobal) "Visual Settings" else "Chat Customization",
+                            color = onTopBar
+                        )
+                        Text(
+                            if (isGlobal) "Global theme · applies everywhere" else "Overrides the global theme for this chat",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = onTopBar.copy(alpha = 0.62f)
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = onTopBar
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = topBar)
             )
         }
     ) { padding ->
@@ -68,16 +113,55 @@ fun VisualSettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            TabRow(selectedTabIndex = activeTab) {
-                Tab(selected = activeTab == 0, onClick = { activeTab = 0 }, text = { Text("Themes") })
-                Tab(selected = activeTab == 1, onClick = { activeTab = 1 }, text = { Text("Customize") })
+            // Design: segmented Themes / Customize control.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        parseColorOr(colorScheme.surfaceVariant, tempTheme.bubbleIncoming)
+                            .copy(alpha = 0.7f)
+                    )
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf("Themes", "Customize").forEachIndexed { index, label ->
+                    val selected = activeTab == index
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (selected) primary else Color.Transparent)
+                            .clickable(role = Role.Button) { activeTab = index }
+                            .padding(vertical = 9.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (selected) {
+                                ensureReadableOnColor(
+                                    background = primary,
+                                    desired = Color.Black,
+                                    fallback = Color.Black
+                                )
+                            } else {
+                                onBackground
+                            }
+                        )
+                    }
+                }
             }
 
             if (activeTab == 0) {
-                ThemesTab(onSelect = {
-                    tempTheme = it
-                    onSelectTheme(it) // Immediate update for presets
-                })
+                ThemesTab(
+                    current = tempTheme,
+                    onSelect = {
+                        tempTheme = it
+                        onSelectTheme(it) // Immediate update for presets
+                    }
+                )
             } else {
                 CustomizeTab(
                     theme = tempTheme,
@@ -85,7 +169,8 @@ fun VisualSettingsScreen(
                         tempTheme = it
                         // Debounced via LaunchedEffect
                     },
-                    isGlobal = isGlobal
+                    isGlobal = isGlobal,
+                    isPremium = isPremium
                 )
             }
         }
@@ -97,16 +182,18 @@ fun VisualSettingsScreen(
 fun CustomizeTab(
     theme: ThemePreferences,
     onUpdate: (ThemePreferences) -> Unit,
-    isGlobal: Boolean
+    isGlobal: Boolean,
+    isPremium: Boolean = false
 ) {
     val scrollState = rememberScrollState()
     var showColorPickerTarget by remember { mutableStateOf<String?>(null) }
-    // Targets: "outgoing", "incoming", "bg", "text_outgoing", "text_incoming", "text_bg", "topbar", "text_topbar", "timestamp", "divider", "grad_start", "grad_end"
+    // Targets: "outgoing", "incoming", "accent", "bg", "text_outgoing", "text_incoming", "text_bg", "topbar", "text_topbar", "timestamp", "divider", "grad_start", "grad_end"
 
     if (showColorPickerTarget != null) {
         val initialColor = when(showColorPickerTarget) {
             "outgoing" -> theme.bubbleOutgoing
             "incoming" -> theme.bubbleIncoming
+            "accent" -> theme.primaryColor
             "text_outgoing" -> theme.onBubbleOutgoing
             "text_incoming" -> theme.onBubbleIncoming
             "text_bg" -> theme.onBackground
@@ -124,6 +211,7 @@ fun CustomizeTab(
                 val newTheme = when(showColorPickerTarget) {
                     "outgoing" -> theme.copy(bubbleOutgoing = color)
                     "incoming" -> theme.copy(bubbleIncoming = color)
+                    "accent" -> theme.copy(primaryColor = color)
                     "text_outgoing" -> theme.copy(onBubbleOutgoing = color)
                     "text_incoming" -> theme.copy(onBubbleIncoming = color)
                     "text_bg" -> theme.copy(onBackground = color)
@@ -141,17 +229,20 @@ fun CustomizeTab(
         )
     }
 
+    val colorScheme = MaterialTheme.colorScheme
+    val onBackground = parseColorOr(colorScheme.onBackground, theme.onBackground)
+    val sectionLabelColor = onBackground.copy(alpha = 0.55f)
+    val primary = parseColorOr(colorScheme.primary, theme.primaryColor)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        Text("Live Preview", style = MaterialTheme.typography.titleMedium)
-
-        // Preview Container
-        val bgModifier = if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
+        // Design: live preview card with a labelled top bar.
+        val previewBg = if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
              Modifier.background(
                  brush = Brush.verticalGradient(
                      colors = listOf(
@@ -163,157 +254,105 @@ fun CustomizeTab(
         } else {
              Modifier.background(parseColorOr(Color.White, theme.backgroundColor))
         }
+        val dividerTint = parseColorOr(onBackground.copy(alpha = 0.15f), theme.dividerColor)
 
-        Card(
-            modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { showColorPickerTarget = "bg" },
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent) // Use manual background
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .border(1.dp, dividerTint.copy(alpha = 0.9f), RoundedCornerShape(18.dp))
         ) {
-             Box(modifier = Modifier.fillMaxWidth()) {
-                 if (!theme.backgroundImageUrl.isNullOrBlank()) {
-                     AsyncImage(
-                         model = theme.backgroundImageUrl,
-                         contentDescription = null,
-                         modifier = Modifier
-                             .fillMaxWidth()
-                             .height(220.dp),
-                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                     )
-                 }
-                 Box(modifier = bgModifier.fillMaxWidth()) {
-                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                     // Top Bar Preview
-                     Surface(
-                         color = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor),
-                         modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { showColorPickerTarget = "topbar" }
-                     ) {
-                         Row(
-                             modifier = Modifier.padding(12.dp),
-                             horizontalArrangement = Arrangement.SpaceBetween,
-                             verticalAlignment = Alignment.CenterVertically
-                         ) {
-                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = parseColorOr(Color.Black, theme.onTopBarColor))
-                             Text(
-                                 "Contact Name",
-                                 color = parseColorOr(Color.Black, theme.onTopBarColor),
-                                 style = MaterialTheme.typography.titleMedium
-                             )
-                             Box(modifier = Modifier.size(24.dp))
-                         }
-                     }
-
-                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                         Text(
-                             "Today 10:23 AM",
-                             modifier = Modifier.align(Alignment.CenterHorizontally).clickable(role = Role.Button) { showColorPickerTarget = "text_bg" },
-                             style = MaterialTheme.typography.labelSmall,
-                             color = parseColorOr(Color.Black, theme.onBackground)
-                         )
-
-                         PreviewBubble(
-                             text = "Outgoing message.",
-                             color = parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing),
-                             textColor = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
-                             timestampColor = parseColorOr(Color.Gray, theme.timestampColor ?: theme.onBubbleOutgoing),
-                             align = Alignment.End,
-                             theme = theme,
-                             onBubbleClick = { showColorPickerTarget = "outgoing" },
-                             onTextClick = { showColorPickerTarget = "text_outgoing" }
-                         )
-                         PreviewBubble(
-                             text = "Incoming message.",
-                             color = parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming),
-                             textColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming),
-                             timestampColor = parseColorOr(Color.Gray, theme.timestampColor ?: theme.onBubbleIncoming),
-                             align = Alignment.Start,
-                             theme = theme,
-                             onBubbleClick = { showColorPickerTarget = "incoming" },
-                             onTextClick = { showColorPickerTarget = "text_incoming" }
-                         )
-                     }
-                 }
-             }
-             }
-        }
-
-        HorizontalDivider()
-
-        Text("Background", style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ColorChip("Solid Bg", parseColorOr(Color.White, theme.backgroundColor)) { showColorPickerTarget = "bg" }
-            ColorChip("Grad Start", parseColorOr(Color.Transparent, theme.appBackgroundGradientStart ?: "#FFFFFF")) { showColorPickerTarget = "grad_start" }
-            ColorChip("Grad End", parseColorOr(Color.Transparent, theme.appBackgroundGradientEnd ?: "#FFFFFF")) { showColorPickerTarget = "grad_end" }
-        }
-        Button(
-            onClick = {
-                 onUpdate(theme.copy(appBackgroundGradientStart = null, appBackgroundGradientEnd = null))
-            },
-            enabled = theme.appBackgroundGradientStart != null
-        ) {
-            Text("Clear Gradient")
-        }
-        Text("Background image", style = MaterialTheme.typography.titleMedium)
-        OutlinedTextField(
-            value = theme.backgroundImageUrl.orEmpty(),
-            onValueChange = { value ->
-                val trimmed = value.trim()
-                onUpdate(theme.copy(backgroundImageUrl = trimmed.ifBlank { null }))
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Image URL") },
-            placeholder = { Text("https://...") },
-            singleLine = true
-        )
-        Text(
-            "Recommended: under 1920x1080 and 1.5MB. Images require approval to publish.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-
-        Text("Colors", style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ColorChip("Text Bg", parseColorOr(Color.Black, theme.onBackground)) { showColorPickerTarget = "text_bg" }
-            ColorChip("Top Bar", parseColorOr(Color.White, theme.topBarColor)) { showColorPickerTarget = "topbar" }
-            ColorChip("TB Text", parseColorOr(Color.Black, theme.onTopBarColor)) { showColorPickerTarget = "text_topbar" }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ColorChip("Out", parseColorOr(Color.Blue, theme.bubbleOutgoing)) { showColorPickerTarget = "outgoing" }
-            ColorChip("Out Text", parseColorOr(Color.White, theme.onBubbleOutgoing)) { showColorPickerTarget = "text_outgoing" }
-            ColorChip("In", parseColorOr(Color.Gray, theme.bubbleIncoming)) { showColorPickerTarget = "incoming" }
-            ColorChip("In Text", parseColorOr(Color.Black, theme.onBubbleIncoming)) { showColorPickerTarget = "text_incoming" }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-             ColorChip("Timestamp", parseColorOr(Color.Gray, theme.timestampColor ?: "#888888")) { showColorPickerTarget = "timestamp" }
-             ColorChip("Divider", parseColorOr(Color.Gray, theme.dividerColor ?: "#CCCCCC")) { showColorPickerTarget = "divider" }
-        }
-
-        HorizontalDivider()
-
-        Text("Typography", style = MaterialTheme.typography.titleMedium)
-        val fonts = listOf("Default", "Serif", "Monospace", "Cursive")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            fonts.forEach { font ->
-                 FilterChip(
-                     selected = theme.fontStyle == font,
-                     onClick = { onUpdate(theme.copy(fontStyle = font)) },
-                     label = { Text(font) }
-                 )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor))
+                    .clickable(role = Role.Button) { showColorPickerTarget = "topbar" }
+                    .padding(horizontal = 12.dp, vertical = 9.dp)
+            ) {
+                Text(
+                    "Live preview",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = parseColorOr(Color.Black, theme.onTopBarColor)
+                )
+            }
+            Box(modifier = Modifier.fillMaxWidth()) {
+                if (!theme.backgroundImageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = theme.backgroundImageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(previewBg)
+                        .clickable(role = Role.Button) { showColorPickerTarget = "bg" }
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PreviewBubble(
+                        text = "Outgoing message.",
+                        color = parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing),
+                        textColor = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
+                        timestampColor = parseColorOr(Color.Gray, theme.timestampColor ?: theme.onBubbleOutgoing),
+                        align = Alignment.End,
+                        theme = theme,
+                        onBubbleClick = { showColorPickerTarget = "outgoing" },
+                        onTextClick = { showColorPickerTarget = "text_outgoing" }
+                    )
+                    PreviewBubble(
+                        text = "Incoming message.",
+                        color = parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming),
+                        textColor = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming),
+                        timestampColor = parseColorOr(Color.Gray, theme.timestampColor ?: theme.onBubbleIncoming),
+                        align = Alignment.Start,
+                        theme = theme,
+                        onBubbleClick = { showColorPickerTarget = "incoming" },
+                        onTextClick = { showColorPickerTarget = "text_incoming" }
+                    )
+                }
             }
         }
-        Text("Font Scale: ${"%.1f".format(theme.fontScale)}x")
-        Slider(
-            value = theme.fontScale,
-            onValueChange = { onUpdate(theme.copy(fontScale = it)) },
-            valueRange = 0.5f..2.0f,
-            steps = 15,
-            modifier = Modifier.semantics { contentDescription = "Font scale" }
+
+        // Design: bubble color swatches — Out / In / Accent / Top bar.
+        SectionLabel("Bubble colors", sectionLabelColor)
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            ColorChip("Out", parseColorOr(Color.Blue, theme.bubbleOutgoing), labelColor = onBackground) { showColorPickerTarget = "outgoing" }
+            ColorChip("In", parseColorOr(Color.Gray, theme.bubbleIncoming), labelColor = onBackground) { showColorPickerTarget = "incoming" }
+            ColorChip("Accent", primary, labelColor = onBackground) { showColorPickerTarget = "accent" }
+            ColorChip("Top bar", parseColorOr(Color.White, theme.topBarColor), labelColor = onBackground) { showColorPickerTarget = "topbar" }
+        }
+        Text(
+            "Tap a swatch to open the color picker.",
+            style = MaterialTheme.typography.labelSmall,
+            color = onBackground.copy(alpha = 0.5f)
         )
 
-        HorizontalDivider()
+        SectionLabel("More colors", sectionLabelColor)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ColorChip("Text Bg", parseColorOr(Color.Black, theme.onBackground), labelColor = onBackground) { showColorPickerTarget = "text_bg" }
+            ColorChip("TB Text", parseColorOr(Color.Black, theme.onTopBarColor), labelColor = onBackground) { showColorPickerTarget = "text_topbar" }
+            ColorChip("Out Text", parseColorOr(Color.White, theme.onBubbleOutgoing), labelColor = onBackground) { showColorPickerTarget = "text_outgoing" }
+            ColorChip("In Text", parseColorOr(Color.Black, theme.onBubbleIncoming), labelColor = onBackground) { showColorPickerTarget = "text_incoming" }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ColorChip("Solid Bg", parseColorOr(Color.White, theme.backgroundColor), labelColor = onBackground) { showColorPickerTarget = "bg" }
+            ColorChip("Timestamp", parseColorOr(Color.Gray, theme.timestampColor ?: "#888888"), labelColor = onBackground) { showColorPickerTarget = "timestamp" }
+            ColorChip("Divider", parseColorOr(Color.Gray, theme.dividerColor ?: "#CCCCCC"), labelColor = onBackground) { showColorPickerTarget = "divider" }
+        }
 
-        Text("Shape (Corner Radius)", style = MaterialTheme.typography.titleMedium)
-
-        Text("Base Radius: ${theme.bubbleCornerRadius}dp")
+        // Design: corner radius with a right-aligned value label.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Corner radius", style = MaterialTheme.typography.bodyMedium, color = onBackground.copy(alpha = 0.7f))
+            Text("${theme.bubbleCornerRadius}dp", style = MaterialTheme.typography.bodyMedium, color = onBackground)
+        }
         Slider(
             value = theme.bubbleCornerRadius.toFloat(),
             onValueChange = {
@@ -327,141 +366,245 @@ fun CustomizeTab(
             },
             valueRange = 0f..32f,
             steps = 32,
+            colors = SliderDefaults.colors(thumbColor = primary, activeTrackColor = primary),
             modifier = Modifier.semantics { contentDescription = "Base bubble corner radius" }
         )
 
-        Text("Advanced Corners (Overrides Base)", style = MaterialTheme.typography.labelLarge)
+        // Design: font scale with a right-aligned value label.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Font scale", style = MaterialTheme.typography.bodyMedium, color = onBackground.copy(alpha = 0.7f))
+            Text("${"%.2f".format(theme.fontScale)}x", style = MaterialTheme.typography.bodyMedium, color = onBackground)
+        }
+        Slider(
+            value = theme.fontScale,
+            onValueChange = { onUpdate(theme.copy(fontScale = it)) },
+            valueRange = 0.5f..2.0f,
+            steps = 15,
+            colors = SliderDefaults.colors(thumbColor = primary, activeTrackColor = primary),
+            modifier = Modifier.semantics { contentDescription = "Font scale" }
+        )
+
+        SectionLabel("Typeface", sectionLabelColor)
+        val fonts = listOf("Default", "Serif", "Monospace", "Cursive")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            fonts.forEach { font ->
+                val fontFamily = when (font) {
+                    "Serif" -> FontFamily.Serif
+                    "Monospace" -> FontFamily.Monospace
+                    "Cursive" -> FontFamily.Cursive
+                    else -> FontFamily.Default
+                }
+                ThemedSelectChip(
+                    label = font,
+                    selected = theme.fontStyle == font,
+                    primary = primary,
+                    onBackground = onBackground,
+                    dividerTint = dividerTint,
+                    fontFamily = fontFamily
+                ) { onUpdate(theme.copy(fontStyle = font)) }
+            }
+        }
+
+        SectionLabel("Density", sectionLabelColor)
+        val densities = listOf("Compact", "Comfortable", "Spacious")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            densities.forEach { density ->
+                ThemedSelectChip(
+                    label = density,
+                    selected = theme.uiDensity == density,
+                    primary = primary,
+                    onBackground = onBackground,
+                    dividerTint = dividerTint
+                ) { onUpdate(theme.copy(uiDensity = density)) }
+            }
+        }
+
+        // Design: effect rows with switches; Premium features carry a gold pill.
+        SectionLabel("Effects", sectionLabelColor)
+        EffectSwitchRow(
+            title = "Holographic glow",
+            subtitle = "Soft accent bloom on bubbles and bars",
+            checked = theme.useHolographicGlow,
+            primary = primary,
+            onBackground = onBackground,
+            dividerTint = dividerTint,
+            onToggle = { onUpdate(theme.copy(useHolographicGlow = it)) }
+        )
+        EffectSwitchRow(
+            title = "Gradient background",
+            subtitle = "Two-stop vertical wallpaper",
+            checked = theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null,
+            primary = primary,
+            onBackground = onBackground,
+            dividerTint = dividerTint,
+            onToggle = { enabled ->
+                if (enabled) {
+                    onUpdate(
+                        theme.copy(
+                            appBackgroundGradientStart = theme.topBarColor,
+                            appBackgroundGradientEnd = theme.bubbleOutgoing
+                        )
+                    )
+                } else {
+                    onUpdate(theme.copy(appBackgroundGradientStart = null, appBackgroundGradientEnd = null))
+                }
+            }
+        )
+        if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ColorChip("Grad Start", parseColorOr(Color.Transparent, theme.appBackgroundGradientStart ?: "#FFFFFF"), labelColor = onBackground) { showColorPickerTarget = "grad_start" }
+                ColorChip("Grad End", parseColorOr(Color.Transparent, theme.appBackgroundGradientEnd ?: "#FFFFFF"), labelColor = onBackground) { showColorPickerTarget = "grad_end" }
+            }
+        }
+        EffectSwitchRow(
+            title = "Glass effect",
+            subtitle = "Translucent bubbles with a soft border",
+            checked = theme.useGlassEffect,
+            primary = primary,
+            onBackground = onBackground,
+            dividerTint = dividerTint,
+            onToggle = { onUpdate(theme.copy(useGlassEffect = it)) }
+        )
+
+        // Icon overrides — Premium.
+        EffectHeaderRow(
+            title = "Icon overrides",
+            subtitle = "Swap any icon for your own image URL",
+            locked = !isPremium,
+            onBackground = onBackground,
+            dividerTint = dividerTint
+        )
+        if (isPremium) {
+            val iconKeys = listOf(
+                "icon.back" to "Back",
+                "icon.settings" to "Settings",
+                "icon.lock" to "Private",
+                "icon.search" to "Search",
+                "icon.close" to "Close",
+                "icon.inbox" to "Inbox",
+                "icon.archive" to "Archive",
+                "icon.unarchive" to "Unarchive",
+                "icon.delete" to "Delete",
+                "icon.send" to "Send",
+                "icon.ai" to "AI",
+                "icon.notifications" to "Notifications"
+            )
+            iconKeys.forEach { (key, label) ->
+                OutlinedTextField(
+                    value = theme.iconOverrides[key].orEmpty(),
+                    onValueChange = { value ->
+                        val updated = theme.iconOverrides.toMutableMap()
+                        val trimmed = value.trim()
+                        if (trimmed.isBlank()) {
+                            updated.remove(key)
+                        } else {
+                            updated[key] = trimmed
+                        }
+                        onUpdate(theme.copy(iconOverrides = updated))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(label) },
+                    placeholder = { Text("https://...") },
+                    singleLine = true
+                )
+            }
+        }
+
+        // Background image — Premium.
+        EffectHeaderRow(
+            title = "Background image",
+            subtitle = "Custom wallpaper behind the thread",
+            locked = !isPremium,
+            onBackground = onBackground,
+            dividerTint = dividerTint
+        )
+        if (isPremium) {
+            OutlinedTextField(
+                value = theme.backgroundImageUrl.orEmpty(),
+                onValueChange = { value ->
+                    val trimmed = value.trim()
+                    onUpdate(theme.copy(backgroundImageUrl = trimmed.ifBlank { null }))
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Image URL") },
+                placeholder = { Text("https://...") },
+                singleLine = true
+            )
+            Text(
+                "Recommended: under 1920x1080 and 1.5MB. Images require approval to publish.",
+                style = MaterialTheme.typography.bodySmall,
+                color = onBackground.copy(alpha = 0.6f)
+            )
+        }
+
+        SectionLabel("Advanced", sectionLabelColor)
+        Text("Advanced corners (overrides base)", style = MaterialTheme.typography.labelLarge, color = onBackground)
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("Top Start: ${theme.bubbleCornerRadiusTopStart ?: "-"}")
+                Text("Top Start: ${theme.bubbleCornerRadiusTopStart ?: "-"}", color = onBackground)
                 Slider(
                     value = (theme.bubbleCornerRadiusTopStart ?: theme.bubbleCornerRadius).toFloat(),
                     onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusTopStart = it.toInt())) },
                     valueRange = 0f..32f,
+                    colors = SliderDefaults.colors(thumbColor = primary, activeTrackColor = primary),
                     modifier = Modifier.semantics { contentDescription = "Top start corner radius" }
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text("Top End: ${theme.bubbleCornerRadiusTopEnd ?: "-"}")
+                Text("Top End: ${theme.bubbleCornerRadiusTopEnd ?: "-"}", color = onBackground)
                 Slider(
                     value = (theme.bubbleCornerRadiusTopEnd ?: theme.bubbleCornerRadius).toFloat(),
                     onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusTopEnd = it.toInt())) },
                     valueRange = 0f..32f,
+                    colors = SliderDefaults.colors(thumbColor = primary, activeTrackColor = primary),
                     modifier = Modifier.semantics { contentDescription = "Top end corner radius" }
                 )
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
              Column(modifier = Modifier.weight(1f)) {
-                 Text("Bot Start: ${theme.bubbleCornerRadiusBottomStart ?: "-"}")
+                 Text("Bot Start: ${theme.bubbleCornerRadiusBottomStart ?: "-"}", color = onBackground)
                  Slider(
                      value = (theme.bubbleCornerRadiusBottomStart ?: theme.bubbleCornerRadius).toFloat(),
                      onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusBottomStart = it.toInt())) },
                      valueRange = 0f..32f,
+                     colors = SliderDefaults.colors(thumbColor = primary, activeTrackColor = primary),
                      modifier = Modifier.semantics { contentDescription = "Bottom start corner radius" }
                  )
              }
              Column(modifier = Modifier.weight(1f)) {
-                 Text("Bot End: ${theme.bubbleCornerRadiusBottomEnd ?: "-"}")
+                 Text("Bot End: ${theme.bubbleCornerRadiusBottomEnd ?: "-"}", color = onBackground)
                  Slider(
                      value = (theme.bubbleCornerRadiusBottomEnd ?: theme.bubbleCornerRadius).toFloat(),
                      onValueChange = { onUpdate(theme.copy(bubbleCornerRadiusBottomEnd = it.toInt())) },
                      valueRange = 0f..32f,
+                     colors = SliderDefaults.colors(thumbColor = primary, activeTrackColor = primary),
                      modifier = Modifier.semantics { contentDescription = "Bottom end corner radius" }
                  )
              }
         }
 
-
-        HorizontalDivider()
-
-        Text("Advanced Effects", style = MaterialTheme.typography.titleMedium)
         Row(
-            modifier = Modifier.fillMaxWidth().clickable { onUpdate(theme.copy(useGlassEffect = !theme.useGlassEffect)) },
-            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Glass Effect (Transparency)")
-            Switch(checked = theme.useGlassEffect, onCheckedChange = { onUpdate(theme.copy(useGlassEffect = it)) })
+            Text("Icon scale", style = MaterialTheme.typography.bodyMedium, color = onBackground.copy(alpha = 0.7f))
+            Text("${(theme.iconSizeFactor * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, color = onBackground)
         }
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable { onUpdate(theme.copy(useHolographicGlow = !theme.useHolographicGlow)) },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Holographic Glow")
-            Switch(checked = theme.useHolographicGlow, onCheckedChange = { onUpdate(theme.copy(useHolographicGlow = it)) })
-        }
-
-        Text("Density", style = MaterialTheme.typography.labelLarge)
-        val densities = listOf("Compact", "Comfortable", "Spacious")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            densities.forEach { density ->
-                FilterChip(
-                    selected = theme.uiDensity == density,
-                    onClick = { onUpdate(theme.copy(uiDensity = density)) },
-                    label = { Text(density) }
-                )
-            }
-        }
-
-        HorizontalDivider()
-
-        Text("Icon Sizing", style = MaterialTheme.typography.titleMedium)
-        Text("Scale: ${(theme.iconSizeFactor * 100).toInt()}%")
         Slider(
             value = theme.iconSizeFactor,
             onValueChange = { onUpdate(theme.copy(iconSizeFactor = it)) },
             valueRange = 0.5f..1.5f,
             steps = 10,
+            colors = SliderDefaults.colors(thumbColor = primary, activeTrackColor = primary),
             modifier = Modifier.semantics { contentDescription = "Icon size scaling" }
         )
 
-        HorizontalDivider()
-
-        Text("Icon overrides", style = MaterialTheme.typography.titleMedium)
-        Text(
-            "Paste image URLs for icons you want to replace. Transparent PNG/SVG recommended.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        val iconKeys = listOf(
-            "icon.back" to "Back",
-            "icon.settings" to "Settings",
-            "icon.lock" to "Private",
-            "icon.search" to "Search",
-            "icon.close" to "Close",
-            "icon.inbox" to "Inbox",
-            "icon.archive" to "Archive",
-            "icon.unarchive" to "Unarchive",
-            "icon.delete" to "Delete",
-            "icon.send" to "Send",
-            "icon.ai" to "AI",
-            "icon.notifications" to "Notifications"
-        )
-        iconKeys.forEach { (key, label) ->
-            OutlinedTextField(
-                value = theme.iconOverrides[key].orEmpty(),
-                onValueChange = { value ->
-                    val updated = theme.iconOverrides.toMutableMap()
-                    val trimmed = value.trim()
-                    if (trimmed.isBlank()) {
-                        updated.remove(key)
-                    } else {
-                        updated[key] = trimmed
-                    }
-                    onUpdate(theme.copy(iconOverrides = updated))
-                },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(label) },
-                placeholder = { Text("https://...") },
-                singleLine = true
-            )
-        }
-
         if (isGlobal) {
-            HorizontalDivider()
-            Text("Beacon icon", style = MaterialTheme.typography.titleMedium)
+            Text("Beacon icon", style = MaterialTheme.typography.labelLarge, color = onBackground)
             val label = theme.inboxIconVariant
                 .ifBlank { "default" }
                 .replace('_', ' ')
@@ -469,16 +612,144 @@ fun CustomizeTab(
             Text(
                 text = "Matches theme: $label",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = onBackground.copy(alpha = 0.6f)
             )
         }
     }
 }
 
 @Composable
-fun ColorChip(label: String, color: Color, onClick: () -> Unit) {
+private fun SectionLabel(text: String, color: Color) {
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+        color = color
+    )
+}
+
+@Composable
+private fun ThemedSelectChip(
+    label: String,
+    selected: Boolean,
+    primary: Color,
+    onBackground: Color,
+    dividerTint: Color,
+    fontFamily: FontFamily = FontFamily.Default,
+    onClick: () -> Unit
+) {
+    val contentColor = if (selected) {
+        ensureReadableOnColor(background = primary, desired = Color.Black, fallback = Color.Black)
+    } else {
+        onBackground
+    }
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(100.dp))
+            .background(if (selected) primary else Color.Transparent)
+            .border(1.dp, if (selected) Color.Transparent else dividerTint, RoundedCornerShape(100.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontFamily = fontFamily,
+            color = contentColor
+        )
+    }
+}
+
+@Composable
+private fun EffectSwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    primary: Color,
+    onBackground: Color,
+    dividerTint: Color,
+    onToggle: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, dividerTint, RoundedCornerShape(14.dp))
+            .clickable { onToggle(!checked) }
+            .padding(horizontal = 14.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = onBackground)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = onBackground.copy(alpha = 0.6f))
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(checkedTrackColor = primary)
+        )
+    }
+}
+
+@Composable
+private fun EffectHeaderRow(
+    title: String,
+    subtitle: String,
+    locked: Boolean,
+    onBackground: Color,
+    dividerTint: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, dividerTint, RoundedCornerShape(14.dp))
+            .padding(horizontal = 14.dp, vertical = 13.dp)
+            .then(if (locked) Modifier.alpha(0.72f) else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = onBackground)
+                if (locked) {
+                    // Design: gold Premium pill.
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(100.dp))
+                            .background(Color(0xFFF5C542))
+                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            "Premium",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFF2B1E00)
+                        )
+                    }
+                }
+            }
+            Text(
+                if (locked) "$subtitle — upgrade to unlock" else subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = onBackground.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+@Composable
+fun ColorChip(
+    label: String,
+    color: Color,
+    labelColor: Color = Color.Unspecified,
+    onClick: () -> Unit
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
             .clickable(onClick = onClick, role = Role.Button)
             .semantics { contentDescription = "Select $label color" }
@@ -488,9 +759,9 @@ fun ColorChip(label: String, color: Color, onClick: () -> Unit) {
                 .size(40.dp)
                 .clip(CircleShape)
                 .background(color)
-                .border(1.dp, Color.Gray, CircleShape)
+                .border(2.dp, labelColor.takeOrElse { Color.Gray }.copy(alpha = 0.25f), CircleShape)
         )
-        Text(label, style = MaterialTheme.typography.labelSmall)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = labelColor)
     }
 }
 
@@ -569,7 +840,10 @@ private data class ThemePreset(
 )
 
 @Composable
-fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
+fun ThemesTab(
+    onSelect: (ThemePreferences) -> Unit,
+    current: ThemePreferences? = null
+) {
     val themes = listOf(
         ThemePreset(
             name = "Future Hologram",
@@ -975,8 +1249,15 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(themes) { preset ->
+            // Active when the preset's key colors match the live theme record.
+            val active = current != null &&
+                current.primaryColor == preset.theme.primaryColor &&
+                current.backgroundColor == preset.theme.backgroundColor &&
+                current.bubbleOutgoing == preset.theme.bubbleOutgoing &&
+                current.bubbleIncoming == preset.theme.bubbleIncoming
             ThemePreviewCard(
                 preset = preset,
+                isActive = active,
                 onSelect = { onSelect(preset.theme) }
             )
         }
@@ -986,7 +1267,8 @@ fun ThemesTab(onSelect: (ThemePreferences) -> Unit) {
 @Composable
 private fun ThemePreviewCard(
     preset: ThemePreset,
-    onSelect: () -> Unit
+    onSelect: () -> Unit,
+    isActive: Boolean = false
 ) {
     val theme = preset.theme
     val topBarColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor)
@@ -1010,7 +1292,12 @@ private fun ThemePreviewCard(
 
     Card(
         onClick = onSelect,
-        elevation = CardDefaults.cardElevation(4.dp)
+        elevation = CardDefaults.cardElevation(4.dp),
+        border = if (isActive) {
+            androidx.compose.foundation.BorderStroke(1.5.dp, iconTint)
+        } else {
+            null
+        }
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(
@@ -1083,7 +1370,33 @@ private fun ThemePreviewCard(
                     }
                 }
             }
-            Text(preset.name, style = MaterialTheme.typography.labelLarge)
+            // Design: name row with the preset's accent dot and an active check.
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(9.dp)
+                        .clip(CircleShape)
+                        .background(iconTint)
+                )
+                Text(
+                    preset.name,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 2
+                )
+                if (isActive) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = "Active theme",
+                        tint = iconTint,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
 }

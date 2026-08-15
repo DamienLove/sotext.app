@@ -1120,6 +1120,8 @@ class MainActivity : AppCompatActivity() {
                         val requiresAgreement = viewModel.needsBetaAgreement(state.settings)
                         OnboardingIntroScreen(
                             ownerName = onboardingName,
+                            onApplyTheme = { theme -> viewModel.setThemePreferences(theme) },
+                            currentTheme = state.settings.themePreferences,
                             onOwnerNameChange = { updated ->
                                 onboardingName = updated
                                 onboardingNameDirty = true
@@ -1755,6 +1757,7 @@ class MainActivity : AppCompatActivity() {
                     composable("extensions_store") {
                         ExtensionsStoreScreen(
                             settings = state.settings,
+                            proActive = isPro,
                             onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) },
                             onToggleFirebaseMessaging = viewModel::setFirebaseMessagingEnabled,
                             onToggleEmailFallback = viewModel::setEmailFallbackEnabled,
@@ -2235,6 +2238,7 @@ class MainActivity : AppCompatActivity() {
                             address = decodedAddress,
                             messages = messages,
                             contact = contact,
+                            isPremium = premiumActive,
                             onBack = { navController.popBackStack() },
                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
                             globalTheme = state.settings.themePreferences,
@@ -2308,7 +2312,8 @@ class MainActivity : AppCompatActivity() {
                         VisualSettingsScreen(
                             theme = currentTheme,
                             onSelectTheme = { newTheme -> viewModel.setThemePreferences(newTheme) },
-                            onBack = { navController.popBackStack() }
+                            onBack = { navController.popBackStack() },
+                            isPremium = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
                         )
                     }
                     composable("private_pin") {
