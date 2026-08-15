@@ -301,10 +301,6 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.7.0-beta02"
-    }
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -343,6 +339,7 @@ kapt {
         arg("room.schemaLocation", "$projectDir/build/room-schemas")
         arg("room.incremental", "true")
         arg("room.expandProjection", "true")
+        arg("dagger.hilt.android.internal.projectType", "APP")
     }
 }
 

@@ -17,6 +17,9 @@ import com.pulselink.data.ads.AdConfig
 import com.pulselink.data.ads.AppOpenAdController
 import com.pulselink.assistant.AssistantShortcuts
 import com.pulselink.data.remoteconfig.RemoteConfigService
+import com.pulselink.data.sms.SmsRelayService
+import com.pulselink.data.sms.SmsSyncManager
+import com.pulselink.data.sms.OtpCleanupWorker
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -31,8 +34,8 @@ class PulseLinkApp : Application(), Configuration.Provider {
     @Inject lateinit var appOpenAdController: AppOpenAdController
     @Inject lateinit var firebaseAuthManager: FirebaseAuthManager
     @Inject lateinit var remoteConfigService: RemoteConfigService
-    @Inject lateinit var smsRelayService: com.pulselink.data.sms.SmsRelayService
-    @Inject lateinit var smsSyncManager: com.pulselink.data.sms.SmsSyncManager
+    @Inject lateinit var smsRelayService: SmsRelayService
+    @Inject lateinit var smsSyncManager: SmsSyncManager
 
     override val workManagerConfiguration: Configuration by lazy {
         Configuration.Builder()
@@ -64,7 +67,7 @@ class PulseLinkApp : Application(), Configuration.Provider {
         // No need for periodic sync
 
         val otpCleanupRequest = PeriodicWorkRequest.Builder(
-            com.pulselink.data.sms.OtpCleanupWorker::class.java,
+            OtpCleanupWorker::class.java,
             24,
             TimeUnit.HOURS
         ).build()
