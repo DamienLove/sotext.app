@@ -34,6 +34,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Unarchive
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inbox
@@ -46,6 +48,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -86,6 +89,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -533,7 +537,7 @@ fun SmsInboxScreen(
                         unfocusedTextColor = onBackgroundColor,
                         cursorColor = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
                     ),
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(24.dp)
                 )
             }
             if (showLinePicker && orderedLines.isNotEmpty()) {
@@ -635,7 +639,7 @@ fun SmsInboxScreen(
                         }
                     }
                 } else {
-                    if (filtered.isEmpty()) {
+                    if (filtered.isEmpty() && !showPrivateOnly) {
                         if (showSkeletons) {
                             items(6) {
                                 ThreadRowSkeleton(theme = theme)
@@ -686,7 +690,35 @@ fun SmsInboxScreen(
                             }
                         }
                     }
-                    if (filtered.isNotEmpty()) {
+                    if (showPrivateOnly) {
+                        // Design: Private Safe — info card, hidden-content rows, unlock action.
+                        item {
+                            PrivateSafeInfoCard(theme = theme)
+                        }
+                        if (filtered.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "Nothing locked yet. Press and hold a conversation in Messages to move it here.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = onBackgroundMuted,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 26.dp, vertical = 44.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                        items(filtered, key = { threadKey(it) }) { thread ->
+                            val contact = contactsByNumber[normalizeSmsAddress(thread.address)]
+                            PrivateSafeRow(
+                                thread = thread,
+                                contact = contact,
+                                dateFormatter = dateFormatter,
+                                theme = theme,
+                                onUnlock = { onTogglePrivate(thread, false) }
+                            )
+                        }
+                    } else if (filtered.isNotEmpty()) {
                         items(filtered, key = { threadKey(it) }) { thread ->
                             val lineIndex = thread.lineId?.let { lineIndexMap[it] }
                             val isLocalLine = localDeviceId == null ||
@@ -711,7 +743,8 @@ fun SmsInboxScreen(
                                 lineIndex = lineIndex,
                                 lineColors = lineColors,
                                 lineCount = orderedLines.size,
-                                actionsEnabled = isLocalLine
+                                actionsEnabled = isLocalLine,
+                                canLockPrivate = isPro || isPremium
                             )
                         }
                         if (hasMoreToLoad && filtered.size >= 20) {
@@ -744,7 +777,7 @@ fun SmsInboxScreen(
                                         tint = onBackgroundMuted
                                     )
                                     Text(
-                                        text = "Press and hold a conversation for more options — pin, mark private, archive, or delete.",
+                                        text = "Press and hold a conversation to lock it into Private Safe.",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = onBackgroundMuted
                                     )
@@ -786,8 +819,10 @@ internal fun ThreadRow(
     lineIndex: Int? = null,
     lineColors: List<Color> = emptyList(),
     lineCount: Int = 0,
-    actionsEnabled: Boolean = true
+    actionsEnabled: Boolean = true,
+    canLockPrivate: Boolean = false
 ) {
+    val context = LocalContext.current
     // Compute text colors from theme
     val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
     val onBackgroundColor = ensureReadableOnColor(
@@ -825,11 +860,14 @@ internal fun ThreadRow(
     )
     val actionIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 28f).dp
     val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
-    val surfaceColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor)
-    val outlineColor = onBackgroundColor
-        .copy(alpha = if (thread.unread) 0.14f else 0.08f)
-    val borderColor = if (thread.unread) primary.copy(alpha = 0.22f) else outlineColor
-    var menuExpanded by remember { mutableStateOf(false) }
+    val dividerColor = parseColorOr(onBackgroundColor.copy(alpha = 0.12f), theme.dividerColor)
+        .copy(alpha = 0.75f)
+    // Design: row density follows the theme's UI density setting.
+    val rowVerticalPadding = when (theme.uiDensity) {
+        "Compact" -> 8.dp
+        "Spacious" -> 20.dp
+        else -> 14.dp
+    }
 
     SwipeToDismissBox(
         state = dismissState,
@@ -867,166 +905,146 @@ internal fun ThreadRow(
             }
         },
         content = {
-            Surface(
+            // Design: flat row on the app background with a hairline divider,
+            // long-press locks the conversation into Private Safe (Pro-gated).
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .combinedClickable(
-                        onClick = { onOpen(thread) },
-                        onLongClick = {
-                            if (actionsEnabled) {
-                                menuExpanded = true
-                            }
-                        }
-                    ),
-                tonalElevation = if (thread.unread) 2.dp else 1.dp,
-                shape = RoundedCornerShape(18.dp),
-                color = surfaceColor,
-                border = BorderStroke(1.dp, borderColor)
+                    .background(backgroundColor)
             ) {
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false },
-                    modifier = Modifier.background(parseColorOr(MaterialTheme.colorScheme.surface, theme.backgroundColor))
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(if (thread.isPinned) "Unpin" else "Pin") },
-                        onClick = {
-                            menuExpanded = false
-                            if (thread.isPinned) onUnpin(thread) else onPin(thread)
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Filled.PushPin, contentDescription = null)
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(if (isPrivate) "Mark as public" else "Mark as private") },
-                        onClick = {
-                            menuExpanded = false
-                            onTogglePrivate(thread, !isPrivate)
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Filled.Lock, contentDescription = null)
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(if (isArchived) "Unarchive" else "Archive") },
-                        onClick = {
-                            menuExpanded = false
-                            if (isArchived) onUnarchive(thread) else onArchive(thread)
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Filled.Archive, contentDescription = null)
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Delete") },
-                        onClick = {
-                            menuExpanded = false
-                            onDelete(thread)
-                        },
-                        leadingIcon = {
-                            Icon(Icons.Filled.Delete, contentDescription = null)
-                        }
-                    )
-                }
-
                 Row(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 14.dp, end = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier.clickable { onAvatarClick(thread) }
-                    ) {
-                        AvatarCircle(text = displayName, theme = theme)
-                    }
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = displayName.ifBlank { number ?: "Unknown" },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                color = onBackgroundColor,
-                                fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .combinedClickable(
+                                onClick = { onOpen(thread) },
+                                onLongClick = {
+                                    if (!actionsEnabled) return@combinedClickable
+                                    if (canLockPrivate) {
+                                        onTogglePrivate(thread, true)
+                                        Toast.makeText(
+                                            context,
+                                            "${displayName.ifBlank { number ?: "Conversation" }} locked into Private Safe",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            "Private Safe needs Pro — locking is gated.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
                             )
-                            if (thread.isPinned) {
-                                Icon(
-                                    Icons.Filled.PushPin,
-                                    contentDescription = "Pinned",
-                                    tint = primary,
-                                    modifier = Modifier.size(16.dp)
+                            .padding(vertical = rowVerticalPadding),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier.clickable { onAvatarClick(thread) }
+                        ) {
+                            AvatarCircle(text = avatarText, theme = theme)
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = resolvedName.ifBlank { number ?: "Unknown" },
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = if (thread.unread) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = onBackgroundColor,
+                                    fontSize = MaterialTheme.typography.titleMedium.fontSize * theme.fontScale,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                if (thread.isPinned) {
+                                    Icon(
+                                        Icons.Filled.PushPin,
+                                        contentDescription = "Pinned",
+                                        tint = primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text(
+                                    text = dateFormatter(thread.timestamp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = timestampColor,
+                                    maxLines = 1
                                 )
                             }
                             Text(
-                                text = dateFormatter(thread.timestamp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = timestampColor
-                            )
-                        }
-                        if (!number.isNullOrBlank() && number != displayName) { 
-                            Text(
-                                text = number,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = onBackgroundMuted,
+                                text = thread.snippet.ifBlank { "No preview available." },
+                                style = MaterialTheme.typography.bodyMedium,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                overflow = TextOverflow.Ellipsis,
+                                color = onBackgroundSubtle.copy(alpha = 0.72f),
+                                fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
                             )
-                        }
-                        Text(
-                            text = thread.snippet.ifBlank { "No preview available." },
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            color = onBackgroundSubtle,
-                            fontSize = MaterialTheme.typography.bodyMedium.fontSize * theme.fontScale
-                        )
-                        if (thread.unread) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            UnreadPill()
-                        }
-                        if (thread.isTrusted && thread.trustedUrgency != null) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            TrustedPill(thread.trustedUrgency)
-                        }
-                        if (thread.isOtp) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            val otpCode = remember(thread.snippet) { OtpHelper.extractCode(thread.snippet) }
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                OtpPill()
-                                if (otpCode != null) {
-                                    OtpCopyChip(code = otpCode, primary = primary)
+                            val otpCode = if (thread.isOtp) {
+                                remember(thread.snippet) { OtpHelper.extractCode(thread.snippet) }
+                            } else {
+                                null
+                            }
+                            val showBadges = (thread.isTrusted && thread.trustedUrgency != null) ||
+                                thread.isOtp || isPrivate
+                            if (showBadges) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(top = 2.dp)
+                                ) {
+                                    if (thread.isTrusted && thread.trustedUrgency != null) {
+                                        TrustedPill(thread.trustedUrgency)
+                                    } else if (thread.isOtp) {
+                                        OtpPill(theme = theme)
+                                    }
+                                    if (otpCode != null) {
+                                        OtpCopyChip(code = otpCode, primary = primary)
+                                    }
+                                    if (isPrivate) {
+                                        PrivatePill()
+                                    }
                                 }
                             }
                         }
-                        if (isPrivate) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            PrivatePill()
+                        if (lineIndex != null && lineCount > 1 && lineColors.isNotEmpty()) {
+                            MultiLineIndicator(
+                                lineCount = lineCount,
+                                activeIndex = lineIndex,
+                                lineColors = lineColors,
+                                theme = theme
+                            )
                         }
                     }
-                    if (lineIndex != null && lineCount > 1 && lineColors.isNotEmpty()) {
-                        MultiLineIndicator(
-                            lineCount = lineCount,
-                            activeIndex = lineIndex,
-                            lineColors = lineColors,
+                    IconButton(
+                        onClick = { if (isArchived) onUnarchive(thread) else onArchive(thread) },
+                        enabled = actionsEnabled
+                    ) {
+                        ThemeIcon(
+                            iconKey = if (isArchived) ThemeIconKey.UNARCHIVE else ThemeIconKey.ARCHIVE,
                             theme = theme,
-                            modifier = Modifier
-                                .align(Alignment.Bottom)
-                                .padding(end = 10.dp, bottom = 10.dp)
+                            imageVector = if (isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive,
+                            contentDescription = if (isArchived) "Unarchive" else "Archive",
+                            tint = Color(0xFF5BC174),
+                            modifier = Modifier.size(actionIconSize)
                         )
                     }
                 }
+                HorizontalDivider(color = dividerColor, thickness = 1.dp)
             }
         }
     )
@@ -1099,70 +1117,64 @@ internal fun ThreadRowSkeleton(
 
 @Composable
 private fun AvatarCircle(text: String, theme: ThemePreferences) {
-    val initial = text.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+    // Design: two-letter initials on the outgoing-bubble color.
+    val initials = text.split(" ")
+        .mapNotNull { it.firstOrNull()?.uppercaseChar() }
+        .joinToString("")
+        .take(2)
+        .ifBlank { "?" }
     Box(
         modifier = Modifier
             .size(44.dp)
             .clip(CircleShape)
-            .background(parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)), // Reuse outgoing bubble color for avatar bg? Or Primary?
+            .background(
+                parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)
+                    .copy(alpha = 0.85f)
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = initial.toString(),
-            style = MaterialTheme.typography.titleMedium,
+            text = initials,
+            style = MaterialTheme.typography.titleSmall,
             color = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-private fun UnreadPill() {
-    Surface(
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-        shape = CircleShape
-    ) {
-        Text(
-            text = "Unread",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            fontWeight = FontWeight.Medium
         )
     }
 }
 
 @Composable
 private fun TrustedPill(urgency: MessageUrgency) {
+    // Design: solid urgency fill with white text for readability on any theme.
     val (label, color) = when (urgency) {
         MessageUrgency.EMERGENCY -> "Emergency" to Color(0xFFB91C1C)
         MessageUrgency.URGENT -> "Urgent" to Color(0xFFF59E0B)
         MessageUrgency.STANDARD -> "Check-in" to Color(0xFF059669)
     }
     Surface(
-        color = color.copy(alpha = 0.12f),
+        color = color,
         shape = CircleShape
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = color,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            color = Color.White,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
         )
     }
 }
 
 @Composable
-private fun OtpPill() {
-    val color = Color(0xFF2563EB)
+private fun OtpPill(theme: ThemePreferences) {
+    val color = parseColorOr(Color(0xFF2563EB), theme.secondaryColor).copy(alpha = 0.7f)
     Surface(
-        color = color.copy(alpha = 0.12f),
+        color = color,
         shape = CircleShape
     ) {
         Text(
-            text = "2-step",
+            text = "2-step code",
             style = MaterialTheme.typography.labelSmall,
-            color = color,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            color = Color.White,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
         )
     }
 }
@@ -1652,6 +1664,129 @@ private fun LinePickerRow(
                 )
             }
         }
+    }
+}
+
+/**
+ * Design: Private Safe explainer card shown above the locked-conversation list.
+ */
+@Composable
+private fun PrivateSafeInfoCard(theme: ThemePreferences) {
+    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val container = parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming)
+        .copy(alpha = 0.62f)
+    val onContainer = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
+    Surface(
+        color = container,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            1.dp,
+            parseColorOr(onContainer.copy(alpha = 0.15f), theme.dividerColor).copy(alpha = 0.9f)
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Shield,
+                contentDescription = null,
+                tint = primary,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = "Locked conversations are hidden from the inbox and notifications. Unlocking returns them to their tabs.",
+                style = MaterialTheme.typography.bodySmall,
+                color = onContainer.copy(alpha = 0.78f)
+            )
+        }
+    }
+}
+
+/**
+ * Design: Private Safe row — lock avatar, hidden-content subtitle, Unlock pill.
+ */
+@Composable
+private fun PrivateSafeRow(
+    thread: SmsThreadItem,
+    contact: Contact?,
+    dateFormatter: (Long) -> String,
+    theme: ThemePreferences,
+    onUnlock: () -> Unit
+) {
+    val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
+    val onBackgroundColor = ensureReadableOnColor(
+        background = backgroundColor,
+        desired = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
+        fallback = Color.White
+    )
+    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val dividerColor = parseColorOr(onBackgroundColor.copy(alpha = 0.12f), theme.dividerColor)
+        .copy(alpha = 0.75f)
+    val (displayName, number) = splitDisplay(thread.address)
+    val resolvedName = contact?.displayName?.takeIf { it.isNotBlank() }
+        ?: contact?.remoteDisplayName?.takeIf { it.isNotBlank() }
+        ?: displayName.ifBlank { number ?: "Unknown" }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(
+                        parseColorOr(MaterialTheme.colorScheme.primaryContainer, theme.bubbleOutgoing)
+                            .copy(alpha = 0.85f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = parseColorOr(MaterialTheme.colorScheme.onPrimaryContainer, theme.onBubbleOutgoing),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    text = resolvedName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = onBackgroundColor
+                )
+                Text(
+                    text = "Content hidden · ${dateFormatter(thread.timestamp)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = onBackgroundColor.copy(alpha = 0.55f)
+                )
+            }
+            OutlinedButton(
+                onClick = onUnlock,
+                shape = CircleShape,
+                border = BorderStroke(1.dp, primary.copy(alpha = 0.45f)),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                    contentColor = primary
+                )
+            ) {
+                Text("Unlock", style = MaterialTheme.typography.labelLarge)
+            }
+        }
+        HorizontalDivider(color = dividerColor, thickness = 1.dp)
     }
 }
 

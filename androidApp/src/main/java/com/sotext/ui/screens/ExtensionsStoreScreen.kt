@@ -68,6 +68,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -113,7 +114,8 @@ fun ExtensionsStoreScreen(
     onOpenThemes: () -> Unit,
     onOpenRingerSong: () -> Unit,
     onUpgradeClick: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    proActive: Boolean = false
 ) {
     val premiumActive = remember(settings) {
         BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
@@ -291,6 +293,16 @@ fun ExtensionsStoreScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // Design: gradient upsell card while Premium is locked.
+            if (!premiumActive) {
+                item {
+                    PremiumUpsellCard(
+                        proActive = proActive || settings.proUnlocked,
+                        onUpgradeClick = onUpgradeClick
+                    )
+                }
+            }
+
             item {
                 StoreHeader()
             }
@@ -365,6 +377,62 @@ fun ExtensionsStoreScreen(
                 onUpgradeClick = onUpgradeClick,
                 onClose = { selectedFeature = null }
             )
+        }
+    }
+}
+
+/**
+ * Design: gradient upsell banner shown while Premium is locked.
+ */
+@Composable
+private fun PremiumUpsellCard(
+    proActive: Boolean,
+    onUpgradeClick: () -> Unit
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        primary.copy(alpha = 0.22f),
+                        secondary.copy(alpha = 0.12f)
+                    )
+                )
+            )
+            .background(Color.Transparent)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = if (proActive) {
+                "Premium adds AI, caller ID and web sync."
+            } else {
+                "Pro removes ads. Premium adds AI."
+            },
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = if (proActive) {
+                "Thread summaries, compose assist, urgency classification and remote messaging from the web portal."
+            } else {
+                "Pro is a one-time purchase and unlocks Private Safe and Smart Replies. Premium is a subscription covering AI assist, caller-ID screening and sotext.app sync."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Button(
+            onClick = onUpgradeClick,
+            shape = RoundedCornerShape(100.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = primary)
+        ) {
+            Text("Upgrade to Premium")
         }
     }
 }
@@ -485,51 +553,64 @@ fun FeatureStoreItem(
     onUpgradeClick: () -> Unit
 ) {
     val locked = feature.requiresPremium && !premiumActive
+    val primary = MaterialTheme.colorScheme.primary
 
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(
-            containerColor = if (feature.isEnabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f)
         ),
-        border = if (feature.isEnabled) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = RoundedCornerShape(18.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Design: rounded icon tile on a primary tint.
             Surface(
-                color = if (feature.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                shape = CircleShape,
-                modifier = Modifier.size(48.dp)
+                color = primary.copy(alpha = 0.16f),
+                shape = RoundedCornerShape(13.dp),
+                modifier = Modifier.size(44.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = feature.icon,
                         contentDescription = null,
-                        tint = if (feature.isEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = primary,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
                     Text(
                         text = stringResource(feature.titleRes),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleSmall
                     )
-                    if (feature.requiresPremium) {
-                        Spacer(modifier = Modifier.width(6.dp))
+                    if (locked) {
+                        // Design: gold tier tag while locked.
                         Text(
-                            text = "PREMIUM",
+                            text = "Premium",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2B1E00),
                             modifier = Modifier
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .background(Color(0xFFF5C542), RoundedCornerShape(100.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    } else if (feature.isEnabled) {
+                        Text(
+                            text = "Installed",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier
+                                .background(primary, RoundedCornerShape(100.dp))
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
                 }
@@ -541,18 +622,31 @@ fun FeatureStoreItem(
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
-            if (feature.isEnabled) {
-                 Icon(
-                     imageVector = Icons.Filled.Check,
-                     contentDescription = "Installed",
-                     tint = MaterialTheme.colorScheme.primary
-                 )
+            // Design: pill action button — Unlock / Install / Remove.
+            if (locked) {
+                Button(
+                    onClick = onUpgradeClick,
+                    shape = RoundedCornerShape(100.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = primary)
+                ) {
+                    Text("Unlock", style = MaterialTheme.typography.labelLarge)
+                }
+            } else if (feature.isEnabled) {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { feature.onToggle(false) },
+                    shape = RoundedCornerShape(100.dp)
+                ) {
+                    Text("Remove", style = MaterialTheme.typography.labelLarge)
+                }
             } else {
-                 Icon(
-                     imageVector = Icons.Filled.Add,
-                     contentDescription = "Install",
-                     tint = MaterialTheme.colorScheme.onSurfaceVariant
-                 )
+                Button(
+                    onClick = { feature.onToggle(true) },
+                    enabled = feature.isAvailable,
+                    shape = RoundedCornerShape(100.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = primary)
+                ) {
+                    Text("Install", style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }

@@ -881,6 +881,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                             address = decodedAddress,
                                             messages = messages,
                                             contact = contact,
+                                            isPremium = hasPremium,
                                             onBack = { navController.popBackStack() },
                                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
                                             globalTheme = state.settings.themePreferences,
@@ -1020,6 +1021,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                 composable("extensions_store") {
                                     ExtensionsStoreScreen(
                                         settings = state.settings,
+                                        proActive = isPro,
                                         onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) },
                                         onToggleFirebaseMessaging = viewModel::setFirebaseMessagingEnabled,
                                         onToggleEmailFallback = viewModel::setEmailFallbackEnabled,
@@ -1159,14 +1161,16 @@ class BeaconInboxActivity : ComponentActivity() {
                                             theme = theme,
                                             onSelectTheme = { newTheme -> viewModel.updateContactTheme(contactId, newTheme) },
                                             onBack = { navController.popBackStack() },
-                                            isGlobal = false
+                                            isGlobal = false,
+                                            isPremium = hasPremium
                                         )
                                     } else {
                                         VisualSettingsScreen(
                                             theme = state.settings.themePreferences,
                                             onSelectTheme = { newTheme -> viewModel.setThemePreferences(newTheme) },
                                             onBack = { navController.popBackStack() },
-                                            isGlobal = true
+                                            isGlobal = true,
+                                            isPremium = hasPremium
                                         )
                                     }
                                 }
