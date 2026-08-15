@@ -100,7 +100,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.pulselink.shared"
+    namespace = "com.sotext.shared"
     compileSdk = 35
     defaultConfig {
         minSdk = 26

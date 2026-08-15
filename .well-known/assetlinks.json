@@ -2,7 +2,7 @@
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
-    "package_name": "com.pulselink",
+    "package_name": "sotext.app",
     "sha256_cert_fingerprints":
     [
       "TODO_REPLACE_WITH_RELEASE_KEY_SHA256_FINGERPRINT",
@@ -25,7 +25,7 @@
   Copy the SHA-256 value and paste it above.
   
   This file must be hosted at:
-  https://pulselink.app/.well-known/assetlinks.json
+  https://sotext.app/.well-known/assetlinks.json
   
   The domain must have a valid SSL certificate.
 -->

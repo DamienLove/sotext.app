@@ -1,0 +1,88 @@
+package com.sotext
+
+import android.app.Application
+import android.util.Log
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequest
+import androidx.work.WorkManager
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.initialization.InitializationStatus
+import com.google.firebase.FirebaseApp
+import com.sotext.auth.FirebaseAuthManager
+import com.sotext.data.ads.AdConfig
+import com.sotext.data.ads.AppOpenAdController
+import com.sotext.assistant.AssistantShortcuts
+import com.sotext.data.remoteconfig.RemoteConfigService
+import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
+
+@HiltAndroidApp
+class PulseLinkApp : Application(), Configuration.Provider {
+
+    @Inject lateinit var workerFactory: HiltWorkerFactory
+    @Inject lateinit var appOpenAdController: AppOpenAdController
+    @Inject lateinit var firebaseAuthManager: FirebaseAuthManager
+    @Inject lateinit var remoteConfigService: RemoteConfigService
+    @Inject lateinit var smsRelayService: com.sotext.data.sms.SmsRelayService
+    @Inject lateinit var smsSyncManager: com.sotext.data.sms.SmsSyncManager
+
+    override val workManagerConfiguration: Configuration by lazy {
+        Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        FirebaseApp.initializeApp(this)
+        // Touch auth early so listeners register before any UI state checks
+        firebaseAuthManager.currentUser()
+        smsRelayService.start()
+        smsSyncManager.start()
+        CoroutineScope(Dispatchers.IO).launch {
+            remoteConfigService.fetchAndActivate()
+        }
+        AssistantShortcuts.publish(this)
+        if (AdConfig.isAdsEnabled) {
+            Thread {
+                MobileAds.initialize(this) { initializationStatus ->
+                    logAdapterStatus(initializationStatus)
+                }
+            }.start()
+            appOpenAdController.updateAvailability(false)
+        }
+
+        // SMS sync is now triggered on-demand when messages are sent/received
+        // No need for periodic sync
+
+        val otpCleanupRequest = PeriodicWorkRequest.Builder(
+            com.sotext.data.sms.OtpCleanupWorker::class.java,
+            24,
+            TimeUnit.HOURS
+        ).build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "OtpCleanup",
+            ExistingPeriodicWorkPolicy.KEEP,
+            otpCleanupRequest
+        )
+    }
+
+    private fun logAdapterStatus(initializationStatus: InitializationStatus) {
+        val statusMap = initializationStatus.adapterStatusMap
+        for ((adapterClass, status) in statusMap) {
+            Log.d(
+                "AdMob",
+                "Adapter: $adapterClass, Status: ${status.description}, Latency: ${status.latency}"
+            )
+        }
+    }
+}

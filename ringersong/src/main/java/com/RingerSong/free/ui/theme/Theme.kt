@@ -6,7 +6,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.RingerSong.free.data.ThemeConfig
-import com.pulselink.shared.ui.theme.hexToColor
+import com.sotext.shared.ui.theme.hexToColor
 
 // Legacy Light - Not recommended but kept
 private val LightColorScheme = lightColorScheme(

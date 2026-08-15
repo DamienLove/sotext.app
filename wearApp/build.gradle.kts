@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.pulselink.wear"
+    namespace = "com.sotext.wear"
     compileSdk = 35
 
     defaultConfig {

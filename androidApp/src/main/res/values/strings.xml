@@ -555,7 +555,7 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="extensions_store_quick_setup_essentials_desc">Just the basics: Relay and Email Backup.</string>
     <string name="extensions_store_quick_setup_power">Power User</string>
     <string name="extensions_store_quick_setup_power_desc">Enable everything available to you.</string>
-    <string name="extension_pulselink_title">PulseLink Safety</string>
+    <string name="extension_pulselink_title">SoText Safety</string>
     <string name="extension_pulselink_desc">The original safety suite: Emergency Alerts, Check-ins, and trusted circle coordination.</string>
 
 </resources>

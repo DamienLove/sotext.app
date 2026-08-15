@@ -1,0 +1,22 @@
+package com.sotext.domain.repository
+
+import com.sotext.domain.model.Contact
+import kotlinx.coroutines.flow.Flow
+
+interface ContactRepository {
+    fun observeContacts(): Flow<List<Contact>>
+    suspend fun upsert(contact: Contact)
+    suspend fun delete(contactId: Long)
+    suspend fun getContact(contactId: Long): Contact?
+    suspend fun getEmergencyContacts(): List<Contact>
+    suspend fun getCheckInContacts(): List<Contact>
+    suspend fun getByLinkCode(code: String): Contact?
+    suspend fun getByPhone(phone: String): Contact?
+    suspend fun getByEmail(email: String?): Contact?
+    suspend fun getByRemoteDeviceId(deviceId: String): Contact?
+    suspend fun getByRemoteUid(remoteUid: String): Contact?
+    suspend fun getLinkedContacts(): List<Contact>
+    suspend fun updateOrder(contactIds: List<Long>)
+    suspend fun getAll(): List<Contact>
+    suspend fun clear()
+}

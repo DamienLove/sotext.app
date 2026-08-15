@@ -1,0 +1,77 @@
+package com.sotext.data.sms
+
+import com.sotext.domain.model.EscalationTier
+
+sealed class PulseLinkMessage {
+    abstract val senderId: String
+    abstract val code: String
+
+    data class LinkRequest(
+        override val senderId: String,
+        override val code: String,
+        val senderName: String
+    ) : PulseLinkMessage()
+
+    data class LinkAccept(
+        override val senderId: String,
+        override val code: String
+    ) : PulseLinkMessage()
+
+    data class Ping(
+        override val senderId: String,
+        override val code: String
+    ) : PulseLinkMessage()
+
+    data class RemoteAlert(
+        override val senderId: String,
+        override val code: String,
+        val tier: EscalationTier
+    ) : PulseLinkMessage()
+
+    enum class AlertPrepareReason {
+        ALERT,
+        MESSAGE,
+        CALL
+    }
+
+    data class AlertPrepare(
+        override val senderId: String,
+        override val code: String,
+        val tier: EscalationTier,
+        val reason: AlertPrepareReason = AlertPrepareReason.ALERT
+    ) : PulseLinkMessage()
+
+    data class AlertReady(
+        override val senderId: String,
+        override val code: String,
+        val ready: Boolean
+    ) : PulseLinkMessage()
+
+    data class SoundOverride(
+        override val senderId: String,
+        override val code: String,
+        val tier: EscalationTier,
+        val soundKey: String?
+    ) : PulseLinkMessage()
+
+    data class ManualMessage(
+        override val senderId: String,
+        override val code: String,
+        val body: String,
+        val urgency: com.sotext.domain.model.MessageUrgency = com.sotext.domain.model.MessageUrgency.STANDARD,
+        val volumeHint: com.sotext.domain.model.VolumeHint? = null
+    ) : PulseLinkMessage()
+
+    data class ConfigUpdate(
+        override val senderId: String,
+        override val code: String,
+        val key: String,
+        val value: String
+    ) : PulseLinkMessage()
+
+    data class CallEnded(
+        override val senderId: String,
+        override val code: String,
+        val callDuration: Long
+    ) : PulseLinkMessage()
+}

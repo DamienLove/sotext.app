@@ -1,3 +1,3 @@
 package com.RingerSong.free.data
 
-typealias ThemeConfig = com.pulselink.shared.ui.theme.SharedThemePreferences
+typealias ThemeConfig = com.sotext.shared.ui.theme.SharedThemePreferences
