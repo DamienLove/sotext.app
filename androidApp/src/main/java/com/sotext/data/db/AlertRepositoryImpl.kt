@@ -1,0 +1,24 @@
+package com.sotext.data.db
+
+import com.sotext.domain.model.AlertEvent
+import com.sotext.domain.repository.AlertRepository
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class AlertRepositoryImpl @Inject constructor(
+    private val alertEventDao: AlertEventDao
+) : AlertRepository {
+    override fun observeRecent(limit: Int): Flow<List<AlertEvent>> = alertEventDao.observeRecent(limit)
+
+    override suspend fun record(event: AlertEvent) {
+        alertEventDao.insert(event)
+    }
+
+    override fun observeUnreadCount(): Flow<Int> = alertEventDao.observeUnreadCount()
+
+    override suspend fun markAsRead(ids: List<Long>) {
+        alertEventDao.markAsRead(ids)
+    }
+}

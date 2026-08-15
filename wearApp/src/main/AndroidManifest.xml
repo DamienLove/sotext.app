@@ -2,12 +2,12 @@
     <uses-feature android:name="android.hardware.type.watch" />
     <application
         android:allowBackup="false"
-        android:label="PulseLink Wear"
+        android:label="SoText Wear"
         android:icon="@drawable/ic_wear_logo"
         android:theme="@android:style/Theme.DeviceDefault">
 
         <service
-            android:name="com.pulselink.wear.PulseLinkWatchFaceService"
+            android:name="com.sotext.wear.PulseLinkWatchFaceService"
             android:exported="true"
             android:permission="android.permission.BIND_WALLPAPER">
             <intent-filter>

@@ -14,7 +14,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.free.pulselink"
-            android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
+            android:targetClass="com.sotext.ui.AssistantShortcutActivity"
             android:data="pulselink://assistant/emergency" />
 
         <!-- Capability binding for Google Assistant integration -->
@@ -37,7 +37,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.free.pulselink"
-            android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
+            android:targetClass="com.sotext.ui.AssistantShortcutActivity"
             android:data="pulselink://assistant/checkin" />
 
         <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
@@ -59,7 +59,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.free.pulselink"
-            android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
+            android:targetClass="com.sotext.ui.AssistantShortcutActivity"
             android:data="pulselink://assistant/cancel" />
 
         <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">

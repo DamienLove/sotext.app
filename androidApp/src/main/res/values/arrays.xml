@@ -2,13 +2,13 @@
 <resources>
     <!-- Query patterns for custom App Actions -->
     <string-array name="send_urgent_query_patterns">
-        <item>send an urgent message to $contact with pulselink saying $text</item>
-        <item>send an emergency message to $contact with pulselink saying $text</item>
-        <item>send a pulselink alert to $contact that says $text</item>
+        <item>send an urgent message to $contact with sotext saying $text</item>
+        <item>send an emergency message to $contact with sotext saying $text</item>
+        <item>send a sotext alert to $contact that says $text</item>
     </string-array>
     <string-array name="send_non_urgent_query_patterns">
-        <item>send a non-urgent message to $contact with pulselink at $volume saying $text</item>
-        <item>send a pulselink message to $contact at $volume saying $text</item>
+        <item>send a non-urgent message to $contact with sotext at $volume saying $text</item>
+        <item>send a sotext message to $contact at $volume saying $text</item>
     </string-array>
 
     <!-- Dummy data to help Google Assistant understand the type of entities expected -->

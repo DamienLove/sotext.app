@@ -1,0 +1,146 @@
+package com.sotext.data.sms
+
+import android.net.Uri
+import com.sotext.domain.model.EscalationTier
+
+object SmsCodec {
+    private const val PREFIX = "PULSELINK"
+            const val CONFIG_PHONE_UPDATE = "PHONE"
+                    const val CONFIG_EMAIL_UPDATE = "EMAIL"
+
+    enum class Type(val wire: String) {
+        LINK_REQUEST("LINK_REQ"),
+        LINK_ACCEPT("LINK_ACCEPT"),
+        PING("PING"),
+        ALERT("ALERT"),
+        ALERT_PREPARE("ALERT_PREP"),
+        ALERT_READY("ALERT_READY"),
+        MESSAGE("MSG"),
+        SOUND_OVERRIDE("SOUND"),
+        CONFIG("CONFIG"),
+        CALL_ENDED("CALL_END")
+    }
+
+    fun encodeLinkRequest(senderId: String, code: String, senderName: String): String =
+        build(Type.LINK_REQUEST, senderId, code, Uri.encode(senderName))
+
+    fun encodeLinkAccept(senderId: String, code: String): String =
+        build(Type.LINK_ACCEPT, senderId, code)
+
+    fun encodePing(senderId: String, code: String): String =
+        build(Type.PING, senderId, code)
+
+    fun encodeRemoteAlert(senderId: String, code: String, tier: EscalationTier): String =
+        build(Type.ALERT, senderId, code, tier.name)
+
+    fun encodeAlertPrepare(
+        senderId: String,
+        code: String,
+        tier: EscalationTier,
+        reason: PulseLinkMessage.AlertPrepareReason = PulseLinkMessage.AlertPrepareReason.ALERT
+    ): String =
+        build(Type.ALERT_PREPARE, senderId, code, tier.name, reason.name)
+
+    fun encodeAlertReady(senderId: String, code: String, ready: Boolean): String =
+        build(Type.ALERT_READY, senderId, code, if (ready) "1" else "0")
+
+    fun encodeManualMessage(
+        senderId: String,
+        code: String,
+        body: String,
+        urgency: com.sotext.domain.model.MessageUrgency,
+        volumeHint: com.sotext.domain.model.VolumeHint?
+    ): String = build(
+        Type.MESSAGE,
+        senderId,
+        code,
+        Uri.encode(body),
+        urgency.name,
+        volumeHint?.name.orEmpty()
+    )
+
+    fun encodeSoundOverride(
+        senderId: String,
+        code: String,
+        tier: EscalationTier,
+        soundKey: String?
+    ): String = build(Type.SOUND_OVERRIDE, senderId, code, tier.name, soundKey.orEmpty())
+
+    fun encodeConfig(senderId: String, code: String, key: String, value: String): String =
+        build(Type.CONFIG, senderId, code, key, value)
+
+    fun encodeCallEnded(senderId: String, code: String, callDuration: Long): String =
+        build(Type.CALL_ENDED, senderId, code, callDuration.toString())
+
+    private fun build(type: Type, vararg parts: String): String =
+        listOf(PREFIX, type.wire, *parts).joinToString("|")
+
+    fun isPulseLinkPayload(body: String): Boolean = body.startsWith(PREFIX)
+
+    fun parse(body: String): PulseLinkMessage? {
+        if (!body.startsWith(PREFIX)) return null
+        val tokens = body.split('|')
+        if (tokens.size < 3) return null
+        val typeToken = tokens[1]
+        val senderId = tokens.getOrNull(2) ?: return null
+        val code = tokens.getOrNull(3) ?: return null
+        return when (typeToken) {
+            Type.LINK_REQUEST.wire -> {
+                val name = tokens.getOrNull(4)?.let { Uri.decode(it) } ?: ""
+                PulseLinkMessage.LinkRequest(senderId, code, name)
+            }
+            Type.LINK_ACCEPT.wire -> PulseLinkMessage.LinkAccept(senderId, code)
+            Type.PING.wire -> PulseLinkMessage.Ping(senderId, code)
+            Type.ALERT.wire -> {
+                val tierToken = tokens.getOrNull(4) ?: return null
+                val tier = runCatching { EscalationTier.valueOf(tierToken) }.getOrNull() ?: return null
+                PulseLinkMessage.RemoteAlert(senderId, code, tier)
+            }
+            Type.ALERT_PREPARE.wire -> {
+                val tierToken = tokens.getOrNull(4) ?: return null
+                val tier = runCatching { EscalationTier.valueOf(tierToken) }.getOrNull() ?: return null
+                val reasonToken = tokens.getOrNull(5)
+                val reason = runCatching {
+                    PulseLinkMessage.AlertPrepareReason.valueOf(reasonToken.orEmpty())
+                }.getOrDefault(PulseLinkMessage.AlertPrepareReason.ALERT)
+                PulseLinkMessage.AlertPrepare(senderId, code, tier, reason)
+            }
+            Type.ALERT_READY.wire -> {
+                val readyToken = tokens.getOrNull(4) ?: "0"
+                val ready = readyToken == "1"
+                PulseLinkMessage.AlertReady(senderId, code, ready)
+            }
+            Type.MESSAGE.wire -> {
+                val body = tokens.getOrNull(4)?.let { Uri.decode(it) } ?: ""
+                val urgencyToken = tokens.getOrNull(5)
+                val urgency = runCatching {
+                    com.sotext.domain.model.MessageUrgency.valueOf(urgencyToken.orEmpty())
+                }.getOrDefault(com.sotext.domain.model.MessageUrgency.STANDARD)
+                val volumeToken = tokens.getOrNull(6)
+                val volume = volumeToken
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let {
+                        runCatching { com.sotext.domain.model.VolumeHint.valueOf(it) }.getOrNull()
+                    }
+                PulseLinkMessage.ManualMessage(senderId, code, body, urgency, volume)
+            }
+            Type.SOUND_OVERRIDE.wire -> {
+                val tierToken = tokens.getOrNull(4) ?: return null
+                val tier = runCatching { EscalationTier.valueOf(tierToken) }.getOrNull() ?: return null
+                val soundKey = tokens.getOrNull(5)?.takeIf { it.isNotEmpty() }
+                PulseLinkMessage.SoundOverride(senderId, code, tier, soundKey)
+            }
+            Type.CONFIG.wire -> {
+                val key = tokens.getOrNull(4) ?: return null
+                val value = tokens.getOrNull(5) ?: ""
+                PulseLinkMessage.ConfigUpdate(senderId, code, key, value)
+            }
+            Type.CALL_ENDED.wire -> {
+                val durationToken = tokens.getOrNull(4)
+                val duration = durationToken?.toLongOrNull() ?: 0L
+                PulseLinkMessage.CallEnded(senderId, code, duration)
+            }
+            else -> null
+        }
+    }
+}

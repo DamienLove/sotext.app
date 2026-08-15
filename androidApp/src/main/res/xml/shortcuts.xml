@@ -14,7 +14,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="sotext.app"
-            android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
+            android:targetClass="com.sotext.ui.AssistantShortcutActivity"
             android:data="sotext://assistant/emergency" />
 
 
@@ -38,7 +38,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="sotext.app"
-            android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
+            android:targetClass="com.sotext.ui.AssistantShortcutActivity"
             android:data="sotext://assistant/checkin" />
 
 
@@ -61,7 +61,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="sotext.app"
-            android:targetClass="com.pulselink.ui.AssistantShortcutActivity"
+            android:targetClass="com.sotext.ui.AssistantShortcutActivity"
             android:data="sotext://assistant/cancel" />
 
 
