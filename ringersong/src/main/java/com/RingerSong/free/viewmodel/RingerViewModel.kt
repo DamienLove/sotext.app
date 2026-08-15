@@ -16,7 +16,7 @@ import com.RingerSong.free.data.SpotifyArtist
 import com.RingerSong.free.data.resolveSongMetadata
 import com.RingerSong.free.data.ThemeConfig
 import com.RingerSong.free.service.SpotifyPlayerManager
-import com.pulselink.shared.ui.theme.SharedThemePreferences
+import com.sotext.shared.ui.theme.SharedThemePreferences
 import com.RingerSong.free.data.SongMetadata
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore

@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `androidApp/` (Compose + Hilt) holds the client: shared code in `src/main/java/com/pulselink`, UI assets in `src/main/res`, instrumentation scaffolding in `src/androidTest/java`, and tier overrides in `src/free` + `src/pro`.
+- `androidApp/` (Compose + Hilt) holds the client: shared code in `src/main/java/com/sotext`, UI assets in `src/main/res`, instrumentation scaffolding in `src/androidTest/java`, and tier overrides in `src/free` + `src/pro`.
 - `functions/` hosts the Node 20 Firebase/Genkit automations (`src/` TypeScript → `lib/` JS); keep emulator credentials and service keys outside git.
 - `docs/`, `branding/`, and `PulseLink-ui-mockup/` provide copy and visual references, while binary artifacts under `androidApp/build/outputs/` or `temp_aab_free/` must be regenerated via Gradle (never edited manually).
 

@@ -194,7 +194,7 @@ fun com.android.build.api.dsl.SigningConfig.applySpec(
 val releaseSigningSpec = project.buildSigningSpec(flavor = null)
 
 android {
-    namespace = "com.pulselink"
+    namespace = "com.sotext"
     compileSdk = 35
     buildToolsVersion = "35.0.0"
     ndkVersion = "28.0.12433562"
