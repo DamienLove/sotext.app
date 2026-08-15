@@ -913,18 +913,9 @@ class MainActivity : AppCompatActivity() {
                             proLikeUser -> "Pro"
                             else -> null
                         }
-                        SplashScreen(
-                            usePremiumBranding = premiumBranding || proLikeUser,
-                            brandName = brandName,
-                            badgeText = badgeText,
-                            isUnifiedMode = unifiedModeActive
-                        )
-                        LaunchedEffect(authState, state.onboardingComplete) {
-                            if (authState is AuthState.Loading) return@LaunchedEffect
-                            delay(1200)
-                            val destination = when (val auth = authState) {
+                        val navigateFromSplash: () -> Unit = {
+                            val destination = when (authState) {
                                 is AuthState.Authenticated -> {
-                                    val user = auth.user
                                     if (state.onboardingComplete) {
                                         if (unifiedModeActive) "unified_inbox" else "home"
                                     } else {
@@ -937,6 +928,20 @@ class MainActivity : AppCompatActivity() {
                                 popUpTo(0) { inclusive = true }
                                 launchSingleTop = true
                             }
+                        }
+                        SplashScreen(
+                            usePremiumBranding = premiumBranding || proLikeUser,
+                            brandName = brandName,
+                            badgeText = badgeText,
+                            isUnifiedMode = unifiedModeActive,
+                            onGetStartedClick = {
+                                if (authState !is AuthState.Loading) navigateFromSplash()
+                            }
+                        )
+                        LaunchedEffect(authState, state.onboardingComplete) {
+                            if (authState is AuthState.Loading) return@LaunchedEffect
+                            delay(1200)
+                            navigateFromSplash()
                         }
                     }
                     composable("unified_inbox") {
