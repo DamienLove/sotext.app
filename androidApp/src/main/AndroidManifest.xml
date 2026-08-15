@@ -32,7 +32,7 @@
     </queries>
 
     <application
-        android:name="com.pulselink.PulseLinkApp"
+        android:name="com.sotext.PulseLinkApp"
         android:allowBackup="false"
         android:icon="@drawable/ic_logo"
         android:label="@string/app_name"
