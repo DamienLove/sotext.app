@@ -814,10 +814,11 @@ class MainActivity : AppCompatActivity() {
                     val shouldNavigateHome = state.onboardingComplete &&
                         (route == "splash" || route.startsWith("onboarding_"))
                     if (shouldNavigateHome) {
-                        navController.navigate("home") {
-                            popUpTo(0) { inclusive = true }
-                            launchSingleTop = true
+                        val messagesIntent = Intent(context, BeaconInboxActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                            putExtra("from_pulselink", true)
                         }
+                        context.startActivity(messagesIntent)
                     }
                 }
 
@@ -872,7 +873,7 @@ class MainActivity : AppCompatActivity() {
                         initialInboxShortcut -> "sms/inbox?filter={filter}"
                         !state.onboardingComplete -> "splash"
                         unifiedModeActive -> "unified_inbox"
-                        else -> "home"
+                        else -> "sms/inbox?filter=all"
                     }
                 }
 
@@ -914,19 +915,23 @@ class MainActivity : AppCompatActivity() {
                             else -> null
                         }
                         val navigateFromSplash: () -> Unit = {
-                            val destination = when (authState) {
-                                is AuthState.Authenticated -> {
-                                    if (state.onboardingComplete) {
-                                        if (unifiedModeActive) "unified_inbox" else "home"
-                                    } else {
-                                        "onboarding_intro"
-                                    }
+                            if (authState is AuthState.Authenticated && state.onboardingComplete && !unifiedModeActive) {
+                                val messagesIntent = Intent(context, BeaconInboxActivity::class.java).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                    putExtra("from_pulselink", true)
                                 }
-                                else -> "login"
-                            }
-                            navController.navigate(destination) {
-                                popUpTo(0) { inclusive = true }
-                                launchSingleTop = true
+                                context.startActivity(messagesIntent)
+                            } else {
+                                val destination = when (authState) {
+                                    is AuthState.Authenticated -> {
+                                        if (state.onboardingComplete) "unified_inbox" else "onboarding_intro"
+                                    }
+                                    else -> "login"
+                                }
+                                navController.navigate(destination) {
+                                    popUpTo(0) { inclusive = true }
+                                    launchSingleTop = true
+                                }
                             }
                         }
                         SplashScreen(
@@ -1112,10 +1117,17 @@ class MainActivity : AppCompatActivity() {
                             val authenticated = authState as? AuthState.Authenticated
                             if (authenticated != null) {
                                 if (!authenticated.user.isAnonymous || !initialAnonymous) {
-                                    val destination = if (state.onboardingComplete) "home" else "onboarding_intro"
-                                    navController.navigate(destination) {
-                                        popUpTo(0) { inclusive = true }
-                                        launchSingleTop = true
+                                    if (state.onboardingComplete) {
+                                        val messagesIntent = Intent(context, BeaconInboxActivity::class.java).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                            putExtra("from_pulselink", true)
+                                        }
+                                        context.startActivity(messagesIntent)
+                                    } else {
+                                        navController.navigate("onboarding_intro") {
+                                            popUpTo(0) { inclusive = true }
+                                            launchSingleTop = true
+                                        }
                                     }
                                 }
                             }

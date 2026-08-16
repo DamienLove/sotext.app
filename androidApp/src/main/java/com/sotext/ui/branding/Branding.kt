@@ -28,9 +28,9 @@ fun pulseBrandName(isPremium: Boolean, isPro: Boolean): String = when {
 }
 
 fun beaconBrandName(isPremium: Boolean, isPro: Boolean): String = when {
-    isPremium -> "Beacon Premium"
-    isPro -> "Beacon Pro"
-    else -> "Beacon"
+    isPremium -> "SoText Premium"
+    isPro -> "SoText Pro"
+    else -> "SoText"
 }
 
 /**

@@ -40,6 +40,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
@@ -144,6 +145,7 @@ fun SmsInboxScreen(
     showBackInBeacon: Boolean = false,
     onOpenSettings: () -> Unit = {},
     onOpenPrivate: () -> Unit = {},
+    onOpenCustomize: () -> Unit = {},
     privateThreadIds: Set<Long> = emptySet(),
     showPrivateOnly: Boolean = false,
     hideOtpInAll: Boolean = false,
@@ -350,7 +352,7 @@ fun SmsInboxScreen(
                                             isUnifiedMode = true
                                         )
                                     } else {
-                                        R.drawable.ic_beacon_inbox
+                                        brandLogoRes(usePremiumBranding = isPremium || isPro)
                                     }
                                 ),
                                 contentDescription = null,
@@ -394,7 +396,7 @@ fun SmsInboxScreen(
                                             R.drawable.ic_beacon_inbox
                                         }
                                     ),
-                                    contentDescription = "Beacon",
+                                    contentDescription = "SoText",
                                     tint = if (isUnifiedMode) logoTint else Color.Unspecified,
                                     modifier = Modifier
                                         .size(beaconCollapsedIconSize)
@@ -409,6 +411,16 @@ fun SmsInboxScreen(
                                 theme = theme,
                                 imageVector = Icons.Filled.Lock,
                                 contentDescription = "Private inbox",
+                                tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
+                                modifier = Modifier.size(iconSize)
+                            )
+                        }
+                        IconButton(onClick = onOpenCustomize) {
+                            ThemeIcon(
+                                iconKey = ThemeIconKey.PALETTE,
+                                theme = theme,
+                                imageVector = Icons.Filled.Palette,
+                                contentDescription = "Customize",
                                 tint = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
                                 modifier = Modifier.size(iconSize)
                             )

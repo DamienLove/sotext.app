@@ -515,6 +515,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                             isPremium = hasPremium,
                                             isPro = isPro,
                                             onOpenSettings = { navController.navigate("beacon_settings") },
+                                            onOpenCustomize = { navController.navigate("visual_settings") },
                                             onOpenPrivate = {
                                                 if (currentRoute != BeaconNavRoute.Private) {
                                                     if (state.settings.privatePinHash.isNullOrBlank()) {
