@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -90,11 +89,7 @@ fun BeaconSettingsScreen(
     onToggleAiUrgencyBypass: (Boolean) -> Unit,
     onToggleAiUrgencyIncludeUnknown: (Boolean) -> Unit,
     blockRcsReadReceipts: Boolean,
-    onToggleBlockRcsReadReceipts: (Boolean) -> Unit,
-    hasMicrophonePermission: Boolean,
-    passiveListeningEnabled: Boolean,
-    onTogglePassiveListening: (Boolean) -> Unit,
-    onRequestMicrophonePermission: () -> Unit
+    onToggleBlockRcsReadReceipts: (Boolean) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -253,30 +248,6 @@ fun BeaconSettingsScreen(
                     onCheckedChange = onToggleBlockRcsReadReceipts,
                     leadingIcon = Icons.Filled.Lock
                 )
-            }
-
-            BeaconCollapsibleSection(title = "Safety") {
-                if (hasMicrophonePermission) {
-                    BeaconSettingsToggleRow(
-                        title = stringResource(R.string.passive_listening_title),
-                        subtitle = if (passiveListeningEnabled) {
-                            stringResource(R.string.passive_listening_subtitle_active)
-                        } else {
-                            "Off"
-                        },
-                        checked = passiveListeningEnabled,
-                        onCheckedChange = onTogglePassiveListening,
-                        leadingIcon = Icons.Filled.NotificationsActive
-                    )
-                } else {
-                    BeaconSettingsActionRow(
-                        title = stringResource(R.string.passive_listening_title),
-                        subtitle = stringResource(R.string.permission_microphone),
-                        actionLabel = stringResource(R.string.dnd_override_action_allow),
-                        onAction = onRequestMicrophonePermission,
-                        leadingIcon = Icons.Filled.NotificationsActive
-                    )
-                }
             }
 
             BeaconCollapsibleSection(title = "Remote access") {

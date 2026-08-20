@@ -861,6 +861,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#E2E8F0",
                 primaryColor = "#22D3EE",
                 secondaryColor = "#D8B4FE",
+                timestampColor = "#94A3B8",
                 dividerColor = "#1E293B",
                 inboxIconVariant = "neon_noir",
                 useGlassEffect = true,
@@ -904,6 +905,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#111827",
                 primaryColor = "#6750A4",
                 secondaryColor = "#625B71",
+                timestampColor = "#6B7280",
                 dividerColor = "#E5E7EB",
                 inboxIconVariant = "default_light"
             )
@@ -980,8 +982,9 @@ fun ThemesTab(
                 onBubbleOutgoing = "#FF5F6D",
                 bubbleIncoming = "#FFF7ED",
                 onBubbleIncoming = "#C2410C",
-                primaryColor = "#FF5F6D",
+                primaryColor = "#FFFFFF",
                 secondaryColor = "#F97316",
+                timestampColor = "#FFE4D6",
                 dividerColor = "#FED7AA",
                 inboxIconVariant = "sunset_fade",
                 bubbleCornerRadiusTopStart = 0,
@@ -1041,6 +1044,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#4C1D95",
                 primaryColor = "#7C3AED",
                 secondaryColor = "#A78BFA",
+                timestampColor = "#7C6BA8",
                 dividerColor = "#DDD6FE",
                 inboxIconVariant = "lavender_haze",
                 iconSizeFactor = 1.1f
@@ -1061,6 +1065,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#0F172A",
                 primaryColor = "#475569",
                 secondaryColor = "#94A3B8",
+                timestampColor = "#64748B",
                 dividerColor = "#CBD5E1",
                 inboxIconVariant = "slate_mono",
                 iconSizeFactor = 0.95f
@@ -1082,6 +1087,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#FFFFFF",
                 primaryColor = "#14B8A6",
                 secondaryColor = "#6366F1",
+                timestampColor = "#CCFBF1",
                 dividerColor = "#5EEAD4",
                 inboxIconVariant = "aurora",
                 iconSizeFactor = 1.15f
@@ -1140,6 +1146,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#E2E8F0",
                 primaryColor = "#22D3EE",
                 secondaryColor = "#F472B6",
+                timestampColor = "#94A3B8",
                 dividerColor = "#1F2937",
                 inboxIconVariant = "neon_noir"
             )

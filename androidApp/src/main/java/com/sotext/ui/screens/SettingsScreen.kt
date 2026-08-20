@@ -80,11 +80,8 @@ fun SettingsScreen(
     isDefaultSmsApp: Boolean,
     defaultSmsSupported: Boolean,
     beaconLauncherEnabled: Boolean,
-    hasMicrophonePermission: Boolean,
     onToggleIncludeLocation: (Boolean) -> Unit,
     onToggleCrashDetection: (Boolean) -> Unit,
-    onTogglePassiveListening: (Boolean) -> Unit,
-    onRequestMicrophonePermission: () -> Unit,
     onRequestDndAccess: () -> Unit,
     onRequestBatteryOpt: () -> Unit,
     onRequestUnusedApps: () -> Unit,
@@ -245,26 +242,6 @@ fun SettingsScreen(
                     checked = settings.includeLocation,
                     onCheckedChange = onToggleIncludeLocation
                 )
-                if (hasMicrophonePermission) {
-                    SettingsToggleRow(
-                        title = stringResource(R.string.passive_listening_title),
-                        subtitle = if (settings.passiveListeningEnabled) {
-                            stringResource(R.string.passive_listening_subtitle_active)
-                        } else {
-                            null
-                        },
-                        checked = settings.passiveListeningEnabled,
-                        onCheckedChange = onTogglePassiveListening
-                    )
-                } else {
-                    SettingsActionRow(
-                        title = stringResource(R.string.passive_listening_title),
-                        subtitle = stringResource(R.string.permission_microphone),
-                        actionLabel = stringResource(R.string.dnd_override_action_allow),
-                        onAction = onRequestMicrophonePermission,
-                        leadingIcon = Icons.Filled.NotificationsActive
-                    )
-                }
                 if (settings.crashDetectionEnabled) {
                     SettingsToggleRow(
                         title = "Crash Detection",
