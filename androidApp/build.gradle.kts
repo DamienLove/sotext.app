@@ -2,8 +2,6 @@
 import java.util.Locale
 import java.util.Properties
 import org.gradle.api.Project
-import org.gradle.api.tasks.Copy
-import com.google.gms.googleservices.GoogleServicesTask
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -206,6 +204,7 @@ android {
     }
 
     defaultConfig {
+        manifestPlaceholders += mapOf("admobAppId" to "ca-app-pub-5327057757821609~9533221188")
         applicationId = "sotext.app"
         minSdk = 26
         targetSdk = 35
@@ -221,11 +220,7 @@ android {
         buildConfigField("boolean", "PREMIUM_FEATURES", "false") // Default OFF, enabled via IAP
         buildConfigField("boolean", "SUBSCRIPTION_ENABLED", "true")
         buildConfigField("String", "ALERT_RELAY_BASE_URL", "\"https://us-central1-sotextapp.cloudfunctions.net\"")
-        
-        manifestPlaceholders += mapOf(
-            "admobAppId" to "ca-app-pub-5327057757821609~9533221188" // Use actual ID from free flavor
-        )
-        
+
         buildConfigField("String", "AD_APP_ID", "\"ca-app-pub-5327057757821609~9533221188\"")
         buildConfigField("String", "AD_UNIT_BANNER", "\"ca-app-pub-5327057757821609/3955684775\"")
         buildConfigField("String", "AD_UNIT_INTERSTITIAL", "\"ca-app-pub-5327057757821609/3170992810\"")
