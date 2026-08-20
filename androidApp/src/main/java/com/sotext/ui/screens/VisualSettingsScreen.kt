@@ -884,6 +884,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#00FF41",
                 primaryColor = "#00FF41",
                 secondaryColor = "#008F11",
+                timestampColor = "#008F11",
                 dividerColor = "#003B00",
                 inboxIconVariant = "midnight_oled",
                 useHolographicGlow = true,
@@ -945,6 +946,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#E2E8F0",
                 primaryColor = "#38BDF8",
                 secondaryColor = "#1D4ED8",
+                timestampColor = "#94A3B8",
                 dividerColor = "#334155",
                 inboxIconVariant = "ocean_deep"
             )
@@ -964,6 +966,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#7F1D1D",
                 primaryColor = "#E11D48",
                 secondaryColor = "#F43F5E",
+                timestampColor = "#B4526B",
                 dividerColor = "#FBCFE8",
                 inboxIconVariant = "rose_petal"
             )
@@ -1006,6 +1009,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#14532D",
                 primaryColor = "#65A30D",
                 secondaryColor = "#84CC16",
+                timestampColor = "#5C7A2E",
                 dividerColor = "#D9F99D",
                 inboxIconVariant = "citrus_pop"
             )
@@ -1025,6 +1029,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#064E3B",
                 primaryColor = "#10B981",
                 secondaryColor = "#059669",
+                timestampColor = "#3F7A63",
                 dividerColor = "#A7F3D0",
                 inboxIconVariant = "forest_trail"
             )
@@ -1108,6 +1113,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#7C2D12",
                 primaryColor = "#EA580C",
                 secondaryColor = "#FDBA74",
+                timestampColor = "#A9603C",
                 dividerColor = "#FED7AA",
                 inboxIconVariant = "desert_clay"
             )
@@ -1127,6 +1133,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#2E3440",
                 primaryColor = "#5E81AC",
                 secondaryColor = "#88C0D0",
+                timestampColor = "#5C6779",
                 dividerColor = "#D8DEE9",
                 inboxIconVariant = "nord_frost"
             )
@@ -1166,6 +1173,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#3F2D1C",
                 primaryColor = "#B45309",
                 secondaryColor = "#D97706",
+                timestampColor = "#7A6248",
                 dividerColor = "#FDE68A",
                 inboxIconVariant = "paperback"
             )
@@ -1185,6 +1193,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#064E3B",
                 primaryColor = "#10B981",
                 secondaryColor = "#34D399",
+                timestampColor = "#3F7A63",
                 dividerColor = "#A7F3D0",
                 inboxIconVariant = "mint_breeze"
             )
@@ -1205,6 +1214,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#E2E8F0",
                 primaryColor = "#8B5CF6",
                 secondaryColor = "#6366F1",
+                timestampColor = "#A5B4FC",
                 dividerColor = "#312E81",
                 inboxIconVariant = "amethyst_night"
             )
@@ -1224,6 +1234,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#e879f9",
                 primaryColor = "#d946ef",
                 secondaryColor = "#06b6d4",
+                timestampColor = "#C084FC",
                 dividerColor = "#4c1d95",
                 inboxIconVariant = "midnight_oled"
             )
@@ -1243,6 +1254,7 @@ fun ThemesTab(
                 onBubbleIncoming = "#38bdf8",
                 primaryColor = "#0ea5e9",
                 secondaryColor = "#38bdf8",
+                timestampColor = "#7DD3FC",
                 dividerColor = "#1e3a8a",
                 inboxIconVariant = "ocean_deep"
             )
