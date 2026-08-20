@@ -1,7 +1,7 @@
-# PulseLink Functional Spec
+# SoText Functional Spec
 
 ## Overview
-PulseLink passively listens for user-defined trigger phrases ("PulseLink phrases") and escalates alerts to trusted contacts across SMS, high-priority notifications, and optional automated calls. The system must never block outgoing or incoming messaging; it augments communication pathways instead of restricting them.
+SoText passively listens for user-defined trigger phrases ("SoText phrases") and escalates alerts to trusted contacts across SMS, high-priority notifications, and optional automated calls. The system must never block outgoing or incoming messaging; it augments communication pathways instead of restricting them.
 
 ## Core Capabilities
 - Continuous phrase detection via foreground service + on-device speech recognition
@@ -14,17 +14,17 @@ PulseLink passively listens for user-defined trigger phrases ("PulseLink phrases
 - Silent SOS mode that suppresses local UI feedback while still signaling contacts
 
 ## Do Not Disturb Override
-PulseLink guarantees that critical alerts are audible even when the device is in Do Not Disturb (DND) mode.
+SoText guarantees that critical alerts are audible even when the device is in Do Not Disturb (DND) mode.
 
 1. **Audio gain staging** – `AudioOverrideManager` captures the existing STREAM_RING, STREAM_NOTIFICATION, and STREAM_ALARM values, forces them to their maxima, and normalizes the ringer mode before playback. A short propagation delay (≈75 ms) ensures the new levels apply before the siren starts.
 2. **Audio focus** – The app requests transient audio focus (`AUDIOFOCUS_GAIN_TRANSIENT` for emergencies, `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK` for check-ins, and `AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE` for incoming-call sirens) so other media is momentarily ducked or paused.
 3. **Notification channels** – Emergency channels are created with `IMPORTANCE_MAX`, `USAGE_ALARM`, and `setBypassDnd(true)`. On Android 15 (API 35) and newer, this channel-level bypass is the only supported way to break through global DND because `NotificationManager.setInterruptionFilter(INTERRUPTION_FILTER_ALL)` now applies only to the app's AutomaticZenRule.
-4. **Interruption filter fallback** – On Android 14 and below, PulseLink still attempts to flip the global interruption filter back to `ALL` when it has `ACCESS_NOTIFICATION_POLICY`. Failures are logged and surfaced to the user.
+4. **Interruption filter fallback** – On Android 14 and below, SoText still attempts to flip the global interruption filter back to `ALL` when it has `ACCESS_NOTIFICATION_POLICY`. Failures are logged and surfaced to the user.
 5. **Restoration** – After playback (default 2 minutes, configurable per use case), the manager restores the original volumes, ringer mode, audio focus, and interruption filter to avoid side effects.
 
 ### Limitations
-- If the user revokes notification-policy access, PulseLink can still raise STREAM_ALARM but cannot change the global DND filter. The UI surfaces this state and points users to Settings.
-- Users can manually downgrade channel importance or disable bypass at the system level. PulseLink validates channels on launch and logs when properties drift.
+- If the user revokes notification-policy access, SoText can still raise STREAM_ALARM but cannot change the global DND filter. The UI surfaces this state and points users to Settings.
+- Users can manually downgrade channel importance or disable bypass at the system level. SoText validates channels on launch and logs when properties drift.
 - OEM-specific DND behaviors (e.g., manufacturer skins that remap usage streams) are outside the app's control; troubleshooting guidance instructs users to re-enable bypass per channel.
 
 ## Platform Notes
@@ -37,13 +37,13 @@ PulseLink guarantees that critical alerts are audible even when the device is in
 - Provide transparent audit log users can clear
 
 ## Troubleshooting DND Override
-- **No audible alert while in DND** – Confirm PulseLink has Do Not Disturb access, then verify the Emergency Alerts notification channel is set to "Allow" and can bypass DND.
-- **Android 15+ device still silent** – Channel bypass is mandatory on API 35+. Re-enable bypass inside Settings → Apps → PulseLink → Notifications.
-- **Partial override** – If PulseLink reports a partial override, volumes were raised but global DND could not be disabled (policy missing or Android 15 restriction). Check notification-policy permissions and channel settings.
+- **No audible alert while in DND** – Confirm SoText has Do Not Disturb access, then verify the Emergency Alerts notification channel is set to "Allow" and can bypass DND.
+- **Android 15+ device still silent** – Channel bypass is mandatory on API 35+. Re-enable bypass inside Settings → Apps → SoText → Notifications.
+- **Partial override** – If SoText reports a partial override, volumes were raised but global DND could not be disabled (policy missing or Android 15 restriction). Check notification-policy permissions and channel settings.
 - **Remote call siren too quiet** – Ensure linked contacts are allowed to override audio (`allowRemoteOverride=true`) and that STREAM_ALARM wasn't manually muted immediately beforehand. The app restores user volume after the override window.
 
 ## Multi-Channel Message Delivery
-PulseLink employs a robust "Firebase-First, SMS-Fallback" strategy to ensure message delivery under various network conditions.
+SoText employs a robust "Firebase-First, SMS-Fallback" strategy to ensure message delivery under various network conditions.
 
 1. **Firebase Cloud Messaging (FCM) & Firestore**:
    - Primary channel for real-time delivery when both devices are online.

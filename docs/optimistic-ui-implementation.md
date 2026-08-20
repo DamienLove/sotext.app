@@ -1,12 +1,12 @@
 # Optimistic UI and Message Status Implementation Guide
 
 ## Overview
-This document provides a comprehensive implementation guide for adding optimistic UI updates and message status tracking to PulseLink.
+This document provides a comprehensive implementation guide for adding optimistic UI updates and message status tracking to SoText.
 
 ## Phase 1: Core Status Infrastructure ✅
 
 ### Completed:
-1. **MessageStatus enum** - Created at `androidApp/src/main/java/com/pulselink/domain/model/MessageStatus.kt`
+1. **MessageStatus enum** - Created at `androidApp/src/main/java/com/sotext/domain/model/MessageStatus.kt`
    - Enum values: SENDING, SENT, DELIVERED, READ
    - String conversion helpers for Firestore mapping
 
@@ -16,7 +16,7 @@ This document provides a comprehensive implementation guide for adding optimisti
 
 ### TODO: Update MessageRepositoryImpl
 
-File: `androidApp/src/main/java/com/pulselink/data/db/MessageRepositoryImpl.kt`
+File: `androidApp/src/main/java/com/sotext/data/db/MessageRepositoryImpl.kt`
 
 Add method to update message status:
 ```kotlin

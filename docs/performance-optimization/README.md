@@ -1,4 +1,4 @@
-# PulseLink Performance Optimization Suite
+# SoText Performance Optimization Suite
 
 ## Overview
 This document provides a comprehensive implementation guide for improving UI responsiveness to near-instant loading times across Android, iOS, and web platforms.
@@ -22,10 +22,10 @@ This document provides a comprehensive implementation guide for improving UI res
 See: `./phase1-blocking-operations.md`
 
 **Files to modify:**
-- `androidApp/src/main/java/com/pulselink/widget/PulseLinkWidgetProvider.kt`
-- `androidApp/src/main/java/com/pulselink/widget/PulseLinkWidgetService.kt`
-- `androidApp/src/main/java/com/pulselink/data/settings/SettingsRepositoryImpl.kt`
-- `androidApp/src/main/java/com/pulselink/ui/state/SmsInboxViewModel.kt`
+- `androidApp/src/main/java/com/sotext/widget/PulseLinkWidgetProvider.kt`
+- `androidApp/src/main/java/com/sotext/widget/PulseLinkWidgetService.kt`
+- `androidApp/src/main/java/com/sotext/data/settings/SettingsRepositoryImpl.kt`
+- `androidApp/src/main/java/com/sotext/ui/state/SmsInboxViewModel.kt`
 
 **Impact:** Fixes ANRs and UI freezes during widget updates and settings load
 

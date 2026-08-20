@@ -1,4 +1,4 @@
-# PulseLink & Beacon Tester Checklist (v55+)
+# SoText Tester Checklist (v55+)
 
 ## 1. Onboarding & Permissions
 - [ ] **Fresh Install**: Verify clean install flow.
@@ -8,7 +8,7 @@
     - [ ] Verify app detects when DND access is granted/revoked.
 - [ ] **Login/Registration**: Sign up with email/Google.
 
-## 2. Core Safety Features (PulseLink)
+## 2. Core Safety Features
 - [ ] **Phrase Detection**:
     - [ ] Test trigger phrase while app is in foreground.
     - [ ] Test trigger phrase while app is backgrounded.
@@ -26,7 +26,7 @@
     - [ ] Verify contact receives invitation (if applicable).
     - [ ] Verify contact receives alerts.
 
-## 3. Messaging & Delivery (PulseLink & Beacon)
+## 3. Messaging & Delivery
 - [ ] **Firebase Delivery**:
     - [ ] Send message between two online devices.
     - [ ] Verify instant delivery via Firestore/FCM.
@@ -39,8 +39,8 @@
     - [ ] Fail both Firebase and SMS.
     - [ ] Verify email is received.
 
-## 4. Beacon SMS App Features
-- [ ] **Default SMS App**: Set Beacon as default SMS app.
+## 4. SoText Messaging (SMS App) Features
+- [ ] **Default SMS App**: Set SoText as default SMS app.
 - [ ] **SMS Send/Receive**: Send and receive standard SMS.
 - [ ] **MMS**: Send an image (Note: may be stubbed, check matrix).
 - [ ] **Conversation List**:

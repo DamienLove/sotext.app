@@ -1,9 +1,9 @@
-# Beacon / PulseLink Messaging Upgrades (Premium → Pro → Beacon Free)
+# SoText Messaging Upgrades (Premium → Pro → Free)
 
 ## Goals (user-facing)
 - Premium first: secure rich messaging with E2E, deep theming/personalization, scheduling/auto-reply, spam/scam protection, backup/restore, cross-device sync (Android ↔ iOS), smooth UI flows.
 - Pro next: same core, lighter presets/models.
-- Beacon Free: curated customization, scheduling/auto-reply basics, spam-lite, backup/restore; Secure Chat optional without E2E by default.
+- SoText Free: curated customization, scheduling/auto-reply basics, spam-lite, backup/restore; Secure Chat optional without E2E by default.
 
 ## Pillars & Scope
 - Transport: OTT “Secure Chat” channel (Firestore/Functions/Storage) with rich media, read receipts, typing, reactions; RCS if carrier access lands; SMS/MMS as fallback.
@@ -28,9 +28,9 @@
   - Spam ML (premium-sized), heuristics, warning UI; allow/deny lists.
   - Backup/restore (Drive + local) covering settings/themes/Secure Chat history; SMS where allowed.
   - Cross-device sync: settings + Secure Chat across Android/iOS.
-- M2 Pro + Beacon Free
+- M2 Pro + SoText Free
   - Pro: same features with smaller model, fewer presets/templates by default.
-  - Beacon Free: curated themes/presets, spam-lite model, Secure Chat without default E2E (opt-in), scheduling/auto-reply basics, backup/restore limited scope.
+  - SoText Free: curated themes/presets, spam-lite model, Secure Chat without default E2E (opt-in), scheduling/auto-reply basics, backup/restore limited scope.
   - iOS parity for Secure Chat + theming needed for cross-OS messaging.
 
 ## Architecture Highlights

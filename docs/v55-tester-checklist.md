@@ -1,4 +1,4 @@
-PulseLink v55 Tester Checklist (Free/Pro only)
+SoText v55 Tester Checklist (Free/Pro only)
 Date: 2025-12-20
 
 Scope
@@ -6,8 +6,8 @@ Scope
 - Focus on the v55 release notes items.
 
 Builds
-- Free: `disposable_aabs/pulselink-free-v55.aab`
-- Pro: `disposable_aabs/pulselink-pro-v55.aab`
+- Free: `disposable_aabs/sotext-free-v55.aab`
+- Pro: `disposable_aabs/sotext-pro-v55.aab`
 
 Preflight
 - Install v55 on a clean device.
@@ -15,9 +15,9 @@ Preflight
 - Verify app version shows 55 in About/App info.
 
 Feature Verification
-1) Beacon launcher icon branding
-- Free: Beacon icon matches Free branding.
-- Pro: Beacon icon matches Pro branding.
+1) SoText launcher icon branding
+- Free: SoText icon matches Free branding.
+- Pro: SoText icon matches Pro branding.
 - Upgrade path: icon updates after v54 -> v55 without clearing data.
 - Android 13+ themed icons: icon remains legible and correct.
 

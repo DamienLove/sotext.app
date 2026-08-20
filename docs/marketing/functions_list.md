@@ -1,6 +1,6 @@
-# PulseLink Cloud Functions List
+# SoText Cloud Functions List
 
-This document lists the deployed Firebase Cloud Functions for the PulseLink backend.
+This document lists the deployed Firebase Cloud Functions for the SoText backend.
 
 ## AI & Natural Language
 *   **`naturalLanguageQuery`**
