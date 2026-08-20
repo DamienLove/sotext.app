@@ -52,6 +52,11 @@ class PhraseDetectionService : Service(), RecognitionListener {
     private var lastDispatchAtMillis = 0L
     private var stopped = false
 
+    // Starts true (prefer the on-device model when present). Permanently flips to false the
+    // first time the recognizer reports the offline language pack is missing/unsupported, so
+    // we fall back to network recognition instead of retrying the same failing request forever.
+    private var preferOffline = true
+
     override fun onCreate() {
         super.onCreate()
         if (!hasRecordAudioPermission() || !SpeechRecognizer.isRecognitionAvailable(this)) {
@@ -109,9 +114,13 @@ class PhraseDetectionService : Service(), RecognitionListener {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-            // Prefer an on-device model when the device has one downloaded; falls back
-            // transparently to network recognition otherwise.
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            // Prefer an on-device model when the device has one downloaded. Some recognizer
+            // implementations don't fall back to network on their own when the offline model
+            // is missing (see onError's LANGUAGE_UNAVAILABLE/NOT_SUPPORTED handling below), so
+            // we track that ourselves via preferOffline.
+            if (preferOffline) {
+                putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+            }
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
         }
         runCatching { recognizer.startListening(intent) }
@@ -163,6 +172,18 @@ class PhraseDetectionService : Service(), RecognitionListener {
             }
             SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
                 // Expected during silence; restart quickly without counting as a failure.
+                consecutiveErrors = 0
+                scheduleRestart(IMMEDIATE_RESTART_DELAY_MS)
+                return
+            }
+            SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE, SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED -> {
+                // The on-device model for this locale isn't downloaded (or doesn't exist).
+                // Retrying the same offline-only request would just fail identically forever,
+                // so permanently switch this session to network recognition and retry now.
+                if (preferOffline) {
+                    Log.w(TAG, "Offline language pack unavailable (error=$error); falling back to network recognition")
+                    preferOffline = false
+                }
                 consecutiveErrors = 0
                 scheduleRestart(IMMEDIATE_RESTART_DELAY_MS)
                 return
