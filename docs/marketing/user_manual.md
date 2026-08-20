@@ -1,10 +1,10 @@
-# PulseLink User Manual
+# SoText User Manual
 
 ## 1. Getting Started
-Welcome to PulseLink! Follow these steps to set up your safety net.
+Welcome to SoText! Follow these steps to set up your safety net.
 
 ### Installation
-1.  Download **PulseLink** from the Google Play Store.
+1.  Download **SoText** from the Google Play Store.
 2.  Open the app and follow the **Setup Wizard**.
 3.  **Grant Permissions**: It is critical to grant *all* requested permissions (Location, Microphone, Contacts, Notifications, DND Access) for the app to function as a safety device.
 
@@ -25,10 +25,10 @@ Welcome to PulseLink! Follow these steps to set up your safety net.
 ### Setting Your Trigger Phrase
 1.  Go to **Settings > Phrase Detection**.
 2.  Tap **Record New Phrase**.
-3.  Speak a phrase clearly (e.g., "PulseLink Help" or "Red Alert").
+3.  Speak a phrase clearly (e.g., "SoText Help" or "Red Alert").
 4.  Verify the phrase. *Tip: Choose something you won't say accidentally in normal conversation.*
 
-## 3. Using PulseLink
+## 3. Using SoText
 
 ### Sending an Emergency Alert
 *   **Voice**: Say your trigger phrase clearly.
@@ -44,15 +44,15 @@ Welcome to PulseLink! Follow these steps to set up your safety net.
 *   Activate via the **Silent SOS** widget or quick tile.
 *   The app sends alerts but *does not* play a siren on *your* device.
 
-## 4. Beacon SMS (Companion App)
-Beacon replaces your stock SMS app with powerful features.
+## 4. SoText Messaging
+SoText replaces your stock SMS app with powerful features.
 
-*   **Set as Default**: Open Beacon and confirm the prompt to set it as your default SMS app.
+*   **Set as Default**: Open Messages and confirm the prompt to set SoText as your default SMS app.
 *   **Private Threads**: Long-press a conversation -> Select "Make Private". These require a PIN to open.
 *   **Customization**: Tap the 3 dots in a thread -> Theme settings.
 
 ## 5. Premium Features
-Upgrade to PulseLink Premium for advanced AI and web tools.
+Upgrade to SoText Premium for advanced AI and web tools.
 
 *   **Web Portal**: Sync messages and manage alerts from your computer.
 *   **AI Assist**:

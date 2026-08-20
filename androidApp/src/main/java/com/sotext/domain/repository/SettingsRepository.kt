@@ -47,6 +47,7 @@ interface SettingsRepository {
     suspend fun setEmailFallbackEnabled(enabled: Boolean)
     suspend fun setMessagingChannelPriority(priority: List<MessageChannel>)
     suspend fun setCrashDetectionEnabled(enabled: Boolean)
+    suspend fun setPassiveListeningEnabled(enabled: Boolean)
     suspend fun setAiSummariesEnabled(enabled: Boolean)
     suspend fun setAiComposeEnabled(enabled: Boolean)
     suspend fun setAiUrgencyEnabled(enabled: Boolean)

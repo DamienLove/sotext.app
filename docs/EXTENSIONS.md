@@ -1,6 +1,6 @@
-# PulseLink Extensions Platform
+# SoText Extensions Platform
 
-PulseLink allows 3rd-party developers to extend the functionality of the messaging suite via web-based extensions. These extensions can run on both the Web Client and the Android App (via WebView).
+SoText allows 3rd-party developers to extend the functionality of the messaging suite via web-based extensions. These extensions can run on both the Web Client and the Android App (via WebView).
 
 ## Manifest Format
 
@@ -73,7 +73,7 @@ window.addEventListener("message", (event) => {
 2.  **Manifest**: Add `manifest.json`.
 3.  **Host**: Serve your folder via a local server (e.g., `http://localhost:3000`).
 4.  **Test**:
-    *   Open PulseLink Web.
+    *   Open SoText Web.
     *   Go to **Extensions**.
     *   Enable **3rd-Party Extensions**.
     *   Enter your manifest URL in **Developer Mode**.
@@ -82,4 +82,4 @@ window.addEventListener("message", (event) => {
 ## Hosting & Submission
 
 *   Extensions can be hosted anywhere (GitHub Pages, Firebase Hosting, etc.).
-*   To publish to the official PulseLink Extensions Store, submit your extension URL via the Developer Console (Coming Soon).
+*   To publish to the official SoText Extensions Store, submit your extension URL via the Developer Console (Coming Soon).

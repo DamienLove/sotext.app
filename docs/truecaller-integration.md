@@ -1,8 +1,8 @@
-# Truecaller Integration for PulseLink
+# Truecaller Integration for SoText
 
 ## Overview
 
-PulseLink now supports Truecaller phone number lookup via RapidAPI's Truecaller4 API. This provides:
+SoText now supports Truecaller phone number lookup via RapidAPI's Truecaller4 API. This provides:
 
 - **Caller ID**: Get name and details for unknown numbers
 - **Spam Detection**: Identify spam/scam calls with confidence scores
@@ -57,7 +57,7 @@ For production apps, store the key in Firebase Remote Config to enable rotation 
 
 ## Usage
 
-The Truecaller integration is automatically used by PulseLink's caller ID system:
+The Truecaller integration is automatically used by SoText's caller ID system:
 
 ```kotlin
 // The CallerIdService automatically tries all providers including Truecaller
@@ -189,7 +189,7 @@ For issues with the Truecaller API:
 - [RapidAPI Support](https://rapidapi.com/support)
 - [Truecaller4 API Documentation](https://rapidapi.com/DataCrawler/api/truecaller4)
 
-For PulseLink integration issues:
+For SoText integration issues:
 - Check logs for detailed error messages
 - Verify API key configuration
 - Test with the /api/v1/test endpoint first

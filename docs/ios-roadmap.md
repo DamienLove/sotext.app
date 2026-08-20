@@ -1,8 +1,8 @@
-# PulseLink iOS Roadmap
+# SoText iOS Roadmap
 
 Status: Planning/Scoping (Q4 2025)
 
-PulseLink for iOS will bring the same discreet trigger and escalation flow to Apple devices. The initial release focuses on a reliable alert pipeline, privacy, and accessibility, with a Kotlin Multiplatform shared core where practical.
+SoText for iOS will bring the same discreet trigger and escalation flow to Apple devices. The initial release focuses on a reliable alert pipeline, privacy, and accessibility, with a Kotlin Multiplatform shared core where practical.
 
 ## Goals
 

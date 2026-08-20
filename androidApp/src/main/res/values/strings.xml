@@ -54,6 +54,10 @@
     <string name="channel_calls">SoText Call Alerts</string>
     <string name="channel_manual_messages">SoText Messages</string>
     <string name="permission_microphone">SoText needs microphone access for hotword detection.</string>
+    <string name="passive_listening_title">Voice-Activated Alerts</string>
+    <string name="passive_listening_subtitle_active">Listening in the background for your safety phrase. A mic indicator shows whenever SoText is listening.</string>
+    <string name="passive_listening_notification_title">SoText is listening</string>
+    <string name="passive_listening_notification_text">Passive safety phrase detection is active.</string>
     <string name="permission_sms">SoText needs SMS permission to contact your circle.</string>
     <string name="permission_location">SoText needs location access to share your position.</string>
     <string name="permission_call_log_title">Allow access to call log</string>

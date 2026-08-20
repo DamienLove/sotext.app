@@ -188,6 +188,12 @@ private fun checkContactsPermission(context: Context): Boolean =
         Manifest.permission.READ_CONTACTS
     ) == PackageManager.PERMISSION_GRANTED
 
+private fun checkRecordAudioPermission(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.RECORD_AUDIO
+    ) == PackageManager.PERMISSION_GRANTED
+
 private fun normalizePhone(input: String): String = input.filter { it.isDigit() }
 
 private data class BeaconAssistState(
@@ -850,6 +856,29 @@ class MainActivity : AppCompatActivity() {
                             return@LaunchedEffect
                         }
 
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(intent)
+                        } else {
+                            context.startService(intent)
+                        }
+                    } else {
+                        context.stopService(intent)
+                    }
+                }
+
+                var hasRecordAudioPermission by remember { mutableStateOf(checkRecordAudioPermission(context)) }
+                val recordAudioPermissionLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission()
+                ) { granted ->
+                    hasRecordAudioPermission = granted
+                    if (!granted) {
+                        viewModel.setPassiveListeningEnabled(false)
+                    }
+                }
+
+                LaunchedEffect(state.settings.passiveListeningEnabled, hasRecordAudioPermission) {
+                    val intent = com.sotext.service.PhraseDetectionService.newIntent(context)
+                    if (state.settings.passiveListeningEnabled && hasRecordAudioPermission) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             context.startForegroundService(intent)
                         } else {
@@ -1718,8 +1747,19 @@ class MainActivity : AppCompatActivity() {
                             isDefaultSmsApp = isDefaultSms,
                             defaultSmsSupported = defaultSmsHelper.buildRoleRequestIntent() != null || isDefaultSms,
                             beaconLauncherEnabled = state.settings.beaconLauncherEnabled,
+                            hasMicrophonePermission = hasRecordAudioPermission,
                             onToggleIncludeLocation = viewModel::setIncludeLocation,
                             onToggleCrashDetection = viewModel::setCrashDetectionEnabled,
+                            onTogglePassiveListening = { enabled ->
+                                if (enabled && !hasRecordAudioPermission) {
+                                    recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                } else {
+                                    viewModel.setPassiveListeningEnabled(enabled)
+                                }
+                            },
+                            onRequestMicrophonePermission = {
+                                recordAudioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            },
                             onRequestDndAccess = { openDndSettings(context) },
                             onRequestBatteryOpt = { openBatteryOptimizationSettings(context) },
                             onRequestUnusedApps = { openUnusedAppRestrictionsSettings(context) },

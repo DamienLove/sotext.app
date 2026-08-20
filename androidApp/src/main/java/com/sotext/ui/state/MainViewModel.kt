@@ -1785,6 +1785,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setPassiveListeningEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setPassiveListeningEnabled(enabled)
+        }
+    }
+
     fun setAiSummariesEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAiSummariesEnabled(enabled)

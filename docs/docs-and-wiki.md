@@ -6,7 +6,7 @@ This repository auto‑publishes documentation from the `docs/` folder using Git
 
 - Workflow: `.github/workflows/deploy-pages.yml`
 - Source: `docs/`
-- Published URL: `https://damienlove.github.io/pulselink/`
+- Published URL: `https://damienlove.github.io/sotext.app/`
 
 ### How to publish/refresh
 
@@ -23,8 +23,8 @@ If you also want to use the separate GitHub Wiki (a distinct repo), you can mirr
 ### Clone the wiki repository
 
 ```bash
-git clone https://github.com/DamienLove/pulselink.wiki.git
-cd pulselink.wiki
+git clone https://github.com/DamienLove/sotext.app.wiki.git
+cd sotext.app.wiki
 ```
 
 ### Copy content from `docs/` into the wiki
