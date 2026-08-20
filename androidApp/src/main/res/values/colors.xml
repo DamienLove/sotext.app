@@ -7,7 +7,7 @@
     <color name="pulse_background">#000000</color>
     <color name="pulse_surface">#05080E</color>
     <color name="pulse_on_surface">#E0F7FA</color>
-    <color name="splash_background">#000000</color>
+    <color name="splash_background">#EFF6FC</color>
     <color name="widget_emergency_red">#D32F2F</color>
     <color name="widget_cancel_orange">#FF6F00</color>
     <color name="widget_checkin_blue">#1976D2</color>
