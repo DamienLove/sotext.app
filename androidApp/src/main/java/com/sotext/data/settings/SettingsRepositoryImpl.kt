@@ -84,6 +84,7 @@ private val UNIFIED_DISPLAY_NAME = stringPreferencesKey("unified_display_name")
 private val MESSAGING_CHANNEL_PRIORITY = stringPreferencesKey("messaging_channel_priority")
 private val CRASH_DETECTION_ENABLED = booleanPreferencesKey("crash_detection_enabled")
 private val PASSIVE_LISTENING_ENABLED = booleanPreferencesKey("passive_listening_enabled")
+private val INBOX_GESTURE_HINTS_DISMISSED = booleanPreferencesKey("inbox_gesture_hints_dismissed")
 private val AI_SUMMARIES_ENABLED = booleanPreferencesKey("ai_summaries_enabled")
 private val AI_COMPOSE_ENABLED = booleanPreferencesKey("ai_compose_enabled")
 private val AI_URGENCY_ENABLED = booleanPreferencesKey("ai_urgency_enabled")
@@ -210,6 +211,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 false
             },
             passiveListeningEnabled = prefs[PASSIVE_LISTENING_ENABLED] ?: PulseLinkSettings().passiveListeningEnabled,
+            inboxGestureHintsDismissed = prefs[INBOX_GESTURE_HINTS_DISMISSED] ?: PulseLinkSettings().inboxGestureHintsDismissed,
             aiSummariesEnabled = prefs[AI_SUMMARIES_ENABLED] ?: PulseLinkSettings().aiSummariesEnabled,
             aiComposeEnabled = prefs[AI_COMPOSE_ENABLED] ?: PulseLinkSettings().aiComposeEnabled,
             aiUrgencyEnabled = prefs[AI_URGENCY_ENABLED] ?: PulseLinkSettings().aiUrgencyEnabled,
@@ -317,6 +319,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 false
             }
             prefs[PASSIVE_LISTENING_ENABLED] = updated.passiveListeningEnabled
+            prefs[INBOX_GESTURE_HINTS_DISMISSED] = updated.inboxGestureHintsDismissed
             prefs[AI_SUMMARIES_ENABLED] = updated.aiSummariesEnabled
             prefs[AI_COMPOSE_ENABLED] = updated.aiComposeEnabled
             prefs[AI_URGENCY_ENABLED] = updated.aiUrgencyEnabled
@@ -350,6 +353,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setPassiveListeningEnabled(enabled: Boolean) {
         editOnIo { prefs ->
             prefs[PASSIVE_LISTENING_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setInboxGestureHintsDismissed(dismissed: Boolean) {
+        editOnIo { prefs ->
+            prefs[INBOX_GESTURE_HINTS_DISMISSED] = dismissed
         }
     }
 

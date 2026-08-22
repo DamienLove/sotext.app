@@ -1791,6 +1791,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun dismissInboxGestureHints() {
+        viewModelScope.launch {
+            settingsRepository.setInboxGestureHintsDismissed(true)
+        }
+    }
+
     fun setAiSummariesEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAiSummariesEnabled(enabled)
