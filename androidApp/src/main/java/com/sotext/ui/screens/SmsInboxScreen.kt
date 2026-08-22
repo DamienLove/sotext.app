@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,6 +39,10 @@ import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.SwipeLeft
+import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
@@ -48,6 +53,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.semantics.Role
@@ -94,6 +101,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
@@ -137,8 +147,11 @@ fun SmsInboxScreen(
     onArchiveThread: (SmsThreadItem) -> Unit = {},
     onUnarchiveThread: (SmsThreadItem) -> Unit = {},
     onDeleteThread: (SmsThreadItem) -> Unit = {},
+    onFavoriteThread: (SmsThreadItem) -> Unit = {},
     onPinThread: (SmsThreadItem) -> Unit = {},
     onUnpinThread: (SmsThreadItem) -> Unit = {},
+    showGestureHints: Boolean = false,
+    onDismissGestureHints: () -> Unit = {},
     modifier: Modifier = Modifier,
     dateFormatter: (Long) -> String,
     isBeaconMode: Boolean = false,
@@ -334,6 +347,7 @@ fun SmsInboxScreen(
     val beaconExpandedAlpha = (1f - collapsedFraction).coerceIn(0f, 1f)
     val beaconCollapsedAlpha = collapsedFraction.coerceIn(0f, 1f)
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = if (theme.appBackgroundGradientStart != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor),
@@ -744,6 +758,7 @@ fun SmsInboxScreen(
                                 onArchive = onArchiveThread,
                                 onUnarchive = onUnarchiveThread,
                                 onDelete = onDeleteThread,
+                                onFavorite = onFavoriteThread,
                                 onPin = onPinThread,
                                 onUnpin = onUnpinThread,
                                 dateFormatter = dateFormatter,
@@ -802,6 +817,145 @@ fun SmsInboxScreen(
             }
         }
     }
+
+        if (showGestureHints) {
+            InboxGestureHints(theme = theme, onDismiss = onDismissGestureHints)
+        }
+    }
+}
+
+/**
+ * First-open overlay explaining the inbox's swipe/long-press gestures: swipe right to
+ * delete, swipe left to favorite, long-press to lock into Private Safe.
+ */
+@Composable
+private fun InboxGestureHints(theme: ThemePreferences, onDismiss: () -> Unit) {
+    val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
+    val onBackgroundColor = ensureReadableOnColor(
+        background = backgroundColor,
+        desired = parseColorOr(MaterialTheme.colorScheme.onBackground, theme.onBackground),
+        fallback = Color.White
+    )
+    val primary = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = {}
+            ),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Surface(
+            color = backgroundColor,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "GESTURES",
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
+                        color = onBackgroundColor.copy(alpha = 0.55f)
+                    )
+                    Text(
+                        text = "Three moves worth knowing",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = onBackgroundColor
+                    )
+                }
+
+                GestureHintRow(
+                    icon = Icons.Filled.SwipeRight,
+                    tint = Color(0xFFE84A4A),
+                    title = "Swipe right to delete",
+                    subtitle = "Removes the conversation from your inbox.",
+                    onBackgroundColor = onBackgroundColor
+                )
+                GestureHintRow(
+                    icon = Icons.Filled.SwipeLeft,
+                    tint = Color(0xFFF5A623),
+                    title = "Swipe left to favorite",
+                    subtitle = "Pins the conversation to your Favorites tab.",
+                    onBackgroundColor = onBackgroundColor
+                )
+                GestureHintRow(
+                    icon = Icons.Filled.TouchApp,
+                    tint = primary,
+                    title = "Press and hold to lock",
+                    subtitle = "Moves the conversation into Private Safe, out of the inbox.",
+                    onBackgroundColor = onBackgroundColor
+                )
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primary,
+                        contentColor = ensureReadableOnColor(
+                            background = primary,
+                            desired = Color.Black,
+                            fallback = Color.Black
+                        )
+                    ),
+                    shape = RoundedCornerShape(100.dp)
+                ) {
+                    Text("Got it")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GestureHintRow(
+    icon: ImageVector,
+    tint: Color,
+    title: String,
+    subtitle: String,
+    onBackgroundColor: Color
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = onBackgroundColor
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = onBackgroundColor.copy(alpha = 0.62f)
+            )
+        }
+    }
 }
 
 /**
@@ -820,6 +974,7 @@ internal fun ThreadRow(
     onArchive: (SmsThreadItem) -> Unit,
     onUnarchive: (SmsThreadItem) -> Unit,
     onDelete: (SmsThreadItem) -> Unit,
+    onFavorite: (SmsThreadItem) -> Unit,
     onPin: (SmsThreadItem) -> Unit,
     onUnpin: (SmsThreadItem) -> Unit,
     dateFormatter: (Long) -> String,
@@ -855,16 +1010,17 @@ internal fun ThreadRow(
         ?: contact?.remoteDisplayName?.takeIf { it.isNotBlank() }
         ?: displayName
     val avatarText = resolvedName.ifBlank { number ?: "Unknown" }
+    // Design: swipe right (StartToEnd) deletes, swipe left (EndToStart) favorites.
+    // Archive/unarchive stays reachable via the dedicated row icon below.
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (!actionsEnabled) return@rememberSwipeToDismissBoxState false
             when (value) {
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    if (isArchived) onUnarchive(thread) else onArchive(thread)
-                    false
+                    onDelete(thread); false
                 }
                 SwipeToDismissBoxValue.EndToStart -> {
-                    onDelete(thread); false
+                    onFavorite(thread); false
                 }
                 SwipeToDismissBoxValue.Settled -> false
             }
@@ -885,15 +1041,11 @@ internal fun ThreadRow(
         state = dismissState,
         backgroundContent = {
             val direction = dismissState.dismissDirection ?: return@SwipeToDismissBox
-            val isDelete = direction == SwipeToDismissBoxValue.EndToStart
-            val color = if (isDelete) Color(0xFFE84A4A) else Color(0xFF5BC174)
-            val label = if (isDelete) "Delete" else if (isArchived) "Unarchive" else "Archive"
-            val icon = if (isDelete) Icons.Filled.Delete else Icons.Filled.Archive
-            val iconKey = when {
-                isDelete -> ThemeIconKey.DELETE
-                isArchived -> ThemeIconKey.UNARCHIVE
-                else -> ThemeIconKey.ARCHIVE
-            }
+            val isDelete = direction == SwipeToDismissBoxValue.StartToEnd
+            val color = if (isDelete) Color(0xFFE84A4A) else Color(0xFFF5A623)
+            val label = if (isDelete) "Delete" else "Favorite"
+            val icon = if (isDelete) Icons.Filled.Delete else Icons.Filled.Favorite
+            val iconKey = if (isDelete) ThemeIconKey.DELETE else ThemeIconKey.FAVORITE
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -901,7 +1053,7 @@ internal fun ThreadRow(
                     .clip(RoundedCornerShape(14.dp))
                     .background(color)
                     .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = if (isDelete) Arrangement.End else Arrangement.Start,
+                horizontalArrangement = if (isDelete) Arrangement.Start else Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ThemeIcon(

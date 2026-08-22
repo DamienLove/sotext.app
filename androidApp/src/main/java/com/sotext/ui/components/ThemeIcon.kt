@@ -21,6 +21,7 @@ object ThemeIconKey {
     const val ARCHIVE = "icon.archive"
     const val UNARCHIVE = "icon.unarchive"
     const val DELETE = "icon.delete"
+    const val FAVORITE = "icon.favorite"
     const val EDIT = "icon.edit"
     const val REFRESH = "icon.refresh"
     const val NOTIFICATIONS = "icon.notifications"

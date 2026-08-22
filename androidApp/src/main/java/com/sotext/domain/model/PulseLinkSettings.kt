@@ -63,6 +63,7 @@ data class PulseLinkSettings(
     val messagingChannelPriority: List<MessageChannel> = listOf(MessageChannel.FIREBASE, MessageChannel.SMS, MessageChannel.EMAIL),
     val crashDetectionEnabled: Boolean = false,
     val passiveListeningEnabled: Boolean = false,
+    val inboxGestureHintsDismissed: Boolean = false,
     val aiSummariesEnabled: Boolean = false,
     val aiComposeEnabled: Boolean = true,
     val aiUrgencyEnabled: Boolean = true,

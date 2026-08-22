@@ -490,8 +490,27 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
                                             onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
                                             onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
+                                            onFavoriteThread = { thread ->
+                                                val favContact = contactsByNumber[com.sotext.util.normalizeSmsAddress(thread.address)]
+                                                if (favContact != null) {
+                                                    viewModel.updateContact(favContact.copy(isFavorite = true))
+                                                    Toast.makeText(
+                                                        this@BeaconInboxActivity,
+                                                        "${favContact.displayName.ifBlank { thread.address }} added to Favorites",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                } else {
+                                                    Toast.makeText(
+                                                        this@BeaconInboxActivity,
+                                                        "Add this number as a contact to favorite it",
+                                                        Toast.LENGTH_SHORT
+                                                    ).show()
+                                                }
+                                            },
                                             onPinThread = { thread -> smsInboxViewModel.pin(thread.threadId) },
                                             onUnpinThread = { thread -> smsInboxViewModel.unpin(thread.threadId) },
+                                            showGestureHints = !state.settings.inboxGestureHintsDismissed,
+                                            onDismissGestureHints = viewModel::dismissInboxGestureHints,
                                             onBack = {
                                                 if (fromPulseLink && isTaskRoot) {
                                                     val backIntent = Intent(context, MainActivity::class.java).apply {

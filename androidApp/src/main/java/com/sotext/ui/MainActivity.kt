@@ -2042,8 +2042,27 @@ class MainActivity : AppCompatActivity() {
                             onArchiveThread = { thread -> smsInboxViewModel.archive(thread.threadId) },
                             onUnarchiveThread = { thread -> smsInboxViewModel.unarchive(thread.threadId) },
                             onDeleteThread = { thread -> smsInboxViewModel.delete(thread.threadId) },
+                            onFavoriteThread = { thread ->
+                                val favContact = contactsByNumber[normalizeSmsAddress(thread.address)]
+                                if (favContact != null) {
+                                    viewModel.updateContact(favContact.copy(isFavorite = true))
+                                    Toast.makeText(
+                                        context,
+                                        "${favContact.displayName.ifBlank { thread.address }} added to Favorites",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Add this number as a contact to favorite it",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            },
                             onPinThread = { thread -> smsInboxViewModel.pin(thread.threadId) },
                             onUnpinThread = { thread -> smsInboxViewModel.unpin(thread.threadId) },
+                            showGestureHints = !state.settings.inboxGestureHintsDismissed,
+                            onDismissGestureHints = viewModel::dismissInboxGestureHints,
                             onBack = { navController.popBackStack() },
                             dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
                             onOpenSettings = { navController.navigate("settings") },
