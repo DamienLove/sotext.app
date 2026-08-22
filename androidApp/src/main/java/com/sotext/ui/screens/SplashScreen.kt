@@ -22,45 +22,37 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Calendar
 
-// Palette for the approved SoText splash artwork: a near-white page lit by a soft
-// blue bloom behind the app mark, faint line-art messaging icons drifting across the
-// top and bottom, and a navy-to-blue icon tile with a solid blue call-to-action.
-private val SplashPageBase = Color(0xFFEFF6FC)
-private val SplashBloom = Color(0xFF8FC9EC)
-private val SplashWatermark = Color(0xFFD4E6F4)
-private val SplashTileTop = Color(0xFF2E6DB4)
-private val SplashTileBottom = Color(0xFF122A60)
-private val SplashWordmarkLight = Color(0xFF3A8FD0)
-private val SplashWordmarkDeep = Color(0xFF2166AE)
-private val SplashTagline = Color(0xFF1B4F86)
-private val SplashButtonTop = Color(0xFF2F86CE)
-private val SplashButtonBottom = Color(0xFF1B62AC)
-private val SplashFootnote = Color(0xFF8FA6BC)
-private val SplashBubbleDot = Color(0xFFBBD9F2)
-private val SplashBadgeSurface = Color(0xFFDCEBF8)
+// Color palette matching the approved SoText splash artwork
+private val SplashBgStart = Color(0xFFEBF5FF)
+private val SplashBgCenter = Color(0xFFE1F0FF)
+private val SplashBgEnd = Color(0xFFF4F8FC)
+private val SplashBluePrimary = Color(0xFF1565C0)
+private val SplashBlueGradientStart = Color(0xFF1976D2)
+private val SplashBlueGradientEnd = Color(0xFF0D47A1)
+private val SplashTaglineDark = Color(0xFF1E293B)
+private val SplashFooterGrey = Color(0xFF64748B)
+private val SplashIllustrationColor = Color(0xFF1565C0).copy(alpha = 0.16f)
 
 @Composable
 fun SplashScreen(
@@ -75,32 +67,25 @@ fun SplashScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .drawWithCache {
-                // The bloom is anchored on the app mark rather than the geometric
-                // centre, so the light reads as coming *from* the logo.
-                val bloomCenter = Offset(size.width * 0.5f, size.height * 0.42f)
-                val bloom = Brush.radialGradient(
-                    colors = listOf(
-                        SplashBloom.copy(alpha = 0.60f),
-                        SplashBloom.copy(alpha = 0.22f),
-                        Color.Transparent
-                    ),
-                    center = bloomCenter,
-                    radius = size.width * 0.95f
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(SplashBgStart, SplashBgCenter, SplashBgEnd)
                 )
-                val core = Brush.radialGradient(
-                    colors = listOf(Color.White.copy(alpha = 0.95f), Color.Transparent),
-                    center = bloomCenter,
-                    radius = size.width * 0.45f
-                )
-                onDrawBehind {
-                    drawRect(SplashPageBase)
-                    drawRect(bloom)
-                    drawRect(core)
-                }
-            }
+            )
     ) {
-        MessagingWatermarks(modifier = Modifier.fillMaxSize())
+        // Soft central glow effect behind the logo
+        Box(
+            modifier = Modifier
+                .size(340.dp)
+                .align(Alignment.Center)
+                .offset(y = (-40).dp)
+                .blur(80.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF90CAF9).copy(alpha = 0.35f))
+        )
+
+        // Vector outline chat illustrations in corners
+        CornerChatIllustrations(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier
@@ -112,309 +97,411 @@ fun SplashScreen(
         ) {
             Spacer(modifier = Modifier.weight(1f))
 
-            AppIconTile(isUnifiedMode = isUnifiedMode)
+            SoTextIconMark(isUnifiedMode = isUnifiedMode)
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             Text(
-                text = "$brandName.",
+                text = "SoText.",
                 style = MaterialTheme.typography.displayMedium.copy(
-                    fontSize = 54.sp,
-                    lineHeight = 60.sp,
                     fontWeight = FontWeight.Bold,
-                    brush = Brush.verticalGradient(
-                        listOf(SplashWordmarkLight, SplashWordmarkDeep)
-                    )
+                    color = SplashBluePrimary,
+                    fontSize = 40.sp
                 )
             )
 
             if (badgeText != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = badgeText.uppercase(),
                     style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         letterSpacing = 1.5.sp
                     ),
-                    color = if (usePremiumBranding) SplashWordmarkDeep else SplashTagline,
+                    color = if (usePremiumBranding) Color(0xFFB58A29) else SplashBluePrimary,
                     modifier = Modifier
                         .clip(RoundedCornerShape(50))
-                        .background(SplashBadgeSurface)
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .background(
+                            if (usePremiumBranding) Color(0xFFFFF8E1) else SplashBluePrimary.copy(alpha = 0.1f)
+                        )
+                        .padding(horizontal = 14.dp, vertical = 4.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Text(
                 text = tagline,
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontSize = 26.sp,
-                    lineHeight = 34.sp,
-                    fontWeight = FontWeight.Normal,
-                    textAlign = TextAlign.Center
-                ),
-                color = SplashTagline
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    fontSize = 19.sp,
+                    color = SplashTaglineDark
+                )
             )
 
             Spacer(modifier = Modifier.weight(1f))
 
-            Text(
-                text = "Get Started".uppercase(),
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.8.sp,
-                    textAlign = TextAlign.Center
-                ),
-                color = Color.White,
+            // Pill-shaped CTA button matching the artwork
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth(0.78f)
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(50),
+                        ambientColor = SplashBlueGradientEnd.copy(alpha = 0.4f),
+                        spotColor = SplashBlueGradientEnd.copy(alpha = 0.4f)
+                    )
                     .clip(RoundedCornerShape(50))
                     .background(
-                        Brush.verticalGradient(listOf(SplashButtonTop, SplashButtonBottom))
+                        Brush.horizontalGradient(
+                            listOf(SplashBlueGradientStart, SplashBlueGradientEnd)
+                        )
                     )
                     .clickable(onClick = onGetStartedClick)
-                    .padding(vertical = 19.dp)
-            )
+                    .padding(horizontal = 56.dp, vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "GET STARTED",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        letterSpacing = 1.2.sp
+                    )
+                )
+            }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             Text(
                 text = "© $brandName. All rights reserved.",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                color = SplashFootnote
+                style = MaterialTheme.typography.labelMedium,
+                color = SplashFooterGrey,
+                fontSize = 13.sp
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
 
-/** The rounded app-icon tile: an "S" beside a speech bubble that stands in for the "o". */
+/**
+ * Modern SoText Icon Mark:
+ * Blue gradient squircle card containing white 'S' and speech bubble 'o' with three blue dots ('...').
+ */
 @Composable
-private fun AppIconTile(isUnifiedMode: Boolean) {
+private fun SoTextIconMark(isUnifiedMode: Boolean) {
     Box(contentAlignment = Alignment.Center) {
-        // Soft drop shadow so the tile lifts off the pale background.
+        // Soft drop shadow
         Box(
             modifier = Modifier
-                .size(124.dp)
-                .offset(y = 12.dp)
-                .blur(24.dp)
-                .clip(RoundedCornerShape(34.dp))
-                .background(SplashTileBottom.copy(alpha = 0.28f))
+                .size(120.dp)
+                .offset(y = 8.dp)
+                .blur(20.dp)
+                .clip(RoundedCornerShape(26.dp))
+                .background(SplashBlueGradientEnd.copy(alpha = 0.35f))
         )
 
+        // Main squircle card
         Box(
             modifier = Modifier
-                .size(136.dp)
-                .clip(RoundedCornerShape(38.dp))
+                .size(120.dp)
+                .clip(RoundedCornerShape(26.dp))
                 .background(
                     Brush.linearGradient(
-                        colors = listOf(SplashTileTop, SplashTileBottom),
-                        start = Offset.Zero,
-                        end = Offset.Infinite
+                        colors = listOf(SplashBlueGradientStart, SplashBlueGradientEnd),
+                        start = Offset(0f, 0f),
+                        end = Offset(300f, 300f)
                     )
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // The mark is artwork, not body copy: pin it to dp so an accessibility
-            // font scale can never push the "S" outside the fixed-size tile.
-            val markSize = with(LocalDensity.current) { 72.dp.toSp() }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.offset(y = (-2).dp)
+                modifier = Modifier.offset(x = (-2).dp)
             ) {
                 Text(
                     text = "S",
-                    style = MaterialTheme.typography.displayLarge.copy(
-                        fontSize = markSize,
-                        lineHeight = markSize,
-                        fontWeight = FontWeight.Black
-                    ),
-                    color = Color.White
+                    style = MaterialTheme.typography.displayMedium.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        fontSize = 58.sp
+                    )
                 )
-                Spacer(modifier = Modifier.width(2.dp))
-                SpeechBubbleGlyph(modifier = Modifier.size(58.dp))
-            }
 
-            if (isUnifiedMode) {
+                Spacer(modifier = Modifier.width(3.dp))
+
+                // Speech bubble 'o' mark with 3 dots inside
                 Box(
                     modifier = Modifier
-                        .size(16.dp)
-                        .align(Alignment.BottomEnd)
-                        .offset(x = (-12).dp, y = (-12).dp)
-                        .clip(CircleShape)
-                        .background(SplashBubbleDot)
-                )
+                        .size(40.dp)
+                        .offset(y = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val w = size.width
+                        val h = size.height * 0.85f
+                        val bubblePath = Path().apply {
+                            addRoundRect(
+                                androidx.compose.ui.geometry.RoundRect(
+                                    rect = Rect(0f, 0f, w, h),
+                                    cornerRadius = CornerRadius(w * 0.48f)
+                                )
+                            )
+                            // Tail pointing down-left
+                            moveTo(w * 0.30f, h)
+                            lineTo(w * 0.15f, size.height)
+                            lineTo(w * 0.50f, h * 0.92f)
+                            close()
+                        }
+                        drawPath(bubblePath, color = Color.White)
+
+                        // 3 blue dots inside speech bubble
+                        val dotRadius = w * 0.07f
+                        val centerY = h * 0.50f
+                        val startX = w * 0.30f
+                        val spacing = w * 0.20f
+                        for (i in 0..2) {
+                            drawCircle(
+                                color = SplashBluePrimary,
+                                radius = dotRadius,
+                                center = Offset(startX + i * spacing, centerY)
+                            )
+                        }
+                    }
+                }
             }
         }
-    }
-}
 
-/** White speech bubble with a down-left tail and three pale-blue typing dots. */
-@Composable
-private fun SpeechBubbleGlyph(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val bubbleRadius = size.width * 0.42f
-        val bubbleCenter = Offset(size.width * 0.5f, size.height * 0.44f)
-
-        val tail = Path().apply {
-            moveTo(size.width * 0.30f, size.height * 0.76f)
-            lineTo(size.width * 0.13f, size.height * 0.99f)
-            lineTo(size.width * 0.50f, size.height * 0.88f)
-            close()
-        }
-        drawPath(tail, color = Color.White)
-        drawCircle(color = Color.White, radius = bubbleRadius, center = bubbleCenter)
-
-        val dotRadius = size.width * 0.062f
-        listOf(0.28f, 0.50f, 0.72f).forEach { fraction ->
-            drawCircle(
-                color = SplashBubbleDot,
-                radius = dotRadius,
-                center = Offset(size.width * fraction, bubbleCenter.y)
+        if (isUnifiedMode) {
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .align(Alignment.BottomEnd)
+                    .clip(CircleShape)
+                    .background(Color(0xFF00E676))
             )
         }
     }
 }
 
-private enum class WatermarkKind { BUBBLE_LINES, BUBBLE_DOTS, BUBBLE_EMPTY, PERSON, PERSON_HEADSET }
-
 /**
- * Placement of one line-art watermark, expressed in fractions of the screen so the
- * scatter keeps its composition across phone sizes.
+ * Helper alias for androidx.compose.ui.geometry.Rect to avoid ambiguity
  */
-private data class Watermark(
-    val kind: WatermarkKind,
-    val x: Float,
-    val y: Float,
-    val widthFraction: Float,
-    val flipped: Boolean = false
-)
+private typealias Rect = androidx.compose.ui.geometry.Rect
 
 /**
- * Faint outlined chat bubbles and contact avatars drifting across the top and bottom
- * of the page, framing the app mark without competing with it.
+ * Faint vector outline illustrations of chat bubbles, connected nodes, and people icons
+ * drawn in the 4 corners of the screen matching the user's splash artwork.
  */
 @Composable
-private fun MessagingWatermarks(modifier: Modifier = Modifier) {
-    val watermarks = remember {
-        listOf(
-            // Top band.
-            Watermark(WatermarkKind.BUBBLE_LINES, 0.030f, 0.035f, 0.26f),
-            Watermark(WatermarkKind.BUBBLE_DOTS, 0.110f, 0.128f, 0.19f),
-            Watermark(WatermarkKind.BUBBLE_LINES, 0.560f, 0.025f, 0.26f, flipped = true),
-            Watermark(WatermarkKind.BUBBLE_EMPTY, 0.585f, 0.098f, 0.125f, flipped = true),
-            Watermark(WatermarkKind.PERSON, 0.700f, 0.155f, 0.135f),
-            Watermark(WatermarkKind.PERSON, 0.845f, 0.150f, 0.135f),
-            // Bottom band.
-            Watermark(WatermarkKind.BUBBLE_LINES, 0.030f, 0.735f, 0.27f),
-            Watermark(WatermarkKind.BUBBLE_LINES, 0.055f, 0.825f, 0.235f),
-            Watermark(WatermarkKind.BUBBLE_LINES, 0.420f, 0.775f, 0.25f, flipped = true),
-            Watermark(WatermarkKind.PERSON_HEADSET, 0.800f, 0.795f, 0.145f),
-            Watermark(WatermarkKind.BUBBLE_DOTS, 0.460f, 0.880f, 0.20f)
-        )
-    }
-
+private fun CornerChatIllustrations(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
-        watermarks.forEach { drawWatermark(it) }
+        val w = size.width
+        val h = size.height
+
+        // Top-Left Cluster: Chat bubbles with dots and background overlap
+        drawTopLeftChatCluster(w, h)
+
+        // Top-Right Cluster: Connected circular avatars / chat bubbles
+        drawTopRightAvatarCluster(w, h)
+
+        // Bottom-Left Cluster: Stacked message cards
+        drawBottomLeftCardCluster(w, h)
+
+        // Bottom-Right Cluster: Speech bubbles with person icons
+        drawBottomRightPeopleCluster(w, h)
     }
 }
 
-private fun DrawScope.drawWatermark(mark: Watermark) {
-    val width = size.width * mark.widthFraction
-    val origin = Offset(size.width * mark.x, size.height * mark.y)
-    val stroke = Stroke(width = (width * 0.045f).coerceIn(2f, 6f), cap = StrokeCap.Round)
-    when (mark.kind) {
-        WatermarkKind.BUBBLE_LINES -> drawBubble(origin, width, stroke, lines = 3, flipped = mark.flipped)
-        WatermarkKind.BUBBLE_DOTS -> drawBubble(origin, width, stroke, lines = 0, dots = true, flipped = mark.flipped)
-        WatermarkKind.BUBBLE_EMPTY -> drawBubble(origin, width, stroke, lines = 0, flipped = mark.flipped)
-        WatermarkKind.PERSON -> drawPerson(origin, width, stroke, headset = false)
-        WatermarkKind.PERSON_HEADSET -> drawPerson(origin, width, stroke, headset = true)
-    }
-}
+private fun DrawScope.drawTopLeftChatCluster(w: Float, h: Float) {
+    val stroke = Stroke(width = 2.dp.toPx())
 
-/** Rounded speech bubble outline with an optional stack of message lines or typing dots. */
-private fun DrawScope.drawBubble(
-    origin: Offset,
-    width: Float,
-    stroke: Stroke,
-    lines: Int,
-    dots: Boolean = false,
-    flipped: Boolean
-) {
-    val height = width * 0.72f
-    val corner = CornerRadius(width * 0.22f, width * 0.22f)
+    // Background bubble (top-left)
     drawRoundRect(
-        color = SplashWatermark,
-        topLeft = origin,
-        size = Size(width, height),
-        cornerRadius = corner,
+        color = SplashIllustrationColor,
+        topLeft = Offset(w * 0.05f, h * 0.03f),
+        size = Size(w * 0.32f, h * 0.08f),
+        cornerRadius = CornerRadius(18.dp.toPx()),
         style = stroke
     )
 
-    // Tail hangs from the lower-left edge, or mirrors to the right when flipped.
-    val sign = if (flipped) -1f else 1f
-    val tailRoot = if (flipped) origin.x + width * 0.84f else origin.x + width * 0.16f
-    val baseline = origin.y + height - stroke.width * 0.5f
-    val tail = Path().apply {
-        moveTo(tailRoot, baseline)
-        lineTo(tailRoot - sign * width * 0.09f, origin.y + height + height * 0.30f)
-        lineTo(tailRoot + sign * width * 0.15f, baseline)
-    }
-    drawPath(tail, color = SplashWatermark, style = stroke)
+    // Foreground bubble with 3 dots (offset)
+    val frontX = w * 0.08f
+    val frontY = h * 0.07f
+    val frontW = w * 0.35f
+    val frontH = h * 0.09f
+    drawRoundRect(
+        color = SplashIllustrationColor,
+        topLeft = Offset(frontX, frontY),
+        size = Size(frontW, frontH),
+        cornerRadius = CornerRadius(20.dp.toPx()),
+        style = stroke
+    )
 
-    if (dots) {
-        val dotRadius = width * 0.055f
-        listOf(0.30f, 0.50f, 0.70f).forEach { fraction ->
-            drawCircle(
-                color = SplashWatermark,
-                radius = dotRadius,
-                center = Offset(origin.x + width * fraction, origin.y + height * 0.5f)
-            )
-        }
-        return
+    // Tail for front bubble
+    val tailPath = Path().apply {
+        moveTo(frontX + 24.dp.toPx(), frontY + frontH)
+        lineTo(frontX + 10.dp.toPx(), frontY + frontH + 14.dp.toPx())
+        lineTo(frontX + 44.dp.toPx(), frontY + frontH)
+        close()
     }
+    drawPath(tailPath, color = SplashIllustrationColor, style = stroke)
 
-    repeat(lines) { index ->
-        // Last line is short, the way a wrapped message tapers off.
-        val lineWidth = if (index == lines - 1) width * 0.42f else width * 0.62f
-        val y = origin.y + height * (0.30f + index * 0.20f)
-        drawLine(
-            color = SplashWatermark,
-            start = Offset(origin.x + width * 0.19f, y),
-            end = Offset(origin.x + width * 0.19f + lineWidth, y),
-            strokeWidth = stroke.width,
-            cap = StrokeCap.Round
+    // 3 dots in front bubble
+    val dotY = frontY + frontH * 0.5f
+    val dotStartX = frontX + frontW * 0.35f
+    val dotSpacing = frontW * 0.15f
+    for (i in 0..2) {
+        drawCircle(
+            color = SplashIllustrationColor,
+            radius = 3.5.dp.toPx(),
+            center = Offset(dotStartX + i * dotSpacing, dotY)
         )
     }
 }
 
-/** Contact avatar: a circle head over shoulders, optionally wearing a support headset. */
-private fun DrawScope.drawPerson(origin: Offset, width: Float, stroke: Stroke, headset: Boolean) {
-    val center = Offset(origin.x + width * 0.5f, origin.y + width * 0.5f)
-    drawCircle(color = SplashWatermark, radius = width * 0.46f, center = center, style = stroke)
-    drawCircle(color = SplashWatermark, radius = width * 0.17f, center = Offset(center.x, center.y - width * 0.13f), style = stroke)
+private fun DrawScope.drawTopRightAvatarCluster(w: Float, h: Float) {
+    val stroke = Stroke(width = 2.dp.toPx())
 
-    // Shoulders, clipped by the surrounding circle so they read as an avatar crop.
-    drawArc(
-        color = SplashWatermark,
-        startAngle = 200f,
-        sweepAngle = 140f,
-        useCenter = false,
-        topLeft = Offset(center.x - width * 0.30f, center.y + width * 0.10f),
-        size = Size(width * 0.60f, width * 0.52f),
+    val r1 = 30.dp.toPx()
+    val c1 = Offset(w * 0.72f, h * 0.10f)
+
+    val r2 = 32.dp.toPx()
+    val c2 = Offset(w * 0.88f, h * 0.15f)
+
+    // Connecting line between avatar bubbles
+    drawLine(
+        color = SplashIllustrationColor,
+        start = c1,
+        end = c2,
+        strokeWidth = 2.dp.toPx()
+    )
+
+    // Avatar bubble 1
+    drawCircle(color = SplashIllustrationColor, radius = r1, center = c1, style = stroke)
+    drawPersonOutline(c1, r1 * 0.7f)
+
+    // Avatar bubble 2
+    drawCircle(color = SplashIllustrationColor, radius = r2, center = c2, style = stroke)
+    drawPersonOutline(c2, r2 * 0.7f)
+}
+
+private fun DrawScope.drawBottomLeftCardCluster(w: Float, h: Float) {
+    val stroke = Stroke(width = 2.dp.toPx())
+
+    // Back card
+    drawRoundRect(
+        color = SplashIllustrationColor,
+        topLeft = Offset(w * 0.04f, h * 0.78f),
+        size = Size(w * 0.35f, h * 0.10f),
+        cornerRadius = CornerRadius(16.dp.toPx()),
         style = stroke
     )
 
-    if (headset) {
-        drawArc(
-            color = SplashWatermark,
-            startAngle = 190f,
-            sweepAngle = 160f,
-            useCenter = false,
-            topLeft = Offset(center.x - width * 0.30f, center.y - width * 0.42f),
-            size = Size(width * 0.60f, width * 0.52f),
-            style = stroke
+    // Front message card
+    val frontX = w * 0.10f
+    val frontY = h * 0.83f
+    val frontW = w * 0.38f
+    val frontH = h * 0.11f
+
+    drawRoundRect(
+        color = SplashIllustrationColor,
+        topLeft = Offset(frontX, frontY),
+        size = Size(frontW, frontH),
+        cornerRadius = CornerRadius(18.dp.toPx()),
+        style = stroke
+    )
+
+    // Faint text line outlines inside front message card
+    drawLine(
+        color = SplashIllustrationColor,
+        start = Offset(frontX + 16.dp.toPx(), frontY + 20.dp.toPx()),
+        end = Offset(frontX + frontW - 24.dp.toPx(), frontY + 20.dp.toPx()),
+        strokeWidth = 2.5.dp.toPx()
+    )
+    drawLine(
+        color = SplashIllustrationColor,
+        start = Offset(frontX + 16.dp.toPx(), frontY + 36.dp.toPx()),
+        end = Offset(frontX + frontW * 0.65f, frontY + 36.dp.toPx()),
+        strokeWidth = 2.5.dp.toPx()
+    )
+
+    // Person profile circle bottom-left
+    drawCircle(
+        color = SplashIllustrationColor,
+        radius = 22.dp.toPx(),
+        center = Offset(w * 0.10f, h * 0.94f),
+        style = stroke
+    )
+}
+
+private fun DrawScope.drawBottomRightPeopleCluster(w: Float, h: Float) {
+    val stroke = Stroke(width = 2.dp.toPx())
+
+    // Large chat bubble
+    val bX = w * 0.62f
+    val bY = h * 0.79f
+    val bW = w * 0.32f
+    val bH = h * 0.12f
+
+    drawRoundRect(
+        color = SplashIllustrationColor,
+        topLeft = Offset(bX, bY),
+        size = Size(bW, bH),
+        cornerRadius = CornerRadius(20.dp.toPx()),
+        style = stroke
+    )
+
+    // Faint text lines inside
+    drawLine(
+        color = SplashIllustrationColor,
+        start = Offset(bX + 18.dp.toPx(), bY + 22.dp.toPx()),
+        end = Offset(bX + bW - 18.dp.toPx(), bY + 22.dp.toPx()),
+        strokeWidth = 2.5.dp.toPx()
+    )
+    drawLine(
+        color = SplashIllustrationColor,
+        start = Offset(bX + 18.dp.toPx(), bY + 38.dp.toPx()),
+        end = Offset(bX + bW * 0.7f, bY + 38.dp.toPx()),
+        strokeWidth = 2.5.dp.toPx()
+    )
+
+    // Person profile circle bottom-right corner
+    val pCenter = Offset(w * 0.90f, h * 0.92f)
+    drawCircle(
+        color = SplashIllustrationColor,
+        radius = 26.dp.toPx(),
+        center = pCenter,
+        style = stroke
+    )
+    drawPersonOutline(pCenter, 26.dp.toPx() * 0.7f)
+}
+
+private fun DrawScope.drawPersonOutline(center: Offset, scale: Float) {
+    val stroke = Stroke(width = 1.8.dp.toPx())
+    // Head circle
+    drawCircle(
+        color = SplashIllustrationColor,
+        radius = scale * 0.35f,
+        center = Offset(center.x, center.y - scale * 0.25f),
+        style = stroke
+    )
+    // Shoulders arc
+    val shoulderPath = Path().apply {
+        addArc(
+            oval = Rect(
+                center.x - scale * 0.6f,
+                center.y + scale * 0.05f,
+                center.x + scale * 0.6f,
+                center.y + scale * 0.95f
+            ),
+            startAngleDegrees = 190f,
+            sweepAngleDegrees = 160f
         )
     }
+    drawPath(shoulderPath, color = SplashIllustrationColor, style = stroke)
 }
+
+private fun currentYear(): Int = Calendar.getInstance().get(Calendar.YEAR)
