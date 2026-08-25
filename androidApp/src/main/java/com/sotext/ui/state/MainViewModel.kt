@@ -1822,6 +1822,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setSwipeRightAction(action: com.sotext.domain.model.SwipeAction) {
+        viewModelScope.launch {
+            settingsRepository.setSwipeRightAction(action)
+        }
+    }
+
+    fun setSwipeLeftAction(action: com.sotext.domain.model.SwipeAction) {
+        viewModelScope.launch {
+            settingsRepository.setSwipeLeftAction(action)
+        }
+    }
+
     fun setAiSummariesEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setAiSummariesEnabled(enabled)

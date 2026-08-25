@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.SwipeLeft
+import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -46,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sotext.R
 import com.sotext.domain.model.PulseLinkSettings
+import com.sotext.domain.model.SwipeAction
 import com.sotext.domain.model.TimeFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,7 +92,9 @@ fun BeaconSettingsScreen(
     onToggleAiUrgencyBypass: (Boolean) -> Unit,
     onToggleAiUrgencyIncludeUnknown: (Boolean) -> Unit,
     blockRcsReadReceipts: Boolean,
-    onToggleBlockRcsReadReceipts: (Boolean) -> Unit
+    onToggleBlockRcsReadReceipts: (Boolean) -> Unit,
+    onChangeSwipeRightAction: (SwipeAction) -> Unit,
+    onChangeSwipeLeftAction: (SwipeAction) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -192,6 +197,23 @@ fun BeaconSettingsScreen(
                     actionLabel = "Edit",
                     onAction = onEditMessageVibration,
                     leadingIcon = Icons.Filled.Message
+                )
+            }
+
+            BeaconCollapsibleSection(title = "Inbox gestures") {
+                BeaconSettingsActionRow(
+                    title = "Swipe right",
+                    subtitle = swipeActionLabel(settings.swipeRightAction),
+                    actionLabel = "Change",
+                    onAction = { onChangeSwipeRightAction(nextSwipeAction(settings.swipeRightAction)) },
+                    leadingIcon = Icons.Filled.SwipeRight
+                )
+                BeaconSettingsActionRow(
+                    title = "Swipe left",
+                    subtitle = swipeActionLabel(settings.swipeLeftAction),
+                    actionLabel = "Change",
+                    onAction = { onChangeSwipeLeftAction(nextSwipeAction(settings.swipeLeftAction)) },
+                    leadingIcon = Icons.Filled.SwipeLeft
                 )
             }
 
@@ -368,6 +390,20 @@ fun BeaconSettingsScreen(
             }
         }
     }
+}
+
+private fun swipeActionLabel(action: SwipeAction): String = when (action) {
+    SwipeAction.NONE -> "Off"
+    SwipeAction.DELETE -> "Delete"
+    SwipeAction.FAVORITE -> "Favorite"
+    SwipeAction.ARCHIVE -> "Archive"
+}
+
+private fun nextSwipeAction(action: SwipeAction): SwipeAction = when (action) {
+    SwipeAction.DELETE -> SwipeAction.FAVORITE
+    SwipeAction.FAVORITE -> SwipeAction.ARCHIVE
+    SwipeAction.ARCHIVE -> SwipeAction.NONE
+    SwipeAction.NONE -> SwipeAction.DELETE
 }
 
 @Composable

@@ -63,7 +63,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.FloatingActionButton
@@ -78,6 +77,7 @@ import androidx.compose.material3.FabPosition
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
@@ -108,7 +108,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.painterResource
 import android.text.format.DateUtils
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -121,6 +120,7 @@ import com.sotext.data.sms.OtpHelper
 import com.sotext.data.sms.SmsThreadItem
 import com.sotext.domain.model.Contact
 import com.sotext.domain.model.MessageUrgency
+import com.sotext.domain.model.SwipeAction
 import com.sotext.domain.model.ThemePreferences
 import com.sotext.ui.components.ThemeIcon
 import com.sotext.ui.components.ThemeIconKey
@@ -131,9 +131,6 @@ import com.sotext.util.splitSmsDisplayAddress
 import com.sotext.ui.state.SearchResultState
 import com.sotext.data.sms.SmsMessageItem
 import com.sotext.ui.model.MessageRecipient
-import com.sotext.ui.branding.beaconBrandName
-import com.sotext.ui.branding.brandLogoRes
-import com.sotext.ui.branding.unifiedBrandName
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
@@ -164,6 +161,8 @@ fun SmsInboxScreen(
     hideOtpInAll: Boolean = false,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
     theme: ThemePreferences = ThemePreferences(),
+    swipeRightAction: SwipeAction = SwipeAction.FAVORITE,
+    swipeLeftAction: SwipeAction = SwipeAction.DELETE,
     sectionTitle: String? = null,
     showFilterTabs: Boolean = true,
     banner: @Composable () -> Unit = {},
@@ -295,8 +294,6 @@ fun SmsInboxScreen(
     }
     val iconSize = (24f * theme.iconSizeFactor).coerceIn(18f, 34f).dp
     val largeIconSize = (64f * theme.iconSizeFactor).coerceIn(48f, 86f).dp
-    val beaconCollapsedIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 26f).dp
-    val beaconExpandedIconSize = (52f * theme.iconSizeFactor).coerceIn(40f, 72f).dp
     val orderedLines = remember(lineOptions) {
         lineOptions.sortedWith(
             compareBy<com.sotext.domain.model.SmsLine> { it.phoneNumber.ifBlank { "~" } }
@@ -329,23 +326,7 @@ fun SmsInboxScreen(
         }
     }
     val topAppBarState = rememberTopAppBarState()
-    val scrollBehavior = if (isBeaconMode) {
-        TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
-    } else {
-        TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
-    }
-    val defaultTheme = ThemePreferences()
-    val themeOverridesTopColor = theme.onTopBarColor != defaultTheme.onTopBarColor
-    val premiumLogoTint = Color(0xFFF5C542)
-    val freeLogoTint = Color(0xFF1D4ED8)
-    val logoTint = when {
-        themeOverridesTopColor -> parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
-        else -> if (isPremium || isPro) premiumLogoTint else freeLogoTint
-    }
-    val topBarForeground = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
-    val collapsedFraction = scrollBehavior.state.collapsedFraction
-    val beaconExpandedAlpha = (1f - collapsedFraction).coerceIn(0f, 1f)
-    val beaconCollapsedAlpha = collapsedFraction.coerceIn(0f, 1f)
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(topAppBarState)
 
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
@@ -353,39 +334,11 @@ fun SmsInboxScreen(
         containerColor = if (theme.appBackgroundGradientStart != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor),
         topBar = {
             if (isBeaconMode) {
-                LargeTopAppBar(
-                    title = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    id = if (isUnifiedMode) {
-                                        brandLogoRes(
-                                            usePremiumBranding = isPremium || isPro,
-                                            isUnifiedMode = true
-                                        )
-                                    } else {
-                                        brandLogoRes(usePremiumBranding = isPremium || isPro)
-                                    }
-                                ),
-                                contentDescription = null,
-                                tint = if (isUnifiedMode) logoTint else Color.Unspecified,
-                                modifier = Modifier
-                                    .size(beaconExpandedIconSize * beaconExpandedAlpha)
-                                    .alpha(beaconExpandedAlpha)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp * beaconExpandedAlpha))
-                                Text(
-                                    if (isUnifiedMode) {
-                                        unifiedBrandName(isPremium, isPro)
-                                    } else {
-                                        beaconBrandName(isPremium, isPro)
-                                    },
-                                    color = topBarForeground
-                                )
-                        }
-                    },
+                // No brand title/logo here by design - a compact bar (instead of the old
+                // LargeTopAppBar's second title row) so the search bar sits right under the
+                // action icons instead of below a big "SoText" wordmark.
+                TopAppBar(
+                    title = {},
                     navigationIcon = {
                         if (showBackInBeacon) {
                             IconButton(onClick = onBack) {
@@ -398,25 +351,7 @@ fun SmsInboxScreen(
                                     modifier = Modifier.size(iconSize)
                                 )
                             }
-                        } else {
-                                Icon(
-                                    painter = painterResource(
-                                        id = if (isUnifiedMode) {
-                                            brandLogoRes(
-                                                usePremiumBranding = isPremium || isPro,
-                                                isUnifiedMode = true
-                                            )
-                                        } else {
-                                            R.drawable.ic_beacon_inbox
-                                        }
-                                    ),
-                                    contentDescription = "SoText",
-                                    tint = if (isUnifiedMode) logoTint else Color.Unspecified,
-                                    modifier = Modifier
-                                        .size(beaconCollapsedIconSize)
-                                        .alpha(beaconCollapsedAlpha)
-                                )
-                            }
+                        }
                     },
                     actions = {
                         IconButton(onClick = onOpenPrivate) {
@@ -450,7 +385,7 @@ fun SmsInboxScreen(
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor)
                     ),
                     scrollBehavior = scrollBehavior
@@ -766,6 +701,8 @@ fun SmsInboxScreen(
                                 isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
                                 onTogglePrivate = onTogglePrivate,
                                 theme = theme,
+                                swipeRightAction = swipeRightAction,
+                                swipeLeftAction = swipeLeftAction,
                                 contact = contact,
                                 lineIndex = lineIndex,
                                 lineColors = lineColors,
@@ -982,6 +919,8 @@ internal fun ThreadRow(
     isPrivate: Boolean,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit,
     theme: ThemePreferences,
+    swipeRightAction: SwipeAction = SwipeAction.FAVORITE,
+    swipeLeftAction: SwipeAction = SwipeAction.DELETE,
     contact: Contact? = null,
     lineIndex: Int? = null,
     lineColors: List<Color> = emptyList(),
@@ -1010,20 +949,26 @@ internal fun ThreadRow(
         ?: contact?.remoteDisplayName?.takeIf { it.isNotBlank() }
         ?: displayName
     val avatarText = resolvedName.ifBlank { number ?: "Unknown" }
-    // Design: swipe right (StartToEnd) deletes, swipe left (EndToStart) favorites.
-    // Archive/unarchive stays reachable via the dedicated row icon below.
+    // Design: which action fires on which swipe direction is user-configurable (Settings >
+    // Inbox gestures); defaults to swipe right = favorite, swipe left = delete. Archive/
+    // unarchive stays reachable via the dedicated row icon below regardless.
+    fun runSwipeAction(action: SwipeAction) {
+        when (action) {
+            SwipeAction.DELETE -> onDelete(thread)
+            SwipeAction.FAVORITE -> onFavorite(thread)
+            SwipeAction.ARCHIVE -> if (isArchived) onUnarchive(thread) else onArchive(thread)
+            SwipeAction.NONE -> {}
+        }
+    }
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (!actionsEnabled) return@rememberSwipeToDismissBoxState false
             when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    onDelete(thread); false
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    onFavorite(thread); false
-                }
-                SwipeToDismissBoxValue.Settled -> false
+                SwipeToDismissBoxValue.StartToEnd -> runSwipeAction(swipeRightAction)
+                SwipeToDismissBoxValue.EndToStart -> runSwipeAction(swipeLeftAction)
+                SwipeToDismissBoxValue.Settled -> {}
             }
+            false
         }
     )
     val actionIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 28f).dp
@@ -1041,11 +986,33 @@ internal fun ThreadRow(
         state = dismissState,
         backgroundContent = {
             val direction = dismissState.dismissDirection ?: return@SwipeToDismissBox
-            val isDelete = direction == SwipeToDismissBoxValue.StartToEnd
-            val color = if (isDelete) Color(0xFFE84A4A) else Color(0xFFF5A623)
-            val label = if (isDelete) "Delete" else "Favorite"
-            val icon = if (isDelete) Icons.Filled.Delete else Icons.Filled.Favorite
-            val iconKey = if (isDelete) ThemeIconKey.DELETE else ThemeIconKey.FAVORITE
+            val isStartToEnd = direction == SwipeToDismissBoxValue.StartToEnd
+            val action = if (isStartToEnd) swipeRightAction else swipeLeftAction
+            if (action == SwipeAction.NONE) return@SwipeToDismissBox
+            val color = when (action) {
+                SwipeAction.DELETE -> Color(0xFFE84A4A)
+                SwipeAction.FAVORITE -> Color(0xFFF5A623)
+                SwipeAction.ARCHIVE -> primary
+                SwipeAction.NONE -> Color.Transparent
+            }
+            val label = when (action) {
+                SwipeAction.DELETE -> "Delete"
+                SwipeAction.FAVORITE -> "Favorite"
+                SwipeAction.ARCHIVE -> if (isArchived) "Unarchive" else "Archive"
+                SwipeAction.NONE -> ""
+            }
+            val icon = when (action) {
+                SwipeAction.DELETE -> Icons.Filled.Delete
+                SwipeAction.FAVORITE -> Icons.Filled.Favorite
+                SwipeAction.ARCHIVE -> if (isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
+                SwipeAction.NONE -> Icons.Filled.Delete
+            }
+            val iconKey = when (action) {
+                SwipeAction.DELETE -> ThemeIconKey.DELETE
+                SwipeAction.FAVORITE -> ThemeIconKey.FAVORITE
+                SwipeAction.ARCHIVE -> if (isArchived) ThemeIconKey.UNARCHIVE else ThemeIconKey.ARCHIVE
+                SwipeAction.NONE -> ThemeIconKey.DELETE
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1053,7 +1020,7 @@ internal fun ThreadRow(
                     .clip(RoundedCornerShape(14.dp))
                     .background(color)
                     .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = if (isDelete) Arrangement.Start else Arrangement.End,
+                horizontalArrangement = if (isStartToEnd) Arrangement.Start else Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ThemeIcon(
