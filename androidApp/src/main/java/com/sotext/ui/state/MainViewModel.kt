@@ -834,6 +834,18 @@ class MainViewModel @Inject constructor(
                 if (error != null || snapshot == null || !snapshot.exists()) {
                     return@addSnapshotListener
                 }
+                // A snapshot with a pending write is Firestore's own local echo of a write we
+                // (this device) just made, served from cache before the server has confirmed
+                // it - not new data from another device/session. Applying it back into local
+                // settings is what caused writes to immediately "revert": e.g. picking a
+                // flat-color theme, pushing it to the cloud, then having this listener fire
+                // with the *old* still-cached document (still holding a stale gradient from a
+                // previous theme) and stomp the fresh local write with it. Skipping pending
+                // writes entirely - rather than only within a fixed window after a push - is
+                // what the ping-pong guard below was trying to approximate.
+                if (snapshot.metadata.hasPendingWrites()) {
+                    return@addSnapshotListener
+                }
                 // Ignore updates within 2 seconds of pushing to avoid ping-pong
                 if (System.currentTimeMillis() - lastSettingsPushTimestamp < 2000) {
                     return@addSnapshotListener
@@ -979,11 +991,14 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun pushThemeToCloud(user: FirebaseUser, theme: ThemePreferences) {
+        lastSettingsPushTimestamp = System.currentTimeMillis()
         runCatching {
-            val payload = mapOf(
-                "themePreferences" to themeToMap(theme),
-                "themeUpdatedAt" to FieldValue.serverTimestamp()
-            )
+            // themeToMap's keys are already dotted "themePreferences.xxx" paths rather than a
+            // nested sub-map: FieldValue.delete() sentinels for the nullable fields (used to
+            // actually clear e.g. a stale gradient when switching to a theme without one) are
+            // only reliably honored by set(merge=true) when the field path is a top-level key,
+            // not when it's buried inside a nested map value.
+            val payload = themeToMap(theme) + ("themeUpdatedAt" to FieldValue.serverTimestamp())
             firestore.collection(COLLECTION_USERS).document(user.uid)
                 .set(payload, SetOptions.merge())
                 .await()
@@ -1320,35 +1335,45 @@ class MainViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Builds a dotted-field-path payload ("themePreferences.xxx" -> value) for a merge write,
+     * rather than a nested "themePreferences" -> {sub-map}. That's required for the nullable
+     * fields below: FieldValue.delete() sentinels are only reliably honored by
+     * set(merge = true) when the field path is a top-level key, not when it's nested inside a
+     * map value. Without this, a null (e.g. "no gradient") would either be silently dropped
+     * from the payload or fail to clear a previously-set value already on the server, leaving a
+     * stale gradient/color bleeding into a later theme that doesn't set it.
+     */
     private fun themeToMap(theme: ThemePreferences): Map<String, Any> {
+        fun key(field: String) = "themePreferences.$field"
         val payload = mutableMapOf<String, Any>(
-            "primaryColor" to theme.primaryColor,
-            "secondaryColor" to theme.secondaryColor,
-            "bubbleOutgoing" to theme.bubbleOutgoing,
-            "bubbleIncoming" to theme.bubbleIncoming,
-            "backgroundColor" to theme.backgroundColor,
-            "iconSizeFactor" to theme.iconSizeFactor,
-            "fontStyle" to theme.fontStyle,
-            "bubbleCornerRadius" to theme.bubbleCornerRadius,
-            "inboxIconVariant" to theme.inboxIconVariant,
-            "onBubbleOutgoing" to theme.onBubbleOutgoing,
-            "onBubbleIncoming" to theme.onBubbleIncoming,
-            "onBackground" to theme.onBackground,
-            "topBarColor" to theme.topBarColor,
-            "onTopBarColor" to theme.onTopBarColor,
-            "fontScale" to theme.fontScale,
-            "useGlassEffect" to theme.useGlassEffect,
-            "useHolographicGlow" to theme.useHolographicGlow,
-            "uiDensity" to theme.uiDensity
+            key("primaryColor") to theme.primaryColor,
+            key("secondaryColor") to theme.secondaryColor,
+            key("bubbleOutgoing") to theme.bubbleOutgoing,
+            key("bubbleIncoming") to theme.bubbleIncoming,
+            key("backgroundColor") to theme.backgroundColor,
+            key("iconSizeFactor") to theme.iconSizeFactor,
+            key("fontStyle") to theme.fontStyle,
+            key("bubbleCornerRadius") to theme.bubbleCornerRadius,
+            key("inboxIconVariant") to theme.inboxIconVariant,
+            key("onBubbleOutgoing") to theme.onBubbleOutgoing,
+            key("onBubbleIncoming") to theme.onBubbleIncoming,
+            key("onBackground") to theme.onBackground,
+            key("topBarColor") to theme.topBarColor,
+            key("onTopBarColor") to theme.onTopBarColor,
+            key("fontScale") to theme.fontScale,
+            key("useGlassEffect") to theme.useGlassEffect,
+            key("useHolographicGlow") to theme.useHolographicGlow,
+            key("uiDensity") to theme.uiDensity
         )
-        theme.bubbleCornerRadiusTopStart?.let { payload["bubbleCornerRadiusTopStart"] = it }
-        theme.bubbleCornerRadiusTopEnd?.let { payload["bubbleCornerRadiusTopEnd"] = it }
-        theme.bubbleCornerRadiusBottomStart?.let { payload["bubbleCornerRadiusBottomStart"] = it }
-        theme.bubbleCornerRadiusBottomEnd?.let { payload["bubbleCornerRadiusBottomEnd"] = it }
-        theme.timestampColor?.let { payload["timestampColor"] = it }
-        theme.dividerColor?.let { payload["dividerColor"] = it }
-        theme.appBackgroundGradientStart?.let { payload["appBackgroundGradientStart"] = it }
-        theme.appBackgroundGradientEnd?.let { payload["appBackgroundGradientEnd"] = it }
+        payload[key("bubbleCornerRadiusTopStart")] = theme.bubbleCornerRadiusTopStart ?: FieldValue.delete()
+        payload[key("bubbleCornerRadiusTopEnd")] = theme.bubbleCornerRadiusTopEnd ?: FieldValue.delete()
+        payload[key("bubbleCornerRadiusBottomStart")] = theme.bubbleCornerRadiusBottomStart ?: FieldValue.delete()
+        payload[key("bubbleCornerRadiusBottomEnd")] = theme.bubbleCornerRadiusBottomEnd ?: FieldValue.delete()
+        payload[key("timestampColor")] = theme.timestampColor ?: FieldValue.delete()
+        payload[key("dividerColor")] = theme.dividerColor ?: FieldValue.delete()
+        payload[key("appBackgroundGradientStart")] = theme.appBackgroundGradientStart ?: FieldValue.delete()
+        payload[key("appBackgroundGradientEnd")] = theme.appBackgroundGradientEnd ?: FieldValue.delete()
         return payload
     }
 

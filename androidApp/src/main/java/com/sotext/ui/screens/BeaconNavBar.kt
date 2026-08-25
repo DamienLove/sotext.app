@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sotext.domain.model.ThemePreferences
+import com.sotext.ui.theme.compactNavigationBarInsets
 import com.sotext.util.parseColorOr
 
 @Composable
@@ -41,7 +42,8 @@ fun BeaconNavBar(
     )
     NavigationBar(
         containerColor = parseColorOr(MaterialTheme.colorScheme.surface, theme.topBarColor),
-        contentColor = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor)
+        contentColor = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onTopBarColor),
+        windowInsets = compactNavigationBarInsets()
     ) {
         NavigationBarItem(
             selected = currentRoute == BeaconNavRoute.Inbox,
