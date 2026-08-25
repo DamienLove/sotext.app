@@ -1,11 +1,16 @@
 package com.sotext.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 
 private val DarkColors = darkColorScheme(
     primary = DeepAccent,
@@ -55,4 +60,17 @@ fun PulseLinkTheme(
         typography = MaterialTheme.typography,
         content = content
     )
+}
+
+/**
+ * BeaconNavBar's default `NavigationBar` reserves the *full* system nav-bar inset below its
+ * icon/label row (48dp on 3-button-nav devices), which reads as an entire extra empty row
+ * stacked under the tab labels before the system buttons. Halving it pulls the row down into
+ * that dead space while still keeping it clear of the system bar.
+ */
+@Composable
+fun compactNavigationBarInsets(): WindowInsets {
+    val density = LocalDensity.current
+    val fullBottomInset = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).getBottom(density)
+    return WindowInsets(bottom = fullBottomInset / 2)
 }
