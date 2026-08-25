@@ -120,6 +120,7 @@ import com.sotext.data.sms.OtpHelper
 import com.sotext.data.sms.SmsThreadItem
 import com.sotext.domain.model.Contact
 import com.sotext.domain.model.MessageUrgency
+import com.sotext.domain.model.SwipeAction
 import com.sotext.domain.model.ThemePreferences
 import com.sotext.ui.components.ThemeIcon
 import com.sotext.ui.components.ThemeIconKey
@@ -160,6 +161,8 @@ fun SmsInboxScreen(
     hideOtpInAll: Boolean = false,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit = { _, _ -> },
     theme: ThemePreferences = ThemePreferences(),
+    swipeRightAction: SwipeAction = SwipeAction.FAVORITE,
+    swipeLeftAction: SwipeAction = SwipeAction.DELETE,
     sectionTitle: String? = null,
     showFilterTabs: Boolean = true,
     banner: @Composable () -> Unit = {},
@@ -698,6 +701,8 @@ fun SmsInboxScreen(
                                 isPrivate = thread.isPrivate || privateThreadIds.contains(thread.threadId),
                                 onTogglePrivate = onTogglePrivate,
                                 theme = theme,
+                                swipeRightAction = swipeRightAction,
+                                swipeLeftAction = swipeLeftAction,
                                 contact = contact,
                                 lineIndex = lineIndex,
                                 lineColors = lineColors,
@@ -914,6 +919,8 @@ internal fun ThreadRow(
     isPrivate: Boolean,
     onTogglePrivate: (SmsThreadItem, Boolean) -> Unit,
     theme: ThemePreferences,
+    swipeRightAction: SwipeAction = SwipeAction.FAVORITE,
+    swipeLeftAction: SwipeAction = SwipeAction.DELETE,
     contact: Contact? = null,
     lineIndex: Int? = null,
     lineColors: List<Color> = emptyList(),
@@ -942,20 +949,26 @@ internal fun ThreadRow(
         ?: contact?.remoteDisplayName?.takeIf { it.isNotBlank() }
         ?: displayName
     val avatarText = resolvedName.ifBlank { number ?: "Unknown" }
-    // Design: swipe right (StartToEnd) deletes, swipe left (EndToStart) favorites.
-    // Archive/unarchive stays reachable via the dedicated row icon below.
+    // Design: which action fires on which swipe direction is user-configurable (Settings >
+    // Inbox gestures); defaults to swipe right = favorite, swipe left = delete. Archive/
+    // unarchive stays reachable via the dedicated row icon below regardless.
+    fun runSwipeAction(action: SwipeAction) {
+        when (action) {
+            SwipeAction.DELETE -> onDelete(thread)
+            SwipeAction.FAVORITE -> onFavorite(thread)
+            SwipeAction.ARCHIVE -> if (isArchived) onUnarchive(thread) else onArchive(thread)
+            SwipeAction.NONE -> {}
+        }
+    }
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             if (!actionsEnabled) return@rememberSwipeToDismissBoxState false
             when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    onDelete(thread); false
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    onFavorite(thread); false
-                }
-                SwipeToDismissBoxValue.Settled -> false
+                SwipeToDismissBoxValue.StartToEnd -> runSwipeAction(swipeRightAction)
+                SwipeToDismissBoxValue.EndToStart -> runSwipeAction(swipeLeftAction)
+                SwipeToDismissBoxValue.Settled -> {}
             }
+            false
         }
     )
     val actionIconSize = (20f * theme.iconSizeFactor).coerceIn(16f, 28f).dp
@@ -973,11 +986,33 @@ internal fun ThreadRow(
         state = dismissState,
         backgroundContent = {
             val direction = dismissState.dismissDirection ?: return@SwipeToDismissBox
-            val isDelete = direction == SwipeToDismissBoxValue.StartToEnd
-            val color = if (isDelete) Color(0xFFE84A4A) else Color(0xFFF5A623)
-            val label = if (isDelete) "Delete" else "Favorite"
-            val icon = if (isDelete) Icons.Filled.Delete else Icons.Filled.Favorite
-            val iconKey = if (isDelete) ThemeIconKey.DELETE else ThemeIconKey.FAVORITE
+            val isStartToEnd = direction == SwipeToDismissBoxValue.StartToEnd
+            val action = if (isStartToEnd) swipeRightAction else swipeLeftAction
+            if (action == SwipeAction.NONE) return@SwipeToDismissBox
+            val color = when (action) {
+                SwipeAction.DELETE -> Color(0xFFE84A4A)
+                SwipeAction.FAVORITE -> Color(0xFFF5A623)
+                SwipeAction.ARCHIVE -> primary
+                SwipeAction.NONE -> Color.Transparent
+            }
+            val label = when (action) {
+                SwipeAction.DELETE -> "Delete"
+                SwipeAction.FAVORITE -> "Favorite"
+                SwipeAction.ARCHIVE -> if (isArchived) "Unarchive" else "Archive"
+                SwipeAction.NONE -> ""
+            }
+            val icon = when (action) {
+                SwipeAction.DELETE -> Icons.Filled.Delete
+                SwipeAction.FAVORITE -> Icons.Filled.Favorite
+                SwipeAction.ARCHIVE -> if (isArchived) Icons.Filled.Unarchive else Icons.Filled.Archive
+                SwipeAction.NONE -> Icons.Filled.Delete
+            }
+            val iconKey = when (action) {
+                SwipeAction.DELETE -> ThemeIconKey.DELETE
+                SwipeAction.FAVORITE -> ThemeIconKey.FAVORITE
+                SwipeAction.ARCHIVE -> if (isArchived) ThemeIconKey.UNARCHIVE else ThemeIconKey.ARCHIVE
+                SwipeAction.NONE -> ThemeIconKey.DELETE
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -985,7 +1020,7 @@ internal fun ThreadRow(
                     .clip(RoundedCornerShape(14.dp))
                     .background(color)
                     .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = if (isDelete) Arrangement.Start else Arrangement.End,
+                horizontalArrangement = if (isStartToEnd) Arrangement.Start else Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ThemeIcon(

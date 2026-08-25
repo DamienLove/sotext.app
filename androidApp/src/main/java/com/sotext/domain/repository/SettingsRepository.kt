@@ -5,6 +5,7 @@ import com.sotext.domain.model.LineSendPreference
 import com.sotext.domain.model.MessageChannel
 import com.sotext.domain.model.PulseLinkSettings
 import com.sotext.domain.model.RcsSettings
+import com.sotext.domain.model.SwipeAction
 import kotlinx.coroutines.flow.Flow
 
 interface SettingsRepository {
@@ -49,6 +50,8 @@ interface SettingsRepository {
     suspend fun setCrashDetectionEnabled(enabled: Boolean)
     suspend fun setPassiveListeningEnabled(enabled: Boolean)
     suspend fun setInboxGestureHintsDismissed(dismissed: Boolean)
+    suspend fun setSwipeRightAction(action: SwipeAction)
+    suspend fun setSwipeLeftAction(action: SwipeAction)
     suspend fun setAiSummariesEnabled(enabled: Boolean)
     suspend fun setAiComposeEnabled(enabled: Boolean)
     suspend fun setAiUrgencyEnabled(enabled: Boolean)

@@ -552,6 +552,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                                 viewModel.setThreadPrivacy(thread.threadId, thread.address, makePrivate)
                                             },
                                             theme = state.settings.themePreferences,
+                                            swipeRightAction = state.settings.swipeRightAction,
+                                            swipeLeftAction = state.settings.swipeLeftAction,
                                             onImportAll = { smsInboxViewModel.importAllMessages() },
                                             onLoadMore = { smsInboxViewModel.loadMoreThreads() },
                                             hasMoreToLoad = smsInboxViewModel.hasMoreThreads.collectAsStateWithLifecycle().value,
@@ -1035,7 +1037,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                             viewModel.setAiUrgencyIncludeUnknown(enabled)
                                         },
                                         blockRcsReadReceipts = state.settings.blockRcsReadReceipts,
-                                        onToggleBlockRcsReadReceipts = { enabled -> viewModel.setBlockRcsReadReceipts(enabled) }
+                                        onToggleBlockRcsReadReceipts = { enabled -> viewModel.setBlockRcsReadReceipts(enabled) },
+                                        onChangeSwipeRightAction = { action -> viewModel.setSwipeRightAction(action) },
+                                        onChangeSwipeLeftAction = { action -> viewModel.setSwipeLeftAction(action) }
                                     )
                                 }
                                 composable("extensions_store") {

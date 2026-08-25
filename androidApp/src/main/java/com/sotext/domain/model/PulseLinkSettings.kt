@@ -64,6 +64,8 @@ data class PulseLinkSettings(
     val crashDetectionEnabled: Boolean = false,
     val passiveListeningEnabled: Boolean = false,
     val inboxGestureHintsDismissed: Boolean = false,
+    val swipeRightAction: SwipeAction = SwipeAction.FAVORITE,
+    val swipeLeftAction: SwipeAction = SwipeAction.DELETE,
     val aiSummariesEnabled: Boolean = false,
     val aiComposeEnabled: Boolean = true,
     val aiUrgencyEnabled: Boolean = true,
@@ -93,6 +95,11 @@ data class PulseLinkSettings(
 
 enum class TimeFormat {
     AUTO, TWELVE_HOUR, TWENTY_FOUR_HOUR
+}
+
+/** What swiping a thread row in a given direction does. Configurable per-direction in Settings. */
+enum class SwipeAction {
+    NONE, DELETE, FAVORITE, ARCHIVE
 }
 
 @kotlinx.serialization.Serializable

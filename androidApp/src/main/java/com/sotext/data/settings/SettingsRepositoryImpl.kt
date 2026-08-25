@@ -17,6 +17,7 @@ import com.sotext.domain.model.LineSendPreference
 import com.sotext.domain.model.MessageChannel
 import com.sotext.domain.model.PulseLinkSettings
 import com.sotext.domain.model.RcsSettings
+import com.sotext.domain.model.SwipeAction
 import com.sotext.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -85,6 +86,8 @@ private val MESSAGING_CHANNEL_PRIORITY = stringPreferencesKey("messaging_channel
 private val CRASH_DETECTION_ENABLED = booleanPreferencesKey("crash_detection_enabled")
 private val PASSIVE_LISTENING_ENABLED = booleanPreferencesKey("passive_listening_enabled")
 private val INBOX_GESTURE_HINTS_DISMISSED = booleanPreferencesKey("inbox_gesture_hints_dismissed")
+private val SWIPE_RIGHT_ACTION = stringPreferencesKey("swipe_right_action")
+private val SWIPE_LEFT_ACTION = stringPreferencesKey("swipe_left_action")
 private val AI_SUMMARIES_ENABLED = booleanPreferencesKey("ai_summaries_enabled")
 private val AI_COMPOSE_ENABLED = booleanPreferencesKey("ai_compose_enabled")
 private val AI_URGENCY_ENABLED = booleanPreferencesKey("ai_urgency_enabled")
@@ -212,6 +215,10 @@ class SettingsRepositoryImpl @Inject constructor(
             },
             passiveListeningEnabled = prefs[PASSIVE_LISTENING_ENABLED] ?: PulseLinkSettings().passiveListeningEnabled,
             inboxGestureHintsDismissed = prefs[INBOX_GESTURE_HINTS_DISMISSED] ?: PulseLinkSettings().inboxGestureHintsDismissed,
+            swipeRightAction = prefs[SWIPE_RIGHT_ACTION]?.let { runCatching { SwipeAction.valueOf(it) }.getOrNull() }
+                ?: PulseLinkSettings().swipeRightAction,
+            swipeLeftAction = prefs[SWIPE_LEFT_ACTION]?.let { runCatching { SwipeAction.valueOf(it) }.getOrNull() }
+                ?: PulseLinkSettings().swipeLeftAction,
             aiSummariesEnabled = prefs[AI_SUMMARIES_ENABLED] ?: PulseLinkSettings().aiSummariesEnabled,
             aiComposeEnabled = prefs[AI_COMPOSE_ENABLED] ?: PulseLinkSettings().aiComposeEnabled,
             aiUrgencyEnabled = prefs[AI_URGENCY_ENABLED] ?: PulseLinkSettings().aiUrgencyEnabled,
@@ -320,6 +327,8 @@ class SettingsRepositoryImpl @Inject constructor(
             }
             prefs[PASSIVE_LISTENING_ENABLED] = updated.passiveListeningEnabled
             prefs[INBOX_GESTURE_HINTS_DISMISSED] = updated.inboxGestureHintsDismissed
+            prefs[SWIPE_RIGHT_ACTION] = updated.swipeRightAction.name
+            prefs[SWIPE_LEFT_ACTION] = updated.swipeLeftAction.name
             prefs[AI_SUMMARIES_ENABLED] = updated.aiSummariesEnabled
             prefs[AI_COMPOSE_ENABLED] = updated.aiComposeEnabled
             prefs[AI_URGENCY_ENABLED] = updated.aiUrgencyEnabled
@@ -359,6 +368,18 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setInboxGestureHintsDismissed(dismissed: Boolean) {
         editOnIo { prefs ->
             prefs[INBOX_GESTURE_HINTS_DISMISSED] = dismissed
+        }
+    }
+
+    override suspend fun setSwipeRightAction(action: SwipeAction) {
+        editOnIo { prefs ->
+            prefs[SWIPE_RIGHT_ACTION] = action.name
+        }
+    }
+
+    override suspend fun setSwipeLeftAction(action: SwipeAction) {
+        editOnIo { prefs ->
+            prefs[SWIPE_LEFT_ACTION] = action.name
         }
     }
 
@@ -807,6 +828,10 @@ class SettingsRepositoryImpl @Inject constructor(
                 json.decodeFromString<Map<String, String>>(it)
             } ?: PulseLinkSettings().threadLineOverrides,
             devicePhoneNumber = prefs[DEVICE_PHONE_NUMBER],
+            swipeRightAction = prefs[SWIPE_RIGHT_ACTION]?.let { runCatching { SwipeAction.valueOf(it) }.getOrNull() }
+                ?: PulseLinkSettings().swipeRightAction,
+            swipeLeftAction = prefs[SWIPE_LEFT_ACTION]?.let { runCatching { SwipeAction.valueOf(it) }.getOrNull() }
+                ?: PulseLinkSettings().swipeLeftAction,
             rcsSettings = decodeJsonOrNull(prefs[RCS_SETTINGS]) {
                 json.decodeFromString(RcsSettings.serializer(), it)
             } ?: run {
