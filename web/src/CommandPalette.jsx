@@ -51,7 +51,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
 
   const handleExecuteCommand = useCallback(async (commandType, details) => {
     switch (commandType) {
-      case 'sendMessage':
+      case 'sendMessage': {
         const { recipient, message, withLocation } = details;
         let targetContact = recipient;
 
@@ -116,6 +116,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
           setPendingCommand(null); // Clear pending as send failed
         }
         return success;
+      }
 
       default:
         setStatus(`Unknown command: ${commandType}`);
@@ -265,7 +266,7 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
       aria-label="Command Palette"
     >
       <div className="command-palette-modal" onClick={e => e.stopPropagation()}>
-        <div className="command-palette-header">
+        <div className="command-palette-header" onClick={() => inputRef.current?.focus()}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="search-icon">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
