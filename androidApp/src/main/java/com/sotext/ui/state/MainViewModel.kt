@@ -1885,6 +1885,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setContextCardsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(contextCardsEnabled = enabled) }
+        }
+    }
+
     private fun emitDndStatus(result: AlertResult?) {
         val overrideResult = result?.overrideResult ?: run {
             dndStatus.value = null

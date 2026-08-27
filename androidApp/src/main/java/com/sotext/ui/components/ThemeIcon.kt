@@ -31,6 +31,12 @@ object ThemeIconKey {
     const val AI = "icon.ai"
     const val ARROW_DOWN = "icon.arrow_down"
     const val ATTACH = "icon.attach"
+    const val CONTEXT_EVENT = "icon.context_event"
+    const val CONTEXT_PLACE = "icon.context_place"
+    const val CONTEXT_PHONE = "icon.context_phone"
+    const val CONTEXT_LINK = "icon.context_link"
+    const val CONTEXT_TRACKING = "icon.context_tracking"
+    const val CONTEXT_CODE = "icon.context_code"
 }
 
 @Composable

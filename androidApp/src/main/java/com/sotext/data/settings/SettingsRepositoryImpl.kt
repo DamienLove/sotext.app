@@ -88,6 +88,7 @@ private val PASSIVE_LISTENING_ENABLED = booleanPreferencesKey("passive_listening
 private val INBOX_GESTURE_HINTS_DISMISSED = booleanPreferencesKey("inbox_gesture_hints_dismissed")
 private val SWIPE_RIGHT_ACTION = stringPreferencesKey("swipe_right_action")
 private val SWIPE_LEFT_ACTION = stringPreferencesKey("swipe_left_action")
+private val CONTEXT_CARDS_ENABLED = booleanPreferencesKey("context_cards_enabled")
 private val AI_SUMMARIES_ENABLED = booleanPreferencesKey("ai_summaries_enabled")
 private val AI_COMPOSE_ENABLED = booleanPreferencesKey("ai_compose_enabled")
 private val AI_URGENCY_ENABLED = booleanPreferencesKey("ai_urgency_enabled")
@@ -219,6 +220,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().swipeRightAction,
             swipeLeftAction = prefs[SWIPE_LEFT_ACTION]?.let { runCatching { SwipeAction.valueOf(it) }.getOrNull() }
                 ?: PulseLinkSettings().swipeLeftAction,
+            contextCardsEnabled = prefs[CONTEXT_CARDS_ENABLED] ?: PulseLinkSettings().contextCardsEnabled,
             aiSummariesEnabled = prefs[AI_SUMMARIES_ENABLED] ?: PulseLinkSettings().aiSummariesEnabled,
             aiComposeEnabled = prefs[AI_COMPOSE_ENABLED] ?: PulseLinkSettings().aiComposeEnabled,
             aiUrgencyEnabled = prefs[AI_URGENCY_ENABLED] ?: PulseLinkSettings().aiUrgencyEnabled,
@@ -329,6 +331,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[INBOX_GESTURE_HINTS_DISMISSED] = updated.inboxGestureHintsDismissed
             prefs[SWIPE_RIGHT_ACTION] = updated.swipeRightAction.name
             prefs[SWIPE_LEFT_ACTION] = updated.swipeLeftAction.name
+            prefs[CONTEXT_CARDS_ENABLED] = updated.contextCardsEnabled
             prefs[AI_SUMMARIES_ENABLED] = updated.aiSummariesEnabled
             prefs[AI_COMPOSE_ENABLED] = updated.aiComposeEnabled
             prefs[AI_URGENCY_ENABLED] = updated.aiUrgencyEnabled
@@ -832,6 +835,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().swipeRightAction,
             swipeLeftAction = prefs[SWIPE_LEFT_ACTION]?.let { runCatching { SwipeAction.valueOf(it) }.getOrNull() }
                 ?: PulseLinkSettings().swipeLeftAction,
+            contextCardsEnabled = prefs[CONTEXT_CARDS_ENABLED] ?: PulseLinkSettings().contextCardsEnabled,
             rcsSettings = decodeJsonOrNull(prefs[RCS_SETTINGS]) {
                 json.decodeFromString(RcsSettings.serializer(), it)
             } ?: run {

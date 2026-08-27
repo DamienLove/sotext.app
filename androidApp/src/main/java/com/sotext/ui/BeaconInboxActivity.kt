@@ -972,7 +972,8 @@ class BeaconInboxActivity : ComponentActivity() {
                                         aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled,
                                         onLoadMore = { threadViewModel.loadMoreMessages() },
                                         hasMoreToLoad = threadViewModel.hasMoreMessages.collectAsStateWithLifecycle().value,
-                                        smartRepliesEnabled = state.settings.smartRepliesEnabled
+                                        smartRepliesEnabled = state.settings.smartRepliesEnabled,
+                                        contextCardsEnabled = state.settings.contextCardsEnabled
                                     )
                                 }
                                 composable("beacon_settings") {

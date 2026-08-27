@@ -94,6 +94,7 @@ fun SettingsScreen(
     onToggleSmartReplies: (Boolean) -> Unit,
     onToggleAiCompose: (Boolean) -> Unit,
     onToggleAiUrgency: (Boolean) -> Unit,
+    onToggleContextCards: (Boolean) -> Unit,
     onRequestDefaultSms: () -> Unit,
     onToggleBeaconLauncher: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
@@ -336,11 +337,17 @@ fun SettingsScreen(
             }
 
             // Smart Features & Extensions
-            if (settings.otpCleanupEnabled || settings.aiSummariesEnabled || settings.smartRepliesEnabled || settings.privateSafeEnabled) {
+            if (settings.otpCleanupEnabled || settings.aiSummariesEnabled || settings.smartRepliesEnabled || settings.privateSafeEnabled || settings.contextCardsEnabled) {
                 CollapsibleSettingsSection(
                     title = "Smart Features",
                     initiallyExpanded = false
                 ) {
+                    SettingsToggleRow(
+                        title = "Smart message cards",
+                        subtitle = "Turn dates, addresses, phone numbers, links, and codes in a message into quick-action cards.",
+                        checked = settings.contextCardsEnabled,
+                        onCheckedChange = onToggleContextCards
+                    )
                     if (settings.otpCleanupEnabled) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                             Text(
