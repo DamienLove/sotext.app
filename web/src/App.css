@@ -508,6 +508,7 @@
   font-size: 1em;
   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+  width: 100%;
 }
 
 .login-input:hover,
@@ -594,6 +595,14 @@
   margin-bottom: 24px;
   align-items: center;
   box-shadow: inset 0 2px 10px rgba(0,0,0,0.4);
+  cursor: text;
+  transition: all 0.2s;
+}
+
+.settings-search-container:focus-within {
+  background: rgba(0, 255, 255, 0.05);
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 0 1px var(--accent-dim);
 }
 
 .settings-search-input {
@@ -803,6 +812,11 @@ textarea:focus-visible,
 
 .password-input-wrapper {
   position: relative;
+}
+
+.password-input-wrapper .login-input {
+  width: 100%;
+  padding-right: 48px; /* space for the toggle button */
 }
 
 .password-toggle-btn {
