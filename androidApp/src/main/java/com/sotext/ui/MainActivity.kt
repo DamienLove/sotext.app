@@ -1732,6 +1732,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleSmartReplies = viewModel::setSmartRepliesEnabled,
                             onToggleAiCompose = viewModel::setAiComposeEnabled,
                             onToggleAiUrgency = viewModel::setAiUrgencyEnabled,
+                            onToggleContextCards = viewModel::setContextCardsEnabled,
                             onRequestDefaultSms = requestDefaultSms,
                             onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) },
                             onSyncNow = viewModel::syncContactsNow,
@@ -2125,7 +2126,8 @@ class MainActivity : AppCompatActivity() {
                             aiComposeEnabled = premiumActive && state.settings.aiComposeEnabled && isAuthenticated,
                             aiSignInRequired = !isAuthenticated,
                             onRequestAiSignIn = { navController.navigate("login") },
-                            smartRepliesEnabled = state.settings.smartRepliesEnabled
+                            smartRepliesEnabled = state.settings.smartRepliesEnabled,
+                            contextCardsEnabled = state.settings.contextCardsEnabled
                         )
                     }
                     composable("settings_help") {

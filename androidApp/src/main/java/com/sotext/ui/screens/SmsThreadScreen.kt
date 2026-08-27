@@ -39,6 +39,13 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -87,17 +94,24 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.provider.CalendarContract
+import android.provider.ContactsContract
 import android.widget.Toast
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.sotext.data.context.ContextCard
+import com.sotext.data.context.MessageContextParser
 import com.sotext.data.sms.SmsMessageItem
 import com.sotext.data.sms.SmsMessageStatus
 import com.sotext.data.ai.AiComposeAction
@@ -150,7 +164,8 @@ fun SmsThreadScreen(
     onLoadMore: () -> Unit = {},
     hasMoreToLoad: Boolean = true,
     smartRepliesEnabled: Boolean = false,
-    isPremium: Boolean = false
+    isPremium: Boolean = false,
+    contextCardsEnabled: Boolean = true
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -413,7 +428,8 @@ fun SmsThreadScreen(
                             onRetry = { failed -> onSendMessage(failed.body, selectedLineId ?: deviceLineId) },
                             onAvatarClick = if (!msg.outgoing) {
                                 { onEditContact() }
-                            } else null
+                            } else null,
+                            contextCardsEnabled = contextCardsEnabled
                         )
                     }
                 }
@@ -992,7 +1008,8 @@ private fun MessageBubble(
     theme: ThemePreferences,
     contact: Contact?,
     onRetry: (SmsMessageItem) -> Unit = {},
-    onAvatarClick: (() -> Unit)? = null
+    onAvatarClick: (() -> Unit)? = null,
+    contextCardsEnabled: Boolean = true
 ) {
     val isOutgoing = msg.outgoing
     val rawBubbleColor = if (isOutgoing) {
@@ -1191,8 +1208,191 @@ private fun MessageBubble(
                     )
                 }
             }
+            if (contextCardsEnabled && msg.body.isNotBlank()) {
+                val contextCards = remember(msg.id, msg.body) {
+                    MessageContextParser.extract(
+                        messageId = msg.id,
+                        body = msg.body,
+                        timestampMillis = msg.timestamp,
+                        senderAddress = msg.address
+                    )
+                }
+                if (contextCards.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        contextCards.forEach { card ->
+                            ContextActionCard(card = card, theme = theme)
+                        }
+                    }
+                }
+            }
         }
     }
+}
+
+private data class ContextCardAction(val label: String, val isPrimary: Boolean, val onClick: () -> Unit)
+
+@Composable
+private fun ContextActionCard(card: ContextCard, theme: ThemePreferences) {
+    var dismissed by remember(card.id) { mutableStateOf(false) }
+    if (dismissed) return
+
+    val context = LocalContext.current
+    val container = parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming)
+    val onContainer = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
+    val accent = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+
+    val (iconKey, icon, label, actions) = remember(card) { contextCardPresentation(card, context) }
+
+    Surface(
+        color = container,
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .widthIn(max = 280.dp)
+                .padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ThemeIcon(
+                iconKey = iconKey,
+                theme = theme,
+                imageVector = icon,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = onContainer,
+                maxLines = 2,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            actions.forEach { action ->
+                TextButton(
+                    onClick = action.onClick,
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = action.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (action.isPrimary) accent else onContainer.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            IconButton(
+                onClick = { dismissed = true },
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Dismiss",
+                    modifier = Modifier.size(14.dp),
+                    tint = onContainer.copy(alpha = 0.5f)
+                )
+            }
+        }
+    }
+}
+
+private fun contextCardPresentation(
+    card: ContextCard,
+    context: Context
+): Quadruple<String, ImageVector, String, List<ContextCardAction>> {
+    return when (card) {
+        is ContextCard.Event -> Quadruple(
+            ThemeIconKey.CONTEXT_EVENT,
+            Icons.Filled.Event,
+            card.title,
+            listOf(ContextCardAction("Add to calendar", true) { openCalendarEvent(context, card) })
+        )
+        is ContextCard.Place -> Quadruple(
+            ThemeIconKey.CONTEXT_PLACE,
+            Icons.Filled.LocationOn,
+            card.matchedText,
+            listOf(ContextCardAction("Directions", true) { openMaps(context, card.query) })
+        )
+        is ContextCard.Phone -> Quadruple(
+            ThemeIconKey.CONTEXT_PHONE,
+            Icons.Filled.Call,
+            card.number,
+            listOf(
+                ContextCardAction("Save", false) { saveContact(context, card.number) },
+                ContextCardAction("Call", true) { dialNumber(context, card.number) }
+            )
+        )
+        is ContextCard.Link -> Quadruple(
+            ThemeIconKey.CONTEXT_LINK,
+            Icons.Filled.Link,
+            card.matchedText,
+            listOf(ContextCardAction("Open", true) { openUrl(context, card.url) })
+        )
+        is ContextCard.Tracking -> Quadruple(
+            ThemeIconKey.CONTEXT_TRACKING,
+            Icons.Filled.LocalShipping,
+            "${card.carrier} · ${card.number}",
+            listOf(ContextCardAction("Track", true) { openUrl(context, card.trackingUrl) })
+        )
+        is ContextCard.VerificationCode -> Quadruple(
+            ThemeIconKey.CONTEXT_CODE,
+            Icons.Filled.ContentCopy,
+            "Code: ${card.code}",
+            listOf(ContextCardAction("Copy", true) { copyToClipboard(context, card.code) })
+        )
+    }
+}
+
+private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
+private fun launchSafely(context: Context, intent: Intent) {
+    runCatching {
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+    }.onFailure {
+        if (it is ActivityNotFoundException) {
+            Toast.makeText(context, "No app found to handle this action.", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
+
+private fun openUrl(context: Context, url: String) {
+    launchSafely(context, Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+}
+
+private fun openMaps(context: Context, query: String) {
+    launchSafely(context, Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(query)}")))
+}
+
+private fun dialNumber(context: Context, number: String) {
+    launchSafely(context, Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(number)}")))
+}
+
+private fun saveContact(context: Context, number: String) {
+    val intent = Intent(ContactsContract.Intents.Insert.ACTION).apply {
+        type = ContactsContract.RawContacts.CONTENT_TYPE
+        putExtra(ContactsContract.Intents.Insert.PHONE, number)
+    }
+    launchSafely(context, intent)
+}
+
+private fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Code", text))
+    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+}
+
+private fun openCalendarEvent(context: Context, event: ContextCard.Event) {
+    val intent = Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI).apply {
+        putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, event.startMillis)
+        putExtra(CalendarContract.EXTRA_EVENT_END_TIME, event.endMillis)
+        putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, event.allDay)
+        putExtra(CalendarContract.Events.TITLE, event.title)
+    }
+    launchSafely(context, intent)
 }
 
 @Composable

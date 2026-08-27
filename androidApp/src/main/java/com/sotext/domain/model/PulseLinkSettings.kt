@@ -66,6 +66,7 @@ data class PulseLinkSettings(
     val inboxGestureHintsDismissed: Boolean = false,
     val swipeRightAction: SwipeAction = SwipeAction.FAVORITE,
     val swipeLeftAction: SwipeAction = SwipeAction.DELETE,
+    val contextCardsEnabled: Boolean = true,
     val aiSummariesEnabled: Boolean = false,
     val aiComposeEnabled: Boolean = true,
     val aiUrgencyEnabled: Boolean = true,
