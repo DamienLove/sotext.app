@@ -12,6 +12,7 @@ import {gemini20Flash} from "@genkit-ai/vertexai";
 // a caller's token has a specific claim (optionally matching a specific value)
 import {onCall} from "firebase-functions/v2/https";
 import {defineSecret} from "firebase-functions/params";
+import {sanitizeScalar} from "./security";
 const apiKey = defineSecret("GOOGLE_GENAI_API_KEY");
 
 // The Firebase telemetry plugin exports a combination of metrics, traces, and logs to Google Cloud
@@ -33,9 +34,11 @@ const menuSuggestionFlow = ai.defineFlow({
   inputSchema: z.string().describe("A restaurant theme").default("seafood"),
   outputSchema: z.string(),
 }, async (subject) => {
+  // Sentinel: Sanitize user input against prompt injection
+  const safeSubject = sanitizeScalar(subject);
   // Construct a request and send it to the model API.
   const prompt =
-      `Suggest an item for the menu of a ${subject} themed restaurant`;
+      `Suggest an item for the menu of a ${safeSubject} themed restaurant`;
   const response = await ai.generate({
     model: gemini20Flash,
     prompt: prompt,

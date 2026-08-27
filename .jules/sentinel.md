@@ -27,6 +27,11 @@
 **Learning:** Never rely on client-side logic ("it has no images") to bypass security queues. If the destination is protected, all writes must go through a privileged backend (Cloud Function) or a submission queue (`themes_submissions`).
 **Prevention:** Implement the "Submission Queue" pattern: Clients always write to a pending collection. A Cloud Function trigger validates the content server-side and promotes it to the public collection if safe, or flags it for review.
 
+## 2024-05-28 - AI Prompt Injection in Genkit Sample Flow
+**Vulnerability:** The `menuSuggestionFlow` in the Genkit sample directly concatenated raw user input (`subject`) into the prompt string without any sanitization. This allowed potential instruction hijacking via newline or control character injection.
+**Learning:** Even simple, sample-level flows using Genkit and direct prompt concatenation are vulnerable to structural prompt manipulation if user input is not sanitized before embedding.
+**Prevention:** Consistently apply `sanitizeScalar` to strip control characters and newlines from all scalar user inputs before they are interpolated into LLM prompts.
+
 ## 2024-05-27 - [Persistent XSS via Direct Profile Updates]
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
