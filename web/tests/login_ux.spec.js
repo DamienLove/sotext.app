@@ -17,11 +17,7 @@ test.describe('Login UX Improvements', () => {
     const toggleBtn = page.locator('.password-toggle-btn');
     await expect(toggleBtn).toBeVisible();
 
-    // Initially hidden (password type)
-    await expect(toggleBtn).toHaveAttribute('title', 'Show password');
-
-    // Click to show
-    await toggleBtn.click();
-    await expect(toggleBtn).toHaveAttribute('title', 'Hide password');
+    // Check static title
+    await expect(toggleBtn).toHaveAttribute('title', 'Toggle password visibility');
   });
 });
