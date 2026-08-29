@@ -4330,6 +4330,7 @@ function App() {
                     className="password-toggle-btn"
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
                     title={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
