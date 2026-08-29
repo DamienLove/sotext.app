@@ -144,15 +144,16 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
 
   try {
     const userDocRef = db.collection("users").doc(uid);
-    const userSnap = await userDocRef.get();
-    const deviceId = userSnap.exists ?
-        (userSnap.data()?.deviceId as string | undefined) :
-        undefined;
 
     // Delete user profile + subcollections
     await db.recursiveDelete(userDocRef);
 
-    // Delete device registrations
+    // Get all authoritative devices for this user
+    const deviceQuery = await db.collection("devices")
+        .where("uid", "==", uid)
+        .get();
+
+    // Delete device registrations and beta agreements
     const deviceDeletes: FirebaseFirestore.WriteBatch[] = [];
     let batch = db.batch();
     let ops = 0;
@@ -166,25 +167,25 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
       }
     };
 
-    const deviceQuery = await db.collection("devices")
-        .where("uid", "==", uid)
-        .get();
-    deviceQuery.forEach((doc) => queueDelete(doc.ref));
-    if (deviceId) {
-      queueDelete(db.collection("devices").doc(deviceId));
-    }
+    const betaAgreementDeletes: Promise<any>[] = [];
+
+    deviceQuery.forEach((doc) => {
+      // Delete the device document
+      queueDelete(doc.ref);
+      // Delete associated beta agreement based on authoritative device ID
+      betaAgreementDeletes.push(
+          db.collection("betaAgreements")
+              .doc(doc.id)
+              .delete()
+              .catch(() => undefined),
+      );
+    });
+
     if (ops > 0) deviceDeletes.push(batch);
     for (const b of deviceDeletes) {
       await b.commit();
     }
-
-    // Delete beta agreement tied to device ID (if present)
-    if (deviceId) {
-      await db.collection("betaAgreements")
-          .doc(deviceId)
-          .delete()
-          .catch(() => undefined);
-    }
+    await Promise.all(betaAgreementDeletes);
 
     // Delete link invites sent by or targeted to the user
     const inviteDeletes: Promise<FirebaseFirestore.WriteResult>[] = [];
