@@ -1,18 +1,23 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {logger} from "firebase-functions";
+import {defineSecret} from "firebase-functions/params";
 
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
 
-export const getSpotifyAccessToken = onCall(async (request) => {
+const spotifyClientId = defineSecret("SPOTIFY_CLIENT_ID");
+const spotifyClientSecret = defineSecret("SPOTIFY_CLIENT_SECRET");
+
+export const getSpotifyAccessToken = onCall(
+  {secrets: [spotifyClientId, spotifyClientSecret]},
+  async (request) => {
   // 1. Authenticate the user
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "User must be authenticated.");
   }
 
-  // 2. Retrieve secrets (assumed to be in process.env for this environment)
-  // In production, use defineSecret() for better security, but process.env matches existing pattern (email.ts).
-  const clientId = process.env.SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+  // 2. Retrieve secrets
+  const clientId = spotifyClientId.value();
+  const clientSecret = spotifyClientSecret.value();
 
   if (!clientId || !clientSecret) {
     logger.error("Missing Spotify credentials in environment.");
