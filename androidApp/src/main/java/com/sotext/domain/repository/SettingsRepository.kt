@@ -53,6 +53,7 @@ interface SettingsRepository {
     suspend fun setSwipeRightAction(action: SwipeAction)
     suspend fun setSwipeLeftAction(action: SwipeAction)
     suspend fun setAiSummariesEnabled(enabled: Boolean)
+    suspend fun setCatchMeUpEnabled(enabled: Boolean)
     suspend fun setAiComposeEnabled(enabled: Boolean)
     suspend fun setAiUrgencyEnabled(enabled: Boolean)
     suspend fun setAiUrgencyBypassDnd(enabled: Boolean)

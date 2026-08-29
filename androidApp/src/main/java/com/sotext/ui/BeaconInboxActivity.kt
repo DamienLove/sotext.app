@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sms
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.runtime.key
@@ -84,6 +85,7 @@ import com.sotext.ui.screens.CustomVibrationCreatorScreen
 import com.sotext.ui.screens.ProfileSettingsScreen
 import com.sotext.ui.screens.MultiLineSetupDialog
 import com.sotext.ui.screens.LineLimitDialog
+import com.sotext.ui.screens.CatchMeUpScreen
 import com.sotext.ui.screens.SmsInboxScreen
 import com.sotext.ui.screens.SmsThreadScreen
 import com.sotext.ui.screens.VisualSettingsScreen
@@ -580,6 +582,43 @@ class BeaconInboxActivity : ComponentActivity() {
                                             },
                                             banner = {
                                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    val catchUpCandidateCount = remember(threads) {
+                                                        val now = System.currentTimeMillis()
+                                                        threads.count {
+                                                            !it.isPrivate && (it.unread || (now - it.timestamp) <= 48L * 60 * 60 * 1000)
+                                                        }
+                                                    }
+                                                    if (hasPremium && state.settings.catchMeUpEnabled &&
+                                                        currentRoute == BeaconNavRoute.Inbox && catchUpCandidateCount > 0
+                                                    ) {
+                                                        Surface(
+                                                            tonalElevation = 2.dp,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(12.dp),
+                                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Icon(Icons.Filled.AutoAwesome, contentDescription = null)
+                                                                Column(Modifier.weight(1f)) {
+                                                                    Text(
+                                                                        text = "Catch Me Up",
+                                                                        style = MaterialTheme.typography.titleSmall
+                                                                    )
+                                                                    Text(
+                                                                        text = "$catchUpCandidateCount conversation" +
+                                                                            (if (catchUpCandidateCount == 1) "" else "s") +
+                                                                            " could use a look",
+                                                                        style = MaterialTheme.typography.bodySmall
+                                                                    )
+                                                                }
+                                                                OutlinedButton(onClick = { navController.navigate("catch_me_up") }) {
+                                                                    Text("View")
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                                     if (!notificationsEnabled || notificationsSilent) {
                                                         Surface(
                                                             tonalElevation = 2.dp,
@@ -753,6 +792,29 @@ class BeaconInboxActivity : ComponentActivity() {
                                          currentRoute = BeaconNavRoute.Private
                                          showPrivate = false
                                     }
+                                }
+                                composable("catch_me_up") {
+                                    val catchUpViewModel: SmsInboxViewModel = hiltViewModel()
+                                    val catchMeUpState by catchUpViewModel.catchMeUpState.collectAsStateWithLifecycle()
+                                    LaunchedEffect(Unit) { catchUpViewModel.requestCatchMeUp() }
+                                    CatchMeUpScreen(
+                                        state = catchMeUpState,
+                                        theme = state.settings.themePreferences,
+                                        dateFormatter = { ts -> formatTimestamp(context, ts, state.settings.timeFormat) },
+                                        onBack = { navController.popBackStack() },
+                                        onOpenThread = { thread ->
+                                            navController.navigate(
+                                                "sms/thread/${thread.threadId}/${Uri.encode(thread.address)}"
+                                            )
+                                        },
+                                        onReply = { thread ->
+                                            navController.navigate(
+                                                "sms/thread/${thread.threadId}/${Uri.encode(thread.address)}"
+                                            )
+                                        },
+                                        onMarkHandled = { card -> catchUpViewModel.dismissCatchUpCard(card.thread.threadId) },
+                                        onRetry = { catchUpViewModel.requestCatchMeUp(force = true) }
+                                    )
                                 }
                                 composable("sms/new") {
                                     val deviceContactsViewModel: DeviceContactsViewModel = hiltViewModel()
@@ -1054,6 +1116,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleOtpCleanup = viewModel::setOtpCleanupEnabled,
                                         onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
                                         onToggleAiSummaries = viewModel::setAiSummariesEnabled,
+                                        onToggleCatchMeUp = viewModel::setCatchMeUpEnabled,
                                         onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                                         onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
                                         onToggleTruecaller = viewModel::setTruecallerEnabled,

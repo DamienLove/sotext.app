@@ -862,6 +862,7 @@ class MainViewModel @Inject constructor(
                 val emailFallback = snapshot.getBoolean("emailFallbackEnabled")
                 val otpCleanup = snapshot.getBoolean("otpCleanupEnabled")
                 val aiSummaries = snapshot.getBoolean("aiSummariesEnabled")
+                val catchMeUp = snapshot.getBoolean("catchMeUpEnabled")
                 val crashDetection = snapshot.getBoolean("crashDetectionEnabled")
                 val thirdParty = snapshot.getBoolean("thirdPartyExtensionsEnabled")
                 val mergedExperience = snapshot.getBoolean("mergedExperienceEnabled")
@@ -913,6 +914,7 @@ class MainViewModel @Inject constructor(
                     emailFallback?.let { if (it != current.emailFallbackEnabled) settingsRepository.setEmailFallbackEnabled(it) }
                     otpCleanup?.let { if (it != current.otpCleanupEnabled) settingsRepository.setOtpCleanupEnabled(it) }
                     aiSummaries?.let { if (it != current.aiSummariesEnabled) settingsRepository.setAiSummariesEnabled(it) }
+                    catchMeUp?.let { if (it != current.catchMeUpEnabled) settingsRepository.setCatchMeUpEnabled(it) }
                     crashDetection?.let { if (it != current.crashDetectionEnabled) settingsRepository.setCrashDetectionEnabled(it) }
                     thirdParty?.let { if (it != current.thirdPartyExtensionsEnabled) settingsRepository.setThirdPartyExtensionsEnabled(it) }
                     mergedExperience?.let { if (it != current.mergedExperienceEnabled) settingsRepository.setMergedExperienceEnabled(it) }
@@ -1839,6 +1841,15 @@ class MainViewModel @Inject constructor(
             settingsRepository.setAiSummariesEnabled(enabled)
             (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
                 pushSettingsToCloud(user, mapOf("aiSummariesEnabled" to enabled))
+            }
+        }
+    }
+
+    fun setCatchMeUpEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setCatchMeUpEnabled(enabled)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("catchMeUpEnabled" to enabled))
             }
         }
     }

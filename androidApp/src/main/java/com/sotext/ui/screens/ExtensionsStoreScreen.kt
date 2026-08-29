@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CarCrash
 import androidx.compose.material.icons.filled.Check
@@ -106,6 +107,7 @@ fun ExtensionsStoreScreen(
     onToggleOtpCleanup: (Boolean) -> Unit,
     onToggleRemoteWebAccess: (Boolean) -> Unit,
     onToggleAiSummaries: (Boolean) -> Unit,
+    onToggleCatchMeUp: (Boolean) -> Unit,
     onToggleThirdPartyExtensions: (Boolean) -> Unit,
     onToggleTruecaller: (Boolean) -> Unit,
     onToggleMergedExperience: (Boolean) -> Unit,
@@ -191,6 +193,15 @@ fun ExtensionsStoreScreen(
                 requiresPremium = true
             ),
             FeatureToggle(
+                id = "catch_me_up",
+                titleRes = R.string.extension_catch_me_up_title,
+                descriptionRes = R.string.extension_catch_me_up_desc,
+                icon = Icons.Filled.AutoAwesome,
+                isEnabled = settings.catchMeUpEnabled,
+                onToggle = onToggleCatchMeUp,
+                requiresPremium = true
+            ),
+            FeatureToggle(
                 id = "unified",
                 titleRes = R.string.extension_merged_title,
                 descriptionRes = R.string.extension_merged_desc,
@@ -244,7 +255,7 @@ fun ExtensionsStoreScreen(
             ExtensionCategory(
                 id = "smart",
                 title = "Smart Features",
-                items = allFeatures.filter { it.id in listOf("smart_replies", "otp", "ai") }
+                items = allFeatures.filter { it.id in listOf("smart_replies", "otp", "ai", "catch_me_up") }
             ),
             ExtensionCategory(
                 id = "integrations",

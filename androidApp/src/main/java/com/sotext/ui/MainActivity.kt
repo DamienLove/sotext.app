@@ -1783,6 +1783,7 @@ class MainActivity : AppCompatActivity() {
                             onToggleOtpCleanup = viewModel::setOtpCleanupEnabled,
                             onToggleRemoteWebAccess = viewModel::setRemoteWebAccess,
                             onToggleAiSummaries = viewModel::setAiSummariesEnabled,
+                            onToggleCatchMeUp = viewModel::setCatchMeUpEnabled,
                             onToggleMergedExperience = viewModel::setMergedExperienceEnabled,
                             onToggleThirdPartyExtensions = viewModel::setThirdPartyExtensionsEnabled,
                             onToggleTruecaller = viewModel::setTruecallerEnabled,
