@@ -4217,16 +4217,31 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    const lineAddresses = new Set();
+    const filtered = [];
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // ⚡ Bolt: Replace chained array methods (.flat, .map, .filter) and spread operations with a single-pass
+    // imperative for...of loop to prevent intermediate array allocations and memory bloat on frequent re-renders.
+    for (const threadGroup of Object.values(lineThreads)) {
+      const group = Array.isArray(threadGroup) ? threadGroup : [threadGroup];
+      for (const t of group) {
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    for (const t of legacyThreads) {
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
@@ -4240,8 +4255,14 @@ function App() {
     const chosenLine = activeLineId || lines[0]?.id || null;
     const current = chosenLine ? lineThreads[chosenLine] || [] : [];
 
-    // Filter by archive status
-    const filtered = current.filter(t => showArchived ? t.archived : !t.archived);
+    const filtered = [];
+
+    // ⚡ Bolt: Single-pass loop to prevent intermediate array allocations
+    for (const t of current) {
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
