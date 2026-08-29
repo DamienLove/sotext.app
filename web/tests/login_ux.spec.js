@@ -14,14 +14,16 @@ test.describe('Login UX Improvements', () => {
   test('Password toggle button should have tooltip title', async ({ page }) => {
     await page.goto('/');
 
-    const toggleBtn = page.locator('.password-toggle-btn');
+    const toggleBtn = page.getByRole('button', { name: 'Toggle password visibility' });
     await expect(toggleBtn).toBeVisible();
 
     // Initially hidden (password type)
     await expect(toggleBtn).toHaveAttribute('title', 'Show password');
+    await expect(toggleBtn).toHaveAttribute('aria-pressed', 'false');
 
     // Click to show
     await toggleBtn.click();
     await expect(toggleBtn).toHaveAttribute('title', 'Hide password');
+    await expect(toggleBtn).toHaveAttribute('aria-pressed', 'true');
   });
 });
