@@ -31,3 +31,8 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+
+## 2024-05-28 - [Hardcoded Secrets in External Client Initialization]
+**Vulnerability:** External clients like `nodemailer` were initialized at module load time with hardcoded environment variables via `process.env`. This exposed secrets in code or environment variables and made secret rotation difficult.
+**Learning:** Using Firebase's `defineSecret` is more secure than `process.env`, but secret values (`.value()`) are only available during function execution, not at module load time. If you initialize clients at module scope, they will receive undefined or empty secrets.
+**Prevention:** Always lazily initialize external clients that depend on secrets inside the function handler itself. Use `runWith({secrets: [...]})` for v1 functions or pass `secrets: [...]` to the configuration of v2 functions.
