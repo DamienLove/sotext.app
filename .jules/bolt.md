@@ -17,3 +17,7 @@
 ## 2026-03-11 - Array Allocation in Render Loops (Revisited)
 **Learning:** Spread operators and `forEach` inside `useMemo` hooks (like `contactLookup` processing thousands of contacts) cause significant intermediate array allocations and garbage collection overhead, slowing down the main thread.
 **Action:** Replace array spreads and `forEach` loops with standard `for` loops in hot paths or large data derivations.
+
+## 2024-05-29 - Command Palette Evaluation Bottleneck
+**Learning:** `resolveContact` was executing an array spread `[...deviceContacts, ...trustedContacts]` inside a callback that runs on every keystroke during command evaluation. This resulted in O(N) array allocation overhead every time the user typed.
+**Action:** Replace `[...a, ...b]` and chaining higher-order array methods (like `.find()`) with sequential, standard `for` loops in hot, repetitive paths to prevent garbage collection spikes.

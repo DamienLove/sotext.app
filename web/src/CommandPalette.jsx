@@ -32,21 +32,38 @@ const CommandPalette = memo(({ isOpen, onClose, setActivePanel, actions }) => {
 
   const resolveContact = useCallback((term) => {
     const lowerTerm = term.toLowerCase();
-    const allContacts = [...deviceContacts, ...trustedContacts];
-    // Prioritize exact phone number match
-    let found = allContacts.find(c => c.phoneNumber === term);
-    if (found) return found;
 
-    // Then try exact display name match
-    found = allContacts.find(c => c.displayName?.toLowerCase() === lowerTerm);
-    if (found) return found;
+    // Performance: Avoid [...deviceContacts, ...trustedContacts] spread to prevent
+    // large array allocations on every keystroke during command evaluation.
+    // 1. Exact phone number match
+    for (let i = 0; i < deviceContacts.length; i++) {
+      if (deviceContacts[i].phoneNumber === term) return deviceContacts[i];
+    }
+    for (let i = 0; i < trustedContacts.length; i++) {
+      if (trustedContacts[i].phoneNumber === term) return trustedContacts[i];
+    }
 
-    // Then try partial display name or phone number includes
-    found = allContacts.find(c =>
-      c.displayName?.toLowerCase().includes(lowerTerm) ||
-      c.phoneNumber?.includes(term)
-    );
-    return found;
+    // 2. Exact display name match
+    for (let i = 0; i < deviceContacts.length; i++) {
+      const c = deviceContacts[i];
+      if (c.displayName && c.displayName.toLowerCase() === lowerTerm) return c;
+    }
+    for (let i = 0; i < trustedContacts.length; i++) {
+      const c = trustedContacts[i];
+      if (c.displayName && c.displayName.toLowerCase() === lowerTerm) return c;
+    }
+
+    // 3. Partial display name or phone number includes
+    for (let i = 0; i < deviceContacts.length; i++) {
+      const c = deviceContacts[i];
+      if ((c.displayName && c.displayName.toLowerCase().includes(lowerTerm)) || (c.phoneNumber && c.phoneNumber.includes(term))) return c;
+    }
+    for (let i = 0; i < trustedContacts.length; i++) {
+      const c = trustedContacts[i];
+      if ((c.displayName && c.displayName.toLowerCase().includes(lowerTerm)) || (c.phoneNumber && c.phoneNumber.includes(term))) return c;
+    }
+
+    return undefined;
   }, [deviceContacts, trustedContacts]);
 
   const handleExecuteCommand = useCallback(async (commandType, details) => {
