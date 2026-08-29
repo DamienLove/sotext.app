@@ -4217,16 +4217,40 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
 
-    // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    // Bolt: Replaced Object.values().flat() and chained array methods with imperative loops
+    // to eliminate intermediate array allocations in this frequently executed render block.
+    const filtered = [];
+    const lineAddresses = new Set();
+    const lineFlattened = [];
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    // Collect line threads and their addresses
+    for (const val of Object.values(lineThreads)) {
+      // Handle cases where val might not be an array, acting like .flat() safely
+      const arr = Array.isArray(val) ? val : [val];
+      for (const t of arr) {
+        lineFlattened.push(t);
+        if (t.address) {
+          lineAddresses.add(t.address);
+        }
+      }
+    }
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Filter and append legacy threads, deduplicating by address
+    for (const t of legacyThreads) {
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
+
+    // Append line threads based on archive status
+    for (const t of lineFlattened) {
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
