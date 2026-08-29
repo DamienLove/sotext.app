@@ -31,3 +31,8 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+
+## 2024-05-18 - DefineSecret for Spotify Token Handlers
+**Vulnerability:** External API credentials (Spotify Client ID/Secret) retrieved directly from `process.env` in a Firebase HTTPs Callable function.
+**Learning:** Hardcoding or reading standard environment variables in serverless functions is an anti-pattern when Secret Manager is available, as it risks accidental exposure of secrets in deployment configs or logs.
+**Prevention:** Always use `defineSecret` from `firebase-functions/params` and require the secrets strictly in the function's configuration wrapper (`onCall({secrets: [mySecret]}, ...)`).
