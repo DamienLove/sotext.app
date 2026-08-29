@@ -31,3 +31,8 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+
+## 2024-05-28 - Hardcoded Firebase Config in Web Frontend
+**Vulnerability:** The web frontend (`web/src/firebase.js`) contained hardcoded Firebase project identifiers, including the API key, exposing them in the source code repository.
+**Learning:** Hardcoded secrets in client-side code are often exposed in public repositories or to anyone with access to the source code, creating a potential vector for unauthorized access or abuse if not properly restricted by origin and Firestore rules.
+**Prevention:** Always use environment variables (e.g., `import.meta.env.*` in Vite) to inject sensitive configuration values at build time or runtime, as specified in the setup documentation.
