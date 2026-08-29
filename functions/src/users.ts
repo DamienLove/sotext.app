@@ -144,13 +144,20 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
 
   try {
     const userDocRef = db.collection("users").doc(uid);
-    const userSnap = await userDocRef.get();
-    const deviceId = userSnap.exists ?
-        (userSnap.data()?.deviceId as string | undefined) :
-        undefined;
+
+    // We do NOT trust the deviceId stored on the user document for deletions,
+    // as it can be modified by the user to perform an IDOR attack against
+    // other users' devices and betaAgreements.
+    // Instead, we rely solely on server-authoritative queries.
 
     // Delete user profile + subcollections
     await db.recursiveDelete(userDocRef);
+
+    // Get all devices owned by the user (Server Authoritative)
+    const deviceQuery = await db.collection("devices")
+        .where("uid", "==", uid)
+        .get();
+    const authorizedDeviceIds: string[] = [];
 
     // Delete device registrations
     const deviceDeletes: FirebaseFirestore.WriteBatch[] = [];
@@ -166,22 +173,20 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
       }
     };
 
-    const deviceQuery = await db.collection("devices")
-        .where("uid", "==", uid)
-        .get();
-    deviceQuery.forEach((doc) => queueDelete(doc.ref));
-    if (deviceId) {
-      queueDelete(db.collection("devices").doc(deviceId));
-    }
+    deviceQuery.forEach((doc) => {
+      authorizedDeviceIds.push(doc.id);
+      queueDelete(doc.ref);
+    });
+
     if (ops > 0) deviceDeletes.push(batch);
     for (const b of deviceDeletes) {
       await b.commit();
     }
 
-    // Delete beta agreement tied to device ID (if present)
-    if (deviceId) {
+    // Delete beta agreements tied to authorized device IDs
+    for (const id of authorizedDeviceIds) {
       await db.collection("betaAgreements")
-          .doc(deviceId)
+          .doc(id)
           .delete()
           .catch(() => undefined);
     }
