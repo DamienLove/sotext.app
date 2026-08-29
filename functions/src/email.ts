@@ -9,6 +9,36 @@ if (admin.apps.length === 0) {
 }
 const db = admin.firestore();
 
+// Sentinel: Rate limit check to prevent email spam abuse
+async function checkEmailRateLimit(uid: string): Promise<void> {
+  const MAX_EMAILS_PER_DAY = 50;
+  const now = admin.firestore.Timestamp.now();
+  const oneDayAgo = admin.firestore.Timestamp.fromMillis(
+      now.toMillis() - 24 * 60 * 60 * 1000,
+  );
+
+  const lookupsRef = db.collection("rate_limits")
+      .doc(uid)
+      .collection("emails");
+
+  const recentLookups = await lookupsRef
+      .where("timestamp", ">", oneDayAgo)
+      .count()
+      .get();
+
+  if (recentLookups.data().count >= MAX_EMAILS_PER_DAY) {
+    throw new functions.https.HttpsError(
+        "resource-exhausted",
+        "Daily email limit reached.",
+    );
+  }
+
+  // Log this lookup attempt
+  await lookupsRef.add({
+    timestamp: now,
+  });
+}
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -26,6 +56,12 @@ export const sendEmailNotification = functions.https.onCall(
 
       const {email, messageType, payload} = data;
 
+      // Sentinel: Fetch verified user identity to prevent spoofing
+      const uid = context.auth.uid;
+
+      // Sentinel: Enforce rate limit for sending emails
+      await checkEmailRateLimit(uid);
+
       // Sentinel: Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!email || !emailRegex.test(email)) {
@@ -33,8 +69,6 @@ export const sendEmailNotification = functions.https.onCall(
             "invalid-argument", "Valid email is required");
       }
 
-      // Sentinel: Fetch verified user identity to prevent spoofing
-      const uid = context.auth.uid;
       let verifiedName = "SoText User";
 
       try {

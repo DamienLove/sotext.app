@@ -31,3 +31,8 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+
+## 2024-05-28 - Missing Rate Limiting on Email Notification
+**Vulnerability:** The `sendEmailNotification` Cloud Function lacked any rate limiting, allowing an authenticated attacker to abuse the endpoint to send an unlimited number of emails, potentially causing spam, reputation damage, and financial costs (via third-party email provider limits or charges).
+**Learning:** Even endpoints that seem innocuous (like sending a link request or a check-in message) can be abused if they trigger external actions (like sending an email). All endpoints that trigger external side-effects must have strict rate limits.
+**Prevention:** Always implement rate limiting on endpoints that trigger notifications (email, SMS, push) to prevent spam and abuse. Use Firestore-backed rate limiting or similar mechanisms to track usage per user over time.
