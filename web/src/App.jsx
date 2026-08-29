@@ -2568,6 +2568,7 @@ function App() {
   const settingsSearchRef = useRef(null);
   const contactSearchRef = useRef(null);
   const themeSearchRef = useRef(null);
+  const passwordInputRef = useRef(null);
   const messagesEndRef = useRef(null);
   const [premiumClaimActive, setPremiumClaimActive] = useState(false);
   const [proClaimActive, setProClaimActive] = useState(false);
