@@ -144,10 +144,17 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
 
   try {
     const userDocRef = db.collection("users").doc(uid);
-    const userSnap = await userDocRef.get();
-    const deviceId = userSnap.exists ?
-        (userSnap.data()?.deviceId as string | undefined) :
-        undefined;
+    // Sentinel: Do not use the user's profile to discover their deviceId.
+    // The profile is client-modifiable and a malicious user could spoof
+    // another user's deviceId to delete their devices/beta agreements.
+
+    // Get authorized device IDs from the devices collection directly
+    const deviceQuery = await db.collection("devices")
+        .where("uid", "==", uid)
+        .get();
+
+    const authorizedDeviceIds: string[] = [];
+    deviceQuery.forEach((doc) => authorizedDeviceIds.push(doc.id));
 
     // Delete user profile + subcollections
     await db.recursiveDelete(userDocRef);
@@ -166,25 +173,20 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
       }
     };
 
-    const deviceQuery = await db.collection("devices")
-        .where("uid", "==", uid)
-        .get();
     deviceQuery.forEach((doc) => queueDelete(doc.ref));
-    if (deviceId) {
-      queueDelete(db.collection("devices").doc(deviceId));
-    }
     if (ops > 0) deviceDeletes.push(batch);
     for (const b of deviceDeletes) {
       await b.commit();
     }
 
-    // Delete beta agreement tied to device ID (if present)
-    if (deviceId) {
-      await db.collection("betaAgreements")
-          .doc(deviceId)
+    // Delete beta agreements tied to authorized device IDs
+    const betaDeletes = authorizedDeviceIds.map((id) =>
+      db.collection("betaAgreements")
+          .doc(id)
           .delete()
-          .catch(() => undefined);
-    }
+          .catch(() => undefined),
+    );
+    await Promise.all(betaDeletes);
 
     // Delete link invites sent by or targeted to the user
     const inviteDeletes: Promise<FirebaseFirestore.WriteResult>[] = [];
