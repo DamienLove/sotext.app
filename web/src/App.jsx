@@ -5408,9 +5408,23 @@ function App() {
                     return keywords.some(k => k.includes(term));
                   };
 
+                  const showAccount = show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']);
+                  const showWeb = show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']);
+                  const showSoText = show(['sotext', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']);
+                  const showData = show(['data', 'delete', 'clear', 'cloud', 'account data', 'remove', 'privacy']);
+
                   return (
                     <>
-                      {show(['account', 'email', 'user id', 'password', 'reset', 'sign out', 'logout', 'profile']) && (
+                      {!showAccount && !showWeb && !showSoText && !showData && (
+                        <EmptyState
+                          icon={<SearchIcon />}
+                          title="No settings found"
+                          description={`We couldn't find any settings matching "${settingsSearch}"`}
+                          action={<button className="secondary-btn" onClick={() => setSettingsSearch('')}>Clear search</button>}
+                        />
+                      )}
+
+                      {showAccount && (
                         <div className="settings-card">
                           <h4>Account</h4>
                           <div className="settings-kv-row">
@@ -5431,7 +5445,7 @@ function App() {
                         </div>
                       )}
 
-                      {show(['web', 'previews', 'scroll', 'auto-scroll', 'message previews', 'browser']) && (
+                      {showWeb && (
                         <div className="settings-card">
                           <h4>Web preferences</h4>
                           <label className="settings-toggle">
@@ -5456,7 +5470,7 @@ function App() {
                         </div>
                       )}
 
-                      {show(['sotext', 'remote', 'web access', 'contact info', 'extensions', '3rd party', 'time format', 'sync']) && (
+                      {showSoText && (
                         <div className="settings-card">
                           <h4>SoText settings</h4>
                           <label className="settings-toggle">
@@ -5552,7 +5566,7 @@ function App() {
                         </div>
                       )}
 
-                      {show(['data', 'delete', 'clear', 'cloud', 'account data', 'remove', 'privacy']) && (
+                      {showData && (
                         <div className="settings-card">
                           <h4>Account data</h4>
                           <p className="settings-note">
