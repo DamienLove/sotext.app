@@ -17,3 +17,6 @@
 ## 2026-03-11 - Array Allocation in Render Loops (Revisited)
 **Learning:** Spread operators and `forEach` inside `useMemo` hooks (like `contactLookup` processing thousands of contacts) cause significant intermediate array allocations and garbage collection overhead, slowing down the main thread.
 **Action:** Replace array spreads and `forEach` loops with standard `for` loops in hot paths or large data derivations.
+## 2026-05-10 - Chained Array Methods in React Hooks
+**Learning:** Chaining functional array methods (like `.flat().map().filter()`) and using spread operators in highly-executed `useMemo` hooks operating on large datasets (like threads/messages) causes unnecessary intermediate array allocations, increasing memory bloat and garbage collection pressure in React.
+**Action:** Replace these chains with single-pass imperative loops (specifically `for...of` loops) within the `useMemo` block to eliminate intermediate array allocations while maintaining relatively clean code.
