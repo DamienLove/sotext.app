@@ -1092,6 +1092,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         aiUrgencyEnabled = state.settings.aiUrgencyEnabled,
                                         aiUrgencyBypassDnd = state.settings.aiUrgencyBypassDnd,
                                         aiUrgencyIncludeUnknown = state.settings.aiUrgencyIncludeUnknown,
+                                        catchMeUpEnabled = state.settings.catchMeUpEnabled,
                                         onToggleAiSummaries = { enabled -> viewModel.setAiSummariesEnabled(enabled) },
                                         onToggleAiCompose = { enabled -> viewModel.setAiComposeEnabled(enabled) },
                                         onToggleAiUrgency = { enabled -> viewModel.setAiUrgencyEnabled(enabled) },
@@ -1099,6 +1100,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleAiUrgencyIncludeUnknown = { enabled ->
                                             viewModel.setAiUrgencyIncludeUnknown(enabled)
                                         },
+                                        onToggleCatchMeUp = { enabled -> viewModel.setCatchMeUpEnabled(enabled) },
                                         blockRcsReadReceipts = state.settings.blockRcsReadReceipts,
                                         onToggleBlockRcsReadReceipts = { enabled -> viewModel.setBlockRcsReadReceipts(enabled) },
                                         onChangeSwipeRightAction = { action -> viewModel.setSwipeRightAction(action) },

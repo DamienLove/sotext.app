@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Lock
@@ -86,11 +87,13 @@ fun BeaconSettingsScreen(
     aiUrgencyEnabled: Boolean,
     aiUrgencyBypassDnd: Boolean,
     aiUrgencyIncludeUnknown: Boolean,
+    catchMeUpEnabled: Boolean,
     onToggleAiSummaries: (Boolean) -> Unit,
     onToggleAiCompose: (Boolean) -> Unit,
     onToggleAiUrgency: (Boolean) -> Unit,
     onToggleAiUrgencyBypass: (Boolean) -> Unit,
     onToggleAiUrgencyIncludeUnknown: (Boolean) -> Unit,
+    onToggleCatchMeUp: (Boolean) -> Unit,
     blockRcsReadReceipts: Boolean,
     onToggleBlockRcsReadReceipts: (Boolean) -> Unit,
     onChangeSwipeRightAction: (SwipeAction) -> Unit,
@@ -324,6 +327,19 @@ fun BeaconSettingsScreen(
                         }
                     },
                     leadingIcon = Icons.Filled.Message
+                )
+                BeaconSettingsToggleRow(
+                    title = "Catch Me Up",
+                    subtitle = "Briefing of unread conversations, grouped by what needs a reply.",
+                    checked = catchMeUpEnabled,
+                    onCheckedChange = {
+                        if (isPremiumActive) {
+                            onToggleCatchMeUp(it)
+                        } else {
+                            onPurchasePremium()
+                        }
+                    },
+                    leadingIcon = Icons.Filled.AutoAwesome
                 )
                 BeaconSettingsToggleRow(
                     title = "AI writing",
