@@ -144,15 +144,15 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
 
   try {
     const userDocRef = db.collection("users").doc(uid);
-    const userSnap = await userDocRef.get();
-    const deviceId = userSnap.exists ?
-        (userSnap.data()?.deviceId as string | undefined) :
-        undefined;
 
     // Delete user profile + subcollections
     await db.recursiveDelete(userDocRef);
 
-    // Delete device registrations
+    // Delete device registrations and beta agreements based on auth
+    const deviceQuery = await db.collection("devices")
+        .where("uid", "==", uid)
+        .get();
+
     const deviceDeletes: FirebaseFirestore.WriteBatch[] = [];
     let batch = db.batch();
     let ops = 0;
@@ -166,24 +166,16 @@ export const deleteAccount = functions.https.onCall(async (_data, context) => {
       }
     };
 
-    const deviceQuery = await db.collection("devices")
-        .where("uid", "==", uid)
-        .get();
-    deviceQuery.forEach((doc) => queueDelete(doc.ref));
-    if (deviceId) {
-      queueDelete(db.collection("devices").doc(deviceId));
-    }
+    deviceQuery.forEach((doc) => {
+      // Delete the device mapping
+      queueDelete(doc.ref);
+      // Delete the corresponding betaAgreement
+      queueDelete(db.collection("betaAgreements").doc(doc.id));
+    });
+
     if (ops > 0) deviceDeletes.push(batch);
     for (const b of deviceDeletes) {
       await b.commit();
-    }
-
-    // Delete beta agreement tied to device ID (if present)
-    if (deviceId) {
-      await db.collection("betaAgreements")
-          .doc(deviceId)
-          .delete()
-          .catch(() => undefined);
     }
 
     // Delete link invites sent by or targeted to the user
