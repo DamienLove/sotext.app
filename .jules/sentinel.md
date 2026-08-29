@@ -31,3 +31,8 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+
+## 2026-05-22 - Unauthenticated GenAI Endpoint (FDoS Risk)
+**Vulnerability:** The `menuSuggestion` Genkit Cloud Function was exposed publicly without an authentication check, allowing anyone to trigger VertexAI/Gemini API calls and consume quota.
+**Learning:** `onCall` functions do not enforce authentication by default. Exposing GenAI models without auth checks can lead to Financial Denial of Service (FDoS) and quota exhaustion.
+**Prevention:** Always verify `request.auth` is present within the handler for any `onCall` endpoint that interacts with LLMs or external paid APIs.
