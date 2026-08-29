@@ -31,3 +31,8 @@
 **Vulnerability:** While theme submissions were validated for XSS vectors (like `javascript:` URLs) by a backend Cloud Function, user profile updates (avatar, theme preferences) were written directly to Firestore via `public_profiles` without content validation in `firestore.rules`.
 **Learning:** Backend validation (Cloud Functions triggers) only protects data flowing through that specific pipeline (e.g., submission queues). It does not protect direct database writes allowed by security rules. Security must be enforced at the entry point (Firestore Rules) for direct writes.
 **Prevention:** Implement validation functions (e.g., `isValidImageUrl`) directly in `firestore.rules` and enforce them on all fields that accept URLs or sensitive content in `create` and `update` operations.
+
+## 2024-05-28 - [Insecure Secret Management via process.env]
+**Vulnerability:** API keys and sensitive credentials (like `EMAIL_USER`, `EMAIL_PASS`, `SPOTIFY_CLIENT_ID`) were being accessed directly via `process.env`. This is insecure because environment variables can be easily leaked in stack traces, diagnostic logs, or exposed during deployments.
+**Learning:** `process.env` does not provide access control or auditing for secrets. Cloud Functions should use the Secret Manager (via `defineSecret` from `firebase-functions/params`) to ensure that secrets are encrypted at rest, only accessible to authorized services, and decoupled from the application's configuration.
+**Prevention:** Always use `defineSecret` for sensitive keys. For v1 functions, use `.runWith({secrets: [secretName]})`. For v2 functions, pass `{secrets: [secretName]}` to the function options. Finally, lazily evaluate secrets via `.value()` inside the execution context instead of the module's top level.
