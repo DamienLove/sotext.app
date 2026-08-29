@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as nodemailer from "nodemailer";
+import {defineSecret} from "firebase-functions/params";
 import {escapeHtml} from "./security";
 
 // Ensure admin is initialized (handled in index.ts, but safe to check)
@@ -9,16 +10,12 @@ if (admin.apps.length === 0) {
 }
 const db = admin.firestore();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const EMAIL_USER = defineSecret("EMAIL_USER");
+const EMAIL_PASS = defineSecret("EMAIL_PASS");
 
-export const sendEmailNotification = functions.https.onCall(
-    async (data, context) => {
+export const sendEmailNotification = functions
+    .runWith({secrets: [EMAIL_USER, EMAIL_PASS]})
+    .https.onCall(async (data, context) => {
       if (!context.auth) {
         throw new functions.https.HttpsError(
             "unauthenticated", "User must be authenticated");
@@ -92,8 +89,17 @@ export const sendEmailNotification = functions.https.onCall(
         html = `<p><strong>${safeSenderName}</strong>: ${safeBody}</p>`;
       }
 
+      // Sentinel: Initialize transporter lazily so secrets are available
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: EMAIL_USER.value(),
+          pass: EMAIL_PASS.value(),
+        },
+      });
+
       const mailOptions = {
-        from: `SoText <${process.env.EMAIL_USER}>`,
+        from: `SoText <${EMAIL_USER.value()}>`,
         to: email,
         subject: subject,
         text: text,
