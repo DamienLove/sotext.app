@@ -4217,21 +4217,51 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
+
+    // Bolt: Use imperative loops to avoid multiple intermediate array allocations (flat, map, filter, spread)
+    const lineFlattened = [];
+    const lineThreadsValues = Object.values(lineThreads);
+    for (let i = 0; i < lineThreadsValues.length; i++) {
+      const val = lineThreadsValues[i];
+      const items = Array.isArray(val) ? val : [val];
+      for (let j = 0; j < items.length; j++) {
+        lineFlattened.push(items[j]);
+      }
+    }
 
     // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    const lineAddresses = new Set();
+    for (let i = 0; i < lineFlattened.length; i++) {
+      const t = lineFlattened[i];
+      if (t && t.address) {
+        lineAddresses.add(t.address);
+      }
+    }
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    const filtered = [];
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Process unique legacy threads and filter by archive status
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t || !t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t?.archived : !t?.archived) {
+          filtered.push(t);
+        }
+      }
+    }
+
+    // Process line threads and filter by archive status
+    for (let i = 0; i < lineFlattened.length; i++) {
+      const t = lineFlattened[i];
+      if (showArchived ? t?.archived : !t?.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return (b.date ?? 0) - (a.date ?? 0);
+      if (a?.pinned !== b?.pinned) return a?.pinned ? -1 : 1;
+      return (b?.date ?? 0) - (a?.date ?? 0);
     });
   }, [legacyThreads, lineThreads, lineInboxMode, showArchived]);
 
