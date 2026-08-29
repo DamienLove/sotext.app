@@ -4217,16 +4217,44 @@ function App() {
 
   const combinedThreads = useMemo(() => {
     if (lineInboxMode === 'PER_LINE') return [];
-    const lineFlattened = Object.values(lineThreads).flat();
+
+    // Bolt: Use imperative loops instead of .flat(), .map(), .filter(), and spread operators
+    // to avoid intermediate array allocations when processing thousands of threads.
+    const lineFlattened = [];
+    const values = Object.values(lineThreads);
+    for (let i = 0; i < values.length; i++) {
+      const val = values[i];
+      const arr = Array.isArray(val) ? val : [val];
+      for (let j = 0; j < arr.length; j++) {
+        lineFlattened.push(arr[j]);
+      }
+    }
 
     // Create a Set of addresses present in the new line threads to filter out legacy duplicates
-    const lineAddresses = new Set(lineFlattened.map(t => t.address).filter(Boolean));
-    const uniqueLegacy = legacyThreads.filter(t => !t.address || !lineAddresses.has(t.address));
+    const lineAddresses = new Set();
+    for (let i = 0; i < lineFlattened.length; i++) {
+      const addr = lineFlattened[i].address;
+      if (addr) lineAddresses.add(addr);
+    }
 
-    const all = [...uniqueLegacy, ...lineFlattened];
+    const filtered = [];
 
-    // Filter by archive status
-    const filtered = all.filter(t => showArchived ? t.archived : !t.archived);
+    // Filter by archive status and uniqueness
+    for (let i = 0; i < legacyThreads.length; i++) {
+      const t = legacyThreads[i];
+      if (!t.address || !lineAddresses.has(t.address)) {
+        if (showArchived ? t.archived : !t.archived) {
+          filtered.push(t);
+        }
+      }
+    }
+
+    for (let i = 0; i < lineFlattened.length; i++) {
+      const t = lineFlattened[i];
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
@@ -4240,8 +4268,14 @@ function App() {
     const chosenLine = activeLineId || lines[0]?.id || null;
     const current = chosenLine ? lineThreads[chosenLine] || [] : [];
 
-    // Filter by archive status
-    const filtered = current.filter(t => showArchived ? t.archived : !t.archived);
+    // Bolt: Use imperative loop instead of .filter() to avoid intermediate array allocation
+    const filtered = [];
+    for (let i = 0; i < current.length; i++) {
+      const t = current[i];
+      if (showArchived ? t.archived : !t.archived) {
+        filtered.push(t);
+      }
+    }
 
     // Sort: Pinned first, then date
     return filtered.sort((a, b) => {
