@@ -3,6 +3,8 @@ package com.sotext.data.ai
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.FirebaseFunctionsException
 import com.sotext.auth.FirebaseAuthManager
+import com.sotext.domain.model.CatchUpCategory
+import com.sotext.domain.model.CatchUpResult
 import com.sotext.domain.model.MessageUrgency
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,6 +56,44 @@ class AiAssistantRepositoryImpl @Inject constructor(
             else -> MessageUrgency.STANDARD
         }
         return AiUrgencyResult(urgency = urgency, confidence = confidence)
+    }
+
+    override suspend fun catchMeUp(conversations: List<CatchUpConversationInput>): List<CatchUpResult> {
+        if (conversations.isEmpty()) return emptyList()
+        authManager.ensureSignedIn()
+        val payload = mapOf(
+            "conversations" to conversations.map { conversation ->
+                mapOf(
+                    "threadId" to conversation.threadId.toString(),
+                    "contactName" to conversation.contactName,
+                    "messages" to conversation.messages
+                )
+            }
+        )
+        val data = callFunction("catchMeUp", payload)
+        val results = data["results"] as? List<*> ?: return emptyList()
+        return results.mapNotNull { raw -> parseCatchUpResult(raw) }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun parseCatchUpResult(raw: Any?): CatchUpResult? {
+        val map = raw as? Map<*, *> ?: return null
+        val threadId = (map["threadId"] as? String)?.toLongOrNull() ?: return null
+        val category = when ((map["category"] as? String).orEmpty()) {
+            "needs_response" -> CatchUpCategory.NEEDS_RESPONSE
+            "important_update" -> CatchUpCategory.IMPORTANT_UPDATE
+            else -> CatchUpCategory.NO_ACTION
+        }
+        return CatchUpResult(
+            threadId = threadId,
+            category = category,
+            topic = (map["topic"] as? String).orEmpty(),
+            summary = (map["summary"] as? String).orEmpty(),
+            needsResponse = (map["needsResponse"] as? Boolean) ?: (category == CatchUpCategory.NEEDS_RESPONSE),
+            questions = (map["questions"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+            actionItems = (map["actionItems"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+            mentionedWhen = map["mentionedWhen"] as? String
+        )
     }
 
     @Suppress("UNCHECKED_CAST")

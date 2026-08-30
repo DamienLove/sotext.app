@@ -514,6 +514,9 @@ BY TAPPING "I AGREE", TESTER CONFIRMS THAT THEY HAVE READ, UNDERSTOOD, AND AGREE
     <string name="extension_ai_title">AI Assistant</string>
     <string name="extension_ai_desc">Get smart summaries of long threads and help composing messages. (Premium)</string>
 
+    <string name="extension_catch_me_up_title">Catch Me Up</string>
+    <string name="extension_catch_me_up_desc">Get an AI briefing of your unread conversations, grouped by what needs a reply. (Premium)</string>
+
     <string name="extension_merged_title">Unified Home</string>
     <string name="extension_merged_desc">Merge the SoText messaging directly into the home screen for a single-app experience.</string>
 

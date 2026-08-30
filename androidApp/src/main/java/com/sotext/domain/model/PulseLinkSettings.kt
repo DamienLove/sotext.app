@@ -68,6 +68,7 @@ data class PulseLinkSettings(
     val swipeLeftAction: SwipeAction = SwipeAction.DELETE,
     val contextCardsEnabled: Boolean = true,
     val aiSummariesEnabled: Boolean = false,
+    val catchMeUpEnabled: Boolean = false,
     val aiComposeEnabled: Boolean = true,
     val aiUrgencyEnabled: Boolean = true,
     val aiUrgencyBypassDnd: Boolean = false,

@@ -90,6 +90,7 @@ private val SWIPE_RIGHT_ACTION = stringPreferencesKey("swipe_right_action")
 private val SWIPE_LEFT_ACTION = stringPreferencesKey("swipe_left_action")
 private val CONTEXT_CARDS_ENABLED = booleanPreferencesKey("context_cards_enabled")
 private val AI_SUMMARIES_ENABLED = booleanPreferencesKey("ai_summaries_enabled")
+private val CATCH_ME_UP_ENABLED = booleanPreferencesKey("catch_me_up_enabled")
 private val AI_COMPOSE_ENABLED = booleanPreferencesKey("ai_compose_enabled")
 private val AI_URGENCY_ENABLED = booleanPreferencesKey("ai_urgency_enabled")
 private val AI_URGENCY_BYPASS_DND = booleanPreferencesKey("ai_urgency_bypass_dnd")
@@ -222,6 +223,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 ?: PulseLinkSettings().swipeLeftAction,
             contextCardsEnabled = prefs[CONTEXT_CARDS_ENABLED] ?: PulseLinkSettings().contextCardsEnabled,
             aiSummariesEnabled = prefs[AI_SUMMARIES_ENABLED] ?: PulseLinkSettings().aiSummariesEnabled,
+            catchMeUpEnabled = prefs[CATCH_ME_UP_ENABLED] ?: PulseLinkSettings().catchMeUpEnabled,
             aiComposeEnabled = prefs[AI_COMPOSE_ENABLED] ?: PulseLinkSettings().aiComposeEnabled,
             aiUrgencyEnabled = prefs[AI_URGENCY_ENABLED] ?: PulseLinkSettings().aiUrgencyEnabled,
             aiUrgencyBypassDnd = prefs[AI_URGENCY_BYPASS_DND] ?: PulseLinkSettings().aiUrgencyBypassDnd,
@@ -333,6 +335,7 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[SWIPE_LEFT_ACTION] = updated.swipeLeftAction.name
             prefs[CONTEXT_CARDS_ENABLED] = updated.contextCardsEnabled
             prefs[AI_SUMMARIES_ENABLED] = updated.aiSummariesEnabled
+            prefs[CATCH_ME_UP_ENABLED] = updated.catchMeUpEnabled
             prefs[AI_COMPOSE_ENABLED] = updated.aiComposeEnabled
             prefs[AI_URGENCY_ENABLED] = updated.aiUrgencyEnabled
             prefs[AI_URGENCY_BYPASS_DND] = updated.aiUrgencyBypassDnd
@@ -389,6 +392,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setAiSummariesEnabled(enabled: Boolean) {
         editOnIo { prefs ->
             prefs[AI_SUMMARIES_ENABLED] = enabled
+        }
+    }
+
+    override suspend fun setCatchMeUpEnabled(enabled: Boolean) {
+        editOnIo { prefs ->
+            prefs[CATCH_ME_UP_ENABLED] = enabled
         }
     }
 

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.sotext.BuildConfig
 import com.sotext.data.ai.AiAssistantRepository
 import com.sotext.data.ai.AiComposeAction
+import com.sotext.data.ai.CatchUpConversationInput
+import com.sotext.domain.model.CatchUpCategory
 import com.sotext.data.sms.RemoteSmsRepository
 import com.sotext.data.sms.SmsLineRepository
 import com.sotext.data.sms.SmsMessageItem
@@ -52,11 +54,15 @@ class SmsInboxViewModel @Inject constructor(
     private val remoteSmsRepository: RemoteSmsRepository,
     private val smsLineRepository: SmsLineRepository,
     private val settingsRepository: SettingsRepository,
-    private val contactRepository: ContactRepository
+    private val contactRepository: ContactRepository,
+    private val aiAssistantRepository: AiAssistantRepository
 ) : ViewModel() {
     private companion object {
         const val INITIAL_THREAD_LIMIT = 100
         const val THREAD_PAGE_SIZE = 50
+        const val CATCH_UP_MAX_THREADS = 15
+        const val CATCH_UP_MESSAGE_LIMIT = 12
+        const val CATCH_UP_RECENT_WINDOW_MS = 48L * 60 * 60 * 1000
     }
     private var currentThreadLimit = INITIAL_THREAD_LIMIT
     private val _hasMoreThreads = MutableStateFlow(true)
@@ -81,6 +87,9 @@ class SmsInboxViewModel @Inject constructor(
     private val deviceLineId = MutableStateFlow("")
     private var refreshJob: Job? = null
     private var lastRefreshAt = 0L
+    private val _catchMeUpState = MutableStateFlow<CatchMeUpState>(CatchMeUpState.Idle)
+    val catchMeUpState: StateFlow<CatchMeUpState> = _catchMeUpState
+    private var catchMeUpJob: Job? = null
 
     fun refresh(force: Boolean = false) {
         refreshJob?.cancel()
@@ -218,6 +227,123 @@ class SmsInboxViewModel @Inject constructor(
                 refresh()
             }
         }
+    }
+
+    /**
+     * Builds an AI briefing across unread/recently-active conversations, grouped into
+     * "needs your response" / "important updates" / "no action needed". Grounded only in
+     * each thread's own recent messages - see [CatchUpConversationInput].
+     */
+    fun requestCatchMeUp(force: Boolean = false) {
+        if (catchMeUpJob?.isActive == true && !force) return
+        catchMeUpJob?.cancel()
+        catchMeUpJob = viewModelScope.launch {
+            val settings = settingsRepository.settings.first()
+            val premium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
+            if (!premium || !settings.catchMeUpEnabled) {
+                _catchMeUpState.value = CatchMeUpState.Error("Catch Me Up isn't enabled.")
+                return@launch
+            }
+
+            _catchMeUpState.value = CatchMeUpState.Loading
+
+            val now = System.currentTimeMillis()
+            // Fetch a fresh snapshot directly rather than relying on the reactive `threads` state,
+            // so this works correctly regardless of whether `refresh()` has populated it yet.
+            val freshThreads = withContext(Dispatchers.IO) {
+                runCatching {
+                    smsRepository.listThreadsAndArchived(
+                        limit = CATCH_UP_MAX_THREADS * 4,
+                        fromSmsOnly = false,
+                        forceRefresh = true
+                    ).first
+                }.getOrDefault(emptyList())
+            }
+            val candidates = freshThreads
+                .asSequence()
+                .filter { !it.isPrivate }
+                .filter { it.unread || (now - it.timestamp) <= CATCH_UP_RECENT_WINDOW_MS }
+                .sortedByDescending { it.timestamp }
+                .take(CATCH_UP_MAX_THREADS)
+                .toList()
+
+            if (candidates.isEmpty()) {
+                _catchMeUpState.value = CatchMeUpState.Success(emptyList(), emptyList(), emptyList(), now)
+                return@launch
+            }
+
+            data class Conversation(val thread: SmsThreadItem, val contactName: String?, val lines: List<String>)
+
+            val conversations = withContext(Dispatchers.IO) {
+                candidates.mapNotNull { thread ->
+                    val messages = runCatching {
+                        smsRepository.messagesForThread(thread.threadId, CATCH_UP_MESSAGE_LIMIT)
+                    }.getOrDefault(emptyList())
+                    if (messages.isEmpty()) return@mapNotNull null
+                    val contactName = runCatching {
+                        contactRepository.getByPhone(thread.address)?.displayName
+                    }.getOrNull()?.takeIf { it.isNotBlank() }
+                    val lines = messages.reversed().map { msg ->
+                        val sender = if (msg.outgoing) "Me" else (contactName ?: "Them")
+                        val body = msg.body.takeIf { it.isNotBlank() && it != "[MMS]" } ?: "[sent an attachment]"
+                        "$sender: $body"
+                    }
+                    Conversation(thread, contactName, lines)
+                }
+            }
+
+            if (conversations.isEmpty()) {
+                _catchMeUpState.value = CatchMeUpState.Success(emptyList(), emptyList(), emptyList(), now)
+                return@launch
+            }
+
+            val requestInputs = conversations.map {
+                CatchUpConversationInput(threadId = it.thread.threadId, contactName = it.contactName, messages = it.lines)
+            }
+
+            val results = runCatching {
+                withTimeout(20_000L) { aiAssistantRepository.catchMeUp(requestInputs) }
+            }.getOrElse { error ->
+                _catchMeUpState.value = CatchMeUpState.Error(error.message ?: "Couldn't build your briefing.")
+                return@launch
+            }
+
+            val resultsByThread = results.associateBy { it.threadId }
+            val needsResponse = mutableListOf<CatchUpCard>()
+            val importantUpdates = mutableListOf<CatchUpCard>()
+            val noAction = mutableListOf<CatchUpCard>()
+            conversations.forEach { conversation ->
+                val result = resultsByThread[conversation.thread.threadId] ?: return@forEach
+                val card = CatchUpCard(thread = conversation.thread, contactName = conversation.contactName, result = result)
+                when (result.category) {
+                    CatchUpCategory.NEEDS_RESPONSE -> needsResponse += card
+                    CatchUpCategory.IMPORTANT_UPDATE -> importantUpdates += card
+                    CatchUpCategory.NO_ACTION -> noAction += card
+                }
+            }
+
+            _catchMeUpState.value = CatchMeUpState.Success(
+                needsResponse = needsResponse.sortedByDescending { it.thread.timestamp },
+                importantUpdates = importantUpdates.sortedByDescending { it.thread.timestamp },
+                noActionNeeded = noAction.sortedByDescending { it.thread.timestamp },
+                generatedAt = now
+            )
+        }
+    }
+
+    /** Removes a card from the current briefing (e.g. after "Mark as handled") without touching the thread itself. */
+    fun dismissCatchUpCard(threadId: Long) {
+        val state = _catchMeUpState.value as? CatchMeUpState.Success ?: return
+        _catchMeUpState.value = state.copy(
+            needsResponse = state.needsResponse.filterNot { it.thread.threadId == threadId },
+            importantUpdates = state.importantUpdates.filterNot { it.thread.threadId == threadId },
+            noActionNeeded = state.noActionNeeded.filterNot { it.thread.threadId == threadId }
+        )
+    }
+
+    fun clearCatchMeUp() {
+        catchMeUpJob?.cancel()
+        _catchMeUpState.value = CatchMeUpState.Idle
     }
 
     private suspend fun runDatabaseAction(block: suspend () -> Unit) {
