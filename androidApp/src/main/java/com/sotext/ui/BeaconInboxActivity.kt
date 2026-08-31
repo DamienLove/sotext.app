@@ -916,6 +916,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val lineId = entry.arguments?.getString("lineId")?.takeIf { it.isNotBlank() }
                                     val threadViewModel: SmsThreadViewModel = hiltViewModel()
                                     val messages by threadViewModel.messages.collectAsStateWithLifecycle()
+                                    val messageIntelligence by threadViewModel.messageIntelligence.collectAsStateWithLifecycle()
                                     val contact by threadViewModel.contact.collectAsStateWithLifecycle()
                                     val isArchived by threadViewModel.isArchived.collectAsStateWithLifecycle()
                                     val summaryState by threadViewModel.summaryState.collectAsStateWithLifecycle()
@@ -1035,7 +1036,15 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onLoadMore = { threadViewModel.loadMoreMessages() },
                                         hasMoreToLoad = threadViewModel.hasMoreMessages.collectAsStateWithLifecycle().value,
                                         smartRepliesEnabled = state.settings.smartRepliesEnabled,
-                                        contextCardsEnabled = state.settings.contextCardsEnabled
+                                        contextCardsEnabled = state.settings.contextCardsEnabled,
+                                        messageIntelligenceEnabled = state.settings.messageIntelligenceEnabled,
+                                        messageIntelligence = messageIntelligence,
+                                        onRequestMessageIntelligence = { messageId, body, timestamp, sender ->
+                                            threadViewModel.requestMessageIntelligence(messageId, body, timestamp, sender)
+                                        },
+                                        onSuppressIntelligenceType = { intent -> viewModel.suppressIntelligenceCardType(intent) },
+                                        onSafetyGetHelp = { EmergencyPopupActivity.launchConfirmation(context, "Message Intelligence") },
+                                        onSafetyShareLocation = { viewModel.sendCheckIn() }
                                     )
                                 }
                                 composable("beacon_settings") {
@@ -1260,7 +1269,9 @@ class BeaconInboxActivity : ComponentActivity() {
                                             onSelectTheme = { newTheme -> viewModel.setThemePreferences(newTheme) },
                                             onBack = { navController.popBackStack() },
                                             isGlobal = true,
-                                            isPremium = hasPremium
+                                            isPremium = hasPremium,
+                                            appIconVariant = state.settings.appIconVariant,
+                                            onSelectAppIconVariant = { variant -> viewModel.setAppIconVariant(variant) }
                                         )
                                     }
                                 }

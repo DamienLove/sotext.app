@@ -90,7 +90,7 @@ class EmergencyPopupActivity : AppCompatActivity() {
 
         val contactName = intent.getStringExtra(EXTRA_CONTACT_NAME) ?: "Unknown"
         val tier = intent.getStringExtra(EXTRA_ESCALATION_TIER) ?: "Emergency"
-        val triggerSource = intent.getStringExtra("EXTRA_TRIGGER_SOURCE") ?: "Widget emergency"
+        val triggerSource = intent.getStringExtra(EXTRA_TRIGGER_SOURCE) ?: "Widget emergency"
 
         setContent {
             PulseLinkTheme {
@@ -208,17 +208,36 @@ class EmergencyPopupActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_CONTACT_NAME = "extra_contact_name"
         private const val EXTRA_ESCALATION_TIER = "extra_escalation_tier"
+        // Matches the literal String onCreate already reads below - previously not exposed by
+        // newIntent() at all, so every caller silently fell back to the "Widget emergency"
+        // default regardless of their actual trigger source.
+        private const val EXTRA_TRIGGER_SOURCE = "EXTRA_TRIGGER_SOURCE"
         private const val TAG = "EmergencyPopupActivity"
         private const val CANCEL_EMERGENCY_AUTHENTICATORS =
             BiometricManager.Authenticators.BIOMETRIC_STRONG or
                 BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
-        fun newIntent(context: Context, contactName: String, tier: String): Intent {
+        fun newIntent(
+            context: Context,
+            contactName: String,
+            tier: String,
+            triggerSource: String = "Widget emergency"
+        ): Intent {
             return Intent(context, EmergencyPopupActivity::class.java).apply {
                 putExtra(EXTRA_CONTACT_NAME, contactName)
                 putExtra(EXTRA_ESCALATION_TIER, tier)
+                putExtra(EXTRA_TRIGGER_SOURCE, triggerSource)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             }
+        }
+
+        /**
+         * Launches the same cancelable-countdown emergency confirmation every other manual
+         * trigger in the app uses (widget double-tap, Wear command) - the actual alert only
+         * dispatches if [triggerLabel] isn't canceled within the countdown (see onTimeout above).
+         */
+        fun launchConfirmation(context: Context, triggerLabel: String) {
+            context.startActivity(newIntent(context, triggerLabel, "EMERGENCY", triggerLabel))
         }
     }
 }

@@ -875,6 +875,7 @@ class MainViewModel @Inject constructor(
                 val crashDetection = snapshot.getBoolean("crashDetectionEnabled")
                 val thirdParty = snapshot.getBoolean("thirdPartyExtensionsEnabled")
                 val mergedExperience = snapshot.getBoolean("mergedExperienceEnabled")
+                val appIconVariant = snapshot.getString("appIconVariant")
                 val privateSafe = snapshot.getBoolean("privateSafeEnabled")
                 val smartReplies = snapshot.getBoolean("smartRepliesEnabled")
                 val truecaller = snapshot.getBoolean("truecallerEnabled")
@@ -927,6 +928,7 @@ class MainViewModel @Inject constructor(
                     crashDetection?.let { if (it != current.crashDetectionEnabled) settingsRepository.setCrashDetectionEnabled(it) }
                     thirdParty?.let { if (it != current.thirdPartyExtensionsEnabled) settingsRepository.setThirdPartyExtensionsEnabled(it) }
                     mergedExperience?.let { if (it != current.mergedExperienceEnabled) settingsRepository.setMergedExperienceEnabled(it) }
+                    appIconVariant?.let { if (it != current.appIconVariant) settingsRepository.setAppIconVariant(it) }
                     privateSafe?.let { if (it != current.privateSafeEnabled) settingsRepository.update { s -> s.copy(privateSafeEnabled = it) } }
                     smartReplies?.let { if (it != current.smartRepliesEnabled) settingsRepository.update { s -> s.copy(smartRepliesEnabled = it) } }
                     truecaller?.let { if (it != current.truecallerEnabled) settingsRepository.setTruecallerEnabled(it) }
@@ -1754,6 +1756,15 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setAppIconVariant(variant: String) {
+        viewModelScope.launch {
+            settingsRepository.setAppIconVariant(variant)
+            (firebaseAuthManager.currentUser()?.takeIf { !it.isAnonymous })?.let { user ->
+                pushSettingsToCloud(user, mapOf("appIconVariant" to variant))
+            }
+        }
+    }
+
     fun setBeaconHintDismissed(dismissed: Boolean) {
         viewModelScope.launch {
             settingsRepository.setBeaconHintDismissed(dismissed)
@@ -1917,6 +1928,27 @@ class MainViewModel @Inject constructor(
     fun setContextCardsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.update { it.copy(contextCardsEnabled = enabled) }
+        }
+    }
+
+    fun setMessageIntelligenceEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(messageIntelligenceEnabled = enabled) }
+        }
+    }
+
+    fun setMessageIntelligenceCloudEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.update { it.copy(messageIntelligenceCloudEnabled = enabled) }
+        }
+    }
+
+    /** "Don't show this type again" - adds one intent type to the suppressed set. */
+    fun suppressIntelligenceCardType(intent: com.sotext.data.intelligence.MessageIntent) {
+        viewModelScope.launch {
+            settingsRepository.update {
+                it.copy(suppressedIntelligenceCardTypes = it.suppressedIntelligenceCardTypes + intent.name)
+            }
         }
     }
 

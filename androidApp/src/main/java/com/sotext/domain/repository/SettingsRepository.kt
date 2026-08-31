@@ -42,6 +42,7 @@ interface SettingsRepository {
     suspend fun setPrivatePinHash(hash: String?)
     suspend fun setPrivateThreads(threadIds: List<Long>)
     suspend fun setBeaconLauncherEnabled(enabled: Boolean)
+    suspend fun setAppIconVariant(variant: String)
     suspend fun setBeaconHintDismissed(dismissed: Boolean)
     suspend fun setWebAccessHintDismissed(dismissed: Boolean)
     suspend fun setFirebaseMessagingEnabled(enabled: Boolean)

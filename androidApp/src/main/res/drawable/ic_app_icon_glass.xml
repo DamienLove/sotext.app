@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App icon color option: Glass. Pale frosted gradient + a soft diagonal highlight band
+     standing in for translucency, since a launcher icon can't truly be see-through. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path android:pathData="M22,0H86A22,22 0 0 1 108,22V86A22,22 0 0 1 86,108H22A22,22 0 0 1 0,86V22A22,22 0 0 1 22,0Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0" android:startY="0"
+                android:endX="108" android:endY="108"
+                android:startColor="#EFF6FF"
+                android:endColor="#DBEAFE" />
+        </aapt:attr>
+    </path>
+
+    <!-- Frosted highlight streak -->
+    <path android:pathData="M4,60L28,4L48,4L20,68Z" android:fillColor="#59FFFFFF" />
+    <path android:pathData="M56,4L64,4L30,84L24,84Z" android:fillColor="#33FFFFFF" />
+
+    <path
+        android:pathData="M50,30C34,30 26,38 28,48C30,56 40,58 46,60C54,63 58,68 56,76C54,86 42,88 28,82"
+        android:strokeColor="#1E3A5F"
+        android:strokeWidth="13"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+
+    <path
+        android:pathData="M70,34H76A16,16 0 0 1 92,50A16,16 0 0 1 76,66H70A16,16 0 0 1 54,50A16,16 0 0 1 70,34Z"
+        android:fillColor="#1E3A5F" />
+
+    <path
+        android:pathData="M66,64L58,78L75,65Z"
+        android:fillColor="#1E3A5F" />
+
+    <path android:pathData="M65,50m-3.2,0a3.2,3.2 0 1,0 6.4,0a3.2,3.2 0 1,0 -6.4,0" android:fillColor="#B3DBEAFE"/>
+    <path android:pathData="M73,50m-3.2,0a3.2,3.2 0 1,0 6.4,0a3.2,3.2 0 1,0 -6.4,0" android:fillColor="#B3DBEAFE"/>
+    <path android:pathData="M81,50m-3.2,0a3.2,3.2 0 1,0 6.4,0a3.2,3.2 0 1,0 -6.4,0" android:fillColor="#B3DBEAFE"/>
+</vector>
