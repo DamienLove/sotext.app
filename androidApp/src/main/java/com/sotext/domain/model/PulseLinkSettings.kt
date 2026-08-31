@@ -127,6 +127,7 @@ data class ThemePreferences(
     val timestampColor: String? = null,
     val dividerColor: String? = null,
     val appBackgroundGradientStart: String? = null,
+    val appBackgroundGradientMid: String? = null,
     val appBackgroundGradientEnd: String? = null,
     val fontScale: Float = 1.0f,
     val backgroundImageUrl: String? = null,

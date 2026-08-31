@@ -171,13 +171,22 @@ class MainViewModel @Inject constructor(
                         settings.proUnlocked || BuildConfig.PRO_FEATURES -> "pro"
                         else -> "free"
                     }
-                    val payload = mapOf(
-                        "premiumUnlocked" to settings.premiumUnlocked,
-                        "proUnlocked" to settings.proUnlocked,
-                        "subscriptionStatus" to subscriptionStatus,
-                        "remoteWebAccessEnabled" to settings.remoteWebAccessEnabled
+                    // remoteWebAccessEnabled is written on its own: premiumUnlocked/proUnlocked/
+                    // subscriptionStatus are protected fields in firestore.rules (client writes are
+                    // rejected once they actually change), and a merged write fails as a whole, which
+                    // was silently dropping remoteWebAccessEnabled along with it.
+                    pushSettingsToCloud(user, mapOf("remoteWebAccessEnabled" to settings.remoteWebAccessEnabled))
+                    // Best-effort informational mirror of local subscription state; the server-side
+                    // verifySubscription/RTDN handlers own the real value, so this is expected to
+                    // no-op/fail once it's out of sync with what they've already set.
+                    pushSettingsToCloud(
+                        user,
+                        mapOf(
+                            "premiumUnlocked" to settings.premiumUnlocked,
+                            "proUnlocked" to settings.proUnlocked,
+                            "subscriptionStatus" to subscriptionStatus
+                        )
                     )
-                    pushSettingsToCloud(user, payload)
                     if (settings.remoteWebAccessEnabled && (!lastRemoteWebEnabled || settings.premiumUnlocked != lastPremium)) {
                         triggerWebSync("SettingsChange")
                     }
@@ -1011,6 +1020,7 @@ class MainViewModel @Inject constructor(
 
     private suspend fun pushSettingsToCloud(user: FirebaseUser, payload: Map<String, Any>) {
         runCatching {
+            com.sotext.data.firestore.requireNoMixedProtectedWrite(payload)
             lastSettingsPushTimestamp = System.currentTimeMillis()
             firestore.collection(COLLECTION_USERS).document(user.uid)
                 .set(payload + mapOf("settingsUpdatedAt" to FieldValue.serverTimestamp()), SetOptions.merge())
@@ -1329,6 +1339,7 @@ class MainViewModel @Inject constructor(
             timestampColor = map["timestampColor"] as? String,
             dividerColor = map["dividerColor"] as? String,
             appBackgroundGradientStart = map["appBackgroundGradientStart"] as? String,
+            appBackgroundGradientMid = map["appBackgroundGradientMid"] as? String,
             appBackgroundGradientEnd = map["appBackgroundGradientEnd"] as? String,
             fontScale = (map["fontScale"] as? Number)?.toFloat() ?: defaults.fontScale,
             useGlassEffect = map["useGlassEffect"] as? Boolean ?: defaults.useGlassEffect,
@@ -1375,6 +1386,7 @@ class MainViewModel @Inject constructor(
         payload[key("timestampColor")] = theme.timestampColor ?: FieldValue.delete()
         payload[key("dividerColor")] = theme.dividerColor ?: FieldValue.delete()
         payload[key("appBackgroundGradientStart")] = theme.appBackgroundGradientStart ?: FieldValue.delete()
+        payload[key("appBackgroundGradientMid")] = theme.appBackgroundGradientMid ?: FieldValue.delete()
         payload[key("appBackgroundGradientEnd")] = theme.appBackgroundGradientEnd ?: FieldValue.delete()
         return payload
     }

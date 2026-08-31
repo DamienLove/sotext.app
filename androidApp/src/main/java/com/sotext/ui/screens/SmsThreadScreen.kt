@@ -124,6 +124,7 @@ import com.sotext.ui.state.AiSummaryState
 import com.sotext.util.sendAttachmentViaSms
 import com.sotext.util.ensureReadableOnColor
 import com.sotext.util.parseColorOr
+import com.sotext.util.themeGradientColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -198,15 +199,9 @@ fun SmsThreadScreen(
     }
     var initialScrollDone by remember(address) { mutableStateOf(false) }
 
-    val bgModifier = if (effectiveTheme.appBackgroundGradientStart != null && effectiveTheme.appBackgroundGradientEnd != null) {
-        Modifier.background(
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientStart!!).copy(alpha = overlayAlpha),
-                    parseColorOr(Color.White, effectiveTheme.appBackgroundGradientEnd!!).copy(alpha = overlayAlpha)
-                )
-            )
-        )
+    val threadGradientColors = themeGradientColors(effectiveTheme, alpha = overlayAlpha)
+    val bgModifier = if (threadGradientColors != null) {
+        Modifier.background(brush = Brush.verticalGradient(colors = threadGradientColors))
     } else {
         Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor).copy(alpha = overlayAlpha))
     }

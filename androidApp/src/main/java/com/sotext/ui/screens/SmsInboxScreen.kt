@@ -126,6 +126,7 @@ import com.sotext.ui.components.ThemeIcon
 import com.sotext.ui.components.ThemeIconKey
 import com.sotext.util.normalizeSmsAddress
 import com.sotext.util.parseColorOr
+import com.sotext.util.themeGradientColors
 import com.sotext.util.ensureReadableOnColor
 import com.sotext.util.splitSmsDisplayAddress
 import com.sotext.ui.state.SearchResultState
@@ -312,15 +313,9 @@ fun SmsInboxScreen(
     val backgroundImageUrl = theme.backgroundImageUrl?.takeIf { it.isNotBlank() }
     val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
     val bgModifier = remember(theme, colorScheme, backgroundColor, overlayAlpha) {
-        if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
-            Modifier.background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        parseColorOr(Color.White, theme.appBackgroundGradientStart!!).copy(alpha = overlayAlpha),
-                        parseColorOr(Color.White, theme.appBackgroundGradientEnd!!).copy(alpha = overlayAlpha)
-                    )
-                )
-            )
+        val gradientColors = themeGradientColors(theme, alpha = overlayAlpha)
+        if (gradientColors != null) {
+            Modifier.background(brush = Brush.verticalGradient(colors = gradientColors))
         } else {
             Modifier.background(backgroundColor.copy(alpha = overlayAlpha))
         }
@@ -756,17 +751,58 @@ fun SmsInboxScreen(
     }
 
         if (showGestureHints) {
-            InboxGestureHints(theme = theme, onDismiss = onDismissGestureHints)
+            InboxGestureHints(
+                theme = theme,
+                swipeRightAction = swipeRightAction,
+                swipeLeftAction = swipeLeftAction,
+                onDismiss = onDismissGestureHints
+            )
         }
     }
 }
 
 /**
- * First-open overlay explaining the inbox's swipe/long-press gestures: swipe right to
- * delete, swipe left to favorite, long-press to lock into Private Safe.
+ * Color for a swipe action's reveal background/icon tint. Shared by the live swipe reveal
+ * (ThreadRow) and the first-run gesture hint sheet (InboxGestureHints) so the two can't drift
+ * out of sync the way the hint sheet's hardcoded copy did when the default swipe mapping was
+ * remapped (see pulselink.txt, swipe gestures remap).
+ */
+private fun swipeActionColor(action: SwipeAction, primary: Color): Color = when (action) {
+    SwipeAction.DELETE -> Color(0xFFE84A4A)
+    SwipeAction.FAVORITE -> Color(0xFFF5A623)
+    SwipeAction.ARCHIVE -> primary
+    SwipeAction.NONE -> Color.Transparent
+}
+
+private fun swipeActionHintTitle(directionWord: String, action: SwipeAction): String = when (action) {
+    SwipeAction.DELETE -> "Swipe $directionWord to delete"
+    SwipeAction.FAVORITE -> "Swipe $directionWord to favorite"
+    SwipeAction.ARCHIVE -> "Swipe $directionWord to archive"
+    SwipeAction.NONE -> ""
+}
+
+private fun swipeActionHintSubtitle(action: SwipeAction): String = when (action) {
+    SwipeAction.DELETE -> "Removes the conversation from your inbox."
+    SwipeAction.FAVORITE -> "Pins the conversation to your Favorites tab."
+    SwipeAction.ARCHIVE -> "Moves the conversation to your Archived tab."
+    SwipeAction.NONE -> ""
+}
+
+/**
+ * First-open overlay explaining the inbox's swipe/long-press gestures. The two swipe rows are
+ * driven by the caller's actual swipeRightAction/swipeLeftAction (Settings > Inbox gestures,
+ * user-configurable, default right=favorite/left=delete) rather than hardcoded copy, so this
+ * can't silently go stale again the way it did after the default mapping was remapped. A
+ * direction currently set to SwipeAction.NONE is skipped. Long-press to lock into Private Safe
+ * isn't user-configurable, so it stays fixed.
  */
 @Composable
-private fun InboxGestureHints(theme: ThemePreferences, onDismiss: () -> Unit) {
+private fun InboxGestureHints(
+    theme: ThemePreferences,
+    swipeRightAction: SwipeAction,
+    swipeLeftAction: SwipeAction,
+    onDismiss: () -> Unit
+) {
     val backgroundColor = parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor)
     val onBackgroundColor = ensureReadableOnColor(
         background = backgroundColor,
@@ -809,20 +845,24 @@ private fun InboxGestureHints(theme: ThemePreferences, onDismiss: () -> Unit) {
                     )
                 }
 
-                GestureHintRow(
-                    icon = Icons.Filled.SwipeRight,
-                    tint = Color(0xFFE84A4A),
-                    title = "Swipe right to delete",
-                    subtitle = "Removes the conversation from your inbox.",
-                    onBackgroundColor = onBackgroundColor
-                )
-                GestureHintRow(
-                    icon = Icons.Filled.SwipeLeft,
-                    tint = Color(0xFFF5A623),
-                    title = "Swipe left to favorite",
-                    subtitle = "Pins the conversation to your Favorites tab.",
-                    onBackgroundColor = onBackgroundColor
-                )
+                if (swipeRightAction != SwipeAction.NONE) {
+                    GestureHintRow(
+                        icon = Icons.Filled.SwipeRight,
+                        tint = swipeActionColor(swipeRightAction, primary),
+                        title = swipeActionHintTitle("right", swipeRightAction),
+                        subtitle = swipeActionHintSubtitle(swipeRightAction),
+                        onBackgroundColor = onBackgroundColor
+                    )
+                }
+                if (swipeLeftAction != SwipeAction.NONE) {
+                    GestureHintRow(
+                        icon = Icons.Filled.SwipeLeft,
+                        tint = swipeActionColor(swipeLeftAction, primary),
+                        title = swipeActionHintTitle("left", swipeLeftAction),
+                        subtitle = swipeActionHintSubtitle(swipeLeftAction),
+                        onBackgroundColor = onBackgroundColor
+                    )
+                }
                 GestureHintRow(
                     icon = Icons.Filled.TouchApp,
                     tint = primary,
@@ -989,12 +1029,7 @@ internal fun ThreadRow(
             val isStartToEnd = direction == SwipeToDismissBoxValue.StartToEnd
             val action = if (isStartToEnd) swipeRightAction else swipeLeftAction
             if (action == SwipeAction.NONE) return@SwipeToDismissBox
-            val color = when (action) {
-                SwipeAction.DELETE -> Color(0xFFE84A4A)
-                SwipeAction.FAVORITE -> Color(0xFFF5A623)
-                SwipeAction.ARCHIVE -> primary
-                SwipeAction.NONE -> Color.Transparent
-            }
+            val color = swipeActionColor(action, primary)
             val label = when (action) {
                 SwipeAction.DELETE -> "Delete"
                 SwipeAction.FAVORITE -> "Favorite"
