@@ -13,15 +13,24 @@ fun parseColorOr(default: Color, hex: String?): Color {
 
 /**
  * A theme's background gradient stops, in order, or null if it uses a flat
- * [ThemePreferences.backgroundColor] instead. Supports both the 2-stop start/end gradient and
- * the optional 3-stop start/mid/end gradient (appBackgroundGradientMid) from one place, so the
- * inbox, thread, and Visual Settings previews can't render a theme's gradient differently from
- * each other.
+ * [ThemePreferences.backgroundColor] instead. Every gradient render site (inbox, thread, Visual
+ * Settings' screen background/live preview/theme-card preview, and the "is a gradient active"
+ * checks) goes through this one place, so they can't render - or disagree about - a theme's
+ * gradient differently from each other.
+ *
+ * [ThemePreferences.appBackgroundGradientStops] (2+ entries) takes precedence for gradients with
+ * more than 3 stops; otherwise falls back to the 2-stop start/end or 3-stop start/mid/end fields
+ * the Customize tab's manual editor exposes.
  */
 fun themeGradientColors(theme: ThemePreferences, alpha: Float = 1f): List<Color>? {
-    val start = theme.appBackgroundGradientStart ?: return null
-    val end = theme.appBackgroundGradientEnd ?: return null
-    val stops = listOfNotNull(start, theme.appBackgroundGradientMid, end)
+    val explicitStops = theme.appBackgroundGradientStops
+    val stops = if (explicitStops != null && explicitStops.size >= 2) {
+        explicitStops
+    } else {
+        val start = theme.appBackgroundGradientStart ?: return null
+        val end = theme.appBackgroundGradientEnd ?: return null
+        listOfNotNull(start, theme.appBackgroundGradientMid, end)
+    }
     return stops.map { parseColorOr(Color.White, it).copy(alpha = alpha) }
 }
 

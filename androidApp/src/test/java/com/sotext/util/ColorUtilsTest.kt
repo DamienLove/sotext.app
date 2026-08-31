@@ -89,4 +89,39 @@ class ColorUtilsTest {
         // tolerance rather than expecting an exact float round-trip.
         colors?.forEach { assertEquals(0.35f, it.alpha, 0.01f) }
     }
+
+    @Test
+    fun `explicit stops list returns all four in order, ignoring start-mid-end`() {
+        // Blood Moon's actual stops: near-black, oxblood, deep crimson (peak), back down.
+        val theme = ThemePreferences(
+            appBackgroundGradientStops = listOf("#0A0405", "#4A0E13", "#8B1A1A", "#200608"),
+            // Should be ignored entirely once appBackgroundGradientStops is present.
+            appBackgroundGradientStart = "#FFFFFF",
+            appBackgroundGradientEnd = "#000000"
+        )
+        val colors = themeGradientColors(theme)
+        assertEquals(
+            listOf(
+                parseColorOr(Color.White, "#0A0405"),
+                parseColorOr(Color.White, "#4A0E13"),
+                parseColorOr(Color.White, "#8B1A1A"),
+                parseColorOr(Color.White, "#200608")
+            ),
+            colors
+        )
+    }
+
+    @Test
+    fun `a stops list with fewer than two entries falls back to start-end`() {
+        val theme = ThemePreferences(
+            appBackgroundGradientStops = listOf("#111111"),
+            appBackgroundGradientStart = "#FF5F6D",
+            appBackgroundGradientEnd = "#FFC371"
+        )
+        val colors = themeGradientColors(theme)
+        assertEquals(
+            listOf(parseColorOr(Color.White, "#FF5F6D"), parseColorOr(Color.White, "#FFC371")),
+            colors
+        )
+    }
 }

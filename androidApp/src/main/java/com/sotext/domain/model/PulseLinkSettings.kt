@@ -129,11 +129,18 @@ data class ThemePreferences(
     val appBackgroundGradientStart: String? = null,
     val appBackgroundGradientMid: String? = null,
     val appBackgroundGradientEnd: String? = null,
+    // For gradients with more than 3 stops (e.g. Blood Moon's near-black/oxblood/crimson/
+    // near-black eclipse curve), in order. Takes precedence over Start/Mid/End when it has
+    // 2+ entries - see themeGradientColors() in ColorUtils.kt. Start/Mid/End stay the source
+    // of truth for 2- and 3-stop themes and for the Customize tab's manual gradient editor,
+    // which only exposes those three named stops.
+    val appBackgroundGradientStops: List<String>? = null,
     val fontScale: Float = 1.0f,
     val backgroundImageUrl: String? = null,
     val iconOverrides: Map<String, String> = emptyMap(),
     val useGlassEffect: Boolean = false,
     val useHolographicGlow: Boolean = false,
+    val useStarfield: Boolean = false,
     val uiDensity: String = "Comfortable"
 )
 

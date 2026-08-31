@@ -38,6 +38,7 @@ import com.sotext.domain.model.ThemePreferences
 import com.sotext.util.ensureReadableOnColor
 import com.sotext.util.parseColorOr
 import com.sotext.util.themeGradientColors
+import com.sotext.ui.theme.starfieldOverlay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +75,7 @@ fun VisualSettingsScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
-        modifier = Modifier.then(bgModifier),
+        modifier = Modifier.then(bgModifier).starfieldOverlay(tempTheme.useStarfield),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -281,6 +282,7 @@ fun CustomizeTab(
                     modifier = Modifier
                         .fillMaxWidth()
                         .then(previewBg)
+                        .starfieldOverlay(theme.useStarfield)
                         .clickable(role = Role.Button) { showColorPickerTarget = "bg" }
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -427,7 +429,7 @@ fun CustomizeTab(
         EffectSwitchRow(
             title = "Gradient background",
             subtitle = "Two-stop vertical wallpaper",
-            checked = theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null,
+            checked = themeGradientColors(theme) != null,
             primary = primary,
             onBackground = onBackground,
             dividerTint = dividerTint,
@@ -440,11 +442,15 @@ fun CustomizeTab(
                         )
                     )
                 } else {
+                    // Also clears appBackgroundGradientStops: a preset with more than 3 stops
+                    // (e.g. Blood Moon) reverts to the flat backgroundColor like any other theme
+                    // once turned off here, rather than leaving an un-editable gradient behind.
                     onUpdate(
                         theme.copy(
                             appBackgroundGradientStart = null,
                             appBackgroundGradientMid = null,
-                            appBackgroundGradientEnd = null
+                            appBackgroundGradientEnd = null,
+                            appBackgroundGradientStops = null
                         )
                     )
                 }
@@ -469,6 +475,15 @@ fun CustomizeTab(
             onBackground = onBackground,
             dividerTint = dividerTint,
             onToggle = { onUpdate(theme.copy(useGlassEffect = it)) }
+        )
+        EffectSwitchRow(
+            title = "Starfield",
+            subtitle = "A scattered field of stars over the background",
+            checked = theme.useStarfield,
+            primary = primary,
+            onBackground = onBackground,
+            dividerTint = dividerTint,
+            onToggle = { onUpdate(theme.copy(useStarfield = it)) }
         )
 
         // Icon overrides — Premium.
@@ -1310,6 +1325,85 @@ fun ThemesTab(
                 useHolographicGlow = true,
                 uiDensity = "Comfortable"
             )
+        ),
+        ThemePreset(
+            name = "Blood Moon",
+            theme = ThemePreferences(
+                fontStyle = "Serif",
+                bubbleCornerRadius = 24,
+                // Near-black -> oxblood -> deep crimson (peak) -> back down toward near-black,
+                // so the wallpaper reads as an eclipse curve rather than a flat red. More than
+                // 3 stops, so this goes through appBackgroundGradientStops rather than the
+                // Start/Mid/End fields (see themeGradientColors() in ColorUtils.kt).
+                appBackgroundGradientStops = listOf("#0A0405", "#4A0E13", "#8B1A1A", "#200608"),
+                onBackground = "#F3C9CE",
+                topBarColor = "#0A0405",
+                onTopBarColor = "#F3C9CE",
+                bubbleOutgoing = "#9E1B32",
+                onBubbleOutgoing = "#F3C9CE",
+                bubbleIncoming = "#2B0A0D",
+                onBubbleIncoming = "#F1D9DB",
+                primaryColor = "#9E1B32",
+                secondaryColor = "#D97706",
+                timestampColor = "#B08A8E",
+                dividerColor = "#3A0F13",
+                inboxIconVariant = "blood_moon",
+                useGlassEffect = true,
+                useHolographicGlow = true,
+                uiDensity = "Comfortable"
+            )
+        ),
+        ThemePreset(
+            name = "Iridescent",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 24,
+                // A soft, pastel shimmer across the spectrum rather than one bold hue -
+                // reads as a holographic/oil-slick sheen.
+                appBackgroundGradientStops = listOf(
+                    "#C9F5F2", "#F5C9F0", "#D6C9F5", "#C9E0F5", "#C9F5D6"
+                ),
+                onBackground = "#2D2438",
+                topBarColor = "#C9F5F2",
+                onTopBarColor = "#2D2438",
+                bubbleOutgoing = "#B794F6",
+                onBubbleOutgoing = "#2D2438",
+                bubbleIncoming = "#FBEAFA",
+                onBubbleIncoming = "#2D2438",
+                primaryColor = "#8B5CF6",
+                secondaryColor = "#22D3EE",
+                timestampColor = "#8A7A9E",
+                dividerColor = "#E0D0F0",
+                inboxIconVariant = "iridescent",
+                useGlassEffect = true,
+                useHolographicGlow = true,
+                uiDensity = "Comfortable"
+            )
+        ),
+        ThemePreset(
+            name = "Dark Cosmic",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 24,
+                appBackgroundGradientStart = "#04010D",
+                appBackgroundGradientEnd = "#160735",
+                onBackground = "#E0E7FF",
+                topBarColor = "#04010D",
+                onTopBarColor = "#E0E7FF",
+                bubbleOutgoing = "#6D28D9",
+                onBubbleOutgoing = "#E0E7FF",
+                bubbleIncoming = "#0F0A24",
+                onBubbleIncoming = "#C7D2FE",
+                primaryColor = "#93C5FD",
+                secondaryColor = "#A78BFA",
+                timestampColor = "#8280A8",
+                dividerColor = "#241454",
+                inboxIconVariant = "dark_cosmic",
+                useGlassEffect = true,
+                useHolographicGlow = true,
+                useStarfield = true,
+                uiDensity = "Comfortable"
+            )
         )
     )
 
@@ -1371,6 +1465,7 @@ private fun ThemePreviewCard(
                     .height(150.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .then(bgModifier)
+                    .starfieldOverlay(theme.useStarfield, starCount = 30)
                     .border(1.dp, divider, RoundedCornerShape(14.dp))
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
