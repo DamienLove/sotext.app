@@ -127,6 +127,7 @@ import com.sotext.ui.components.ThemeIconKey
 import com.sotext.util.normalizeSmsAddress
 import com.sotext.util.parseColorOr
 import com.sotext.util.themeGradientColors
+import com.sotext.ui.theme.starfieldOverlay
 import com.sotext.util.ensureReadableOnColor
 import com.sotext.util.splitSmsDisplayAddress
 import com.sotext.ui.state.SearchResultState
@@ -326,7 +327,7 @@ fun SmsInboxScreen(
     Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = if (theme.appBackgroundGradientStart != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor),
+        containerColor = if (themeGradientColors(theme) != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor),
         topBar = {
             if (isBeaconMode) {
                 // No brand title/logo here by design - a compact bar (instead of the old
@@ -427,7 +428,7 @@ fun SmsInboxScreen(
                     contentScale = ContentScale.Crop
                 )
             }
-            Box(modifier = Modifier.fillMaxSize().then(bgModifier))
+            Box(modifier = Modifier.fillMaxSize().then(bgModifier).starfieldOverlay(theme.useStarfield))
             Column(
                 modifier = Modifier
                     .fillMaxSize()

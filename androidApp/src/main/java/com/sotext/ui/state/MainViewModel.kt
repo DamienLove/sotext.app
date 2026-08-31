@@ -1341,9 +1341,13 @@ class MainViewModel @Inject constructor(
             appBackgroundGradientStart = map["appBackgroundGradientStart"] as? String,
             appBackgroundGradientMid = map["appBackgroundGradientMid"] as? String,
             appBackgroundGradientEnd = map["appBackgroundGradientEnd"] as? String,
+            appBackgroundGradientStops = (map["appBackgroundGradientStops"] as? List<*>)
+                ?.filterIsInstance<String>()
+                ?.takeIf { it.isNotEmpty() },
             fontScale = (map["fontScale"] as? Number)?.toFloat() ?: defaults.fontScale,
             useGlassEffect = map["useGlassEffect"] as? Boolean ?: defaults.useGlassEffect,
             useHolographicGlow = map["useHolographicGlow"] as? Boolean ?: defaults.useHolographicGlow,
+            useStarfield = map["useStarfield"] as? Boolean ?: defaults.useStarfield,
             uiDensity = map["uiDensity"] as? String ?: defaults.uiDensity
         )
     }
@@ -1377,6 +1381,7 @@ class MainViewModel @Inject constructor(
             key("fontScale") to theme.fontScale,
             key("useGlassEffect") to theme.useGlassEffect,
             key("useHolographicGlow") to theme.useHolographicGlow,
+            key("useStarfield") to theme.useStarfield,
             key("uiDensity") to theme.uiDensity
         )
         payload[key("bubbleCornerRadiusTopStart")] = theme.bubbleCornerRadiusTopStart ?: FieldValue.delete()
@@ -1388,6 +1393,7 @@ class MainViewModel @Inject constructor(
         payload[key("appBackgroundGradientStart")] = theme.appBackgroundGradientStart ?: FieldValue.delete()
         payload[key("appBackgroundGradientMid")] = theme.appBackgroundGradientMid ?: FieldValue.delete()
         payload[key("appBackgroundGradientEnd")] = theme.appBackgroundGradientEnd ?: FieldValue.delete()
+        payload[key("appBackgroundGradientStops")] = theme.appBackgroundGradientStops ?: FieldValue.delete()
         return payload
     }
 

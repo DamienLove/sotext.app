@@ -125,6 +125,7 @@ import com.sotext.util.sendAttachmentViaSms
 import com.sotext.util.ensureReadableOnColor
 import com.sotext.util.parseColorOr
 import com.sotext.util.themeGradientColors
+import com.sotext.ui.theme.starfieldOverlay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -207,7 +208,7 @@ fun SmsThreadScreen(
     }
 
     Scaffold(
-        containerColor = if (effectiveTheme.appBackgroundGradientStart != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor),
+        containerColor = if (themeGradientColors(effectiveTheme) != null) Color.Transparent else parseColorOr(MaterialTheme.colorScheme.background, effectiveTheme.backgroundColor),
         bottomBar = {
             MessageInput(
                 draft = draft,
@@ -391,7 +392,7 @@ fun SmsThreadScreen(
                     contentScale = ContentScale.Crop
                 )
             }
-            Box(modifier = Modifier.fillMaxSize().then(bgModifier))
+            Box(modifier = Modifier.fillMaxSize().then(bgModifier).starfieldOverlay(effectiveTheme.useStarfield))
             if (isDatabaseBusy) {
                 LinearProgressIndicator(
                     modifier = Modifier
