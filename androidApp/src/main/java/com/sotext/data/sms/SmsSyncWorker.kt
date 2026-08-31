@@ -17,6 +17,7 @@ import com.sotext.BuildConfig
 import com.sotext.R
 import com.sotext.data.alert.NotificationRegistrar
 import com.sotext.data.contacts.DeviceContactsRepository
+import com.sotext.data.firestore.requireNoMixedProtectedWrite
 import com.sotext.domain.repository.SettingsRepository
 import com.sotext.util.splitSmsDisplayAddress
 import dagger.assisted.Assisted
@@ -68,13 +69,21 @@ class SmsSyncWorker @AssistedInject constructor(
             val userRef = firestore.collection("users").document(user.uid)
             val deviceId = settingsRepository.ensureDeviceId()
 
-            userRef.set(
-                mapOf(
-                    "subscriptionStatus" to subscriptionTier,
-                    "remoteWebAccessEnabled" to settings.remoteWebAccessEnabled
-                ),
-                SetOptions.merge()
-            ).await()
+            // remoteWebAccessEnabled must land even if the informational tier mirror below
+            // gets rejected, so it's written on its own rather than merged with subscriptionStatus.
+            val criticalPayload = mapOf("remoteWebAccessEnabled" to settings.remoteWebAccessEnabled)
+            requireNoMixedProtectedWrite(criticalPayload)
+            userRef.set(criticalPayload, SetOptions.merge()).await()
+
+            // subscriptionStatus is one of firestore.rules' protected subscription fields
+            // (client writes are rejected whenever it actually changes value - the server-side
+            // verifySubscription/RTDN handlers own the real value via premiumSubscriptionStatus).
+            // Mirror it best-effort only; a rejection here must not abort the thread/message sync.
+            runCatching {
+                val tierMirrorPayload = mapOf("subscriptionStatus" to subscriptionTier)
+                requireNoMixedProtectedWrite(tierMirrorPayload)
+                userRef.set(tierMirrorPayload, SetOptions.merge()).await()
+            }
 
             // If the user hasn't enabled remote web access, there's nothing to sync.
             if (!settings.remoteWebAccessEnabled) {
