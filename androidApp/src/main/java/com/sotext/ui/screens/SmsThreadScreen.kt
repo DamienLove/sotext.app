@@ -45,6 +45,10 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.AlertDialog
@@ -112,6 +116,12 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.sotext.data.context.ContextCard
 import com.sotext.data.context.MessageContextParser
+import com.sotext.data.intelligence.CardDecision
+import com.sotext.data.intelligence.MessageEntities
+import com.sotext.data.intelligence.MessageIntent
+import com.sotext.data.intelligence.SafetyAnalysis
+import com.sotext.data.intelligence.SuggestedAction
+import com.sotext.data.intelligence.SuggestedActionType
 import com.sotext.data.sms.SmsMessageItem
 import com.sotext.data.sms.SmsMessageStatus
 import com.sotext.data.ai.AiComposeAction
@@ -167,13 +177,23 @@ fun SmsThreadScreen(
     hasMoreToLoad: Boolean = true,
     smartRepliesEnabled: Boolean = false,
     isPremium: Boolean = false,
-    contextCardsEnabled: Boolean = true
+    contextCardsEnabled: Boolean = true,
+    messageIntelligenceEnabled: Boolean = false,
+    messageIntelligence: Map<Long, CardDecision> = emptyMap(),
+    onRequestMessageIntelligence: (Long, String, Long, String?) -> Unit = { _, _, _, _ -> },
+    onSuppressIntelligenceType: (MessageIntent) -> Unit = {},
+    onSafetyGetHelp: () -> Unit = {},
+    onSafetyShareLocation: () -> Unit = {}
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
     var showNotificationMenu by remember { mutableStateOf(false) }
     val iconSize = (24f * effectiveTheme.iconSizeFactor).coerceIn(18f, 34f).dp
     var draft by rememberSaveable { mutableStateOf("") }
+    // Hoisted above the LazyColumn (unlike ContextActionCard's own per-item remember) so a
+    // dismissal survives scroll-recycling, not just until the bubble leaves composition. Not
+    // rememberSaveable - matches the existing Catch Me Up precedent of in-memory-only dismissal.
+    var dismissedIntelligenceCards by remember { mutableStateOf(setOf<Long>()) }
     var showOfflineDialog by remember { mutableStateOf(false) }
     var pendingDraft by remember { mutableStateOf<String?>(null) }
     var pendingLineId by remember { mutableStateOf<String?>(null) }
@@ -425,7 +445,15 @@ fun SmsThreadScreen(
                             onAvatarClick = if (!msg.outgoing) {
                                 { onEditContact() }
                             } else null,
-                            contextCardsEnabled = contextCardsEnabled
+                            contextCardsEnabled = contextCardsEnabled,
+                            messageIntelligenceEnabled = messageIntelligenceEnabled,
+                            decision = messageIntelligence[msg.id],
+                            dismissed = msg.id in dismissedIntelligenceCards,
+                            onRequestMessageIntelligence = onRequestMessageIntelligence,
+                            onDismiss = { dismissedIntelligenceCards = dismissedIntelligenceCards + msg.id },
+                            onSuppressType = onSuppressIntelligenceType,
+                            onSafetyGetHelp = onSafetyGetHelp,
+                            onSafetyShareLocation = onSafetyShareLocation
                         )
                     }
                 }
@@ -1005,7 +1033,15 @@ private fun MessageBubble(
     contact: Contact?,
     onRetry: (SmsMessageItem) -> Unit = {},
     onAvatarClick: (() -> Unit)? = null,
-    contextCardsEnabled: Boolean = true
+    contextCardsEnabled: Boolean = true,
+    messageIntelligenceEnabled: Boolean = false,
+    decision: CardDecision? = null,
+    dismissed: Boolean = false,
+    onRequestMessageIntelligence: (Long, String, Long, String?) -> Unit = { _, _, _, _ -> },
+    onDismiss: () -> Unit = {},
+    onSuppressType: (MessageIntent) -> Unit = {},
+    onSafetyGetHelp: () -> Unit = {},
+    onSafetyShareLocation: () -> Unit = {}
 ) {
     val isOutgoing = msg.outgoing
     val rawBubbleColor = if (isOutgoing) {
@@ -1204,6 +1240,50 @@ private fun MessageBubble(
                     )
                 }
             }
+            // Message Intelligence renders first (safety, when present, always wins visual
+            // priority - spec section 9) - the older, on-device-only context cards render after.
+            if (messageIntelligenceEnabled && msg.body.isNotBlank() && !dismissed) {
+                LaunchedEffect(msg.id, msg.body) {
+                    onRequestMessageIntelligence(msg.id, msg.body, msg.timestamp, msg.address)
+                }
+                when (val current = decision) {
+                    is CardDecision.ShowSafetyCard -> {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        SafetyMessageCard(
+                            safety = current.safety,
+                            theme = theme,
+                            onGetHelp = onSafetyGetHelp,
+                            onShareLocation = onSafetyShareLocation,
+                            onDismiss = onDismiss
+                        )
+                    }
+                    is CardDecision.ShowActionCard -> {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        SmartMessageCard(
+                            intent = current.intent,
+                            entities = current.entities,
+                            actions = current.actions,
+                            theme = theme,
+                            subtle = false,
+                            onDismiss = onDismiss,
+                            onSuppressType = { onSuppressType(current.intent) }
+                        )
+                    }
+                    is CardDecision.ShowSuggestion -> {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        SmartMessageCard(
+                            intent = current.intent,
+                            entities = current.entities,
+                            actions = emptyList(),
+                            theme = theme,
+                            subtle = true,
+                            onDismiss = onDismiss,
+                            onSuppressType = { onSuppressType(current.intent) }
+                        )
+                    }
+                    CardDecision.NoCard, null -> {}
+                }
+            }
             if (contextCardsEnabled && msg.body.isNotBlank()) {
                 val contextCards = remember(msg.id, msg.body) {
                     MessageContextParser.extract(
@@ -1290,6 +1370,322 @@ private fun ContextActionCard(card: ContextCard, theme: ThemePreferences) {
                     modifier = Modifier.size(14.dp),
                     tint = onContainer.copy(alpha = 0.5f)
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Renders a [CardDecision.ShowActionCard] (full-emphasis, [subtle] = false) or
+ * [CardDecision.ShowSuggestion] (low-emphasis, [subtle] = true) - the same visual idiom as
+ * [ContextActionCard] (icon + title/subtitle + actions + dismiss), so a Message Intelligence
+ * card reads as the same kind of thing as the existing Smart Message Cards, not a new UI
+ * language. Never invents a missing entity (spec section 4) - [smartCardSubtitle] falls back to
+ * a "needs more info" prompt instead.
+ */
+@Composable
+private fun SmartMessageCard(
+    intent: MessageIntent,
+    entities: MessageEntities,
+    actions: List<SuggestedAction>,
+    theme: ThemePreferences,
+    subtle: Boolean,
+    onDismiss: () -> Unit,
+    onSuppressType: () -> Unit
+) {
+    var dismissedLocally by remember(intent) { mutableStateOf(false) }
+    if (dismissedLocally) return
+
+    val context = LocalContext.current
+    val baseContainer = parseColorOr(MaterialTheme.colorScheme.surfaceVariant, theme.bubbleIncoming)
+    val container = if (subtle) baseContainer.copy(alpha = 0.55f) else baseContainer
+    val onContainer = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.onBubbleIncoming)
+    val accent = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
+    val (iconKey, icon, title, subtitle) = remember(intent, entities) { smartCardPresentation(intent, entities) }
+
+    Surface(
+        color = container,
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = if (subtle) 0.dp else 1.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 280.dp)
+                .padding(start = 10.dp, end = 4.dp, top = 6.dp, bottom = 6.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ThemeIcon(
+                    iconKey = iconKey,
+                    theme = theme,
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (subtle) onContainer.copy(alpha = 0.6f) else accent,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (subtle) FontWeight.Normal else FontWeight.SemiBold,
+                        color = onContainer,
+                        maxLines = 1
+                    )
+                    if (subtitle.isNotBlank()) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = onContainer.copy(alpha = 0.75f),
+                            maxLines = 2
+                        )
+                    }
+                }
+                IconButton(
+                    onClick = { dismissedLocally = true; onDismiss() },
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Dismiss",
+                        modifier = Modifier.size(14.dp),
+                        tint = onContainer.copy(alpha = 0.5f)
+                    )
+                }
+            }
+            if (actions.isNotEmpty() || !subtle) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    actions.forEach { action ->
+                        TextButton(
+                            onClick = { performSuggestedAction(context, action.type, intent, entities) },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = action.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (action.isPrimary) accent else onContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    TextButton(
+                        onClick = { dismissedLocally = true; onSuppressType() },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            text = "Don't show again",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = onContainer.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun smartCardPresentation(
+    intent: MessageIntent,
+    entities: MessageEntities
+): Quadruple<String, ImageVector, String, String> {
+    val whenText = smartCardWhenText(entities)
+    return when (intent) {
+        MessageIntent.REMINDER -> Quadruple(
+            ThemeIconKey.CONTEXT_EVENT, Icons.Filled.Event, "Reminder detected",
+            listOfNotNull(entities.task?.replaceFirstChar { it.uppercase() }, whenText)
+                .joinToString(" · ").ifBlank { "Add a time to finish setting this up" }
+        )
+        MessageIntent.SCHEDULING, MessageIntent.AVAILABILITY_REQUEST -> Quadruple(
+            ThemeIconKey.CONTEXT_EVENT, Icons.Filled.Event, "Scheduling request",
+            whenText ?: "Time not specified"
+        )
+        MessageIntent.LOCATION_REQUEST -> Quadruple(
+            ThemeIconKey.CONTEXT_PLACE, Icons.Filled.LocationOn, "Location requested",
+            entities.location ?: ""
+        )
+        MessageIntent.CONTACT_REQUEST -> Quadruple(
+            ThemeIconKey.CONTEXT_PHONE, Icons.Filled.Person, "Contact requested",
+            entities.person ?: "Who do they mean?"
+        )
+        MessageIntent.PAYMENT_REQUEST -> Quadruple(
+            "icon.intelligence_payment", Icons.Filled.AttachMoney, "Payment request",
+            entities.amount?.let { formatAmount(it) } ?: "Amount not specified"
+        )
+        MessageIntent.MONEY_OWED, MessageIntent.REIMBURSEMENT_REQUEST -> Quadruple(
+            "icon.intelligence_payment", Icons.Filled.AttachMoney, "Money owed",
+            entities.amount?.let { formatAmount(it) } ?: "Amount not specified"
+        )
+        MessageIntent.INFORMATION_REQUEST, MessageIntent.QUESTION -> Quadruple(
+            "icon.intelligence_question", Icons.Filled.HelpOutline, "Question", "Needs a reply"
+        )
+        else -> Quadruple(
+            "icon.intelligence_question", Icons.Filled.HelpOutline,
+            intent.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }, ""
+        )
+    }
+}
+
+private fun smartCardWhenText(entities: MessageEntities): String? {
+    if (!entities.rawDateTimeText.isNullOrBlank()) return entities.rawDateTimeText
+    if (!entities.hasDateTime()) return null
+    val date = entities.dateEpochDay?.let { java.time.LocalDate.ofEpochDay(it) }
+    val time = entities.timeMinuteOfDay?.let { java.time.LocalTime.of(it / 60, it % 60) }
+    return listOfNotNull(
+        date?.format(java.time.format.DateTimeFormatter.ofPattern("MMM d")),
+        time?.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a"))
+    ).joinToString(" · ").ifBlank { null }
+}
+
+private fun formatAmount(amount: Double): String =
+    if (amount == amount.toLong().toDouble()) "$${amount.toLong()}" else "$%.2f".format(amount)
+
+/**
+ * Dispatches a Phase 1 suggested action. Every [SuggestedActionType] has a real handler here -
+ * some open an existing system app (Calendar, Contacts) for the user to confirm, matching "the
+ * application should not silently create an external commitment" (spec section 11); a few that
+ * would need a real integration this phase doesn't build (Suggest Reply, Open Payment App) are
+ * honest stubs rather than missing entirely, per spec section 5's explicit allowance to build
+ * the action architecture now and wire a real integration in later.
+ */
+private fun performSuggestedAction(
+    context: Context,
+    type: SuggestedActionType,
+    intent: MessageIntent,
+    entities: MessageEntities
+) {
+    when (type) {
+        SuggestedActionType.CREATE_REMINDER, SuggestedActionType.ADD_TO_CALENDAR -> {
+            val date = entities.dateEpochDay?.let { java.time.LocalDate.ofEpochDay(it) } ?: java.time.LocalDate.now()
+            val time = entities.timeMinuteOfDay
+            val zone = java.time.ZoneId.systemDefault()
+            val allDay = time == null
+            val startMillis = date.atTime(if (time != null) time / 60 else 0, time?.rem(60) ?: 0)
+                .atZone(zone).toInstant().toEpochMilli()
+            val endMillis = if (allDay) {
+                date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            } else {
+                startMillis + 60L * 60L * 1000L
+            }
+            val title = entities.task?.replaceFirstChar { it.uppercase() } ?: "Reminder"
+            launchSafely(
+                context,
+                Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI).apply {
+                    putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startMillis)
+                    putExtra(CalendarContract.EXTRA_EVENT_END_TIME, endMillis)
+                    putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, allDay)
+                    putExtra(CalendarContract.Events.TITLE, title)
+                }
+            )
+        }
+        SuggestedActionType.CHECK_AVAILABILITY -> {
+            val date = entities.dateEpochDay?.let { java.time.LocalDate.ofEpochDay(it) } ?: java.time.LocalDate.now()
+            val millis = date.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+            launchSafely(
+                context,
+                Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("content://com.android.calendar/time/$millis")
+                }
+            )
+        }
+        SuggestedActionType.FIND_CONTACT -> {
+            launchSafely(context, Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI))
+        }
+        SuggestedActionType.SHARE_LOCATION -> {
+            Toast.makeText(
+                context,
+                "Open your maps app to share your pin - one-tap sharing from here is coming soon.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        SuggestedActionType.SUGGEST_REPLY -> {
+            Toast.makeText(context, "Reply suggestions for this are coming soon.", Toast.LENGTH_SHORT).show()
+        }
+        SuggestedActionType.OPEN_PAYMENT_APP -> {
+            Toast.makeText(context, "Payment app integrations aren't available yet.", Toast.LENGTH_SHORT).show()
+        }
+        SuggestedActionType.REPLY -> {
+            Toast.makeText(context, "Type your reply below.", Toast.LENGTH_SHORT).show()
+        }
+        SuggestedActionType.GET_HELP, SuggestedActionType.DISMISS -> {
+            // Handled directly by SafetyMessageCard's own callbacks, not through this dispatcher.
+        }
+    }
+}
+
+/**
+ * The safety-priority card (spec section 9) - a distinct, higher-emphasis visual treatment from
+ * [SmartMessageCard] so it reads as different in kind, not just another action card. "Get Help"
+ * and "Share Location" are wired by the caller to SoText's existing manual-emergency
+ * confirmation flow ([com.sotext.service.AlertRouter]), not fired directly from here - a safety
+ * action is exactly the kind of consequential action spec section 11 says must stay behind
+ * confirmation.
+ */
+@Composable
+private fun SafetyMessageCard(
+    safety: SafetyAnalysis,
+    theme: ThemePreferences,
+    onGetHelp: () -> Unit,
+    onShareLocation: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var dismissedLocally by remember { mutableStateOf(false) }
+    if (dismissedLocally) return
+
+    val warningColor = Color(0xFFDC2626)
+    val container = warningColor.copy(alpha = 0.12f)
+    val onContainer = parseColorOr(MaterialTheme.colorScheme.onSurface, theme.onBackground)
+
+    Surface(
+        color = container,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, warningColor.copy(alpha = 0.4f))
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 300.dp)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Shield,
+                    contentDescription = null,
+                    tint = warningColor,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Possible safety concern",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = onContainer,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { dismissedLocally = true; onDismiss() }, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Dismiss",
+                        modifier = Modifier.size(14.dp),
+                        tint = onContainer.copy(alpha = 0.5f)
+                    )
+                }
+            }
+            Text(
+                text = "This message may indicate an immediate safety concern.",
+                style = MaterialTheme.typography.bodySmall,
+                color = onContainer.copy(alpha = 0.85f)
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onGetHelp,
+                    colors = ButtonDefaults.buttonColors(containerColor = warningColor)
+                ) {
+                    Text("Get Help", style = MaterialTheme.typography.labelMedium)
+                }
+                OutlinedButton(onClick = onShareLocation) {
+                    Text("Share Location", style = MaterialTheme.typography.labelMedium)
+                }
             }
         }
     }

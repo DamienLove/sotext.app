@@ -175,6 +175,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import com.sotext.BuildConfig
 import com.sotext.util.formatTimestamp
 import com.sotext.util.DefaultSmsHelper
+import com.sotext.util.AppIconManager
 import com.sotext.util.BeaconIconManager
 import com.sotext.util.UnifiedLauncherManager
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -463,6 +464,18 @@ class MainActivity : AppCompatActivity() {
                             state.settings.themePreferences.inboxIconVariant,
                             unifiedModeActive = false
                         )
+                    }
+                }
+                LaunchedEffect(
+                    state.settings.appIconVariant,
+                    state.settings.mergedExperienceEnabled
+                ) {
+                    // Same reasoning as the Beacon launcher effect above: skip while unified mode
+                    // is active (UnifiedLauncherManager owns launcher icon state there), and
+                    // re-apply whenever unified mode toggles off so exiting it doesn't strand
+                    // the user's chosen app icon color under the plain default.
+                    if (!state.settings.mergedExperienceEnabled) {
+                        AppIconManager.apply(context, state.settings.appIconVariant, unifiedModeActive = false)
                     }
                 }
                 LaunchedEffect(navController) {
@@ -1733,6 +1746,8 @@ class MainActivity : AppCompatActivity() {
                             onToggleAiCompose = viewModel::setAiComposeEnabled,
                             onToggleAiUrgency = viewModel::setAiUrgencyEnabled,
                             onToggleContextCards = viewModel::setContextCardsEnabled,
+                            onToggleMessageIntelligence = viewModel::setMessageIntelligenceEnabled,
+                            onToggleMessageIntelligenceCloud = viewModel::setMessageIntelligenceCloudEnabled,
                             onRequestDefaultSms = requestDefaultSms,
                             onToggleBeaconLauncher = { enabled -> viewModel.setBeaconLauncherEnabled(enabled) },
                             onSyncNow = viewModel::syncContactsNow,
@@ -2026,6 +2041,7 @@ class MainActivity : AppCompatActivity() {
                         val lineId = entry.arguments?.getString("lineId")?.takeIf { it.isNotBlank() }
                         val threadViewModel: SmsThreadViewModel = hiltViewModel()
                         val messages by threadViewModel.messages.collectAsStateWithLifecycle()
+                        val messageIntelligence by threadViewModel.messageIntelligence.collectAsStateWithLifecycle()
                         val contact by threadViewModel.contact.collectAsStateWithLifecycle()
                         val isArchived by threadViewModel.isArchived.collectAsStateWithLifecycle()
                         val threadBusy by threadViewModel.isDatabaseBusy.collectAsStateWithLifecycle()
@@ -2128,7 +2144,15 @@ class MainActivity : AppCompatActivity() {
                             aiSignInRequired = !isAuthenticated,
                             onRequestAiSignIn = { navController.navigate("login") },
                             smartRepliesEnabled = state.settings.smartRepliesEnabled,
-                            contextCardsEnabled = state.settings.contextCardsEnabled
+                            contextCardsEnabled = state.settings.contextCardsEnabled,
+                            messageIntelligenceEnabled = state.settings.messageIntelligenceEnabled,
+                            messageIntelligence = messageIntelligence,
+                            onRequestMessageIntelligence = { messageId, body, timestamp, sender ->
+                                threadViewModel.requestMessageIntelligence(messageId, body, timestamp, sender)
+                            },
+                            onSuppressIntelligenceType = { intent -> viewModel.suppressIntelligenceCardType(intent) },
+                            onSafetyGetHelp = { EmergencyPopupActivity.launchConfirmation(context, "Message Intelligence") },
+                            onSafetyShareLocation = { viewModel.sendCheckIn() }
                         )
                     }
                     composable("settings_help") {
@@ -2146,7 +2170,9 @@ class MainActivity : AppCompatActivity() {
                             theme = currentTheme,
                             onSelectTheme = { newTheme -> viewModel.setThemePreferences(newTheme) },
                             onBack = { navController.popBackStack() },
-                            isPremium = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
+                            isPremium = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked,
+                            appIconVariant = state.settings.appIconVariant,
+                            onSelectAppIconVariant = { variant -> viewModel.setAppIconVariant(variant) }
                         )
                     }
                     composable("private_pin") {

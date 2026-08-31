@@ -95,6 +95,8 @@ fun SettingsScreen(
     onToggleAiCompose: (Boolean) -> Unit,
     onToggleAiUrgency: (Boolean) -> Unit,
     onToggleContextCards: (Boolean) -> Unit,
+    onToggleMessageIntelligence: (Boolean) -> Unit,
+    onToggleMessageIntelligenceCloud: (Boolean) -> Unit,
     onRequestDefaultSms: () -> Unit,
     onToggleBeaconLauncher: (Boolean) -> Unit,
     onSyncNow: () -> Unit,
@@ -337,7 +339,7 @@ fun SettingsScreen(
             }
 
             // Smart Features & Extensions
-            if (settings.otpCleanupEnabled || settings.aiSummariesEnabled || settings.smartRepliesEnabled || settings.privateSafeEnabled || settings.contextCardsEnabled) {
+            if (settings.otpCleanupEnabled || settings.aiSummariesEnabled || settings.smartRepliesEnabled || settings.privateSafeEnabled || settings.contextCardsEnabled || settings.messageIntelligenceEnabled) {
                 CollapsibleSettingsSection(
                     title = "Smart Features",
                     initiallyExpanded = false
@@ -348,6 +350,20 @@ fun SettingsScreen(
                         checked = settings.contextCardsEnabled,
                         onCheckedChange = onToggleContextCards
                     )
+                    SettingsToggleRow(
+                        title = "Message Intelligence",
+                        subtitle = "Recognize reminders, scheduling, location, contact, and payment requests in messages and offer one-tap actions. Runs on-device; nothing leaves your phone.",
+                        checked = settings.messageIntelligenceEnabled,
+                        onCheckedChange = onToggleMessageIntelligence
+                    )
+                    if (settings.messageIntelligenceEnabled && isProUser) {
+                        SettingsToggleRow(
+                            title = "Deep AI analysis",
+                            subtitle = "Premium: send ambiguous messages to AI for a deeper pass when the on-device detector isn't confident. Never used for safety-critical messages, which are already covered separately.",
+                            checked = settings.messageIntelligenceCloudEnabled,
+                            onCheckedChange = onToggleMessageIntelligenceCloud
+                        )
+                    }
                     if (settings.otpCleanupEnabled) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                             Text(

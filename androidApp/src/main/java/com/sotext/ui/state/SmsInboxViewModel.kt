@@ -6,7 +6,16 @@ import com.sotext.BuildConfig
 import com.sotext.data.ai.AiAssistantRepository
 import com.sotext.data.ai.AiComposeAction
 import com.sotext.data.ai.CatchUpConversationInput
+import com.sotext.data.intelligence.CardDecision
+import com.sotext.data.intelligence.MessageIntelligenceDecisionEngine
+import com.sotext.data.intelligence.MessageIntelligenceRepository
+import com.sotext.data.intelligence.MessageIntelligenceResult
+import com.sotext.data.intelligence.MessageIntelligenceThresholds
+import com.sotext.data.intelligence.MessageIntent
+import com.sotext.data.intelligence.ResultSource
+import com.sotext.data.intelligence.SecondaryIntent
 import com.sotext.domain.model.CatchUpCategory
+import com.sotext.domain.model.PulseLinkSettings
 import com.sotext.data.sms.RemoteSmsRepository
 import com.sotext.data.sms.SmsLineRepository
 import com.sotext.data.sms.SmsMessageItem
@@ -442,7 +451,8 @@ class SmsThreadViewModel @Inject constructor(
     private val aiAssistantRepository: AiAssistantRepository,
     private val settingsRepository: SettingsRepository,
     private val remoteSmsRepository: RemoteSmsRepository,
-    private val smsOutboxService: SmsOutboxService
+    private val smsOutboxService: SmsOutboxService,
+    private val messageIntelligenceRepository: MessageIntelligenceRepository
 ) : ViewModel() {
     private companion object {
         const val PENDING_MATCH_WINDOW_MS = 20_000L
@@ -462,6 +472,9 @@ class SmsThreadViewModel @Inject constructor(
     val summaryState: StateFlow<AiSummaryState> = _summaryState
     private val _composeState = MutableStateFlow<AiComposeState>(AiComposeState.Idle)
     val composeState: StateFlow<AiComposeState> = _composeState
+    private val _messageIntelligence = MutableStateFlow<Map<Long, CardDecision>>(emptyMap())
+    val messageIntelligence: StateFlow<Map<Long, CardDecision>> = _messageIntelligence
+    private val requestedIntelligenceFor = mutableSetOf<Long>()
     private val _isDatabaseBusy = MutableStateFlow(false)
     val isDatabaseBusy: StateFlow<Boolean> = _isDatabaseBusy
     private val _hasMoreMessages = MutableStateFlow(false)
@@ -794,6 +807,65 @@ class SmsThreadViewModel @Inject constructor(
 
     fun clearCompose() {
         _composeState.value = AiComposeState.Idle
+    }
+
+    /**
+     * Runs the Message Intelligence pipeline for one message: an immediate, free, on-device
+     * pass (same guarantee as [com.sotext.data.context.MessageContextParser] - nothing leaves
+     * the device), then - only if Premium and the cloud deep-pass is opted in - an async safety
+     * classification (always attempted, since safety can override an otherwise-fine message)
+     * and, only when the on-device result wasn't already confident, an async intent deep-pass.
+     * Each step publishes through [messageIntelligence] as soon as it resolves; a later cloud
+     * result can only upgrade what's already showing (see [MessageIntelligenceRepository]),
+     * never replace it with something weaker. Safe to call once per message per screen visit -
+     * [requestedIntelligenceFor] makes repeat calls (e.g. from LazyColumn recomposition) no-ops.
+     */
+    fun requestMessageIntelligence(messageId: Long, body: String, timestampMillis: Long, senderAddress: String?) {
+        if (!requestedIntelligenceFor.add(messageId)) return
+        viewModelScope.launch {
+            val settings = settingsRepository.settings.first()
+            if (!settings.messageIntelligenceEnabled) return@launch
+
+            val onDevice = messageIntelligenceRepository.analyzeOnDevice(messageId, body, timestampMillis, senderAddress)
+            publishDecision(messageId, onDevice, settings)
+
+            val premium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
+            if (!premium || !settings.messageIntelligenceCloudEnabled) return@launch
+
+            val safety = runCatching { withTimeout(6_000L) { aiAssistantRepository.classifySafety(body) } }.getOrNull()
+            if (safety != null) {
+                publishDecision(messageId, messageIntelligenceRepository.mergeCloudSafety(messageId, safety), settings)
+            }
+
+            if (onDevice.confidence < MessageIntelligenceThresholds.DEFAULT.highConfidence) {
+                val cloud = runCatching { withTimeout(6_000L) { aiAssistantRepository.classifyMessageIntent(body) } }.getOrNull()
+                if (cloud != null) {
+                    val cloudResult = MessageIntelligenceResult(
+                        messageId = messageId,
+                        intent = cloud.intent,
+                        confidence = cloud.confidence,
+                        actionability = cloud.actionability,
+                        entities = cloud.entities,
+                        suggestedActions = messageIntelligenceRepository.actionsFor(cloud.intent),
+                        secondaryIntents = listOfNotNull(
+                            cloud.secondaryIntent?.let {
+                                SecondaryIntent(it.intent, it.confidence, it.actionability, it.entities)
+                            }
+                        ),
+                        source = ResultSource.CLOUD
+                    )
+                    publishDecision(messageId, messageIntelligenceRepository.mergeCloudIntent(messageId, cloudResult), settings)
+                }
+            }
+        }
+    }
+
+    private fun publishDecision(messageId: Long, result: MessageIntelligenceResult, settings: PulseLinkSettings) {
+        val suppressed = settings.suppressedIntelligenceCardTypes
+            .mapNotNull { raw -> runCatching { MessageIntent.valueOf(raw) }.getOrNull() }
+            .toSet()
+        val decision = MessageIntelligenceDecisionEngine.decide(result, suppressedTypes = suppressed)
+        _messageIntelligence.value = _messageIntelligence.value + (messageId to decision)
     }
 }
 

@@ -31,6 +31,7 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 import java.util.UUID
+import com.sotext.util.AppIconManager
 import com.sotext.util.BeaconIconManager
 
 private const val DATA_STORE_NAME = "pulselink_settings"
@@ -74,6 +75,7 @@ private val OTP_CLEANUP_DAYS = intPreferencesKey("otp_cleanup_days")
 private val PRIVATE_PIN_HASH = stringPreferencesKey("private_pin_hash")
 private val PRIVATE_THREADS = stringPreferencesKey("private_threads")
 private val BEACON_LAUNCHER_ENABLED = booleanPreferencesKey("beacon_launcher_enabled")
+private val APP_ICON_VARIANT = stringPreferencesKey("app_icon_variant")
 private val BEACON_HINT_DISMISSED = booleanPreferencesKey("beacon_hint_dismissed")
 private val WEB_ACCESS_HINT_DISMISSED = booleanPreferencesKey("web_access_hint_dismissed")
 private val FIREBASE_MESSAGING_ENABLED = booleanPreferencesKey("firebase_messaging_enabled")
@@ -89,6 +91,9 @@ private val INBOX_GESTURE_HINTS_DISMISSED = booleanPreferencesKey("inbox_gesture
 private val SWIPE_RIGHT_ACTION = stringPreferencesKey("swipe_right_action")
 private val SWIPE_LEFT_ACTION = stringPreferencesKey("swipe_left_action")
 private val CONTEXT_CARDS_ENABLED = booleanPreferencesKey("context_cards_enabled")
+private val MESSAGE_INTELLIGENCE_ENABLED = booleanPreferencesKey("message_intelligence_enabled")
+private val MESSAGE_INTELLIGENCE_CLOUD_ENABLED = booleanPreferencesKey("message_intelligence_cloud_enabled")
+private val SUPPRESSED_INTELLIGENCE_CARD_TYPES = stringPreferencesKey("suppressed_intelligence_card_types")
 private val AI_SUMMARIES_ENABLED = booleanPreferencesKey("ai_summaries_enabled")
 private val CATCH_ME_UP_ENABLED = booleanPreferencesKey("catch_me_up_enabled")
 private val AI_COMPOSE_ENABLED = booleanPreferencesKey("ai_compose_enabled")
@@ -200,6 +205,12 @@ class SettingsRepositoryImpl @Inject constructor(
                 json.decodeFromString<List<Long>>(it)
             } ?: PulseLinkSettings().privateThreadIds,
             beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled,
+            appIconVariant = prefs[APP_ICON_VARIANT] ?: PulseLinkSettings().appIconVariant,
+            messageIntelligenceEnabled = prefs[MESSAGE_INTELLIGENCE_ENABLED] ?: PulseLinkSettings().messageIntelligenceEnabled,
+            messageIntelligenceCloudEnabled = prefs[MESSAGE_INTELLIGENCE_CLOUD_ENABLED] ?: PulseLinkSettings().messageIntelligenceCloudEnabled,
+            suppressedIntelligenceCardTypes = decodeJsonOrNull(prefs[SUPPRESSED_INTELLIGENCE_CARD_TYPES]) {
+                json.decodeFromString<Set<String>>(it)
+            } ?: PulseLinkSettings().suppressedIntelligenceCardTypes,
             beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed,
             webAccessHintDismissed = prefs[WEB_ACCESS_HINT_DISMISSED] ?: PulseLinkSettings().webAccessHintDismissed,
             firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,
@@ -315,6 +326,7 @@ class SettingsRepositoryImpl @Inject constructor(
                 json.encodeToString(updated.privateThreadIds)
             }
             prefs[BEACON_LAUNCHER_ENABLED] = updated.beaconLauncherEnabled
+            prefs[APP_ICON_VARIANT] = updated.appIconVariant
             prefs[BEACON_HINT_DISMISSED] = updated.beaconHintDismissed
             prefs[WEB_ACCESS_HINT_DISMISSED] = updated.webAccessHintDismissed
             prefs[FIREBASE_MESSAGING_ENABLED] = updated.firebaseMessagingEnabled
@@ -334,6 +346,11 @@ class SettingsRepositoryImpl @Inject constructor(
             prefs[SWIPE_RIGHT_ACTION] = updated.swipeRightAction.name
             prefs[SWIPE_LEFT_ACTION] = updated.swipeLeftAction.name
             prefs[CONTEXT_CARDS_ENABLED] = updated.contextCardsEnabled
+            prefs[MESSAGE_INTELLIGENCE_ENABLED] = updated.messageIntelligenceEnabled
+            prefs[MESSAGE_INTELLIGENCE_CLOUD_ENABLED] = updated.messageIntelligenceCloudEnabled
+            prefs[SUPPRESSED_INTELLIGENCE_CARD_TYPES] = encodeJson {
+                json.encodeToString(updated.suppressedIntelligenceCardTypes)
+            }
             prefs[AI_SUMMARIES_ENABLED] = updated.aiSummariesEnabled
             prefs[CATCH_ME_UP_ENABLED] = updated.catchMeUpEnabled
             prefs[AI_COMPOSE_ENABLED] = updated.aiComposeEnabled
@@ -677,6 +694,18 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun setAppIconVariant(variant: String) {
+        editOnIo { prefs ->
+            prefs[APP_ICON_VARIANT] = variant
+        }
+        runCatching {
+            val unifiedModeActive = settings.first().mergedExperienceEnabled
+            AppIconManager.apply(context, variant, unifiedModeActive)
+        }.onFailure { error ->
+            Log.w(TAG, "Unable to update app icon variant=$variant", error)
+        }
+    }
+
     override suspend fun setWebAccessHintDismissed(dismissed: Boolean) {
         editOnIo { prefs ->
             prefs[WEB_ACCESS_HINT_DISMISSED] = dismissed
@@ -817,6 +846,12 @@ class SettingsRepositoryImpl @Inject constructor(
                 json.decodeFromString<List<Long>>(it)
             } ?: PulseLinkSettings().privateThreadIds,
             beaconLauncherEnabled = prefs[BEACON_LAUNCHER_ENABLED] ?: PulseLinkSettings().beaconLauncherEnabled,
+            appIconVariant = prefs[APP_ICON_VARIANT] ?: PulseLinkSettings().appIconVariant,
+            messageIntelligenceEnabled = prefs[MESSAGE_INTELLIGENCE_ENABLED] ?: PulseLinkSettings().messageIntelligenceEnabled,
+            messageIntelligenceCloudEnabled = prefs[MESSAGE_INTELLIGENCE_CLOUD_ENABLED] ?: PulseLinkSettings().messageIntelligenceCloudEnabled,
+            suppressedIntelligenceCardTypes = decodeJsonOrNull(prefs[SUPPRESSED_INTELLIGENCE_CARD_TYPES]) {
+                json.decodeFromString<Set<String>>(it)
+            } ?: PulseLinkSettings().suppressedIntelligenceCardTypes,
             beaconHintDismissed = prefs[BEACON_HINT_DISMISSED] ?: PulseLinkSettings().beaconHintDismissed,
             webAccessHintDismissed = prefs[WEB_ACCESS_HINT_DISMISSED] ?: PulseLinkSettings().webAccessHintDismissed,
             firebaseMessagingEnabled = prefs[FIREBASE_MESSAGING_ENABLED] ?: PulseLinkSettings().firebaseMessagingEnabled,

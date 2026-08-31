@@ -54,6 +54,10 @@ data class PulseLinkSettings(
     val privateThreadIds: List<Long> = emptyList(),
     val beaconLauncherEnabled: Boolean = false,
     val beaconHintDismissed: Boolean = false,
+    // The app's home-screen launcher icon color (Settings > app icon). One of
+    // AppIconManager's variant keys ("gold", "steel", "iridescent", "rainbow", "matte_black",
+    // "reverse", "glass", "sapphire", "crimson"), or "default" for the standard icon.
+    val appIconVariant: String = "default",
     val webAccessHintDismissed: Boolean = false,
     val firebaseMessagingEnabled: Boolean = true,
     val emailFallbackEnabled: Boolean = false,
@@ -67,6 +71,18 @@ data class PulseLinkSettings(
     val swipeRightAction: SwipeAction = SwipeAction.FAVORITE,
     val swipeLeftAction: SwipeAction = SwipeAction.DELETE,
     val contextCardsEnabled: Boolean = true,
+    // Message Intelligence: unified intent/entity/safety pipeline extending contextCardsEnabled's
+    // on-device Smart Message Cards and aiUrgencyEnabled's safety classification into one
+    // decision engine - see androidApp/.../data/intelligence/. On-device detection (reminders,
+    // scheduling, location/contact/payment requests) is free and on by default, matching
+    // contextCardsEnabled; the cloud deep-pass is Premium-gated and off by default, matching
+    // aiSummariesEnabled/catchMeUpEnabled.
+    val messageIntelligenceEnabled: Boolean = true,
+    val messageIntelligenceCloudEnabled: Boolean = false,
+    // "Don't show this type again", keyed by MessageIntent.name - the one piece of Message
+    // Intelligence state that survives restart; per-message dismissal does not (see
+    // SmsThreadScreen's in-memory dismiss state), matching the existing Catch Me Up precedent.
+    val suppressedIntelligenceCardTypes: Set<String> = emptySet(),
     val aiSummariesEnabled: Boolean = false,
     val catchMeUpEnabled: Boolean = false,
     val aiComposeEnabled: Boolean = true,

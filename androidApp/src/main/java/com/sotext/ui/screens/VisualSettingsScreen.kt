@@ -1,5 +1,6 @@
 package com.sotext.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,15 +26,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import coil.compose.AsyncImage
+import com.sotext.R
 import com.sotext.domain.model.ThemePreferences
 import com.sotext.util.ensureReadableOnColor
 import com.sotext.util.parseColorOr
@@ -47,7 +51,9 @@ fun VisualSettingsScreen(
     onSelectTheme: (ThemePreferences) -> Unit,
     onBack: () -> Unit,
     isGlobal: Boolean = true,
-    isPremium: Boolean = false
+    isPremium: Boolean = false,
+    appIconVariant: String = "default",
+    onSelectAppIconVariant: (String) -> Unit = {}
 ) {
     var activeTab by remember { mutableStateOf(0) }
     var tempTheme by remember(theme) { mutableStateOf(theme) }
@@ -122,7 +128,10 @@ fun VisualSettingsScreen(
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                listOf("Themes", "Customize").forEachIndexed { index, label ->
+                // App Icon only applies globally - a per-chat theme override can't change the
+                // home-screen launcher icon.
+                val tabLabels = if (isGlobal) listOf("Themes", "Customize", "App Icon") else listOf("Themes", "Customize")
+                tabLabels.forEachIndexed { index, label ->
                     val selected = activeTab == index
                     Box(
                         modifier = Modifier
@@ -158,7 +167,7 @@ fun VisualSettingsScreen(
                         onSelectTheme(it) // Immediate update for presets
                     }
                 )
-            } else {
+            } else if (activeTab == 1) {
                 CustomizeTab(
                     theme = tempTheme,
                     onUpdate = {
@@ -167,6 +176,13 @@ fun VisualSettingsScreen(
                     },
                     isGlobal = isGlobal,
                     isPremium = isPremium
+                )
+            } else if (isGlobal) {
+                AppIconTab(
+                    current = appIconVariant,
+                    onSelect = onSelectAppIconVariant,
+                    onBackground = onBackground,
+                    primary = primary
                 )
             }
         }
@@ -1425,6 +1441,103 @@ fun ThemesTab(
                 isActive = active,
                 onSelect = { onSelect(preset.theme) }
             )
+        }
+    }
+}
+
+private data class AppIconOption(val key: String, val label: String, val drawableRes: Int)
+
+/**
+ * The app's home-screen launcher icon color (Settings > Visual Settings > App Icon, global
+ * only). Keys must match [com.sotext.util.AppIconManager]'s variant map exactly - that's what
+ * actually switches the manifest activity-alias on selection.
+ */
+private val appIconOptions = listOf(
+    AppIconOption("default", "Default", R.drawable.ic_logo),
+    AppIconOption("gold", "Gold", R.drawable.ic_app_icon_gold),
+    AppIconOption("steel", "Steel", R.drawable.ic_app_icon_steel),
+    AppIconOption("iridescent", "Iridescent", R.drawable.ic_app_icon_iridescent),
+    AppIconOption("rainbow", "Rainbow", R.drawable.ic_app_icon_rainbow),
+    AppIconOption("matte_black", "Matte Black", R.drawable.ic_app_icon_matte_black),
+    AppIconOption("reverse", "Reverse Blue/White", R.drawable.ic_app_icon_reverse),
+    AppIconOption("glass", "Glass", R.drawable.ic_app_icon_glass),
+    AppIconOption("sapphire", "Sapphire Blue", R.drawable.ic_app_icon_sapphire),
+    AppIconOption("crimson", "Crimson", R.drawable.ic_app_icon_crimson)
+)
+
+@Composable
+fun AppIconTab(
+    current: String,
+    onSelect: (String) -> Unit,
+    onBackground: Color,
+    primary: Color
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            "Changes the app's icon on your home screen. Takes a moment to update after you pick one.",
+            style = MaterialTheme.typography.bodySmall,
+            color = onBackground.copy(alpha = 0.7f)
+        )
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            modifier = Modifier.heightIn(max = 900.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            userScrollEnabled = false
+        ) {
+            items(appIconOptions) { option ->
+                val active = current == option.key || (current.isBlank() && option.key == "default")
+                Column(
+                    modifier = Modifier
+                        .clickable(role = Role.Button) { onSelect(option.key) }
+                        .padding(4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .border(
+                                width = if (active) 2.dp else 1.dp,
+                                color = if (active) primary else onBackground.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                    ) {
+                        Image(
+                            painter = painterResource(id = option.drawableRes),
+                            contentDescription = option.label,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        if (active) {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = "Selected",
+                                tint = primary,
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(2.dp)
+                                    .size(18.dp)
+                                    .background(Color.White, CircleShape)
+                                    .padding(1.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        option.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = onBackground,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2
+                    )
+                }
+            }
         }
     }
 }
