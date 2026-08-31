@@ -126,6 +126,7 @@ import com.sotext.ui.components.ThemeIcon
 import com.sotext.ui.components.ThemeIconKey
 import com.sotext.util.normalizeSmsAddress
 import com.sotext.util.parseColorOr
+import com.sotext.util.themeGradientColors
 import com.sotext.util.ensureReadableOnColor
 import com.sotext.util.splitSmsDisplayAddress
 import com.sotext.ui.state.SearchResultState
@@ -312,15 +313,9 @@ fun SmsInboxScreen(
     val backgroundImageUrl = theme.backgroundImageUrl?.takeIf { it.isNotBlank() }
     val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
     val bgModifier = remember(theme, colorScheme, backgroundColor, overlayAlpha) {
-        if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
-            Modifier.background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        parseColorOr(Color.White, theme.appBackgroundGradientStart!!).copy(alpha = overlayAlpha),
-                        parseColorOr(Color.White, theme.appBackgroundGradientEnd!!).copy(alpha = overlayAlpha)
-                    )
-                )
-            )
+        val gradientColors = themeGradientColors(theme, alpha = overlayAlpha)
+        if (gradientColors != null) {
+            Modifier.background(brush = Brush.verticalGradient(colors = gradientColors))
         } else {
             Modifier.background(backgroundColor.copy(alpha = overlayAlpha))
         }

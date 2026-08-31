@@ -1339,6 +1339,7 @@ class MainViewModel @Inject constructor(
             timestampColor = map["timestampColor"] as? String,
             dividerColor = map["dividerColor"] as? String,
             appBackgroundGradientStart = map["appBackgroundGradientStart"] as? String,
+            appBackgroundGradientMid = map["appBackgroundGradientMid"] as? String,
             appBackgroundGradientEnd = map["appBackgroundGradientEnd"] as? String,
             fontScale = (map["fontScale"] as? Number)?.toFloat() ?: defaults.fontScale,
             useGlassEffect = map["useGlassEffect"] as? Boolean ?: defaults.useGlassEffect,
@@ -1385,6 +1386,7 @@ class MainViewModel @Inject constructor(
         payload[key("timestampColor")] = theme.timestampColor ?: FieldValue.delete()
         payload[key("dividerColor")] = theme.dividerColor ?: FieldValue.delete()
         payload[key("appBackgroundGradientStart")] = theme.appBackgroundGradientStart ?: FieldValue.delete()
+        payload[key("appBackgroundGradientMid")] = theme.appBackgroundGradientMid ?: FieldValue.delete()
         payload[key("appBackgroundGradientEnd")] = theme.appBackgroundGradientEnd ?: FieldValue.delete()
         return payload
     }

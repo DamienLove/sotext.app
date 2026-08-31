@@ -37,6 +37,7 @@ import coil.compose.AsyncImage
 import com.sotext.domain.model.ThemePreferences
 import com.sotext.util.ensureReadableOnColor
 import com.sotext.util.parseColorOr
+import com.sotext.util.themeGradientColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,15 +65,9 @@ fun VisualSettingsScreen(
     val topBar = parseColorOr(colorScheme.surface, tempTheme.topBarColor)
     val onTopBar = parseColorOr(colorScheme.onSurface, tempTheme.onTopBarColor)
     val primary = parseColorOr(colorScheme.primary, tempTheme.primaryColor)
-    val bgModifier = if (tempTheme.appBackgroundGradientStart != null && tempTheme.appBackgroundGradientEnd != null) {
-        Modifier.background(
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    parseColorOr(Color.White, tempTheme.appBackgroundGradientStart!!),
-                    parseColorOr(Color.White, tempTheme.appBackgroundGradientEnd!!)
-                )
-            )
-        )
+    val screenGradientColors = themeGradientColors(tempTheme)
+    val bgModifier = if (screenGradientColors != null) {
+        Modifier.background(brush = Brush.verticalGradient(colors = screenGradientColors))
     } else {
         Modifier.background(background)
     }
@@ -187,7 +182,7 @@ fun CustomizeTab(
 ) {
     val scrollState = rememberScrollState()
     var showColorPickerTarget by remember { mutableStateOf<String?>(null) }
-    // Targets: "outgoing", "incoming", "accent", "bg", "text_outgoing", "text_incoming", "text_bg", "topbar", "text_topbar", "timestamp", "divider", "grad_start", "grad_end"
+    // Targets: "outgoing", "incoming", "accent", "bg", "text_outgoing", "text_incoming", "text_bg", "topbar", "text_topbar", "timestamp", "divider", "grad_start", "grad_mid", "grad_end"
 
     if (showColorPickerTarget != null) {
         val initialColor = when(showColorPickerTarget) {
@@ -202,6 +197,7 @@ fun CustomizeTab(
             "timestamp" -> theme.timestampColor ?: theme.onBubbleOutgoing
             "divider" -> theme.dividerColor ?: theme.onBackground
             "grad_start" -> theme.appBackgroundGradientStart ?: theme.backgroundColor
+            "grad_mid" -> theme.appBackgroundGradientMid ?: theme.backgroundColor
             "grad_end" -> theme.appBackgroundGradientEnd ?: theme.backgroundColor
             else -> theme.backgroundColor
         }
@@ -220,6 +216,7 @@ fun CustomizeTab(
                     "timestamp" -> theme.copy(timestampColor = color)
                     "divider" -> theme.copy(dividerColor = color)
                     "grad_start" -> theme.copy(appBackgroundGradientStart = color)
+                    "grad_mid" -> theme.copy(appBackgroundGradientMid = color)
                     "grad_end" -> theme.copy(appBackgroundGradientEnd = color)
                     else -> theme.copy(backgroundColor = color)
                 }
@@ -242,15 +239,9 @@ fun CustomizeTab(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         // Design: live preview card with a labelled top bar.
-        val previewBg = if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
-             Modifier.background(
-                 brush = Brush.verticalGradient(
-                     colors = listOf(
-                         parseColorOr(Color.White, theme.appBackgroundGradientStart!!),
-                         parseColorOr(Color.White, theme.appBackgroundGradientEnd!!)
-                     )
-                 )
-             )
+        val livePreviewGradientColors = themeGradientColors(theme)
+        val previewBg = if (livePreviewGradientColors != null) {
+             Modifier.background(brush = Brush.verticalGradient(colors = livePreviewGradientColors))
         } else {
              Modifier.background(parseColorOr(Color.White, theme.backgroundColor))
         }
@@ -449,13 +440,24 @@ fun CustomizeTab(
                         )
                     )
                 } else {
-                    onUpdate(theme.copy(appBackgroundGradientStart = null, appBackgroundGradientEnd = null))
+                    onUpdate(
+                        theme.copy(
+                            appBackgroundGradientStart = null,
+                            appBackgroundGradientMid = null,
+                            appBackgroundGradientEnd = null
+                        )
+                    )
                 }
             }
         )
         if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ColorChip("Grad Start", parseColorOr(Color.Transparent, theme.appBackgroundGradientStart ?: "#FFFFFF"), labelColor = onBackground) { showColorPickerTarget = "grad_start" }
+                // Grad Mid is optional (2-stop gradients stay 2-stop); shown once a preset or a
+                // prior edit has set one, so it stays editable instead of getting stranded.
+                if (theme.appBackgroundGradientMid != null) {
+                    ColorChip("Grad Mid", parseColorOr(Color.Transparent, theme.appBackgroundGradientMid ?: "#FFFFFF"), labelColor = onBackground) { showColorPickerTarget = "grad_mid" }
+                }
                 ColorChip("Grad End", parseColorOr(Color.Transparent, theme.appBackgroundGradientEnd ?: "#FFFFFF"), labelColor = onBackground) { showColorPickerTarget = "grad_end" }
             }
         }
@@ -1258,6 +1260,56 @@ fun ThemesTab(
                 dividerColor = "#1e3a8a",
                 inboxIconVariant = "ocean_deep"
             )
+        ),
+        ThemePreset(
+            name = "Prism Drift",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 24,
+                appBackgroundGradientStart = "#10B981",
+                appBackgroundGradientMid = "#2563EB",
+                appBackgroundGradientEnd = "#7C3AED",
+                onBackground = "#ECFEFF",
+                topBarColor = "#10B981",
+                onTopBarColor = "#FFFFFF",
+                bubbleOutgoing = "#22D3EE",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#312E81",
+                onBubbleIncoming = "#E2E8F0",
+                primaryColor = "#22D3EE",
+                secondaryColor = "#7C3AED",
+                timestampColor = "#94A3B8",
+                dividerColor = "#1E293B",
+                inboxIconVariant = "prism_drift",
+                useGlassEffect = true,
+                useHolographicGlow = true,
+                uiDensity = "Comfortable"
+            )
+        ),
+        ThemePreset(
+            name = "Opal Bloom",
+            theme = ThemePreferences(
+                fontStyle = "Default",
+                bubbleCornerRadius = 24,
+                appBackgroundGradientStart = "#EC4899",
+                appBackgroundGradientMid = "#A855F7",
+                appBackgroundGradientEnd = "#6366F1",
+                onBackground = "#FDF4FF",
+                topBarColor = "#EC4899",
+                onTopBarColor = "#FFFFFF",
+                bubbleOutgoing = "#DA70D6",
+                onBubbleOutgoing = "#FFFFFF",
+                bubbleIncoming = "#581C87",
+                onBubbleIncoming = "#F5D0FE",
+                primaryColor = "#DA70D6",
+                secondaryColor = "#6366F1",
+                timestampColor = "#E9D5FF",
+                dividerColor = "#581C87",
+                inboxIconVariant = "opal_bloom",
+                useGlassEffect = true,
+                useHolographicGlow = true,
+                uiDensity = "Comfortable"
+            )
         )
     )
 
@@ -1295,15 +1347,9 @@ private fun ThemePreviewCard(
     val iconTint = parseColorOr(MaterialTheme.colorScheme.primary, theme.primaryColor)
     val timestamp = parseColorOr(MaterialTheme.colorScheme.onSurfaceVariant, theme.timestampColor ?: theme.onBackground)
     val divider = parseColorOr(MaterialTheme.colorScheme.outlineVariant, theme.dividerColor ?: theme.onBackground).copy(alpha = 0.2f)
-    val bgModifier = if (theme.appBackgroundGradientStart != null && theme.appBackgroundGradientEnd != null) {
-        Modifier.background(
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    parseColorOr(Color.White, theme.appBackgroundGradientStart!!),
-                    parseColorOr(Color.White, theme.appBackgroundGradientEnd!!)
-                )
-            )
-        )
+    val cardGradientColors = themeGradientColors(theme)
+    val bgModifier = if (cardGradientColors != null) {
+        Modifier.background(brush = Brush.verticalGradient(colors = cardGradientColors))
     } else {
         Modifier.background(parseColorOr(MaterialTheme.colorScheme.background, theme.backgroundColor))
     }
