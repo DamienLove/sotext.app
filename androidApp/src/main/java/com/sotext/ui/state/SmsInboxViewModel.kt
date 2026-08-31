@@ -812,13 +812,17 @@ class SmsThreadViewModel @Inject constructor(
     /**
      * Runs the Message Intelligence pipeline for one message: an immediate, free, on-device
      * pass (same guarantee as [com.sotext.data.context.MessageContextParser] - nothing leaves
-     * the device), then - only if Premium and the cloud deep-pass is opted in - an async safety
-     * classification (always attempted, since safety can override an otherwise-fine message)
-     * and, only when the on-device result wasn't already confident, an async intent deep-pass.
-     * Each step publishes through [messageIntelligence] as soon as it resolves; a later cloud
-     * result can only upgrade what's already showing (see [MessageIntelligenceRepository]),
-     * never replace it with something weaker. Safe to call once per message per screen visit -
-     * [requestedIntelligenceFor] makes repeat calls (e.g. from LazyColumn recomposition) no-ops.
+     * the device), then - only if Premium and the cloud deep-pass is opted in, and only if this
+     * message hasn't already had its one cloud pass attempted (see
+     * [MessageIntelligenceRepository.cloudPassAttempted]) - an async safety classification
+     * (attempted regardless of on-device confidence, since safety can override an otherwise-fine
+     * message) and, only when the on-device result wasn't already confident, an async intent
+     * deep-pass. Each step publishes through [messageIntelligence] as soon as it resolves; a
+     * later cloud result can only upgrade what's already showing (see
+     * [MessageIntelligenceRepository]), never replace it with something weaker. Safe to call
+     * once per message per screen visit - [requestedIntelligenceFor] makes repeat calls (e.g.
+     * from LazyColumn recomposition) no-ops within one screen visit, and the repository-level
+     * flag prevents a re-issue across separate visits (e.g. leaving and reopening the thread).
      */
     fun requestMessageIntelligence(messageId: Long, body: String, timestampMillis: Long, senderAddress: String?) {
         if (!requestedIntelligenceFor.add(messageId)) return
@@ -831,6 +835,11 @@ class SmsThreadViewModel @Inject constructor(
 
             val premium = BuildConfig.PREMIUM_FEATURES || settings.premiumUnlocked
             if (!premium || !settings.messageIntelligenceCloudEnabled) return@launch
+            // The repository's cloud-attempted flag is process-lifetime, not just this
+            // ViewModel's - so reopening the same thread doesn't re-issue paid AI calls for a
+            // message that already got its one cloud pass (see MessageIntelligenceRepository).
+            if (messageIntelligenceRepository.cloudPassAttempted(messageId)) return@launch
+            messageIntelligenceRepository.markCloudPassAttempted(messageId)
 
             val safety = runCatching { withTimeout(6_000L) { aiAssistantRepository.classifySafety(body) } }.getOrNull()
             if (safety != null) {

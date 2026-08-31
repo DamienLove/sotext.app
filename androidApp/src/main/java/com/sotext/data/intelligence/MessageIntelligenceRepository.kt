@@ -21,7 +21,21 @@ class MessageIntelligenceRepository @Inject constructor() {
 
     private val cache = LruCache<Long, MessageIntelligenceResult>(200)
 
+    // Tracks which messages have already had a cloud pass (safety and/or intent) attempted, so a
+    // caller re-entering the same thread doesn't re-issue paid AI calls for a message it already
+    // asked about - this repository is a singleton, so unlike the per-ViewModel dedupe set in
+    // SmsThreadViewModel, this survives the thread screen being left and reopened.
+    private val cloudAttempted = LruCache<Long, Boolean>(200)
+
     fun cached(messageId: Long): MessageIntelligenceResult? = cache.get(messageId)
+
+    /** True once a cloud pass has already been attempted for this message this app session. */
+    fun cloudPassAttempted(messageId: Long): Boolean = cloudAttempted.get(messageId) == true
+
+    /** Marks a message as having had its (one) cloud pass attempted, successful or not. */
+    fun markCloudPassAttempted(messageId: Long) {
+        cloudAttempted.put(messageId, true)
+    }
 
     fun analyzeOnDevice(
         messageId: Long,

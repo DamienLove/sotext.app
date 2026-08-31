@@ -112,6 +112,11 @@ class MessageIntentDetectorTest {
         // Spec section 6's own example.
         val matches = analyze("Remind me tomorrow to pick up Sarah at the airport, and what time does her flight land?")
         assertEquals(MessageIntent.REMINDER, matches.first().intent)
+        assertEquals(
+            "a time phrase between \"remind me\" and \"to\" should not swallow the task",
+            "pick up Sarah",
+            matches.first().entities.task
+        )
         val secondary = matches.drop(1).firstOrNull { it.intent != MessageIntent.REMINDER }
         assertNotNull("expected a secondary, non-reminder match", secondary)
         assertEquals(MessageIntent.INFORMATION_REQUEST, secondary!!.intent)

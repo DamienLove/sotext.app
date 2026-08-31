@@ -73,8 +73,12 @@ object MessageIntentDetector {
     private val impliedReminderTrigger = Regex(
         """(?i)\b(?:i (?:need|have|want|got) to remember|don'?t (?:let me )?forget|i should remember)\b"""
     )
+    // "remind me to <task>" is the common case, but a time phrase can sit between "me" and "to"
+    // ("remind me tomorrow to pick up Sarah") - the optional group tolerates that so the task
+    // still gets extracted instead of coming back null on an otherwise EXPLICIT/high-confidence
+    // match (spec section 6's own multi-intent example uses exactly this phrasing).
     private val reminderTaskRegex = Regex(
-        """(?i)(?:remind\s+me\s+to|remember\s+to|forget\s+to)\s+(.+?)""" +
+        """(?i)(?:remind\s+me\s+(?:(?:tomorrow|tonight|today|next\s+\w+|on\s+\S+|at\s+\S+|by\s+\S+)\s+)?to|remember\s+to|forget\s+to)\s+(.+?)""" +
             """(?=\s+(?:tomorrow|tonight|today|on\s|at\s|next\s|by\s)|[.!?]|$)"""
     )
 
