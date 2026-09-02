@@ -42,7 +42,7 @@ import midnightBg from './assets/themes/midnight_oled.svg';
 import sunsetBg from './assets/themes/sunset_fade.svg';
 import forestBg from './assets/themes/forest_trail.svg';
 import neonBg from './assets/themes/neon_noir.svg';
-import goldBg from './assets/themes/gold_standard.svg';
+import goldBg from './assets/themes/gold_standard.png';
 import diamondBg from './assets/themes/diamond_dust.svg';
 import obsidianBg from './assets/themes/obsidian_pro.svg';
 import titaniumBg from './assets/themes/titanium_flow.svg';

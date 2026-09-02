@@ -879,6 +879,28 @@ fun ThemesTab(
 ) {
     val themes = listOf(
         ThemePreset(
+            name = "Gold Standard",
+            theme = ThemePreferences(
+                fontStyle = "Serif",
+                bubbleCornerRadius = 16,
+                backgroundColor = "#332200",
+                onBackground = "#FFD700",
+                topBarColor = "#4B3621",
+                onTopBarColor = "#FFD700",
+                bubbleOutgoing = "#FFD700",
+                onBubbleOutgoing = "#332200",
+                bubbleIncoming = "#B8860B",
+                onBubbleIncoming = "#FFFFFF",
+                primaryColor = "#FFD700",
+                secondaryColor = "#DAA520",
+                timestampColor = "#E5C158",
+                dividerColor = "#B8860B",
+                inboxIconVariant = "pro",
+                useGlassEffect = true,
+                useHolographicGlow = true
+            )
+        ),
+        ThemePreset(
             name = "Future Hologram",
             theme = ThemePreferences(
                 fontStyle = "Default",
