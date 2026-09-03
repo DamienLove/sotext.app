@@ -1473,6 +1473,11 @@ private data class AppIconOption(val key: String, val label: String, val drawabl
  * The app's home-screen launcher icon color (Settings > Visual Settings > App Icon, global
  * only). Keys must match [com.sotext.util.AppIconManager]'s variant map exactly - that's what
  * actually switches the manifest activity-alias on selection.
+ *
+ * Matte Black/Reverse/Glass/Sapphire/Crimson are pulled pending real PNG art (their hand-drawn
+ * vector placeholders were removed) - re-add an AppIconOption here for each once its
+ * ic_app_icon_<variant>.png lands, alongside the matching manifest alias and
+ * AppIconManager.variantMap entry.
  */
 private val appIconOptions = listOf(
     AppIconOption("default", "Default", R.drawable.ic_logo),
@@ -1480,12 +1485,7 @@ private val appIconOptions = listOf(
     AppIconOption("steel", "Steel", R.drawable.ic_app_icon_steel),
     AppIconOption("bronze", "Bronze", R.drawable.ic_app_icon_bronze),
     AppIconOption("iridescent", "Iridescent", R.drawable.ic_app_icon_iridescent),
-    AppIconOption("rainbow", "Rainbow", R.drawable.ic_app_icon_rainbow),
-    AppIconOption("matte_black", "Matte Black", R.drawable.ic_app_icon_matte_black),
-    AppIconOption("reverse", "Reverse Blue/White", R.drawable.ic_app_icon_reverse),
-    AppIconOption("glass", "Glass", R.drawable.ic_app_icon_glass),
-    AppIconOption("sapphire", "Sapphire Blue", R.drawable.ic_app_icon_sapphire),
-    AppIconOption("crimson", "Crimson", R.drawable.ic_app_icon_crimson)
+    AppIconOption("rainbow", "Rainbow", R.drawable.ic_app_icon_rainbow)
 )
 
 @Composable
@@ -1536,6 +1536,10 @@ fun AppIconTab(
                         Image(
                             painter = painterResource(id = option.drawableRes),
                             contentDescription = option.label,
+                            // Crop, not the default Fit - source PNGs (e.g. the gold logo) carry
+                            // their own transparent padding for app-store icon conventions, which
+                            // Fit would preserve as visible whitespace inside this small preview
+                            // box. Crop scales to fill the box edge-to-edge instead.
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )

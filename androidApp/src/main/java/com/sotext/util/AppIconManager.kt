@@ -7,9 +7,14 @@ import android.util.Log
 
 /**
  * Switches the app's own home-screen launcher icon between the color options offered in
- * Settings (Gold, Steel, Iridescent, Rainbow, Matte Black, Reverse, Glass, Sapphire, Crimson),
- * each backed by its own manifest activity-alias (com.sotext.AppIcon*), plus the default
- * com.sotext.PulseLinkLauncher. Exactly one of these is enabled at a time.
+ * Settings, each backed by its own manifest activity-alias (com.sotext.AppIcon*), plus the
+ * default com.sotext.PulseLinkLauncher. Exactly one of these is enabled at a time.
+ *
+ * Gold/Steel/Iridescent/Rainbow/Bronze are wired with real PNG art. Matte Black/Reverse/Glass/
+ * Sapphire/Crimson had hand-drawn vector placeholders that were pulled pending real PNG art;
+ * their manifest aliases were removed too, so any variant key below without a matching alias
+ * falls through to [apply]'s default via `variantMap[variant] == null` - safe even if a device
+ * still has one of those old variant strings persisted in settings from before this cleanup.
  *
  * Distinct from [BeaconIconManager], which switches the separate, optional Beacon-inbox
  * shortcut icon - the two never touch the same components.
@@ -22,12 +27,7 @@ object AppIconManager {
         "steel" to "com.sotext.AppIconSteel",
         "iridescent" to "com.sotext.AppIconIridescent",
         "rainbow" to "com.sotext.AppIconRainbow",
-        "bronze" to "com.sotext.AppIconBronze",
-        "matte_black" to "com.sotext.AppIconMatteBlack",
-        "reverse" to "com.sotext.AppIconReverse",
-        "glass" to "com.sotext.AppIconGlass",
-        "sapphire" to "com.sotext.AppIconSapphire",
-        "crimson" to "com.sotext.AppIconCrimson"
+        "bronze" to "com.sotext.AppIconBronze"
     )
 
     /**
