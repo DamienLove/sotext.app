@@ -79,6 +79,12 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
+    abstract fun bindScheduledMessageRepository(
+        impl: com.sotext.data.db.ScheduledMessageRepositoryImpl
+    ): com.sotext.domain.repository.ScheduledMessageRepository
+
+    @Binds
+    @Singleton
     abstract fun bindBetaAgreementRepository(impl: BetaAgreementRepositoryImpl): BetaAgreementRepository
 
     @Binds
@@ -121,6 +127,11 @@ object DatabaseModule {
 
     @Provides
     fun providePinnedThreadDao(database: PulseLinkDatabase): PinnedThreadDao = database.pinnedThreadDao()
+
+    @Provides
+    fun provideScheduledMessageDao(
+        database: PulseLinkDatabase
+    ): com.sotext.data.db.ScheduledMessageDao = database.scheduledMessageDao()
 
     @Provides
     @Singleton

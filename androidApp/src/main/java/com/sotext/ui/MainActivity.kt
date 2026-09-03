@@ -116,6 +116,7 @@ import com.sotext.ui.screens.SplashScreen
 import com.sotext.ui.screens.SmsInboxScreen
 import com.sotext.ui.screens.UnifiedHomeScreen
 import com.sotext.ui.screens.SmsThreadScreen
+import com.sotext.ui.screens.ScheduledMessagesScreen
 import com.sotext.ui.screens.NewMessageScreen
 import com.sotext.ui.screens.VisualSettingsScreen
 import com.sotext.ui.screens.PrivatePinScreen
@@ -1440,6 +1441,26 @@ class MainActivity : AppCompatActivity() {
                             onBackClick = { navController.popBackStack() }
                         )
                     }
+                    composable("scheduled_messages") {
+                        val scheduledMessagesViewModel: com.sotext.ui.state.ScheduledMessagesViewModel = hiltViewModel()
+                        val allScheduled by scheduledMessagesViewModel.scheduledMessages.collectAsStateWithLifecycle()
+                        ScheduledMessagesScreen(
+                            scheduledMessages = allScheduled,
+                            onBack = { navController.popBackStack() },
+                            onOpenConversation = { message ->
+                                val lineSuffix = message.lineId?.let { "?lineId=$it" } ?: ""
+                                navController.navigate(
+                                    "sms/thread/${message.threadId ?: 0}/${Uri.encode(message.address)}$lineSuffix"
+                                )
+                            },
+                            onCancel = { id -> scheduledMessagesViewModel.cancel(id) },
+                            onSendNow = { id -> scheduledMessagesViewModel.sendNow(id) },
+                            onRetry = { id -> scheduledMessagesViewModel.retry(id) },
+                            onEdit = { id, body, time, recurrence, attachments ->
+                                scheduledMessagesViewModel.update(id, body, time, recurrence, attachments)
+                            }
+                        )
+                    }
                     composable(
                         route = "contact/{contactId}",
                         arguments = listOf(navArgument("contactId") { type = NavType.LongType })
@@ -2047,6 +2068,7 @@ class MainActivity : AppCompatActivity() {
                         val threadBusy by threadViewModel.isDatabaseBusy.collectAsStateWithLifecycle()
                         val summaryState by threadViewModel.summaryState.collectAsStateWithLifecycle()
                         val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
+                        val scheduledMessages by threadViewModel.scheduledMessages.collectAsStateWithLifecycle()
                         val decodedAddress = Uri.decode(address)
                         val premiumActive = BuildConfig.PREMIUM_FEATURES || state.settings.premiumUnlocked
                         val isAuthenticated = authState is AuthState.Authenticated
@@ -2152,7 +2174,16 @@ class MainActivity : AppCompatActivity() {
                             },
                             onSuppressIntelligenceType = { intent -> viewModel.suppressIntelligenceCardType(intent) },
                             onSafetyGetHelp = { EmergencyPopupActivity.launchConfirmation(context, "Message Intelligence") },
-                            onSafetyShareLocation = { viewModel.sendCheckIn() }
+                            onSafetyShareLocation = { viewModel.sendCheckIn() },
+                            scheduledMessages = scheduledMessages,
+                            onScheduleMessage = { body, scheduledForUtcMillis, recurrence, attachments, occurrenceKey, editingId ->
+                                threadViewModel.scheduleMessage(
+                                    body, scheduledForUtcMillis, recurrence, attachments, occurrenceKey, editingId
+                                )
+                            },
+                            onCancelScheduled = { id -> threadViewModel.cancelScheduled(id) },
+                            onSendScheduledNow = { id -> threadViewModel.sendScheduledNow(id) },
+                            onRetryScheduled = { id -> threadViewModel.retryScheduled(id) }
                         )
                     }
                     composable("settings_help") {

@@ -88,6 +88,7 @@ import com.sotext.ui.screens.LineLimitDialog
 import com.sotext.ui.screens.CatchMeUpScreen
 import com.sotext.ui.screens.SmsInboxScreen
 import com.sotext.ui.screens.SmsThreadScreen
+import com.sotext.ui.screens.ScheduledMessagesScreen
 import com.sotext.ui.screens.VisualSettingsScreen
 import com.sotext.ui.screens.ExtensionsStoreScreen
 import com.sotext.ui.model.MessageRecipient
@@ -921,6 +922,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                     val isArchived by threadViewModel.isArchived.collectAsStateWithLifecycle()
                                     val summaryState by threadViewModel.summaryState.collectAsStateWithLifecycle()
                                     val composeState by threadViewModel.composeState.collectAsStateWithLifecycle()
+                                    val scheduledMessages by threadViewModel.scheduledMessages.collectAsStateWithLifecycle()
                                     val decodedAddress = Uri.decode(address)
                                     val callNumber = contact?.primaryPhone()
                                         ?: decodedAddress.takeIf { it.isNotBlank() }
@@ -1044,7 +1046,36 @@ class BeaconInboxActivity : ComponentActivity() {
                                         },
                                         onSuppressIntelligenceType = { intent -> viewModel.suppressIntelligenceCardType(intent) },
                                         onSafetyGetHelp = { EmergencyPopupActivity.launchConfirmation(context, "Message Intelligence") },
-                                        onSafetyShareLocation = { viewModel.sendCheckIn() }
+                                        onSafetyShareLocation = { viewModel.sendCheckIn() },
+                                        scheduledMessages = scheduledMessages,
+                                        onScheduleMessage = { body, scheduledForUtcMillis, recurrence, attachments, occurrenceKey, editingId ->
+                                            threadViewModel.scheduleMessage(
+                                                body, scheduledForUtcMillis, recurrence, attachments, occurrenceKey, editingId
+                                            )
+                                        },
+                                        onCancelScheduled = { id -> threadViewModel.cancelScheduled(id) },
+                                        onSendScheduledNow = { id -> threadViewModel.sendScheduledNow(id) },
+                                        onRetryScheduled = { id -> threadViewModel.retryScheduled(id) }
+                                    )
+                                }
+                                composable("scheduled_messages") {
+                                    val scheduledMessagesViewModel: com.sotext.ui.state.ScheduledMessagesViewModel = hiltViewModel()
+                                    val allScheduled by scheduledMessagesViewModel.scheduledMessages.collectAsStateWithLifecycle()
+                                    ScheduledMessagesScreen(
+                                        scheduledMessages = allScheduled,
+                                        onBack = { navController.popBackStack() },
+                                        onOpenConversation = { message ->
+                                            val lineSuffix = message.lineId?.let { "?lineId=$it" } ?: ""
+                                            navController.navigate(
+                                                "sms/thread/${message.threadId ?: 0}/${Uri.encode(message.address)}$lineSuffix"
+                                            )
+                                        },
+                                        onCancel = { id -> scheduledMessagesViewModel.cancel(id) },
+                                        onSendNow = { id -> scheduledMessagesViewModel.sendNow(id) },
+                                        onRetry = { id -> scheduledMessagesViewModel.retry(id) },
+                                        onEdit = { id, body, time, recurrence, attachments ->
+                                            scheduledMessagesViewModel.update(id, body, time, recurrence, attachments)
+                                        }
                                     )
                                 }
                                 composable("beacon_settings") {
@@ -1068,6 +1099,7 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onOpenVisualSettings = { navController.navigate("visual_settings") },
                                         onOpenProfileSettings = { navController.navigate("profile_settings") },
                                         onOpenExtensionsStore = { navController.navigate("extensions_store") },
+                                        onOpenScheduledMessages = { navController.navigate("scheduled_messages") },
                                         messageSoundLabel = messageSoundLabel,
                                         messageVibrate = state.settings.messageNotificationVibrate,
                                         onEditMessageSound = { navController.navigate("notifications/message_sound") },

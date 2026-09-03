@@ -435,6 +435,8 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-intents:3.5.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("com.google.dagger:hilt-android-testing:2.57.2")
+    androidTestImplementation("androidx.room:room-testing:2.7.0")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     kaptAndroidTest("com.google.dagger:hilt-compiler:2.57.2")
 }
 

@@ -24,14 +24,20 @@ import com.sotext.data.sms.SmsOutboxService
 import com.sotext.data.sms.SmsRepository
 import com.sotext.data.sms.SmsSender
 import com.sotext.data.sms.SmsThreadItem
+import com.sotext.data.scheduled.ScheduledMessageAlarmScheduler
+import com.sotext.data.scheduled.ScheduledMessageDispatcher
 import com.sotext.domain.model.Contact
 import com.sotext.domain.model.LineInboxMode
+import com.sotext.domain.model.RecurrenceRule
+import com.sotext.domain.model.ScheduledMessage
 import com.sotext.domain.model.SmsLine
 import com.sotext.domain.model.ThemePreferences
 import com.sotext.domain.repository.ContactRepository
+import com.sotext.domain.repository.ScheduledMessageRepository
 import com.sotext.domain.repository.SettingsRepository
 import com.sotext.util.normalizeSmsAddress
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -452,7 +458,10 @@ class SmsThreadViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val remoteSmsRepository: RemoteSmsRepository,
     private val smsOutboxService: SmsOutboxService,
-    private val messageIntelligenceRepository: MessageIntelligenceRepository
+    private val messageIntelligenceRepository: MessageIntelligenceRepository,
+    private val scheduledMessageRepository: ScheduledMessageRepository,
+    private val scheduledMessageAlarmScheduler: ScheduledMessageAlarmScheduler,
+    private val scheduledMessageDispatcher: ScheduledMessageDispatcher
 ) : ViewModel() {
     private companion object {
         const val PENDING_MATCH_WINDOW_MS = 20_000L
@@ -479,6 +488,9 @@ class SmsThreadViewModel @Inject constructor(
     val isDatabaseBusy: StateFlow<Boolean> = _isDatabaseBusy
     private val _hasMoreMessages = MutableStateFlow(false)
     val hasMoreMessages: StateFlow<Boolean> = _hasMoreMessages
+    private val _scheduledMessages = MutableStateFlow<List<ScheduledMessage>>(emptyList())
+    val scheduledMessages: StateFlow<List<ScheduledMessage>> = _scheduledMessages
+    private var scheduledMessagesJob: Job? = null
     private var activeThreadId: Long? = null
     private var activeAddress: String = ""
     private var activeLineId: String? = null
@@ -505,6 +517,16 @@ class SmsThreadViewModel @Inject constructor(
             }
             remoteMessagesJob?.cancel()
             localMessagesJob?.cancel()
+            scheduledMessagesJob?.cancel()
+            // Keyed by address, not threadId: unlike `messages` (Telephony-backed, only resolves a
+            // thread once a real message exists), a schedule can be created before any message has
+            // ever been sent to this address.
+            if (activeAddress.isNotBlank()) {
+                scheduledMessagesJob = scheduledMessageRepository
+                    .observeForAddress(activeAddress)
+                    .onEach { _scheduledMessages.value = it }
+                    .launchIn(viewModelScope)
+            }
             if (!activeLineId.isNullOrBlank() && activeLineId != deviceLineId && activeThreadId != null) {
                 remoteMessagesJob = remoteSmsRepository
                     .observeMessages(activeLineId!!, activeThreadId!!)
@@ -666,6 +688,73 @@ class SmsThreadViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Creates a new scheduled message, or - when [editingId] is non-null - updates an existing
+     * one in place (editing never creates a duplicate schedule; it's the same row, rescheduled).
+     */
+    fun scheduleMessage(
+        body: String,
+        scheduledForUtcMillis: Long,
+        recurrence: RecurrenceRule?,
+        attachments: List<com.sotext.domain.model.ScheduledAttachment> = emptyList(),
+        occurrenceKey: String,
+        editingId: Long? = null
+    ) {
+        if (body.isBlank()) return
+        val targetAddress = activeAddress
+        if (targetAddress.isBlank()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val resolvedLineId = activeLineId ?: deviceLineId
+            if (editingId != null) {
+                val existing = scheduledMessageRepository.getById(editingId) ?: return@launch
+                val updated = existing.copy(
+                    body = body,
+                    scheduledForUtcMillis = scheduledForUtcMillis,
+                    recurrenceRule = recurrence,
+                    attachments = attachments,
+                    timezoneId = ZoneId.systemDefault().id
+                )
+                scheduledMessageRepository.update(updated)
+                scheduledMessageAlarmScheduler.scheduleExact(updated)
+            } else {
+                // occurrenceKey must match the directory ScheduleMessageSheet already copied any
+                // picked attachments into (staged before the Room row/id existed) - never let this
+                // default to a fresh UUID here, or the dispatcher would look in the wrong directory.
+                val message = ScheduledMessage(
+                    occurrenceKey = occurrenceKey,
+                    threadId = activeThreadId,
+                    address = targetAddress,
+                    body = body,
+                    attachments = attachments,
+                    lineId = resolvedLineId,
+                    scheduledForUtcMillis = scheduledForUtcMillis,
+                    timezoneId = ZoneId.systemDefault().id,
+                    recurrenceRule = recurrence
+                )
+                val id = scheduledMessageRepository.insert(message)
+                scheduledMessageAlarmScheduler.scheduleExact(message.copy(id = id))
+            }
+        }
+    }
+
+    fun cancelScheduled(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (scheduledMessageRepository.cancel(id)) {
+                scheduledMessageAlarmScheduler.cancel(id)
+            }
+        }
+    }
+
+    /** Bypasses the alarm and dispatches immediately - used by both "Send now" and "Retry". */
+    fun sendScheduledNow(id: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            scheduledMessageAlarmScheduler.cancel(id)
+            scheduledMessageDispatcher.sendNowManually(id)
+        }
+    }
+
+    fun retryScheduled(id: Long) = sendScheduledNow(id)
+
     private fun updateMessages(messages: List<SmsMessageItem>) {
         withPendingLock {
             loadedMessages = messages
@@ -686,6 +775,7 @@ class SmsThreadViewModel @Inject constructor(
             loadedMessages = emptyList()
             _messages.value = emptyList()
         }
+        _scheduledMessages.value = emptyList()
     }
 
     private fun addPendingMessage(message: SmsMessageItem) {

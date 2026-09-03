@@ -196,6 +196,47 @@ object MessageIntentDetector {
     }
 
     // ---------------------------------------------------------------------
+    // Schedule-this-draft suggestion (Scheduled Messages feature)
+    // ---------------------------------------------------------------------
+
+    // Deliberately narrower than findScheduling's trigger above: that one detects "are you free
+    // to meet" in an *inbound* message (someone else proposing a time); this one detects the
+    // *outgoing* draft-author signaling they intend to send this message itself later, which is a
+    // different intent (MessageIntent.SCHEDULE, not SCHEDULING) with a different, narrower phrase set.
+    private val scheduleDraftTrigger = Regex(
+        """(?i)\b(?:i'?ll send (?:this|that|it)|send this (?:tomorrow|tonight|later|this )|""" +
+            """remind me to send|schedule this)\b"""
+    )
+
+    /**
+     * Runs the same date/time extraction [analyze] uses on inbound messages, but against the
+     * composer's in-progress draft text - the plug-in point for "💡 Schedule for tomorrow
+     * morning?" suggestions. Deliberately does not read [MessageIntent.SCHEDULING] or any other
+     * intent; a draft only ever suggests scheduling *itself*, never anything else, and the
+     * suggestion is surfaced to the caller as data only - nothing here schedules a message.
+     */
+    fun analyzeDraft(draftText: String, referenceTimestampMillis: Long): IntentMatch? {
+        if (draftText.isBlank()) return null
+        if (!scheduleDraftTrigger.containsMatchIn(draftText)) return null
+
+        val contextCards = MessageContextParser.extract(0L, draftText, referenceTimestampMillis)
+        val eventCard = contextCards.filterIsInstance<ContextCard.Event>().firstOrNull() ?: return null
+        val zone = ZoneId.systemDefault()
+        val start = Instant.ofEpochMilli(eventCard.startMillis).atZone(zone)
+        val dateTime = MessageEntities(
+            dateEpochDay = start.toLocalDate().toEpochDay(),
+            timeMinuteOfDay = if (eventCard.allDay) null else start.toLocalTime().let { it.hour * 60 + it.minute },
+            rawDateTimeText = eventCard.matchedText
+        )
+        return IntentMatch(
+            intent = MessageIntent.SCHEDULE,
+            confidence = 0.75f,
+            actionability = Actionability.EXPLICIT,
+            entities = dateTime
+        )
+    }
+
+    // ---------------------------------------------------------------------
     // Generic information request (fallback for a plain question)
     // ---------------------------------------------------------------------
 

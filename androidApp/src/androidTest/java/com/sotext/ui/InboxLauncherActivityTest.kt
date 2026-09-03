@@ -1,7 +1,7 @@
 package com.sotext.ui
 
 import android.content.Intent
-import androidx.test.core.app.ActivityScenarioRule
+import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasComponent
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasExtra

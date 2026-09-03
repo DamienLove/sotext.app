@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.Update
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sotext.domain.model.AlertEvent
@@ -16,6 +17,7 @@ import com.sotext.domain.model.PinnedThread
 import com.sotext.domain.model.Contact
 import com.sotext.domain.model.ContactMessage
 import com.sotext.domain.model.MessageStatus
+import com.sotext.domain.model.ScheduledMessage
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -162,9 +164,113 @@ interface PinnedThreadDao {
     fun isPinned(threadId: Long): Boolean
 }
 
+@Dao
+interface ScheduledMessageDao {
+    @Insert
+    suspend fun insert(message: ScheduledMessage): Long
+
+    @Update
+    suspend fun update(message: ScheduledMessage)
+
+    @Query("SELECT * FROM scheduled_messages WHERE id = :id")
+    suspend fun getById(id: Long): ScheduledMessage?
+
+    @Query("SELECT * FROM scheduled_messages WHERE occurrenceKey = :occurrenceKey")
+    suspend fun getByOccurrenceKey(occurrenceKey: String): ScheduledMessage?
+
+    @Query("SELECT * FROM scheduled_messages WHERE seriesId = :seriesId AND scheduledForUtcMillis = :scheduledForUtcMillis LIMIT 1")
+    suspend fun getBySeriesAndTime(seriesId: String, scheduledForUtcMillis: Long): ScheduledMessage?
+
+    @Query(
+        "SELECT * FROM scheduled_messages WHERE threadId = :threadId " +
+            "AND status IN ('SCHEDULED','PROCESSING','FAILED') ORDER BY scheduledForUtcMillis ASC"
+    )
+    fun observeForThread(threadId: Long): Flow<List<ScheduledMessage>>
+
+    @Query(
+        "SELECT * FROM scheduled_messages WHERE address = :address " +
+            "AND status IN ('SCHEDULED','PROCESSING','FAILED') ORDER BY scheduledForUtcMillis ASC"
+    )
+    fun observeForAddress(address: String): Flow<List<ScheduledMessage>>
+
+    @Query("SELECT * FROM scheduled_messages WHERE status IN ('SCHEDULED','FAILED') ORDER BY scheduledForUtcMillis ASC")
+    fun observeUpcoming(): Flow<List<ScheduledMessage>>
+
+    @Query("SELECT * FROM scheduled_messages WHERE status = 'SCHEDULED' AND scheduledForUtcMillis <= :nowUtcMillis")
+    suspend fun getDueForDispatch(nowUtcMillis: Long): List<ScheduledMessage>
+
+    /** Auto-retry candidates: failed sends below the retry cap, backed off by retryCount * the sweep interval. */
+    @Query(
+        "SELECT * FROM scheduled_messages WHERE status = 'FAILED' AND retryCount < :maxRetries " +
+            "AND updatedAt <= :retryEligibleBeforeMillis"
+    )
+    suspend fun getRetryableFailed(maxRetries: Int, retryEligibleBeforeMillis: Long): List<ScheduledMessage>
+
+    @Query("SELECT * FROM scheduled_messages WHERE status = 'PROCESSING' AND processingStartedAt <= :staleBeforeMillis")
+    suspend fun getStaleProcessing(staleBeforeMillis: Long): List<ScheduledMessage>
+
+    @Query("SELECT * FROM scheduled_messages WHERE status = 'SCHEDULED'")
+    suspend fun getAllScheduled(): List<ScheduledMessage>
+
+    /** Every row still expected to send eventually - not SENT/CANCELLED - used for attachment-directory orphan sweeps. */
+    @Query("SELECT * FROM scheduled_messages WHERE status IN ('SCHEDULED','PROCESSING','FAILED')")
+    suspend fun getAllActive(): List<ScheduledMessage>
+
+    /**
+     * CAS: succeeds from SCHEDULED (normal dispatch) or FAILED (retry/send-now on a message that
+     * previously failed). 0 rows affected means someone else already claimed it, or it's in a
+     * terminal state (SENT/CANCELLED) or already PROCESSING - the guard that makes a double-send
+     * impossible regardless of how many callers race to dispatch the same id.
+     */
+    // Every status-changing UPDATE also resets syncedToCloud = 0, so ScheduledMessageSyncService's
+    // "push any row where syncedToCloud is false" scan (§ ScheduledMessageSyncService) picks up
+    // status transitions driven purely by DAO queries (i.e. everything below), not just the
+    // full-object writes that go through `update()`/`insert()`.
+    @Query(
+        "UPDATE scheduled_messages SET status = 'PROCESSING', processingStartedAt = :now, updatedAt = :now, " +
+            "syncedToCloud = 0 WHERE id = :id AND status IN ('SCHEDULED', 'FAILED')"
+    )
+    suspend fun claimForProcessing(id: Long, now: Long): Int
+
+    @Query(
+        "UPDATE scheduled_messages SET status = 'SENT', sentMessageId = :sentMessageId, updatedAt = :now, " +
+            "processingStartedAt = NULL, syncedToCloud = 0 WHERE id = :id"
+    )
+    suspend fun markSent(id: Long, sentMessageId: Long?, now: Long)
+
+    @Query(
+        "UPDATE scheduled_messages SET status = 'FAILED', lastError = :error, retryCount = retryCount + 1, " +
+            "updatedAt = :now, processingStartedAt = NULL, syncedToCloud = 0 WHERE id = :id"
+    )
+    suspend fun markFailed(id: Long, error: String, now: Long)
+
+    @Query(
+        "UPDATE scheduled_messages SET status = 'CANCELLED', updatedAt = :now, syncedToCloud = 0 " +
+            "WHERE id = :id AND status IN ('SCHEDULED','FAILED')"
+    )
+    suspend fun cancel(id: Long, now: Long): Int
+
+    /** Crash recovery: PROCESSING -> SCHEDULED so the next sweep/alarm retries it. */
+    @Query(
+        "UPDATE scheduled_messages SET status = 'SCHEDULED', processingStartedAt = NULL, updatedAt = :now, " +
+            "syncedToCloud = 0 WHERE id = :id AND status = 'PROCESSING'"
+    )
+    suspend fun reclaimStale(id: Long, now: Long): Int
+
+    /** Rows dirtied since the last successful push - what ScheduledMessageSyncService uploads. */
+    @Query("SELECT * FROM scheduled_messages WHERE syncedToCloud = 0")
+    suspend fun getUnsyncedToCloud(): List<ScheduledMessage>
+
+    @Query("UPDATE scheduled_messages SET syncedToCloud = 1, cloudDocId = :cloudDocId WHERE id = :id")
+    suspend fun markSyncedToCloud(id: Long, cloudDocId: String)
+
+    @Query("DELETE FROM scheduled_messages WHERE id = :id")
+    suspend fun deleteById(id: Long)
+}
+
 @Database(
-    entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class, PinnedThread::class],
-    version = 18,
+    entities = [Contact::class, AlertEvent::class, ContactMessage::class, BlockedContact::class, ArchivedThread::class, PinnedThread::class, ScheduledMessage::class],
+    version = 19,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -175,6 +281,7 @@ abstract class PulseLinkDatabase : RoomDatabase() {
     abstract fun blockedContactDao(): BlockedContactDao
     abstract fun archivedThreadDao(): ArchivedThreadDao
     abstract fun pinnedThreadDao(): PinnedThreadDao
+    abstract fun scheduledMessageDao(): ScheduledMessageDao
 
     companion object {
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -379,6 +486,49 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS scheduled_messages (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        seriesId TEXT NOT NULL,
+                        occurrenceKey TEXT NOT NULL,
+                        threadId INTEGER,
+                        address TEXT NOT NULL,
+                        body TEXT NOT NULL,
+                        attachments TEXT,
+                        lineId TEXT,
+                        scheduledForUtcMillis INTEGER NOT NULL,
+                        timezoneId TEXT NOT NULL,
+                        recurrenceRule TEXT,
+                        status TEXT NOT NULL,
+                        retryCount INTEGER NOT NULL DEFAULT 0,
+                        lastError TEXT,
+                        sentMessageId INTEGER,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        processingStartedAt INTEGER,
+                        syncedToCloud INTEGER NOT NULL DEFAULT 0,
+                        cloudDocId TEXT
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_scheduled_messages_status_time ON scheduled_messages(status, scheduledForUtcMillis)"
+                )
+                database.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS index_scheduled_messages_occurrenceKey ON scheduled_messages(occurrenceKey)"
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_scheduled_messages_threadId ON scheduled_messages(threadId)"
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_scheduled_messages_seriesId ON scheduled_messages(seriesId)"
+                )
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -396,7 +546,8 @@ abstract class PulseLinkDatabase : RoomDatabase() {
             MIGRATION_14_15,
             MIGRATION_15_16,
             MIGRATION_16_17,
-            MIGRATION_17_18
+            MIGRATION_17_18,
+            MIGRATION_18_19
         )
 
         private fun ensureBaseSchema(database: SupportSQLiteDatabase) {

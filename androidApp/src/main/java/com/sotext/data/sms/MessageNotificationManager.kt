@@ -15,15 +15,65 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.sotext.R
 import com.sotext.domain.model.PulseLinkSettings
+import com.sotext.domain.model.ScheduledMessage
+import com.sotext.receiver.ScheduledMessageRetryReceiver
 import com.sotext.ui.BeaconInboxActivity
 import com.sotext.util.normalizeSmsAddress
 import com.sotext.util.VibrationPatterns
 
 object MessageNotificationManager {
     const val CHANNEL_MESSAGES = "beacon_messages"
+    const val CHANNEL_SCHEDULED_MESSAGES = "scheduled_messages"
 
     const val EXTRA_THREAD_ID = "com.sotext.extra.THREAD_ID"
     const val EXTRA_ADDRESS = "com.sotext.extra.ADDRESS"
+
+    /**
+     * The only scheduled-message notification: a failed send. Successful sends stay silent - the
+     * message already appears as a normal bubble the moment it lands in the Telephony provider
+     * (the thread screen's existing content-observer re-renders automatically), so a notification
+     * for every scheduled send the user themselves configured would be redundant noise with no
+     * per-channel opt-out. A failure is the genuinely unexpected, actionable case.
+     */
+    fun notifyScheduledSendFailed(context: Context, message: ScheduledMessage) {
+        if (!areNotificationsEnabled(context)) return
+
+        ensureSimpleChannel(
+            context = context,
+            channelId = CHANNEL_SCHEDULED_MESSAGES,
+            channelName = "Scheduled message alerts",
+            description = "Alerts when a scheduled message fails to send"
+        )
+
+        val title = "Scheduled message failed to send"
+        val label = resolveContactLabel(context, message.address).ifBlank { message.address }
+        val text = "To $label: ${message.body.take(80)}"
+
+        val contentIntent = buildContentIntent(context, message.threadId, message.address)
+        val retryIntent = Intent(context, ScheduledMessageRetryReceiver::class.java).apply {
+            putExtra(ScheduledMessageRetryReceiver.EXTRA_SCHEDULED_MESSAGE_ID, message.id)
+        }
+        val retryPendingIntent = PendingIntent.getBroadcast(
+            context,
+            message.id.toInt(),
+            retryIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_SCHEDULED_MESSAGES)
+            .setSmallIcon(R.drawable.ic_logo)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setCategory(NotificationCompat.CATEGORY_ERROR)
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent)
+            .addAction(0, "Retry", retryPendingIntent)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+        val notificationId = (message.id.hashCode() and 0xFFFF) + 9000
+        NotificationManagerCompat.from(context).notify(notificationId, builder.build())
+    }
 
     fun notifyIncoming(
         context: Context,
@@ -159,6 +209,17 @@ object MessageNotificationManager {
             }
             manager.createNotificationChannel(channel)
         }
+    }
+
+    /** Simple, default-sound channel creation for notifications with no per-contact override needs. */
+    private fun ensureSimpleChannel(context: Context, channelId: String, channelName: String, description: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        if (manager.getNotificationChannel(channelId) != null) return
+        val channel = NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_DEFAULT).apply {
+            this.description = description
+        }
+        manager.createNotificationChannel(channel)
     }
 
     private fun buildContentIntent(context: Context, threadId: Long?, address: String): PendingIntent {
