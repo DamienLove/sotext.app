@@ -1478,6 +1478,7 @@ private val appIconOptions = listOf(
     AppIconOption("default", "Default", R.drawable.ic_logo),
     AppIconOption("gold", "Gold", R.drawable.ic_app_icon_gold),
     AppIconOption("steel", "Steel", R.drawable.ic_app_icon_steel),
+    AppIconOption("bronze", "Bronze", R.drawable.ic_app_icon_bronze),
     AppIconOption("iridescent", "Iridescent", R.drawable.ic_app_icon_iridescent),
     AppIconOption("rainbow", "Rainbow", R.drawable.ic_app_icon_rainbow),
     AppIconOption("matte_black", "Matte Black", R.drawable.ic_app_icon_matte_black),
@@ -1535,6 +1536,7 @@ fun AppIconTab(
                         Image(
                             painter = painterResource(id = option.drawableRes),
                             contentDescription = option.label,
+                            contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
                         if (active) {

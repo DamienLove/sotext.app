@@ -22,6 +22,7 @@ object AppIconManager {
         "steel" to "com.sotext.AppIconSteel",
         "iridescent" to "com.sotext.AppIconIridescent",
         "rainbow" to "com.sotext.AppIconRainbow",
+        "bronze" to "com.sotext.AppIconBronze",
         "matte_black" to "com.sotext.AppIconMatteBlack",
         "reverse" to "com.sotext.AppIconReverse",
         "glass" to "com.sotext.AppIconGlass",
