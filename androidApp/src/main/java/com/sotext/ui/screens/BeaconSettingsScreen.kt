@@ -14,9 +14,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
@@ -98,6 +103,13 @@ fun BeaconSettingsScreen(
     onToggleCatchMeUp: (Boolean) -> Unit,
     blockRcsReadReceipts: Boolean,
     onToggleBlockRcsReadReceipts: (Boolean) -> Unit,
+    onSetRcsEnabled: (Boolean) -> Unit,
+    onSetRcsSendReadReceipts: (Boolean) -> Unit,
+    onSetRcsReceiveReadReceipts: (Boolean) -> Unit,
+    onSetRcsSendTypingIndicators: (Boolean) -> Unit,
+    onSetRcsReceiveTypingIndicators: (Boolean) -> Unit,
+    onSetRcsHighResolutionMedia: (Boolean) -> Unit,
+    onSetRcsShowDeliveryStatus: (Boolean) -> Unit,
     onChangeSwipeRightAction: (SwipeAction) -> Unit,
     onChangeSwipeLeftAction: (SwipeAction) -> Unit
 ) {
@@ -282,6 +294,65 @@ fun BeaconSettingsScreen(
                     onCheckedChange = onToggleBlockRcsReadReceipts,
                     leadingIcon = Icons.Filled.Lock
                 )
+            }
+
+            BeaconCollapsibleSection(title = "RCS chats") {
+                val rcs = settings.rcsSettings
+                BeaconSettingsToggleRow(
+                    title = "Use RCS chats",
+                    subtitle = if (rcs.rcsEnabled) {
+                        "Read receipts, typing indicators, and richer media where available"
+                    } else {
+                        "Off — messages send as standard SMS/MMS only"
+                    },
+                    checked = rcs.rcsEnabled,
+                    onCheckedChange = onSetRcsEnabled,
+                    leadingIcon = Icons.Filled.Chat
+                )
+                if (rcs.rcsEnabled) {
+                    BeaconSettingsToggleRow(
+                        title = "Send read receipts",
+                        subtitle = "Let senders see when you've read their messages.",
+                        checked = rcs.sendReadReceipts,
+                        onCheckedChange = onSetRcsSendReadReceipts,
+                        leadingIcon = Icons.Filled.DoneAll
+                    )
+                    BeaconSettingsToggleRow(
+                        title = "Receive read receipts",
+                        subtitle = "See when others have read messages you sent.",
+                        checked = rcs.receiveReadReceipts,
+                        onCheckedChange = onSetRcsReceiveReadReceipts,
+                        leadingIcon = Icons.Filled.DoneAll
+                    )
+                    BeaconSettingsToggleRow(
+                        title = "Show when you're typing",
+                        subtitle = "Let others see a typing indicator while you compose.",
+                        checked = rcs.sendTypingIndicators,
+                        onCheckedChange = onSetRcsSendTypingIndicators,
+                        leadingIcon = Icons.Filled.MoreHoriz
+                    )
+                    BeaconSettingsToggleRow(
+                        title = "See when others are typing",
+                        subtitle = "Show a typing indicator when someone is composing to you.",
+                        checked = rcs.receiveTypingIndicators,
+                        onCheckedChange = onSetRcsReceiveTypingIndicators,
+                        leadingIcon = Icons.Filled.MoreHoriz
+                    )
+                    BeaconSettingsToggleRow(
+                        title = "High-resolution media",
+                        subtitle = "Share photos and videos at full quality over RCS.",
+                        checked = rcs.highResolutionMedia,
+                        onCheckedChange = onSetRcsHighResolutionMedia,
+                        leadingIcon = Icons.Filled.HighQuality
+                    )
+                    BeaconSettingsToggleRow(
+                        title = "Delivery status",
+                        subtitle = "Show delivered/read confirmations on sent messages.",
+                        checked = rcs.showDeliveryStatus,
+                        onCheckedChange = onSetRcsShowDeliveryStatus,
+                        leadingIcon = Icons.Filled.LocalShipping
+                    )
+                }
             }
 
             BeaconCollapsibleSection(title = "Remote access") {

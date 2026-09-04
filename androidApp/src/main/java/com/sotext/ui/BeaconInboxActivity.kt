@@ -1144,6 +1144,13 @@ class BeaconInboxActivity : ComponentActivity() {
                                         onToggleCatchMeUp = { enabled -> viewModel.setCatchMeUpEnabled(enabled) },
                                         blockRcsReadReceipts = state.settings.blockRcsReadReceipts,
                                         onToggleBlockRcsReadReceipts = { enabled -> viewModel.setBlockRcsReadReceipts(enabled) },
+                                        onSetRcsEnabled = { enabled -> viewModel.setRcsEnabled(enabled) },
+                                        onSetRcsSendReadReceipts = { enabled -> viewModel.setRcsSendReadReceipts(enabled) },
+                                        onSetRcsReceiveReadReceipts = { enabled -> viewModel.setRcsReceiveReadReceipts(enabled) },
+                                        onSetRcsSendTypingIndicators = { enabled -> viewModel.setRcsSendTypingIndicators(enabled) },
+                                        onSetRcsReceiveTypingIndicators = { enabled -> viewModel.setRcsReceiveTypingIndicators(enabled) },
+                                        onSetRcsHighResolutionMedia = { enabled -> viewModel.setRcsHighResolutionMedia(enabled) },
+                                        onSetRcsShowDeliveryStatus = { enabled -> viewModel.setRcsShowDeliveryStatus(enabled) },
                                         onChangeSwipeRightAction = { action -> viewModel.setSwipeRightAction(action) },
                                         onChangeSwipeLeftAction = { action -> viewModel.setSwipeLeftAction(action) }
                                     )
