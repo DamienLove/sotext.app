@@ -1705,6 +1705,48 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun setRcsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRcsEnabled(enabled)
+        }
+    }
+
+    fun setRcsSendReadReceipts(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRcsSendReadReceipts(enabled)
+        }
+    }
+
+    fun setRcsReceiveReadReceipts(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRcsReceiveReadReceipts(enabled)
+        }
+    }
+
+    fun setRcsSendTypingIndicators(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRcsSendTypingIndicators(enabled)
+        }
+    }
+
+    fun setRcsReceiveTypingIndicators(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRcsReceiveTypingIndicators(enabled)
+        }
+    }
+
+    fun setRcsHighResolutionMedia(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRcsHighResolutionMedia(enabled)
+        }
+    }
+
+    fun setRcsShowDeliveryStatus(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setRcsShowDeliveryStatus(enabled)
+        }
+    }
+
     fun setOtpCleanupEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setOtpCleanupEnabled(enabled)
