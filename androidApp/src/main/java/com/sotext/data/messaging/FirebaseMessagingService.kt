@@ -7,6 +7,8 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.sotext.data.link.LinkChannelService
+import com.sotext.data.scheduled.ScheduledMessageSweepWorker
+import com.sotext.data.scheduled.ScheduledMessageSyncService
 import com.sotext.data.sms.SmsRelayService
 import com.sotext.domain.repository.SettingsRepository
 import dagger.hilt.android.AndroidEntryPoint
@@ -21,6 +23,7 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
 
     @Inject lateinit var linkChannelService: LinkChannelService
     @Inject lateinit var smsRelayService: SmsRelayService
+    @Inject lateinit var scheduledMessageSyncService: ScheduledMessageSyncService
     @Inject lateinit var settingsRepository: SettingsRepository
     @Inject lateinit var firestore: FirebaseFirestore
     @Inject lateinit var auth: FirebaseAuth
@@ -44,6 +47,22 @@ class PulseLinkFirebaseMessagingService : FirebaseMessagingService() {
             // If the app was dead, PulseLinkApp.onCreate() calls this too, but
             // explicit call here guarantees it for all entry points.
             smsRelayService.start()
+            return
+        }
+        if (type == "SCHEDULED_MESSAGE_WAKE") {
+            Log.d(TAG, "Received SCHEDULED_MESSAGE_WAKE trigger")
+            // Fallback path only: sent by the Cloud Function sweep when a phone's own local alarm
+            // may have missed a due send (app killed, doze, etc). This just makes sure the process
+            // is alive and the sync/sweep machinery gets a chance to run - it never sends anything
+            // itself, that's still ScheduledMessageDispatcher's job via the local sweep worker.
+            scheduledMessageSyncService.start()
+            androidx.work.WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                "scheduled_wake_sweep",
+                androidx.work.ExistingWorkPolicy.KEEP,
+                androidx.work.OneTimeWorkRequestBuilder<ScheduledMessageSweepWorker>()
+                    .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .build()
+            )
             return
         }
 

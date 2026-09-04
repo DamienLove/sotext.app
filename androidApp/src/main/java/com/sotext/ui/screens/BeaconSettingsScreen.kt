@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.SwipeLeft
 import androidx.compose.material.icons.filled.SwipeRight
@@ -61,6 +62,7 @@ fun BeaconSettingsScreen(
     onOpenVisualSettings: () -> Unit,
     onOpenProfileSettings: () -> Unit,
     onOpenExtensionsStore: () -> Unit,
+    onOpenScheduledMessages: () -> Unit,
     messageSoundLabel: String,
     messageVibrate: Boolean,
     onEditMessageSound: () -> Unit,
@@ -155,6 +157,13 @@ fun BeaconSettingsScreen(
             }
 
             BeaconCollapsibleSection(title = "Messaging") {
+                BeaconSettingsActionRow(
+                    title = "Scheduled messages",
+                    subtitle = "View, edit, and manage messages scheduled to send later.",
+                    actionLabel = "Open",
+                    onAction = onOpenScheduledMessages,
+                    leadingIcon = Icons.Filled.Schedule
+                )
                 BeaconSettingsActionRow(
                     title = "Default SMS app",
                     subtitle = defaultSmsSubtitle,

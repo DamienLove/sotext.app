@@ -65,6 +65,15 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
+      // Scheduled Messages cross-device sync. Local scheduling itself is free for every user and
+      // never touches Firestore (Room is the source of truth on-device) - this collection is only
+      // ever written to by ScheduledMessageSyncService, which itself only starts once
+      // remoteWebAccessEnabled is on, so this rule additionally requires the premium claim +
+      // remoteWebAccessEnabled server-side rather than trusting the client-side gate alone.
+      match /scheduledMessages/{messageId} {
+        allow read, write: if canUseSmsWebSync(userId);
+      }
+
       match /trustedContacts/{contactId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }

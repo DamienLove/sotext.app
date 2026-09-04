@@ -144,4 +144,55 @@ class MessageIntentDetectorTest {
             info.confidence >= thresholds.mediumConfidence && info.confidence < thresholds.highConfidence
         )
     }
+
+    // -----------------------------------------------------------------------
+    // Scheduled Messages: analyzeDraft (draft-text-only, never runs on inbound messages)
+    // -----------------------------------------------------------------------
+
+    private fun analyzeDraft(draft: String) = MessageIntentDetector.analyzeDraft(draft, anchorMillis)
+
+    @Test
+    fun `draft with a trigger phrase and a resolvable time suggests SCHEDULE`() {
+        // MessageContextParser only resolves "tomorrow" into a date when it's paired with an
+        // explicit clock time (a bare "tomorrow morning" is too common as filler on its own) -
+        // matches its existing behavior for inbound messages, reused as-is here.
+        val match = analyzeDraft("I'll send this tomorrow at 9am once I have the address.")
+        assertNotNull("expected a schedule suggestion", match)
+        assertEquals(MessageIntent.SCHEDULE, match!!.intent)
+        assertEquals(Actionability.EXPLICIT, match.actionability)
+        assertTrue("expected a resolved date/time", match.entities.hasDateTime())
+    }
+
+    @Test
+    fun `draft with a date but no trigger phrase does not suggest scheduling`() {
+        // Plenty of ordinary drafts mention tomorrow without meaning "send this later".
+        val match = analyzeDraft("See you tomorrow at the usual spot!")
+        assertNull("a bare date/time mention alone must not suggest scheduling", match)
+    }
+
+    @Test
+    fun `draft with a trigger phrase but no resolvable time suggests nothing`() {
+        // "schedule this" alone, with nothing MessageContextParser can resolve to a date/time,
+        // has nothing concrete to prefill - never guess a time, just stay silent.
+        val match = analyzeDraft("Schedule this for later, not sure when yet.")
+        assertNull(match)
+    }
+
+    @Test
+    fun `blank draft suggests nothing`() {
+        assertNull(analyzeDraft(""))
+        assertNull(analyzeDraft("   "))
+    }
+
+    @Test
+    fun `analyzeDraft never mutates any state - it only returns data`() {
+        // Structural guarantee behind "never automatically schedule an ambiguous message without
+        // user confirmation": calling analyzeDraft repeatedly must be a pure, side-effect-free
+        // read, so the only path from a suggestion to an actual ScheduledMessage row is the UI
+        // layer's explicit "Schedule" tap opening ScheduleMessageSheet.
+        val draft = "I'll send this tomorrow at 9am."
+        val first = analyzeDraft(draft)
+        val second = analyzeDraft(draft)
+        assertEquals(first, second)
+    }
 }

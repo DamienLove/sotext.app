@@ -8,9 +8,11 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,7 +51,9 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -77,6 +81,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import com.sotext.data.intelligence.IntentMatch
+import com.sotext.data.intelligence.MessageIntentDetector
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.imePadding
@@ -126,6 +138,8 @@ import com.sotext.data.sms.SmsMessageItem
 import com.sotext.data.sms.SmsMessageStatus
 import com.sotext.data.ai.AiComposeAction
 import com.sotext.domain.model.Contact
+import com.sotext.domain.model.RecurrenceRule
+import com.sotext.domain.model.ScheduledMessage
 import com.sotext.domain.model.ThemePreferences
 import com.sotext.ui.components.ThemeIcon
 import com.sotext.ui.components.ThemeIconKey
@@ -137,7 +151,7 @@ import com.sotext.util.parseColorOr
 import com.sotext.util.themeGradientColors
 import com.sotext.ui.theme.starfieldOverlay
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, kotlinx.coroutines.FlowPreview::class)
 @Composable
 fun SmsThreadScreen(
     address: String,
@@ -183,7 +197,19 @@ fun SmsThreadScreen(
     onRequestMessageIntelligence: (Long, String, Long, String?) -> Unit = { _, _, _, _ -> },
     onSuppressIntelligenceType: (MessageIntent) -> Unit = {},
     onSafetyGetHelp: () -> Unit = {},
-    onSafetyShareLocation: () -> Unit = {}
+    onSafetyShareLocation: () -> Unit = {},
+    scheduledMessages: List<ScheduledMessage> = emptyList(),
+    onScheduleMessage: (
+        body: String,
+        scheduledForUtcMillis: Long,
+        recurrence: RecurrenceRule?,
+        attachments: List<com.sotext.domain.model.ScheduledAttachment>,
+        occurrenceKey: String,
+        editingId: Long?
+    ) -> Unit = { _, _, _, _, _, _ -> },
+    onCancelScheduled: (Long) -> Unit = {},
+    onSendScheduledNow: (Long) -> Unit = {},
+    onRetryScheduled: (Long) -> Unit = {}
 ) {
     val effectiveTheme = contact?.themeOverride ?: globalTheme
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -197,6 +223,31 @@ fun SmsThreadScreen(
     var showOfflineDialog by remember { mutableStateOf(false) }
     var pendingDraft by remember { mutableStateOf<String?>(null) }
     var pendingLineId by remember { mutableStateOf<String?>(null) }
+    var showScheduleSheet by remember { mutableStateOf(false) }
+    var editingScheduled by remember { mutableStateOf<ScheduledMessage?>(null) }
+    // Fresh per sheet-open for a new schedule (before any Room row exists); reused across
+    // recompositions of the same sheet session so a picked attachment's staging directory stays
+    // stable until Confirm/Dismiss.
+    var newScheduleOccurrenceKey by remember { mutableStateOf(java.util.UUID.randomUUID().toString()) }
+    val scheduleSheetState = rememberModalBottomSheetState()
+    // On-device only (no cloud call): a debounced re-scan of the draft as the user types, never
+    // auto-scheduling anything - just populates a dismissible suggestion the user must explicitly
+    // tap through the same ScheduleMessageSheet used for manual scheduling.
+    var scheduleSuggestion by remember { mutableStateOf<IntentMatch?>(null) }
+    var dismissedScheduleSuggestionForDraft by remember { mutableStateOf<String?>(null) }
+    var suggestedScheduledForUtcMillis by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { draft }
+            .debounce(600)
+            .filter { it.length > 8 }
+            .distinctUntilChanged()
+            .collect { text ->
+                val match = withContext(Dispatchers.Default) {
+                    MessageIntentDetector.analyzeDraft(text, System.currentTimeMillis())
+                }
+                scheduleSuggestion = if (text == dismissedScheduleSuggestionForDraft) null else match
+            }
+    }
     val lastInbound = remember(messages) { messages.lastOrNull { !it.outgoing }?.body }
     val backgroundImageUrl = effectiveTheme.backgroundImageUrl?.takeIf { it.isNotBlank() }
     val overlayAlpha = if (backgroundImageUrl != null) 0.35f else 1f
@@ -253,6 +304,29 @@ fun SmsThreadScreen(
                 selectedLineId = selectedLineId,
                 onSelectLine = onSelectLine,
                 onPickAttachment = { attachmentPicker.launch("*/*") },
+                onScheduleClick = {
+                    editingScheduled = null
+                    showScheduleSheet = true
+                },
+                scheduleSuggestion = scheduleSuggestion,
+                onAcceptScheduleSuggestion = {
+                    editingScheduled = null
+                    suggestedScheduledForUtcMillis = scheduleSuggestion?.entities?.let { entities ->
+                        val epochDay = entities.dateEpochDay ?: java.time.LocalDate.now().toEpochDay()
+                        val minuteOfDay = entities.timeMinuteOfDay ?: (9 * 60) // default to 9 AM if only a date was parsed
+                        java.time.LocalDate.ofEpochDay(epochDay)
+                            .atTime(minuteOfDay / 60, minuteOfDay % 60)
+                            .atZone(java.time.ZoneId.systemDefault())
+                            .toInstant()
+                            .toEpochMilli()
+                    }
+                    showScheduleSheet = true
+                    scheduleSuggestion = null
+                },
+                onDismissScheduleSuggestion = {
+                    dismissedScheduleSuggestionForDraft = draft
+                    scheduleSuggestion = null
+                },
                 lineStatus = lineStatus,
                 aiEnabled = aiComposeEnabled,
                 aiSignInRequired = aiSignInRequired,
@@ -427,6 +501,26 @@ fun SmsThreadScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Not folded into the `messages` list/pagination below - that list is
+                // Telephony-provider-backed and only ever contains messages that have actually
+                // sent. Sorted soonest-first so, with reverseLayout, "what's happening next"
+                // renders lowest in the list - directly above the composer.
+                items(
+                    scheduledMessages.sortedBy { it.scheduledForUtcMillis },
+                    key = { "sched_${it.id}" }
+                ) { scheduled ->
+                    ScheduledMessageCard(
+                        message = scheduled,
+                        modifier = Modifier.fillMaxWidth(),
+                        onEdit = {
+                            editingScheduled = scheduled
+                            showScheduleSheet = true
+                        },
+                        onSendNow = { onSendScheduledNow(scheduled.id) },
+                        onCancel = { onCancelScheduled(scheduled.id) },
+                        onRetry = { onRetryScheduled(scheduled.id) }
+                    )
+                }
                 if (messages.isEmpty() && isDatabaseBusy) {
                     items(6) { index ->
                         MessageBubbleSkeleton(
@@ -530,8 +624,47 @@ fun SmsThreadScreen(
             }
         )
     }
+
+    if (showScheduleSheet) {
+        val editing = editingScheduled
+        ScheduleMessageSheet(
+            sheetState = scheduleSheetState,
+            occurrenceKey = editing?.occurrenceKey ?: newScheduleOccurrenceKey,
+            initialBody = editing?.body ?: draft,
+            initialScheduledForUtcMillis = editing?.scheduledForUtcMillis ?: suggestedScheduledForUtcMillis,
+            initialRecurrence = editing?.recurrenceRule,
+            initialAttachments = editing?.attachments ?: emptyList(),
+            isEditing = editing != null,
+            onDismiss = {
+                showScheduleSheet = false
+                editingScheduled = null
+                suggestedScheduledForUtcMillis = null
+                newScheduleOccurrenceKey = java.util.UUID.randomUUID().toString()
+            },
+            onConfirm = { body, scheduledForUtcMillis, recurrence, attachments ->
+                onScheduleMessage(
+                    body,
+                    scheduledForUtcMillis,
+                    recurrence,
+                    attachments,
+                    editing?.occurrenceKey ?: newScheduleOccurrenceKey,
+                    editing?.id
+                )
+                if (editing == null) {
+                    // Only a brand-new schedule consumes the draft - editing an existing one
+                    // shouldn't clear whatever the user is currently typing in the composer.
+                    draft = ""
+                }
+                showScheduleSheet = false
+                editingScheduled = null
+                suggestedScheduledForUtcMillis = null
+                newScheduleOccurrenceKey = java.util.UUID.randomUUID().toString()
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MessageInput(
     draft: String,
@@ -543,6 +676,10 @@ private fun MessageInput(
     selectedLineId: String?,
     onSelectLine: (String) -> Unit,
     onPickAttachment: () -> Unit,
+    onScheduleClick: () -> Unit = {},
+    scheduleSuggestion: IntentMatch? = null,
+    onAcceptScheduleSuggestion: () -> Unit = {},
+    onDismissScheduleSuggestion: () -> Unit = {},
     lineStatus: Map<String, Boolean>,
     aiEnabled: Boolean,
     aiSignInRequired: Boolean,
@@ -746,6 +883,31 @@ private fun MessageInput(
                     )
                 }
             }
+            if (scheduleSuggestion != null) {
+                val entities = scheduleSuggestion.entities
+                val suggestedLabel = entities.rawDateTimeText?.takeIf { it.isNotBlank() } ?: "later"
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = primary.copy(alpha = 0.12f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("💡", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = "Schedule this for $suggestedLabel?",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = onAcceptScheduleSuggestion) { Text("Schedule") }
+                        TextButton(onClick = onDismissScheduleSuggestion) { Text("Dismiss") }
+                    }
+                }
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom,
@@ -759,6 +921,18 @@ private fun MessageInput(
                         theme = theme,
                         imageVector = Icons.Filled.AttachFile,
                         contentDescription = "Attach file",
+                        tint = onTopBar,
+                        modifier = Modifier.size(iconSize)
+                    )
+                }
+                // Always visible - local scheduling is free for every user, not gated behind
+                // Premium/AI like the compose-action chip row above.
+                IconButton(
+                    onClick = onScheduleClick
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Schedule,
+                        contentDescription = "Schedule message",
                         tint = onTopBar,
                         modifier = Modifier.size(iconSize)
                     )
@@ -799,7 +973,11 @@ private fun MessageInput(
                         .size(48.dp)
                         .clip(CircleShape)
                         .background(if (sendEnabled) primary else primary.copy(alpha = 0.38f))
-                        .clickable(enabled = sendEnabled) { onSend(draft, selectedLineId) }
+                        .combinedClickable(
+                            enabled = sendEnabled,
+                            onClick = { onSend(draft, selectedLineId) },
+                            onLongClick = { if (sendEnabled) onScheduleClick() }
+                        )
                 ) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         ThemeIcon(

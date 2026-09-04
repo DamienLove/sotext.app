@@ -24,6 +24,11 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Exact-time firing for Scheduled Messages. Not USE_EXACT_ALARM: that's restricted to
+         alarm-clock/calendar-category apps and would risk Play Store rejection for a
+         Communication-category app. Paired with a runtime canScheduleExactAlarms() check and an
+         inexact fallback in ScheduledMessageAlarmScheduler. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -515,6 +520,25 @@
             <intent-filter>
                 <action android:name="com.sotext.SMS_SENT" />
                 <action android:name="com.sotext.SMS_DELIVERED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".receiver.ScheduledMessageAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".receiver.ScheduledMessageRetryReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".receiver.BootCompletedReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 

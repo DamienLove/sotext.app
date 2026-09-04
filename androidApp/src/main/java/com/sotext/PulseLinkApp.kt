@@ -20,6 +20,10 @@ import com.sotext.data.remoteconfig.RemoteConfigService
 import com.sotext.data.sms.SmsRelayService
 import com.sotext.data.sms.SmsSyncManager
 import com.sotext.data.sms.OtpCleanupWorker
+import com.sotext.data.scheduled.ScheduledMessageAlarmScheduler
+import com.sotext.data.scheduled.ScheduledMessageSweepWorker
+import com.sotext.data.scheduled.ScheduledMessageSyncService
+import com.sotext.domain.repository.ScheduledMessageRepository
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +40,9 @@ class PulseLinkApp : Application(), Configuration.Provider {
     @Inject lateinit var remoteConfigService: RemoteConfigService
     @Inject lateinit var smsRelayService: SmsRelayService
     @Inject lateinit var smsSyncManager: SmsSyncManager
+    @Inject lateinit var scheduledMessageRepository: ScheduledMessageRepository
+    @Inject lateinit var scheduledMessageAlarmScheduler: ScheduledMessageAlarmScheduler
+    @Inject lateinit var scheduledMessageSyncService: ScheduledMessageSyncService
 
     override val workManagerConfiguration: Configuration by lazy {
         Configuration.Builder()
@@ -50,6 +57,7 @@ class PulseLinkApp : Application(), Configuration.Provider {
         firebaseAuthManager.currentUser()
         smsRelayService.start()
         smsSyncManager.start()
+        scheduledMessageSyncService.start()
         CoroutineScope(Dispatchers.IO).launch {
             remoteConfigService.fetchAndActivate()
         }
@@ -77,6 +85,26 @@ class PulseLinkApp : Application(), Configuration.Provider {
             ExistingPeriodicWorkPolicy.KEEP,
             otpCleanupRequest
         )
+
+        val scheduledMessageSweepRequest = PeriodicWorkRequest.Builder(
+            ScheduledMessageSweepWorker::class.java,
+            ScheduledMessageSweepWorker.SWEEP_INTERVAL_MINUTES,
+            TimeUnit.MINUTES
+        ).setConstraints(Constraints.Builder().build()).build() // must run offline/low-battery: exact-time firing is time-critical
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "ScheduledMessageSweep",
+            ExistingPeriodicWorkPolicy.KEEP,
+            scheduledMessageSweepRequest
+        )
+
+        // Cold start (process death, not just reboot - BootCompletedReceiver only covers reboots)
+        // is a good moment to make sure every SCHEDULED row still has a live alarm.
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching {
+                scheduledMessageRepository.getAllScheduled().forEach { scheduledMessageAlarmScheduler.scheduleExact(it) }
+            }
+        }
     }
 
     private fun logAdapterStatus(initializationStatus: InitializationStatus) {

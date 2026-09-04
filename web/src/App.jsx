@@ -3,6 +3,7 @@ import { auth, db, functions, storage } from './firebase';
 import DevTools from './DevTools';
 import CommandPalette from './CommandPalette';
 import Toast from './Toast';
+import ScheduledMessagesPanel from './ScheduledMessagesPanel';
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -2165,6 +2166,16 @@ const Sidebar = memo(({
             <span>SoText</span>
           </button>
         )}
+        <button
+          className={`nav-item ${activePanel === 'scheduled' ? 'active' : ''}`}
+          onClick={() => setActivePanel('scheduled')}
+          title="Scheduled"
+          aria-label="Scheduled"
+          aria-current={activePanel === 'scheduled' ? 'page' : undefined}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+          <span>Scheduled</span>
+        </button>
         {remoteSettings.mapEnabled && (
           <button
             className={`nav-item ${activePanel === 'map' ? 'active' : ''}`}
@@ -4755,6 +4766,10 @@ function App() {
                 </div>
               </div>
             </div>
+          )}
+
+          {activePanel === 'scheduled' && (
+            <ScheduledMessagesPanel db={db} user={user} />
           )}
 
           {activePanel === 'contacts' && (
